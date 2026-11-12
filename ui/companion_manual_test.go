@@ -77,7 +77,7 @@ func TestCompanionInstallOnAPhoneThatIgnoresTheChange(t *testing.T) {
 	tt := mg.NewTester(ta.view, 1280, 820)
 	ta.waitFor(t, "the card", func() bool { tt.Frame(); return ta.comp.state["pixel-9"] == driver.CompanionMissing })
 	tt.Frame()
-	if err := tt.Click("Install Pinky for Android on Pixel 9"); err != nil {
+	if err := tt.Click("Install Pinky on Pixel 9"); err != nil {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "the install to fail", func() bool { tt.Frame(); return ta.comp.err["pixel-9"] != "" })

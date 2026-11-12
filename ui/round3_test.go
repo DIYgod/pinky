@@ -340,12 +340,12 @@ func TestCompanionInstallCard(t *testing.T) {
 	tt := mg.NewTester(ta.view, 1280, 820)
 	ta.waitFor(t, "the companion state", func() bool { tt.Frame(); return ta.comp.state["pixel-9"] == driver.CompanionMissing })
 	tt.Frame()
-	for _, want := range []string{"Install Pinky for Android", "faster and more steadily", "type without using its clipboard", "If the phone asks, allow the install.", "Not now"} {
+	for _, want := range []string{"Install Pinky on the phone", "faster and more steadily", "type without using its clipboard", "If the phone asks, allow the install.", "Not now"} {
 		if !hasText(tt, want) {
 			t.Errorf("no %q in %q", want, tt.Texts())
 		}
 	}
-	if err := tt.Click("Install Pinky for Android on Pixel 9"); err != nil {
+	if err := tt.Click("Install Pinky on Pixel 9"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
@@ -357,12 +357,12 @@ func TestCompanionInstallCard(t *testing.T) {
 		t.Errorf("installs: %v", got)
 	}
 	tt.Frame()
-	if hasText(tt, "Install Pinky for Android") {
+	if hasText(tt, "Install Pinky on the phone") {
 		t.Errorf("the card stays after the install: %q", tt.Texts())
 	}
 	ta.page, ta.set.sec = pageSettings, secPhones
 	tt.Frame()
-	if !hasText(tt, "Pinky for Android turns on only while an agent works") {
+	if !hasText(tt, "Pinky on the phone turns on only while an agent works") {
 		t.Errorf("Settings › Phones: %q", tt.Texts())
 	}
 }
@@ -371,11 +371,11 @@ func TestCompanionNotNow(t *testing.T) {
 	ta := newTestApp(t, fakeapi.Companion)
 	ta.sync()
 	tt := mg.NewTester(ta.view, 1280, 820)
-	ta.waitFor(t, "the card", func() bool { tt.Frame(); return hasText(tt, "Install Pinky for Android") })
+	ta.waitFor(t, "the card", func() bool { tt.Frame(); return hasText(tt, "Install Pinky on the phone") })
 	if err := tt.Click("Not now"); err != nil {
 		t.Fatal(err)
 	}
-	if hasText(tt, "Install Pinky for Android") || len(ta.api.Installs()) != 0 {
+	if hasText(tt, "Install Pinky on the phone") || len(ta.api.Installs()) != 0 {
 		t.Errorf("after Not now: %q", tt.Texts())
 	}
 }

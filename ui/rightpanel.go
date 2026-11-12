@@ -32,6 +32,9 @@ func (a *app) rightPanel(c *mg.Context) {
 		if d := a.device(a.sel); d != nil && d.Features.Companion {
 			a.companionCard(c, *d)
 		}
+		if d := a.device(a.sel); d != nil {
+			a.phoneTasksCard(c, *d)
+		}
 		mg.Column(c).Label(locales.TasksSection()).Children(func() {
 			sectionLabel(c, locales.TasksSection())
 			mg.Column(c).Gap(8).Children(func() {

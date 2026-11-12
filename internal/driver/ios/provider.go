@@ -712,8 +712,8 @@ func (p *Provider) runner(e goios.DeviceEntry) (string, error) {
 const (
 	coreDeviceTooOld = "Connecting without Pinky for iPhone needs iOS 27 or later; this iPhone runs iOS %s. Choose Automatic or Pinky for iPhone in Settings > Phones."
 	wdaMissing       = "Pinky for iPhone is not installed on this iPhone. Install it once on a Mac with Xcode, with Install Pinky for iPhone in Pinky's window or pinkyctl helper install (docs/notes/ios.md, \"Installing Pinky for iPhone\"), or choose another connection in Settings > Phones."
-	automationAsk    = "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky for iPhone can control the phone."
-	automationMissed = "The iPhone asked for its passcode to let Pinky for iPhone control it. If it still asks, enter the passcode there. Pinky tries again in a few minutes, or at once when you reconnect the iPhone or choose its connection again in Settings > Phones."
+	automationAsk    = "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky on the iPhone can control the phone."
+	automationMissed = "The iPhone asked for its passcode to let Pinky on the iPhone control it. If it still asks, enter the passcode there. Pinky tries again in a few minutes, or at once when you reconnect the iPhone or choose its connection again in Settings > Phones."
 )
 
 // coreDeviceTooOldState fills in a phone the person chose to connect

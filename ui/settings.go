@@ -413,6 +413,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 				a.connectionRows(c, d)
 				a.awayRow(c, d)
 				a.phoneWiFiRow(c, d)
+				a.phoneTasksRow(c, d)
 				mg.Row(c).Padding(sp2, sp4).Gap(sp2).AlignItems(mg.Center).Justify(mg.End).Children(func() {
 					if button(c, locales.PhoneCheckup(), btnOpt{small: true}).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
 						a.openCheckup(d)

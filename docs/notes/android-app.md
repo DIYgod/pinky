@@ -25,7 +25,7 @@ The prototype's own app, `app.pinky.standalone` (`android/standalone`), is gone.
 
 ### What is in which build
 
-`res/values/bools.xml` holds `on_phone_ui`: false in release builds, true in debug builds. It decides everything on-phone mode adds:
+`res/values/bools.xml` holds `on_phone_ui`, which decides everything on-phone mode adds. It is true in every build since 2026-11-13 ([below](#release-builds-with-tasks-on-the-phone)); until then it was false in release builds, and the table shows what that meant:
 
 | | Release (ships) | Debug |
 | --- | --- | --- |
@@ -37,7 +37,7 @@ The prototype's own app, `app.pinky.standalone` (`android/standalone`), is gone.
 | Go core (`libpinkycore.so`, arm64) and its stand-in for `armeabi-v7a` and `x86_64` | yes, since 2026-11-12, unused until `on_phone_ui` turns true ([one APK](#one-apk-for-every-phone)) | yes, built by `scripts/androidcore.sh` |
 | Size | about 24 MB with the core (142 KB before) | 24 MB |
 
-So on-phone mode stays hidden in releases until Milestone 2 makes it complete. A release build asks Android for what Pinky Companion asked for plus performing gestures, which desktop mode needs on Xiaomi's MIUI and HyperOS: they drop the taps adb sends to a background display, so Pinky on the computer taps, swipes and presses back there through the service instead ([android.md](android.md), GitHub issue #48). Android's consent dialog for the service then also says it can perform gestures, and the service's description says why.
+So on-phone mode stayed hidden in releases until 2026-11-13. A release build asks Android for what Pinky Companion asked for plus performing gestures, which desktop mode needs on Xiaomi's MIUI and HyperOS: they drop the taps adb sends to a background display, so Pinky on the computer taps, swipes and presses back there through the service instead ([android.md](android.md), GitHub issue #48). Android's consent dialog for the service then also says it can perform gestures, and the service's description says why.
 
 ### On-phone mode
 
@@ -159,12 +159,16 @@ Not checked: the new screens on the Pixel and the Mi 10 Pro, the dark theme (swi
 
 ### Milestone 2: tasks on the phone, complete
 
-- **The core in release builds.** Packaging is in (one APK, [below](#one-apk-for-every-phone)); release builds carry the core. Left: `INTERNET` in the release build, and `on_phone_ui` true there once the checklist below is done.
+- **The core in release builds.** Done (2026-11-13): release builds carry the core, `INTERNET` and `REQUEST_INSTALL_PACKAGES` are in the main manifest, and `on_phone_ui` is true there ([below](#release-builds-with-tasks-on-the-phone)).
 - **Setup screens in Pinky's words and look:** the task screen, Settings, Activity and staying alive are in (above). Left: checking the vendors' autostart pages and a long task on real phones (Milestone 3).
 - **Updates without a computer:** the app checks Pinky's release feed, `latest.json` ([updates.md](updates.md#the-feed)), and offers the new APK; desktop Pinky keeps updating it as today where there is a computer. The feed gains an asset `android-arm64` for `pinky-android.apk` with the usual `url`, `sha256` and `size`, plus `version_code`: the APK changes only when `android/companion` does, so the app offers an update only for a higher `version_code`. Desktop Pinky ignores the new key, as it reads only its own `GOOS-GOARCH`.
-- **Distribution:** releases publish `pinky-android.apk` as an asset of its own and in the feed as `android-arm64` with its `version_code` ([below](#one-apk-for-every-phone)), the feed that Updates without a computer reads; the app's own checks are on the checklist below. Left: a download link in the README, once Pinky for Android does something without a computer.
+- **Distribution:** releases publish `pinky-android.apk` as an asset of its own and in the feed as `android-arm64` with its `version_code` ([below](#one-apk-for-every-phone)), the feed that Updates without a computer reads; the app's own checks are on the checklist below. The README links `releases/latest/download/pinky-android.apk` in its section on Pinky on the phone (2026-11-13).
 - **Two modes on one phone:** both sides are in ([above](#two-modes-on-one-phone)). Left: keeping the claim while an agent's task is idle for over a minute, and a run of both sides together on a real phone. A desktop Pinky older than 2026.1112.6 does not claim, and the phone counts its event subscription as a claim it cannot stop; that includes the subscription of a checkup or an install, and a desktop Pinky built before 2026-11-08, which may keep one open all along, can keep a task on the phone waiting as long.
 - **Tests:** the prototype's `fakemodel` stands in for the model. A debug build takes a real model's key from `corectl model` ([below](#building-and-testing)), so a run with a real model no longer needs the owner to type it.
+
+#### Release builds with tasks on the phone
+
+Since 2026-11-13 (`claude/platform-phone-apps`) every build has on-phone mode: `on_phone_ui` is true in `src/main`, and the debug build no longer overrides it or adds permissions. Every build has one launcher entry, **Pinky**, which opens the task screen (`TaskActivity`); the service's settings link in Android's Accessibility settings opens it too, and the debug page (`MainActivity`) is reached with `adb shell am start -n <package>/app.pinky.companion.MainActivity`. The debug build is named Pinky (dev). The task screen follows [phone-apps-ux.md](phone-apps-ux.md), the design both phone apps share: setup as numbered steps, a tinted card only for the running task or the computer, Activity and Settings as icons in the header. The Working pill floats over other apps only: while Pinky's own screen is in front it hides (`Overlays.windowsChanged`, from the service's window events), as that screen shows the same with its own Stop. Desktop Pinky calls the app Pinky on the phone and says once, on the phone's page, that it can do tasks by itself ([phone-apps-ux.md](phone-apps-ux.md#desktop-pinky)).
 
 #### Before release builds turn on `on_phone_ui`
 

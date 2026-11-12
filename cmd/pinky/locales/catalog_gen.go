@@ -1623,38 +1623,38 @@ func (msgs Messages) AddPhoneIPhoneStepDriverWaiting() string {
 // in the language the app shows.
 //
 // Add phone › iPhone, the phone's page and the checkup: the title of the
-// step where the iPhone asks for its passcode before Pinky for iPhone may
-// control it, as iOS does now and then.
+// step where the iPhone asks for its passcode before Pinky on the iPhone
+// may control it, as iOS does now and then.
 func AddPhoneIPhoneStepPasscode() string { return In(i18n.Locale()).AddPhoneIPhoneStepPasscode() }
 
 // AddPhoneIPhoneStepPasscode says "Enter the passcode"
 // in the language of msgs.
 //
 // Add phone › iPhone, the phone's page and the checkup: the title of the
-// step where the iPhone asks for its passcode before Pinky for iPhone may
-// control it, as iOS does now and then.
+// step where the iPhone asks for its passcode before Pinky on the iPhone
+// may control it, as iOS does now and then.
 func (msgs Messages) AddPhoneIPhoneStepPasscode() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPasscode", nil)
 }
 
-// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky for iPhone can control the phone. If the …"
+// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky on the iPhone can control the phone. If t…"
 // in the language the app shows.
 //
 // Add phone › iPhone, the phone's page and the checkup: what to do while
-// the iPhone asks for its passcode before Pinky for iPhone may control it.
-// WebDriverAgent is a name. Pinky starts Pinky for iPhone again later when
-// nobody entered the passcode.
+// the iPhone asks for its passcode before Pinky on the iPhone may control
+// it. WebDriverAgent is a name. Pinky starts Pinky on the iPhone again
+// later when nobody entered the passcode.
 func AddPhoneIPhoneStepPasscodeDetail() string {
 	return In(i18n.Locale()).AddPhoneIPhoneStepPasscodeDetail()
 }
 
-// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky for iPhone can control the phone. If the …"
+// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky on the iPhone can control the phone. If t…"
 // in the language of msgs.
 //
 // Add phone › iPhone, the phone's page and the checkup: what to do while
-// the iPhone asks for its passcode before Pinky for iPhone may control it.
-// WebDriverAgent is a name. Pinky starts Pinky for iPhone again later when
-// nobody entered the passcode.
+// the iPhone asks for its passcode before Pinky on the iPhone may control
+// it. WebDriverAgent is a name. Pinky starts Pinky on the iPhone again
+// later when nobody entered the passcode.
 func (msgs Messages) AddPhoneIPhoneStepPasscodeDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPasscodeDetail", nil)
 }
@@ -2183,23 +2183,25 @@ func (msgs Messages) AddPhoneOlderDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderDetail", nil)
 }
 
-// AddPhoneOlderHelper says "Use Pinky for iPhone"
+// AddPhoneOlderHelper says "Use Pinky on the iPhone"
 // in the language the app shows.
 //
 // Add phone › older iPhone: the first way to connect, by installing
 // Pinky's iPhone app, which hosts WebDriverAgent, on the iPhone. Also its
-// accessibility label. Pinky for iPhone is the name of Pinky's iPhone app
-// (as Pinky for Android is the Android app's); older installs are the app
+// accessibility label. Pinky on the iPhone is what the computer calls
+// Pinky's iPhone app, named just Pinky on the iPhone itself (Pinky on the
+// phone names the Android app the same way); older installs are the app
 // Pinky Helper, which works the same.
 func AddPhoneOlderHelper() string { return In(i18n.Locale()).AddPhoneOlderHelper() }
 
-// AddPhoneOlderHelper says "Use Pinky for iPhone"
+// AddPhoneOlderHelper says "Use Pinky on the iPhone"
 // in the language of msgs.
 //
 // Add phone › older iPhone: the first way to connect, by installing
 // Pinky's iPhone app, which hosts WebDriverAgent, on the iPhone. Also its
-// accessibility label. Pinky for iPhone is the name of Pinky's iPhone app
-// (as Pinky for Android is the Android app's); older installs are the app
+// accessibility label. Pinky on the iPhone is what the computer calls
+// Pinky's iPhone app, named just Pinky on the iPhone itself (Pinky on the
+// phone names the Android app the same way); older installs are the app
 // Pinky Helper, which works the same.
 func (msgs Messages) AddPhoneOlderHelper() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderHelper", nil)
@@ -2208,22 +2210,22 @@ func (msgs Messages) AddPhoneOlderHelper() string {
 // AddPhoneOlderHelperDetail says "Pinky's app for the iPhone, signed with your Apple ID, through which Pinky controls the phone (WebDriverAgent). With …"
 // in the language the app shows.
 //
-// Add phone › older iPhone: under "Install Pinky for iPhone", what Pinky
-// for iPhone is, that Pinky Helper installed before keeps working, and how
-// long its signature lasts. WebDriverAgent is a name. Pinky Helper is the
-// name an older install has on the iPhone's home screen in the iPhone's
-// language: Pinky Helper, 「Pinky 助手」 in Chinese, 「Pinky
+// Add phone › older iPhone: under "Install Pinky on the iPhone", what
+// Pinky on the iPhone is, that Pinky Helper installed before keeps working,
+// and how long its signature lasts. WebDriverAgent is a name. Pinky Helper
+// is the name an older install has on the iPhone's home screen in the
+// iPhone's language: Pinky Helper, 「Pinky 助手」 in Chinese, 「Pinky
 // ヘルパー」 in Japanese.
 func AddPhoneOlderHelperDetail() string { return In(i18n.Locale()).AddPhoneOlderHelperDetail() }
 
 // AddPhoneOlderHelperDetail says "Pinky's app for the iPhone, signed with your Apple ID, through which Pinky controls the phone (WebDriverAgent). With …"
 // in the language of msgs.
 //
-// Add phone › older iPhone: under "Install Pinky for iPhone", what Pinky
-// for iPhone is, that Pinky Helper installed before keeps working, and how
-// long its signature lasts. WebDriverAgent is a name. Pinky Helper is the
-// name an older install has on the iPhone's home screen in the iPhone's
-// language: Pinky Helper, 「Pinky 助手」 in Chinese, 「Pinky
+// Add phone › older iPhone: under "Install Pinky on the iPhone", what
+// Pinky on the iPhone is, that Pinky Helper installed before keeps working,
+// and how long its signature lasts. WebDriverAgent is a name. Pinky Helper
+// is the name an older install has on the iPhone's home screen in the
+// iPhone's language: Pinky Helper, 「Pinky 助手」 in Chinese, 「Pinky
 // ヘルパー」 in Japanese.
 func (msgs Messages) AddPhoneOlderHelperDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderHelperDetail", nil)
@@ -2232,19 +2234,21 @@ func (msgs Messages) AddPhoneOlderHelperDetail() string {
 // AddPhoneOlderHelperHow says "Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal, with the iPhone connected and unlocked.…"
 // in the language the app shows.
 //
-// Add phone › older iPhone, Install Pinky for iPhone chosen, where Pinky
-// cannot install it from its window (no Mac, or no Xcode): how to install
-// it. pinkyctl helper install is a command typed in Terminal (macOS's app,
-// named as Apple names it in the language) and stays as it is.
+// Add phone › older iPhone, Install Pinky on the iPhone chosen, where
+// Pinky cannot install it from its window (no Mac, or no Xcode): how to
+// install it. pinkyctl helper install is a command typed in Terminal
+// (macOS's app, named as Apple names it in the language) and stays as it
+// is.
 func AddPhoneOlderHelperHow() string { return In(i18n.Locale()).AddPhoneOlderHelperHow() }
 
 // AddPhoneOlderHelperHow says "Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal, with the iPhone connected and unlocked.…"
 // in the language of msgs.
 //
-// Add phone › older iPhone, Install Pinky for iPhone chosen, where Pinky
-// cannot install it from its window (no Mac, or no Xcode): how to install
-// it. pinkyctl helper install is a command typed in Terminal (macOS's app,
-// named as Apple names it in the language) and stays as it is.
+// Add phone › older iPhone, Install Pinky on the iPhone chosen, where
+// Pinky cannot install it from its window (no Mac, or no Xcode): how to
+// install it. pinkyctl helper install is a command typed in Terminal
+// (macOS's app, named as Apple names it in the language) and stays as it
+// is.
 func (msgs Messages) AddPhoneOlderHelperHow() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderHelperHow", nil)
 }
@@ -2265,7 +2269,7 @@ func (msgs Messages) AddPhoneOlderIPhone() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderIPhone", nil)
 }
 
-// AddPhoneOlderMirrorNotYet says "Pinky can't connect through iPhone Mirroring yet. Install Pinky for iPhone instead, or update to iOS 27."
+// AddPhoneOlderMirrorNotYet says "Pinky can't connect through iPhone Mirroring yet. Install Pinky on the iPhone instead, or update to iOS 27."
 // in the language the app shows.
 //
 // Add phone › older iPhone, Use iPhone Mirroring chosen: Pinky has no way
@@ -2273,7 +2277,7 @@ func (msgs Messages) AddPhoneOlderIPhone() string {
 // feature in the language.
 func AddPhoneOlderMirrorNotYet() string { return In(i18n.Locale()).AddPhoneOlderMirrorNotYet() }
 
-// AddPhoneOlderMirrorNotYet says "Pinky can't connect through iPhone Mirroring yet. Install Pinky for iPhone instead, or update to iOS 27."
+// AddPhoneOlderMirrorNotYet says "Pinky can't connect through iPhone Mirroring yet. Install Pinky on the iPhone instead, or update to iOS 27."
 // in the language of msgs.
 //
 // Add phone › older iPhone, Use iPhone Mirroring chosen: Pinky has no way
@@ -4354,7 +4358,7 @@ func (msgs Messages) CheckBackgroundUnlocked() string {
 // CheckCompanionManual says "Installed, but this phone doesn't let Pinky turn on its accessibility service over USB debugging. Turn on Pinky in th…"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android, on a phone that took Pinky's change to
+// The checkup, Pinky on the phone, on a phone that took Pinky's change to
 // its accessibility settings without an error and kept nothing of it
 // (vivo's OriginOS 6 does): only the person can turn the app's service on,
 // in the phone's settings. Pinky then leaves it on after tasks, until the
@@ -4367,7 +4371,7 @@ func CheckCompanionManual() string { return In(i18n.Locale()).CheckCompanionManu
 // CheckCompanionManual says "Installed, but this phone doesn't let Pinky turn on its accessibility service over USB debugging. Turn on Pinky in th…"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android, on a phone that took Pinky's change to
+// The checkup, Pinky on the phone, on a phone that took Pinky's change to
 // its accessibility settings without an error and kept nothing of it
 // (vivo's OriginOS 6 does): only the person can turn the app's service on,
 // in the phone's settings. Pinky then leaves it on after tasks, until the
@@ -4382,7 +4386,7 @@ func (msgs Messages) CheckCompanionManual() string {
 // CheckCompanionManualOn says "Installed and on. This phone doesn't let Pinky turn its accessibility service on or off over USB debugging, so the se…"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android: passed, on a phone that does not let
+// The checkup, Pinky on the phone: passed, on a phone that does not let
 // Pinky turn the app's accessibility service on or off (vivo's OriginOS 6),
 // where the person turned it on by hand. Pinky leaves it on after tasks,
 // until the person turns it off on the phone, and the phone's apps can see
@@ -4393,7 +4397,7 @@ func CheckCompanionManualOn() string { return In(i18n.Locale()).CheckCompanionMa
 // CheckCompanionManualOn says "Installed and on. This phone doesn't let Pinky turn its accessibility service on or off over USB debugging, so the se…"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android: passed, on a phone that does not let
+// The checkup, Pinky on the phone: passed, on a phone that does not let
 // Pinky turn the app's accessibility service on or off (vivo's OriginOS 6),
 // where the person turned it on by hand. Pinky leaves it on after tasks,
 // until the person turns it off on the phone, and the phone's apps can see
@@ -4406,7 +4410,7 @@ func (msgs Messages) CheckCompanionManualOn() string {
 // CheckCompanionManualOther says "In the phone's Settings, open Accessibility (search Settings for it if you can't find it), choose Pinky among the dow…"
 // in the language the app shows.
 //
-// The checkup and the Pinky for Android card, on a phone that does not let
+// The checkup and the Pinky on the phone card, on a phone that does not let
 // Pinky turn the app's service on: where to turn it on by hand.
 // Accessibility is Android's own name for the settings page: use Android's
 // own name for it in each language. Pinky is the app's name on the phone.
@@ -4415,7 +4419,7 @@ func CheckCompanionManualOther() string { return In(i18n.Locale()).CheckCompanio
 // CheckCompanionManualOther says "In the phone's Settings, open Accessibility (search Settings for it if you can't find it), choose Pinky among the dow…"
 // in the language of msgs.
 //
-// The checkup and the Pinky for Android card, on a phone that does not let
+// The checkup and the Pinky on the phone card, on a phone that does not let
 // Pinky turn the app's service on: where to turn it on by hand.
 // Accessibility is Android's own name for the settings page: use Android's
 // own name for it in each language. Pinky is the app's name on the phone.
@@ -4426,8 +4430,8 @@ func (msgs Messages) CheckCompanionManualOther() string {
 // CheckCompanionManualVivo says "On vivo phones, Accessibility is usually in Settings, in the section for shortcuts and accessibility; search Settings…"
 // in the language the app shows.
 //
-// The checkup and the Pinky for Android card, on a vivo phone that does not
-// let Pinky turn the app's service on (OriginOS 6 ignores the change):
+// The checkup and the Pinky on the phone card, on a vivo phone that does
+// not let Pinky turn the app's service on (OriginOS 6 ignores the change):
 // where to turn it on by hand. The menu names of OriginOS 6 could not be
 // confirmed, so the section is described rather than quoted; Accessibility
 // is Android's own name for the settings page. Pinky is the app's name on
@@ -4437,8 +4441,8 @@ func CheckCompanionManualVivo() string { return In(i18n.Locale()).CheckCompanion
 // CheckCompanionManualVivo says "On vivo phones, Accessibility is usually in Settings, in the section for shortcuts and accessibility; search Settings…"
 // in the language of msgs.
 //
-// The checkup and the Pinky for Android card, on a vivo phone that does not
-// let Pinky turn the app's service on (OriginOS 6 ignores the change):
+// The checkup and the Pinky on the phone card, on a vivo phone that does
+// not let Pinky turn the app's service on (OriginOS 6 ignores the change):
 // where to turn it on by hand. The menu names of OriginOS 6 could not be
 // confirmed, so the section is described rather than quoted; Accessibility
 // is Android's own name for the settings page. Pinky is the app's name on
@@ -4450,13 +4454,15 @@ func (msgs Messages) CheckCompanionManualVivo() string {
 // CheckCompanionMissing says "Not installed. With it, Pinky reads the screen in about 70 ms instead of 2 s, and types any language without the clip…"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android: not installed; an Install button follows.
+// The checkup, Pinky on the phone: not installed; an Install button
+// follows.
 func CheckCompanionMissing() string { return In(i18n.Locale()).CheckCompanionMissing() }
 
 // CheckCompanionMissing says "Not installed. With it, Pinky reads the screen in about 70 ms instead of 2 s, and types any language without the clip…"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android: not installed; an Install button follows.
+// The checkup, Pinky on the phone: not installed; an Install button
+// follows.
 func (msgs Messages) CheckCompanionMissing() string {
 	return Catalog.Format(msgs.locale, "checkCompanionMissing", nil)
 }
@@ -4464,13 +4470,13 @@ func (msgs Messages) CheckCompanionMissing() string {
 // CheckCompanionNone says "Pinky couldn't tell whether it is installed."
 // in the language the app shows.
 //
-// The checkup, Pinky for Android: the check failed.
+// The checkup, Pinky on the phone: the check failed.
 func CheckCompanionNone() string { return In(i18n.Locale()).CheckCompanionNone() }
 
 // CheckCompanionNone says "Pinky couldn't tell whether it is installed."
 // in the language of msgs.
 //
-// The checkup, Pinky for Android: the check failed.
+// The checkup, Pinky on the phone: the check failed.
 func (msgs Messages) CheckCompanionNone() string {
 	return Catalog.Format(msgs.locale, "checkCompanionNone", nil)
 }
@@ -4478,15 +4484,15 @@ func (msgs Messages) CheckCompanionNone() string {
 // CheckCompanionOff says "Installed, but Pinky couldn't turn on its accessibility service."
 // in the language the app shows.
 //
-// The checkup, Pinky for Android: its service did not come on the last time
-// Pinky tried; a Turn on button follows.
+// The checkup, Pinky on the phone: its service did not come on the last
+// time Pinky tried; a Turn on button follows.
 func CheckCompanionOff() string { return In(i18n.Locale()).CheckCompanionOff() }
 
 // CheckCompanionOff says "Installed, but Pinky couldn't turn on its accessibility service."
 // in the language of msgs.
 //
-// The checkup, Pinky for Android: its service did not come on the last time
-// Pinky tried; a Turn on button follows.
+// The checkup, Pinky on the phone: its service did not come on the last
+// time Pinky tried; a Turn on button follows.
 func (msgs Messages) CheckCompanionOff() string {
 	return Catalog.Format(msgs.locale, "checkCompanionOff", nil)
 }
@@ -4494,7 +4500,7 @@ func (msgs Messages) CheckCompanionOff() string {
 // CheckCompanionOffHuawei says "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky, and allow it to run…"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android, on a HUAWEI or HONOR phone whose app's
+// The checkup, Pinky on the phone, on a HUAWEI or HONOR phone whose app's
 // service is off. App launch and Manage automatically are Huawei's names:
 // use those of its Simplified Chinese settings. Pinky is the app's name on
 // the phone.
@@ -4503,7 +4509,7 @@ func CheckCompanionOffHuawei() string { return In(i18n.Locale()).CheckCompanionO
 // CheckCompanionOffHuawei says "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky, and allow it to run…"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android, on a HUAWEI or HONOR phone whose app's
+// The checkup, Pinky on the phone, on a HUAWEI or HONOR phone whose app's
 // service is off. App launch and Manage automatically are Huawei's names:
 // use those of its Simplified Chinese settings. Pinky is the app's name on
 // the phone.
@@ -4514,15 +4520,15 @@ func (msgs Messages) CheckCompanionOffHuawei() string {
 // CheckCompanionOffOppo says "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, …"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android, on an OPPO, OnePlus or realme phone whose
-// app's service is off. Use ColorOS's Simplified Chinese names.
+// The checkup, Pinky on the phone, on an OPPO, OnePlus or realme phone
+// whose app's service is off. Use ColorOS's Simplified Chinese names.
 func CheckCompanionOffOppo() string { return In(i18n.Locale()).CheckCompanionOffOppo() }
 
 // CheckCompanionOffOppo says "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, …"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android, on an OPPO, OnePlus or realme phone whose
-// app's service is off. Use ColorOS's Simplified Chinese names.
+// The checkup, Pinky on the phone, on an OPPO, OnePlus or realme phone
+// whose app's service is off. Use ColorOS's Simplified Chinese names.
 func (msgs Messages) CheckCompanionOffOppo() string {
 	return Catalog.Format(msgs.locale, "checkCompanionOffOppo", nil)
 }
@@ -4530,7 +4536,7 @@ func (msgs Messages) CheckCompanionOffOppo() string {
 // CheckCompanionOffOther says "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky, tap ⋮ › Allow restricted sett…"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android, on other phones whose app's service is
+// The checkup, Pinky on the phone, on other phones whose app's service is
 // off. Allow restricted settings is Android's own name: use that of
 // Android's Simplified Chinese settings. Pinky is the app's name on the
 // phone.
@@ -4539,7 +4545,7 @@ func CheckCompanionOffOther() string { return In(i18n.Locale()).CheckCompanionOf
 // CheckCompanionOffOther says "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky, tap ⋮ › Allow restricted sett…"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android, on other phones whose app's service is
+// The checkup, Pinky on the phone, on other phones whose app's service is
 // off. Allow restricted settings is Android's own name: use that of
 // Android's Simplified Chinese settings. Pinky is the app's name on the
 // phone.
@@ -4550,7 +4556,7 @@ func (msgs Messages) CheckCompanionOffOther() string {
 // CheckCompanionOffVivo says "If it keeps turning off: in Settings › Battery › Background power consumption management, choose Pinky and don't …"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android, on a vivo phone whose app's service is
+// The checkup, Pinky on the phone, on a vivo phone whose app's service is
 // off: vivo turns off the service of apps that are not from its store. The
 // Chinese menu names could not be confirmed, so they are described rather
 // than quoted. Pinky is the app's name on the phone.
@@ -4559,7 +4565,7 @@ func CheckCompanionOffVivo() string { return In(i18n.Locale()).CheckCompanionOff
 // CheckCompanionOffVivo says "If it keeps turning off: in Settings › Battery › Background power consumption management, choose Pinky and don't …"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android, on a vivo phone whose app's service is
+// The checkup, Pinky on the phone, on a vivo phone whose app's service is
 // off: vivo turns off the service of apps that are not from its store. The
 // Chinese menu names could not be confirmed, so they are described rather
 // than quoted. Pinky is the app's name on the phone.
@@ -4570,7 +4576,7 @@ func (msgs Messages) CheckCompanionOffVivo() string {
 // CheckCompanionOffXiaomi says "If it keeps turning off: in the app's settings, turn on Autostart and set Battery saver to No restrictions."
 // in the language the app shows.
 //
-// The checkup, Pinky for Android, on a Xiaomi phone whose app's service is
+// The checkup, Pinky on the phone, on a Xiaomi phone whose app's service is
 // off: Xiaomi's cleaners stop apps, which turns their service off.
 // Autostart and Battery saver are Xiaomi's names: use those of its
 // Simplified Chinese settings.
@@ -4579,7 +4585,7 @@ func CheckCompanionOffXiaomi() string { return In(i18n.Locale()).CheckCompanionO
 // CheckCompanionOffXiaomi says "If it keeps turning off: in the app's settings, turn on Autostart and set Battery saver to No restrictions."
 // in the language of msgs.
 //
-// The checkup, Pinky for Android, on a Xiaomi phone whose app's service is
+// The checkup, Pinky on the phone, on a Xiaomi phone whose app's service is
 // off: Xiaomi's cleaners stop apps, which turns their service off.
 // Autostart and Battery saver are Xiaomi's names: use those of its
 // Simplified Chinese settings.
@@ -4590,13 +4596,13 @@ func (msgs Messages) CheckCompanionOffXiaomi() string {
 // CheckCompanionOutdated says "An older version is installed; Pinky carries a newer one."
 // in the language the app shows.
 //
-// The checkup, Pinky for Android: outdated; an Update button follows.
+// The checkup, Pinky on the phone: outdated; an Update button follows.
 func CheckCompanionOutdated() string { return In(i18n.Locale()).CheckCompanionOutdated() }
 
 // CheckCompanionOutdated says "An older version is installed; Pinky carries a newer one."
 // in the language of msgs.
 //
-// The checkup, Pinky for Android: outdated; an Update button follows.
+// The checkup, Pinky on the phone: outdated; an Update button follows.
 func (msgs Messages) CheckCompanionOutdated() string {
 	return Catalog.Format(msgs.locale, "checkCompanionOutdated", nil)
 }
@@ -4604,7 +4610,7 @@ func (msgs Messages) CheckCompanionOutdated() string {
 // CheckCompanionPass says "Installed. Pinky turns it on only while an agent works on the phone, then reads the screen quickly and types any lang…"
 // in the language the app shows.
 //
-// The checkup, Pinky for Android: passed. Pinky turns the app's
+// The checkup, Pinky on the phone: passed. Pinky turns the app's
 // accessibility service on only while an agent works on the phone, and off
 // again afterwards.
 func CheckCompanionPass() string { return In(i18n.Locale()).CheckCompanionPass() }
@@ -4612,7 +4618,7 @@ func CheckCompanionPass() string { return In(i18n.Locale()).CheckCompanionPass()
 // CheckCompanionPass says "Installed. Pinky turns it on only while an agent works on the phone, then reads the screen quickly and types any lang…"
 // in the language of msgs.
 //
-// The checkup, Pinky for Android: passed. Pinky turns the app's
+// The checkup, Pinky on the phone: passed. Pinky turns the app's
 // accessibility service on only while an agent works on the phone, and off
 // again afterwards.
 func (msgs Messages) CheckCompanionPass() string {
@@ -4622,7 +4628,7 @@ func (msgs Messages) CheckCompanionPass() string {
 // CheckCompanionPublicKey says "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key."
 // in the language the app shows.
 //
-// The checkup, Pinky for Android: the installed app is signed with the key
+// The checkup, Pinky on the phone: the installed app is signed with the key
 // of the builds until 8 November 2026, which was public, so anyone could
 // make a fake update of it; an Update button follows.
 func CheckCompanionPublicKey() string { return In(i18n.Locale()).CheckCompanionPublicKey() }
@@ -4630,27 +4636,27 @@ func CheckCompanionPublicKey() string { return In(i18n.Locale()).CheckCompanionP
 // CheckCompanionPublicKey says "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key."
 // in the language of msgs.
 //
-// The checkup, Pinky for Android: the installed app is signed with the key
+// The checkup, Pinky on the phone: the installed app is signed with the key
 // of the builds until 8 November 2026, which was public, so anyone could
 // make a fake update of it; an Update button follows.
 func (msgs Messages) CheckCompanionPublicKey() string {
 	return Catalog.Format(msgs.locale, "checkCompanionPublicKey", nil)
 }
 
-// CheckCompanionTitle says "Pinky for Android"
+// CheckCompanionTitle says "Pinky on the phone"
 // in the language the app shows.
 //
-// The checkup: the item for Pinky's app on Android phones. Pinky for
-// Android is the app's name on the computer (on the phone it is just
-// Pinky): translate it the same way everywhere.
+// The checkup: the item for Pinky's app on Android phones. Pinky on the
+// phone is what the computer calls the app (on the phone it is just Pinky):
+// translate it the same way everywhere, as the phone's word and Pinky.
 func CheckCompanionTitle() string { return In(i18n.Locale()).CheckCompanionTitle() }
 
-// CheckCompanionTitle says "Pinky for Android"
+// CheckCompanionTitle says "Pinky on the phone"
 // in the language of msgs.
 //
-// The checkup: the item for Pinky's app on Android phones. Pinky for
-// Android is the app's name on the computer (on the phone it is just
-// Pinky): translate it the same way everywhere.
+// The checkup: the item for Pinky's app on Android phones. Pinky on the
+// phone is what the computer calls the app (on the phone it is just Pinky):
+// translate it the same way everywhere, as the phone's word and Pinky.
 func (msgs Messages) CheckCompanionTitle() string {
 	return Catalog.Format(msgs.locale, "checkCompanionTitle", nil)
 }
@@ -4979,48 +4985,50 @@ func (msgs Messages) CheckDiskImageTitle() string {
 	return Catalog.Format(msgs.locale, "checkDiskImageTitle", nil)
 }
 
-// CheckHelperExpired says "Pinky for iPhone on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again …"
+// CheckHelperExpired says "Pinky on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again with pinkyc…"
 // in the language the app shows.
 //
-// Checkup and the Phone screen, Pinky for iPhone (WebDriverAgent): the
+// Checkup and the Phone screen, Pinky on the iPhone (WebDriverAgent): the
 // signature (provisioning profile) made with the person's Apple ID ran out,
-// so the iPhone no longer starts Pinky for iPhone; pinkyctl helper install
-// is a command that stays as it is; the button below opens how to install
-// it. phone is the iPhone's name; when is when it ran out, with the time.
+// so the iPhone no longer starts Pinky on the iPhone; pinkyctl helper
+// install is a command that stays as it is; the button below opens how to
+// install it. phone is the iPhone's name; when is when it ran out, with the
+// time.
 func CheckHelperExpired(phone string, when time.Time) string {
 	return In(i18n.Locale()).CheckHelperExpired(phone, when)
 }
 
-// CheckHelperExpired says "Pinky for iPhone on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again …"
+// CheckHelperExpired says "Pinky on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again with pinkyc…"
 // in the language of msgs.
 //
-// Checkup and the Phone screen, Pinky for iPhone (WebDriverAgent): the
+// Checkup and the Phone screen, Pinky on the iPhone (WebDriverAgent): the
 // signature (provisioning profile) made with the person's Apple ID ran out,
-// so the iPhone no longer starts Pinky for iPhone; pinkyctl helper install
-// is a command that stays as it is; the button below opens how to install
-// it. phone is the iPhone's name; when is when it ran out, with the time.
+// so the iPhone no longer starts Pinky on the iPhone; pinkyctl helper
+// install is a command that stays as it is; the button below opens how to
+// install it. phone is the iPhone's name; when is when it ran out, with the
+// time.
 func (msgs Messages) CheckHelperExpired(phone string, when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperExpired", map[string]any{"phone": phone, "when": when})
 }
 
-// CheckHelperExpiredHere says "Pinky for iPhone on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again;…"
+// CheckHelperExpiredHere says "Pinky on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again; signed wit…"
 // in the language the app shows.
 //
-// Checkup and the Phone screen, on a Mac with Xcode, Pinky for iPhone
+// Checkup and the Phone screen, on a Mac with Xcode, Pinky on the iPhone
 // (WebDriverAgent): the signature (provisioning profile) made with the
-// person's Apple ID ran out, so the iPhone no longer starts Pinky for
+// person's Apple ID ran out, so the iPhone no longer starts Pinky on the
 // iPhone; the button below, Install again, installs it. phone is the
 // iPhone's name; when is when it ran out, with the time.
 func CheckHelperExpiredHere(phone string, when time.Time) string {
 	return In(i18n.Locale()).CheckHelperExpiredHere(phone, when)
 }
 
-// CheckHelperExpiredHere says "Pinky for iPhone on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again;…"
+// CheckHelperExpiredHere says "Pinky on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again; signed wit…"
 // in the language of msgs.
 //
-// Checkup and the Phone screen, on a Mac with Xcode, Pinky for iPhone
+// Checkup and the Phone screen, on a Mac with Xcode, Pinky on the iPhone
 // (WebDriverAgent): the signature (provisioning profile) made with the
-// person's Apple ID ran out, so the iPhone no longer starts Pinky for
+// person's Apple ID ran out, so the iPhone no longer starts Pinky on the
 // iPhone; the button below, Install again, installs it. phone is the
 // iPhone's name; when is when it ran out, with the time.
 func (msgs Messages) CheckHelperExpiredHere(phone string, when time.Time) string {
@@ -5031,14 +5039,14 @@ func (msgs Messages) CheckHelperExpiredHere(phone string, when time.Time) string
 // in the language the app shows.
 //
 // Checkup, an iPhone's item: the button that opens the instructions for
-// installing Pinky for iPhone.
+// installing Pinky on the iPhone.
 func CheckHelperHow() string { return In(i18n.Locale()).CheckHelperHow() }
 
 // CheckHelperHow says "How to install it"
 // in the language of msgs.
 //
 // Checkup, an iPhone's item: the button that opens the instructions for
-// installing Pinky for iPhone.
+// installing Pinky on the iPhone.
 func (msgs Messages) CheckHelperHow() string {
 	return Catalog.Format(msgs.locale, "checkHelperHow", nil)
 }
@@ -5046,14 +5054,14 @@ func (msgs Messages) CheckHelperHow() string {
 // CheckHelperMissing says "WebDriverAgent isn't installed or doesn't answer. Below iOS 27 an iPhone takes taps and typing only through it; witho…"
 // in the language the app shows.
 //
-// Checkup, an iPhone's item: Pinky for iPhone is missing or does not
+// Checkup, an iPhone's item: Pinky on the iPhone is missing or does not
 // answer.
 func CheckHelperMissing() string { return In(i18n.Locale()).CheckHelperMissing() }
 
 // CheckHelperMissing says "WebDriverAgent isn't installed or doesn't answer. Below iOS 27 an iPhone takes taps and typing only through it; witho…"
 // in the language of msgs.
 //
-// Checkup, an iPhone's item: Pinky for iPhone is missing or does not
+// Checkup, an iPhone's item: Pinky on the iPhone is missing or does not
 // answer.
 func (msgs Messages) CheckHelperMissing() string {
 	return Catalog.Format(msgs.locale, "checkHelperMissing", nil)
@@ -5062,23 +5070,23 @@ func (msgs Messages) CheckHelperMissing() string {
 // CheckHelperPass says "WebDriverAgent is installed and answers."
 // in the language the app shows.
 //
-// Checkup, an iPhone's item: Pinky for iPhone answers.
+// Checkup, an iPhone's item: Pinky on the iPhone answers.
 func CheckHelperPass() string { return In(i18n.Locale()).CheckHelperPass() }
 
 // CheckHelperPass says "WebDriverAgent is installed and answers."
 // in the language of msgs.
 //
-// Checkup, an iPhone's item: Pinky for iPhone answers.
+// Checkup, an iPhone's item: Pinky on the iPhone answers.
 func (msgs Messages) CheckHelperPass() string {
 	return Catalog.Format(msgs.locale, "checkHelperPass", nil)
 }
 
-// CheckHelperSoon says "Pinky for iPhone on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper inst…"
+// CheckHelperSoon says "Pinky on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper install on a Ma…"
 // in the language the app shows.
 //
-// Checkup and a reminder on the Phone screen, Pinky for iPhone
+// Checkup and a reminder on the Phone screen, Pinky on the iPhone
 // (WebDriverAgent): its signature (provisioning profile) runs out within
-// two days, after which the iPhone no longer starts Pinky for iPhone;
+// two days, after which the iPhone no longer starts Pinky on the iPhone;
 // pinkyctl helper install is a command that stays as it is; the button
 // beside it opens how to install it. phone is the iPhone's name; when is
 // when it runs out, with the time.
@@ -5086,12 +5094,12 @@ func CheckHelperSoon(phone string, when time.Time) string {
 	return In(i18n.Locale()).CheckHelperSoon(phone, when)
 }
 
-// CheckHelperSoon says "Pinky for iPhone on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper inst…"
+// CheckHelperSoon says "Pinky on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper install on a Ma…"
 // in the language of msgs.
 //
-// Checkup and a reminder on the Phone screen, Pinky for iPhone
+// Checkup and a reminder on the Phone screen, Pinky on the iPhone
 // (WebDriverAgent): its signature (provisioning profile) runs out within
-// two days, after which the iPhone no longer starts Pinky for iPhone;
+// two days, after which the iPhone no longer starts Pinky on the iPhone;
 // pinkyctl helper install is a command that stays as it is; the button
 // beside it opens how to install it. phone is the iPhone's name; when is
 // when it runs out, with the time.
@@ -5099,47 +5107,49 @@ func (msgs Messages) CheckHelperSoon(phone string, when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperSoon", map[string]any{"phone": phone, "when": when})
 }
 
-// CheckHelperSoonHere says "Pinky for iPhone on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then."
+// CheckHelperSoonHere says "Pinky on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then."
 // in the language the app shows.
 //
-// Checkup and a reminder on the Phone screen, on a Mac with Xcode, Pinky
-// for iPhone (WebDriverAgent): its signature (provisioning profile) runs
-// out within two days, after which the iPhone no longer starts Pinky for
+// Checkup and a reminder on the Phone screen, on a Mac with Xcode, Pinky on
+// the iPhone (WebDriverAgent): its signature (provisioning profile) runs
+// out within two days, after which the iPhone no longer starts Pinky on the
 // iPhone; the button beside it, Install again, installs it. phone is the
 // iPhone's name; when is when it runs out, with the time.
 func CheckHelperSoonHere(phone string, when time.Time) string {
 	return In(i18n.Locale()).CheckHelperSoonHere(phone, when)
 }
 
-// CheckHelperSoonHere says "Pinky for iPhone on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then."
+// CheckHelperSoonHere says "Pinky on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then."
 // in the language of msgs.
 //
-// Checkup and a reminder on the Phone screen, on a Mac with Xcode, Pinky
-// for iPhone (WebDriverAgent): its signature (provisioning profile) runs
-// out within two days, after which the iPhone no longer starts Pinky for
+// Checkup and a reminder on the Phone screen, on a Mac with Xcode, Pinky on
+// the iPhone (WebDriverAgent): its signature (provisioning profile) runs
+// out within two days, after which the iPhone no longer starts Pinky on the
 // iPhone; the button beside it, Install again, installs it. phone is the
 // iPhone's name; when is when it runs out, with the time.
 func (msgs Messages) CheckHelperSoonHere(phone string, when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperSoonHere", map[string]any{"phone": phone, "when": when})
 }
 
-// CheckHelperTitle says "Pinky for iPhone"
+// CheckHelperTitle says "Pinky on the iPhone"
 // in the language the app shows.
 //
-// Checkup, an iPhone's item: the title of the item about Pinky for iPhone,
-// the app Pinky drives iPhones below iOS 27 through. Pinky for iPhone is
-// the name of Pinky's iPhone app (as Pinky for Android is the Android
-// app's), which hosts WebDriverAgent; older installs are the app Pinky
+// Checkup, an iPhone's item: the title of the item about Pinky on the
+// iPhone, the app Pinky drives iPhones below iOS 27 through. Pinky on the
+// iPhone is what the computer calls Pinky's iPhone app, named just Pinky on
+// the iPhone itself (Pinky on the phone names the Android app the same
+// way), which hosts WebDriverAgent; older installs are the app Pinky
 // Helper, which works the same.
 func CheckHelperTitle() string { return In(i18n.Locale()).CheckHelperTitle() }
 
-// CheckHelperTitle says "Pinky for iPhone"
+// CheckHelperTitle says "Pinky on the iPhone"
 // in the language of msgs.
 //
-// Checkup, an iPhone's item: the title of the item about Pinky for iPhone,
-// the app Pinky drives iPhones below iOS 27 through. Pinky for iPhone is
-// the name of Pinky's iPhone app (as Pinky for Android is the Android
-// app's), which hosts WebDriverAgent; older installs are the app Pinky
+// Checkup, an iPhone's item: the title of the item about Pinky on the
+// iPhone, the app Pinky drives iPhones below iOS 27 through. Pinky on the
+// iPhone is what the computer calls Pinky's iPhone app, named just Pinky on
+// the iPhone itself (Pinky on the phone names the Android app the same
+// way), which hosts WebDriverAgent; older installs are the app Pinky
 // Helper, which works the same.
 func (msgs Messages) CheckHelperTitle() string {
 	return Catalog.Format(msgs.locale, "checkHelperTitle", nil)
@@ -5148,16 +5158,16 @@ func (msgs Messages) CheckHelperTitle() string {
 // CheckHelperUntil says "Its signature lasts until {when, date, ::yMMMMd}. Pinky reminds you two days before."
 // in the language the app shows.
 //
-// Checkup, Pinky for iPhone (WebDriverAgent) that works: a note on when its
-// signature (provisioning profile) runs out. when is that day, with the
+// Checkup, Pinky on the iPhone (WebDriverAgent) that works: a note on when
+// its signature (provisioning profile) runs out. when is that day, with the
 // year.
 func CheckHelperUntil(when time.Time) string { return In(i18n.Locale()).CheckHelperUntil(when) }
 
 // CheckHelperUntil says "Its signature lasts until {when, date, ::yMMMMd}. Pinky reminds you two days before."
 // in the language of msgs.
 //
-// Checkup, Pinky for iPhone (WebDriverAgent) that works: a note on when its
-// signature (provisioning profile) runs out. when is that day, with the
+// Checkup, Pinky on the iPhone (WebDriverAgent) that works: a note on when
+// its signature (provisioning profile) runs out. when is that day, with the
 // year.
 func (msgs Messages) CheckHelperUntil(when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperUntil", map[string]any{"when": when})
@@ -5307,18 +5317,18 @@ func (msgs Messages) CheckInputFail() string {
 	return Catalog.Format(msgs.locale, "checkInputFail", nil)
 }
 
-// CheckInputIPhoneNoHelper says "No taps or typing without Pinky for iPhone."
+// CheckInputIPhoneNoHelper says "No taps or typing without Pinky on the iPhone."
 // in the language the app shows.
 //
 // Checkup, an iPhone's item: the input item of an iPhone below iOS 27
-// without Pinky for iPhone.
+// without Pinky on the iPhone.
 func CheckInputIPhoneNoHelper() string { return In(i18n.Locale()).CheckInputIPhoneNoHelper() }
 
-// CheckInputIPhoneNoHelper says "No taps or typing without Pinky for iPhone."
+// CheckInputIPhoneNoHelper says "No taps or typing without Pinky on the iPhone."
 // in the language of msgs.
 //
 // Checkup, an iPhone's item: the input item of an iPhone below iOS 27
-// without Pinky for iPhone.
+// without Pinky on the iPhone.
 func (msgs Messages) CheckInputIPhoneNoHelper() string {
 	return Catalog.Format(msgs.locale, "checkInputIPhoneNoHelper", nil)
 }
@@ -6172,14 +6182,14 @@ func (msgs Messages) CheckupWarnLabel() string {
 // CompanionAllowHint says "If the phone asks, allow the install."
 // in the language the app shows.
 //
-// The Pinky for Android card: under the progress bar while the app
+// The Pinky on the phone card: under the progress bar while the app
 // installs, and in small type under the buttons before.
 func CompanionAllowHint() string { return In(i18n.Locale()).CompanionAllowHint() }
 
 // CompanionAllowHint says "If the phone asks, allow the install."
 // in the language of msgs.
 //
-// The Pinky for Android card: under the progress bar while the app
+// The Pinky on the phone card: under the progress bar while the app
 // installs, and in small type under the buttons before.
 func (msgs Messages) CompanionAllowHint() string {
 	return Catalog.Format(msgs.locale, "companionAllowHint", nil)
@@ -6188,19 +6198,19 @@ func (msgs Messages) CompanionAllowHint() string {
 // CompanionAllowHintOppo says "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account."
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup, on an OPPO, OnePlus or realme
-// phone, while Pinky installs the app: what to do on the phone. Continue
-// installing is the button of ColorOS's page: use its Simplified Chinese
-// name.
+// The Pinky on the phone card and the checkup, on an OPPO, OnePlus or
+// realme phone, while Pinky installs the app: what to do on the phone.
+// Continue installing is the button of ColorOS's page: use its Simplified
+// Chinese name.
 func CompanionAllowHintOppo() string { return In(i18n.Locale()).CompanionAllowHintOppo() }
 
 // CompanionAllowHintOppo says "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account."
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup, on an OPPO, OnePlus or realme
-// phone, while Pinky installs the app: what to do on the phone. Continue
-// installing is the button of ColorOS's page: use its Simplified Chinese
-// name.
+// The Pinky on the phone card and the checkup, on an OPPO, OnePlus or
+// realme phone, while Pinky installs the app: what to do on the phone.
+// Continue installing is the button of ColorOS's page: use its Simplified
+// Chinese name.
 func (msgs Messages) CompanionAllowHintOppo() string {
 	return Catalog.Format(msgs.locale, "companionAllowHintOppo", nil)
 }
@@ -6208,7 +6218,7 @@ func (msgs Messages) CompanionAllowHintOppo() string {
 // CompanionAllowHintXiaomi says "On the phone, tap Install within 10 seconds; keep it unlocked."
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup, on a Xiaomi phone, while
+// The Pinky on the phone card and the checkup, on a Xiaomi phone, while
 // Pinky installs the app: what to do on the phone. Install is the button of
 // Xiaomi's prompt: use its Simplified Chinese name.
 func CompanionAllowHintXiaomi() string { return In(i18n.Locale()).CompanionAllowHintXiaomi() }
@@ -6216,7 +6226,7 @@ func CompanionAllowHintXiaomi() string { return In(i18n.Locale()).CompanionAllow
 // CompanionAllowHintXiaomi says "On the phone, tap Install within 10 seconds; keep it unlocked."
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup, on a Xiaomi phone, while
+// The Pinky on the phone card and the checkup, on a Xiaomi phone, while
 // Pinky installs the app: what to do on the phone. Install is the button of
 // Xiaomi's prompt: use its Simplified Chinese name.
 func (msgs Messages) CompanionAllowHintXiaomi() string {
@@ -6226,32 +6236,32 @@ func (msgs Messages) CompanionAllowHintXiaomi() string {
 // CompanionByHandHow says "How to install it by hand"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup, after the phone refused an
-// install over USB: a link to the README's steps for installing Pinky for
-// Android by hand.
+// The Pinky on the phone card and the checkup, after the phone refused an
+// install over USB: a link to the README's steps for installing Pinky on
+// the phone by hand.
 func CompanionByHandHow() string { return In(i18n.Locale()).CompanionByHandHow() }
 
 // CompanionByHandHow says "How to install it by hand"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup, after the phone refused an
-// install over USB: a link to the README's steps for installing Pinky for
-// Android by hand.
+// The Pinky on the phone card and the checkup, after the phone refused an
+// install over USB: a link to the README's steps for installing Pinky on
+// the phone by hand.
 func (msgs Messages) CompanionByHandHow() string {
 	return Catalog.Format(msgs.locale, "companionByHandHow", nil)
 }
 
-// CompanionCardLabel says "Pinky for Android on {name}"
+// CompanionCardLabel says "Pinky on {name}"
 // in the language the app shows.
 //
-// The accessibility label of the Pinky for Android card. name is the
+// The accessibility label of the Pinky on the phone card. name is the
 // phone's name.
 func CompanionCardLabel(name string) string { return In(i18n.Locale()).CompanionCardLabel(name) }
 
-// CompanionCardLabel says "Pinky for Android on {name}"
+// CompanionCardLabel says "Pinky on {name}"
 // in the language of msgs.
 //
-// The accessibility label of the Pinky for Android card. name is the
+// The accessibility label of the Pinky on the phone card. name is the
 // phone's name.
 func (msgs Messages) CompanionCardLabel(name string) string {
 	return Catalog.Format(msgs.locale, "companionCardLabel", map[string]any{"name": name})
@@ -6260,14 +6270,14 @@ func (msgs Messages) CompanionCardLabel(name string) string {
 // CompanionErrDeclined says "The install was declined on the phone. Try again, and tap Install when the phone asks."
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup: the error when the person or
+// The Pinky on the phone card and the checkup: the error when the person or
 // the phone declined the install (the phone's own confirmation).
 func CompanionErrDeclined() string { return In(i18n.Locale()).CompanionErrDeclined() }
 
 // CompanionErrDeclined says "The install was declined on the phone. Try again, and tap Install when the phone asks."
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup: the error when the person or
+// The Pinky on the phone card and the checkup: the error when the person or
 // the phone declined the install (the phone's own confirmation).
 func (msgs Messages) CompanionErrDeclined() string {
 	return Catalog.Format(msgs.locale, "companionErrDeclined", nil)
@@ -6276,7 +6286,7 @@ func (msgs Messages) CompanionErrDeclined() string {
 // CompanionErrNoAnswer says "Pinky turned on the app's accessibility service, but it didn't start ({detail}). Restart the phone, then try again. I…"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup: Pinky turned on the app's
+// The Pinky on the phone card and the checkup: Pinky turned on the app's
 // accessibility service, but the service did not answer, and the phone
 // showed no known reason. detail is what Pinky saw on the phone, in
 // English. Send feedback is the name of Pinky's feedback window.
@@ -6287,7 +6297,7 @@ func CompanionErrNoAnswer(detail string) string {
 // CompanionErrNoAnswer says "Pinky turned on the app's accessibility service, but it didn't start ({detail}). Restart the phone, then try again. I…"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup: Pinky turned on the app's
+// The Pinky on the phone card and the checkup: Pinky turned on the app's
 // accessibility service, but the service did not answer, and the phone
 // showed no known reason. detail is what Pinky saw on the phone, in
 // English. Send feedback is the name of Pinky's feedback window.
@@ -6298,7 +6308,7 @@ func (msgs Messages) CompanionErrNoAnswer(detail string) string {
 // CompanionErrNotUnlocked says "The phone hasn't been unlocked since it restarted, and Android starts the app only after that. Unlock the phone, then…"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup: the app's accessibility
+// The Pinky on the phone card and the checkup: the app's accessibility
 // service did not start because the phone has not been unlocked since it
 // started.
 func CompanionErrNotUnlocked() string { return In(i18n.Locale()).CompanionErrNotUnlocked() }
@@ -6306,7 +6316,7 @@ func CompanionErrNotUnlocked() string { return In(i18n.Locale()).CompanionErrNot
 // CompanionErrNotUnlocked says "The phone hasn't been unlocked since it restarted, and Android starts the app only after that. Unlock the phone, then…"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup: the app's accessibility
+// The Pinky on the phone card and the checkup: the app's accessibility
 // service did not start because the phone has not been unlocked since it
 // started.
 func (msgs Messages) CompanionErrNotUnlocked() string {
@@ -6316,31 +6326,31 @@ func (msgs Messages) CompanionErrNotUnlocked() string {
 // CompanionErrOffline says "The phone went offline. Connect it again, then try again."
 // in the language the app shows.
 //
-// The Pinky for Android card: the error when the phone went offline during
+// The Pinky on the phone card: the error when the phone went offline during
 // the install.
 func CompanionErrOffline() string { return In(i18n.Locale()).CompanionErrOffline() }
 
 // CompanionErrOffline says "The phone went offline. Connect it again, then try again."
 // in the language of msgs.
 //
-// The Pinky for Android card: the error when the phone went offline during
+// The Pinky on the phone card: the error when the phone went offline during
 // the install.
 func (msgs Messages) CompanionErrOffline() string {
 	return Catalog.Format(msgs.locale, "companionErrOffline", nil)
 }
 
-// CompanionErrOther says "Couldn't install Pinky for Android: {detail}"
+// CompanionErrOther says "Couldn't install Pinky on the phone: {detail}"
 // in the language the app shows.
 //
-// The Pinky for Android card: the error when the install failed for another
-// reason. detail is the error, in English.
+// The Pinky on the phone card: the error when the install failed for
+// another reason. detail is the error, in English.
 func CompanionErrOther(detail string) string { return In(i18n.Locale()).CompanionErrOther(detail) }
 
-// CompanionErrOther says "Couldn't install Pinky for Android: {detail}"
+// CompanionErrOther says "Couldn't install Pinky on the phone: {detail}"
 // in the language of msgs.
 //
-// The Pinky for Android card: the error when the install failed for another
-// reason. detail is the error, in English.
+// The Pinky on the phone card: the error when the install failed for
+// another reason. detail is the error, in English.
 func (msgs Messages) CompanionErrOther(detail string) string {
 	return Catalog.Format(msgs.locale, "companionErrOther", map[string]any{"detail": detail})
 }
@@ -6348,14 +6358,14 @@ func (msgs Messages) CompanionErrOther(detail string) string {
 // CompanionErrPlayProtect says "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again."
 // in the language the app shows.
 //
-// The Pinky for Android card: the error when Google Play Protect stopped
+// The Pinky on the phone card: the error when Google Play Protect stopped
 // the install. Install anyway is the button of Play Protect's prompt.
 func CompanionErrPlayProtect() string { return In(i18n.Locale()).CompanionErrPlayProtect() }
 
 // CompanionErrPlayProtect says "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again."
 // in the language of msgs.
 //
-// The Pinky for Android card: the error when Google Play Protect stopped
+// The Pinky on the phone card: the error when Google Play Protect stopped
 // the install. Install anyway is the button of Play Protect's prompt.
 func (msgs Messages) CompanionErrPlayProtect() string {
 	return Catalog.Format(msgs.locale, "companionErrPlayProtect", nil)
@@ -6364,7 +6374,7 @@ func (msgs Messages) CompanionErrPlayProtect() string {
 // CompanionErrRestricted says "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switc…"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup: the error when the phone
+// The Pinky on the phone card and the checkup: the error when the phone
 // blocked installs over USB, on a phone whose maker Pinky does not know.
 // The links companionShowAPK and companionByHandHow follow it, for
 // installing the APK by hand.
@@ -6373,7 +6383,7 @@ func CompanionErrRestricted() string { return In(i18n.Locale()).CompanionErrRest
 // CompanionErrRestricted says "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switc…"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup: the error when the phone
+// The Pinky on the phone card and the checkup: the error when the phone
 // blocked installs over USB, on a phone whose maker Pinky does not know.
 // The links companionShowAPK and companionByHandHow follow it, for
 // installing the APK by hand.
@@ -6384,7 +6394,7 @@ func (msgs Messages) CompanionErrRestricted() string {
 // CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may ne…"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup, on a Xiaomi phone: the error
+// The Pinky on the phone card and the checkup, on a Xiaomi phone: the error
 // when the phone blocked installs over USB (the switch is off, or nobody
 // tapped Install in time). Install via USB and Install are Xiaomi's names:
 // use those of its Simplified Chinese settings. Some Xiaomi phones cannot
@@ -6395,7 +6405,7 @@ func CompanionErrRestrictedXiaomi() string { return In(i18n.Locale()).CompanionE
 // CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may ne…"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup, on a Xiaomi phone: the error
+// The Pinky on the phone card and the checkup, on a Xiaomi phone: the error
 // when the phone blocked installs over USB (the switch is off, or nobody
 // tapped Install in time). Install via USB and Install are Xiaomi's names:
 // use those of its Simplified Chinese settings. Some Xiaomi phones cannot
@@ -6408,19 +6418,19 @@ func (msgs Messages) CompanionErrRestrictedXiaomi() string {
 // CompanionErrSettingIgnored says "The phone accepted the change but didn't keep it: it doesn't let Pinky turn on the app's accessibility service over U…"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup: Pinky added the app's service
-// to the phone's accessibility settings, the phone took the change without
-// an error, and reading the setting back showed it had not kept it (vivo's
-// OriginOS 6 does this). Pinky is the app's name on the phone.
+// The Pinky on the phone card and the checkup: Pinky added the app's
+// service to the phone's accessibility settings, the phone took the change
+// without an error, and reading the setting back showed it had not kept it
+// (vivo's OriginOS 6 does this). Pinky is the app's name on the phone.
 func CompanionErrSettingIgnored() string { return In(i18n.Locale()).CompanionErrSettingIgnored() }
 
 // CompanionErrSettingIgnored says "The phone accepted the change but didn't keep it: it doesn't let Pinky turn on the app's accessibility service over U…"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup: Pinky added the app's service
-// to the phone's accessibility settings, the phone took the change without
-// an error, and reading the setting back showed it had not kept it (vivo's
-// OriginOS 6 does this). Pinky is the app's name on the phone.
+// The Pinky on the phone card and the checkup: Pinky added the app's
+// service to the phone's accessibility settings, the phone took the change
+// without an error, and reading the setting back showed it had not kept it
+// (vivo's OriginOS 6 does this). Pinky is the app's name on the phone.
 func (msgs Messages) CompanionErrSettingIgnored() string {
 	return Catalog.Format(msgs.locale, "companionErrSettingIgnored", nil)
 }
@@ -6428,7 +6438,7 @@ func (msgs Messages) CompanionErrSettingIgnored() string {
 // CompanionErrSettings says "The phone refuses to let the computer turn on the app's accessibility service: {detail}"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup: turning on the app's service
+// The Pinky on the phone card and the checkup: turning on the app's service
 // failed because the phone refuses settings changes from the computer, on a
 // phone whose maker Pinky does not know.
 func CompanionErrSettings(detail string) string {
@@ -6438,7 +6448,7 @@ func CompanionErrSettings(detail string) string {
 // CompanionErrSettings says "The phone refuses to let the computer turn on the app's accessibility service: {detail}"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup: turning on the app's service
+// The Pinky on the phone card and the checkup: turning on the app's service
 // failed because the phone refuses settings changes from the computer, on a
 // phone whose maker Pinky does not know.
 func (msgs Messages) CompanionErrSettings(detail string) string {
@@ -6448,17 +6458,17 @@ func (msgs Messages) CompanionErrSettings(detail string) string {
 // CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, r…"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup, on an OPPO, OnePlus or realme
-// phone: turning on the app's service failed because permission monitoring
-// is on. Use ColorOS's Simplified Chinese name for the switch.
+// The Pinky on the phone card and the checkup, on an OPPO, OnePlus or
+// realme phone: turning on the app's service failed because permission
+// monitoring is on. Use ColorOS's Simplified Chinese name for the switch.
 func CompanionErrSettingsOppo() string { return In(i18n.Locale()).CompanionErrSettingsOppo() }
 
 // CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, r…"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup, on an OPPO, OnePlus or realme
-// phone: turning on the app's service failed because permission monitoring
-// is on. Use ColorOS's Simplified Chinese name for the switch.
+// The Pinky on the phone card and the checkup, on an OPPO, OnePlus or
+// realme phone: turning on the app's service failed because permission
+// monitoring is on. Use ColorOS's Simplified Chinese name for the switch.
 func (msgs Messages) CompanionErrSettingsOppo() string {
 	return Catalog.Format(msgs.locale, "companionErrSettingsOppo", nil)
 }
@@ -6466,16 +6476,16 @@ func (msgs Messages) CompanionErrSettingsOppo() string {
 // CompanionErrSettingsXiaomi says "The phone refuses to let the computer turn on the app. In Developer options, turn on USB debugging (Security settings…"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup, on a Xiaomi phone: turning on
-// the app's service failed because USB debugging (Security settings) is
+// The Pinky on the phone card and the checkup, on a Xiaomi phone: turning
+// on the app's service failed because USB debugging (Security settings) is
 // off. Use the name of Xiaomi's Simplified Chinese settings.
 func CompanionErrSettingsXiaomi() string { return In(i18n.Locale()).CompanionErrSettingsXiaomi() }
 
 // CompanionErrSettingsXiaomi says "The phone refuses to let the computer turn on the app. In Developer options, turn on USB debugging (Security settings…"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup, on a Xiaomi phone: turning on
-// the app's service failed because USB debugging (Security settings) is
+// The Pinky on the phone card and the checkup, on a Xiaomi phone: turning
+// on the app's service failed because USB debugging (Security settings) is
 // off. Use the name of Xiaomi's Simplified Chinese settings.
 func (msgs Messages) CompanionErrSettingsXiaomi() string {
 	return Catalog.Format(msgs.locale, "companionErrSettingsXiaomi", nil)
@@ -6484,14 +6494,14 @@ func (msgs Messages) CompanionErrSettingsXiaomi() string {
 // CompanionErrStorage says "The phone is out of space. Free some up, then try again."
 // in the language the app shows.
 //
-// The Pinky for Android card: the error when the phone has no room for the
+// The Pinky on the phone card: the error when the phone has no room for the
 // app.
 func CompanionErrStorage() string { return In(i18n.Locale()).CompanionErrStorage() }
 
 // CompanionErrStorage says "The phone is out of space. Free some up, then try again."
 // in the language of msgs.
 //
-// The Pinky for Android card: the error when the phone has no room for the
+// The Pinky on the phone card: the error when the phone has no room for the
 // app.
 func (msgs Messages) CompanionErrStorage() string {
 	return Catalog.Format(msgs.locale, "companionErrStorage", nil)
@@ -6500,14 +6510,14 @@ func (msgs Messages) CompanionErrStorage() string {
 // CompanionErrTimeout says "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again."
 // in the language the app shows.
 //
-// The Pinky for Android card: the error when the install did not finish in
+// The Pinky on the phone card: the error when the install did not finish in
 // time. Allow is the button of the phone's install prompt.
 func CompanionErrTimeout() string { return In(i18n.Locale()).CompanionErrTimeout() }
 
 // CompanionErrTimeout says "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again."
 // in the language of msgs.
 //
-// The Pinky for Android card: the error when the install did not finish in
+// The Pinky on the phone card: the error when the install did not finish in
 // time. Allow is the button of the phone's install prompt.
 func (msgs Messages) CompanionErrTimeout() string {
 	return Catalog.Format(msgs.locale, "companionErrTimeout", nil)
@@ -6516,7 +6526,7 @@ func (msgs Messages) CompanionErrTimeout() string {
 // CompanionErrUIAutomation says "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and …"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup: the app's accessibility
+// The Pinky on the phone card and the checkup: the app's accessibility
 // service did not start because another testing tool holds Android's UI
 // automation, which turns off every accessibility service. Keep the tools'
 // names as they are.
@@ -6525,7 +6535,7 @@ func CompanionErrUIAutomation() string { return In(i18n.Locale()).CompanionErrUI
 // CompanionErrUIAutomation says "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and …"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup: the app's accessibility
+// The Pinky on the phone card and the checkup: the app's accessibility
 // service did not start because another testing tool holds Android's UI
 // automation, which turns off every accessibility service. Keep the tools'
 // names as they are.
@@ -6536,14 +6546,14 @@ func (msgs Messages) CompanionErrUIAutomation() string {
 // CompanionInstall says "Install"
 // in the language the app shows.
 //
-// The Pinky for Android card: the button that installs the app on the
+// The Pinky on the phone card: the button that installs the app on the
 // phone.
 func CompanionInstall() string { return In(i18n.Locale()).CompanionInstall() }
 
 // CompanionInstall says "Install"
 // in the language of msgs.
 //
-// The Pinky for Android card: the button that installs the app on the
+// The Pinky on the phone card: the button that installs the app on the
 // phone.
 func (msgs Messages) CompanionInstall() string {
 	return Catalog.Format(msgs.locale, "companionInstall", nil)
@@ -6552,49 +6562,51 @@ func (msgs Messages) CompanionInstall() string {
 // CompanionInstallBody says "A small Pinky app for {name}. Agents control the phone faster and more steadily with it, and type without using its c…"
 // in the language the app shows.
 //
-// The Pinky for Android card, when the app is not installed: why to install
-// it. Pinky turns its accessibility service on only while an agent works on
-// the phone. name is the phone's name. The card is in a narrow side panel.
+// The Pinky on the phone card, when the app is not installed: why to
+// install it. Pinky turns its accessibility service on only while an agent
+// works on the phone. name is the phone's name. The card is in a narrow
+// side panel.
 func CompanionInstallBody(name string) string { return In(i18n.Locale()).CompanionInstallBody(name) }
 
 // CompanionInstallBody says "A small Pinky app for {name}. Agents control the phone faster and more steadily with it, and type without using its c…"
 // in the language of msgs.
 //
-// The Pinky for Android card, when the app is not installed: why to install
-// it. Pinky turns its accessibility service on only while an agent works on
-// the phone. name is the phone's name. The card is in a narrow side panel.
+// The Pinky on the phone card, when the app is not installed: why to
+// install it. Pinky turns its accessibility service on only while an agent
+// works on the phone. name is the phone's name. The card is in a narrow
+// side panel.
 func (msgs Messages) CompanionInstallBody(name string) string {
 	return Catalog.Format(msgs.locale, "companionInstallBody", map[string]any{"name": name})
 }
 
-// CompanionInstallLabel says "Install Pinky for Android on {name}"
+// CompanionInstallLabel says "Install Pinky on {name}"
 // in the language the app shows.
 //
-// The accessibility label of the Install button of the Pinky for Android
+// The accessibility label of the Install button of the Pinky on the phone
 // card. name is the phone's name.
 func CompanionInstallLabel(name string) string { return In(i18n.Locale()).CompanionInstallLabel(name) }
 
-// CompanionInstallLabel says "Install Pinky for Android on {name}"
+// CompanionInstallLabel says "Install Pinky on {name}"
 // in the language of msgs.
 //
-// The accessibility label of the Install button of the Pinky for Android
+// The accessibility label of the Install button of the Pinky on the phone
 // card. name is the phone's name.
 func (msgs Messages) CompanionInstallLabel(name string) string {
 	return Catalog.Format(msgs.locale, "companionInstallLabel", map[string]any{"name": name})
 }
 
-// CompanionInstallTitle says "Install Pinky for Android"
+// CompanionInstallTitle says "Install Pinky on the phone"
 // in the language the app shows.
 //
 // The title of the card on an Android phone's side panel that offers to
-// install Pinky for Android, Pinky's app for the phone.
+// install Pinky on the phone, Pinky's app for the phone.
 func CompanionInstallTitle() string { return In(i18n.Locale()).CompanionInstallTitle() }
 
-// CompanionInstallTitle says "Install Pinky for Android"
+// CompanionInstallTitle says "Install Pinky on the phone"
 // in the language of msgs.
 //
 // The title of the card on an Android phone's side panel that offers to
-// install Pinky for Android, Pinky's app for the phone.
+// install Pinky on the phone, Pinky's app for the phone.
 func (msgs Messages) CompanionInstallTitle() string {
 	return Catalog.Format(msgs.locale, "companionInstallTitle", nil)
 }
@@ -6602,14 +6614,14 @@ func (msgs Messages) CompanionInstallTitle() string {
 // CompanionInstalling says "Installing"
 // in the language the app shows.
 //
-// The Pinky for Android card: the accessibility label of the progress bar
+// The Pinky on the phone card: the accessibility label of the progress bar
 // while the app installs.
 func CompanionInstalling() string { return In(i18n.Locale()).CompanionInstalling() }
 
 // CompanionInstalling says "Installing"
 // in the language of msgs.
 //
-// The Pinky for Android card: the accessibility label of the progress bar
+// The Pinky on the phone card: the accessibility label of the progress bar
 // while the app installs.
 func (msgs Messages) CompanionInstalling() string {
 	return Catalog.Format(msgs.locale, "companionInstalling", nil)
@@ -6618,8 +6630,8 @@ func (msgs Messages) CompanionInstalling() string {
 // CompanionShowAPK says "Show pinky-android.apk"
 // in the language the app shows.
 //
-// The Pinky for Android card and the checkup, after the phone refused an
-// install over USB: a link that shows the APK of Pinky for Android, which
+// The Pinky on the phone card and the checkup, after the phone refused an
+// install over USB: a link that shows the APK of Pinky on the phone, which
 // comes with Pinky, in Finder or the file manager, to copy to the phone and
 // install there. Keep the file name as it is.
 func CompanionShowAPK() string { return In(i18n.Locale()).CompanionShowAPK() }
@@ -6627,52 +6639,52 @@ func CompanionShowAPK() string { return In(i18n.Locale()).CompanionShowAPK() }
 // CompanionShowAPK says "Show pinky-android.apk"
 // in the language of msgs.
 //
-// The Pinky for Android card and the checkup, after the phone refused an
-// install over USB: a link that shows the APK of Pinky for Android, which
+// The Pinky on the phone card and the checkup, after the phone refused an
+// install over USB: a link that shows the APK of Pinky on the phone, which
 // comes with Pinky, in Finder or the file manager, to copy to the phone and
 // install there. Keep the file name as it is.
 func (msgs Messages) CompanionShowAPK() string {
 	return Catalog.Format(msgs.locale, "companionShowAPK", nil)
 }
 
-// CompanionInstallingTitle says "Installing Pinky for Android"
+// CompanionInstallingTitle says "Installing Pinky on the phone"
 // in the language the app shows.
 //
-// The Pinky for Android card's title while Pinky installs or updates the
+// The Pinky on the phone card's title while Pinky installs or updates the
 // app.
 func CompanionInstallingTitle() string { return In(i18n.Locale()).CompanionInstallingTitle() }
 
-// CompanionInstallingTitle says "Installing Pinky for Android"
+// CompanionInstallingTitle says "Installing Pinky on the phone"
 // in the language of msgs.
 //
-// The Pinky for Android card's title while Pinky installs or updates the
+// The Pinky on the phone card's title while Pinky installs or updates the
 // app.
 func (msgs Messages) CompanionInstallingTitle() string {
 	return Catalog.Format(msgs.locale, "companionInstallingTitle", nil)
 }
 
-// CompanionLineManual says "Turn on Pinky for Android on the phone by hand"
+// CompanionLineManual says "Turn on Pinky on the phone by hand"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android when the
+// Settings › Phones: a phone's line about Pinky on the phone when the
 // phone does not let Pinky turn the app's service on, so only the person
 // can, on the phone.
 func CompanionLineManual() string { return In(i18n.Locale()).CompanionLineManual() }
 
-// CompanionLineManual says "Turn on Pinky for Android on the phone by hand"
+// CompanionLineManual says "Turn on Pinky on the phone by hand"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android when the
+// Settings › Phones: a phone's line about Pinky on the phone when the
 // phone does not let Pinky turn the app's service on, so only the person
 // can, on the phone.
 func (msgs Messages) CompanionLineManual() string {
 	return Catalog.Format(msgs.locale, "companionLineManual", nil)
 }
 
-// CompanionLineManualOn says "Pinky for Android is on until you turn it off on the phone; apps on the phone, banking apps among them, can see it"
+// CompanionLineManualOn says "Pinky on the phone stays on until you turn it off there; apps on the phone, banking apps among them, can see it"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android while its
+// Settings › Phones: a phone's line about Pinky on the phone while its
 // accessibility service is on, on a phone that does not let Pinky turn the
 // service on or off (vivo's OriginOS 6): the person turned it on, and it
 // stays on after tasks until they turn it off on the phone. The phone's
@@ -6680,10 +6692,10 @@ func (msgs Messages) CompanionLineManual() string {
 // such services).
 func CompanionLineManualOn() string { return In(i18n.Locale()).CompanionLineManualOn() }
 
-// CompanionLineManualOn says "Pinky for Android is on until you turn it off on the phone; apps on the phone, banking apps among them, can see it"
+// CompanionLineManualOn says "Pinky on the phone stays on until you turn it off there; apps on the phone, banking apps among them, can see it"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android while its
+// Settings › Phones: a phone's line about Pinky on the phone while its
 // accessibility service is on, on a phone that does not let Pinky turn the
 // service on or off (vivo's OriginOS 6): the person turned it on, and it
 // stays on after tasks until they turn it off on the phone. The phone's
@@ -6693,119 +6705,119 @@ func (msgs Messages) CompanionLineManualOn() string {
 	return Catalog.Format(msgs.locale, "companionLineManualOn", nil)
 }
 
-// CompanionLineMissing says "Pinky for Android is not installed"
+// CompanionLineMissing says "Pinky on the phone is not installed"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android when the app
+// Settings › Phones: a phone's line about Pinky on the phone when the app
 // is not on the phone.
 func CompanionLineMissing() string { return In(i18n.Locale()).CompanionLineMissing() }
 
-// CompanionLineMissing says "Pinky for Android is not installed"
+// CompanionLineMissing says "Pinky on the phone is not installed"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android when the app
+// Settings › Phones: a phone's line about Pinky on the phone when the app
 // is not on the phone.
 func (msgs Messages) CompanionLineMissing() string {
 	return Catalog.Format(msgs.locale, "companionLineMissing", nil)
 }
 
-// CompanionLineNoAPK says "This Pinky doesn't come with Pinky for Android"
+// CompanionLineNoAPK says "This Pinky doesn't come with the phone app"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android when this
+// Settings › Phones: a phone's line about Pinky on the phone when this
 // build of Pinky does not include the app.
 func CompanionLineNoAPK() string { return In(i18n.Locale()).CompanionLineNoAPK() }
 
-// CompanionLineNoAPK says "This Pinky doesn't come with Pinky for Android"
+// CompanionLineNoAPK says "This Pinky doesn't come with the phone app"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android when this
+// Settings › Phones: a phone's line about Pinky on the phone when this
 // build of Pinky does not include the app.
 func (msgs Messages) CompanionLineNoAPK() string {
 	return Catalog.Format(msgs.locale, "companionLineNoAPK", nil)
 }
 
-// CompanionLineOff says "Pinky couldn't turn on Pinky for Android"
+// CompanionLineOff says "Couldn't turn on Pinky on the phone"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android when its
+// Settings › Phones: a phone's line about Pinky on the phone when its
 // service did not come on the last time Pinky tried.
 func CompanionLineOff() string { return In(i18n.Locale()).CompanionLineOff() }
 
-// CompanionLineOff says "Pinky couldn't turn on Pinky for Android"
+// CompanionLineOff says "Couldn't turn on Pinky on the phone"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android when its
+// Settings › Phones: a phone's line about Pinky on the phone when its
 // service did not come on the last time Pinky tried.
 func (msgs Messages) CompanionLineOff() string {
 	return Catalog.Format(msgs.locale, "companionLineOff", nil)
 }
 
-// CompanionLineOn says "Pinky for Android is on"
+// CompanionLineOn says "Pinky on the phone is on"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android, Pinky's app
+// Settings › Phones: a phone's line about Pinky on the phone, Pinky's app
 // for the phone, while its accessibility service is on: an agent works on
 // the phone.
 func CompanionLineOn() string { return In(i18n.Locale()).CompanionLineOn() }
 
-// CompanionLineOn says "Pinky for Android is on"
+// CompanionLineOn says "Pinky on the phone is on"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android, Pinky's app
+// Settings › Phones: a phone's line about Pinky on the phone, Pinky's app
 // for the phone, while its accessibility service is on: an agent works on
 // the phone.
 func (msgs Messages) CompanionLineOn() string {
 	return Catalog.Format(msgs.locale, "companionLineOn", nil)
 }
 
-// CompanionLineOutdated says "Pinky for Android has an update"
+// CompanionLineOutdated says "Pinky on the phone has an update"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android when this
+// Settings › Phones: a phone's line about Pinky on the phone when this
 // Pinky comes with a newer version.
 func CompanionLineOutdated() string { return In(i18n.Locale()).CompanionLineOutdated() }
 
-// CompanionLineOutdated says "Pinky for Android has an update"
+// CompanionLineOutdated says "Pinky on the phone has an update"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android when this
+// Settings › Phones: a phone's line about Pinky on the phone when this
 // Pinky comes with a newer version.
 func (msgs Messages) CompanionLineOutdated() string {
 	return Catalog.Format(msgs.locale, "companionLineOutdated", nil)
 }
 
-// CompanionLinePublicKey says "Pinky for Android has a security update"
+// CompanionLinePublicKey says "Pinky on the phone has a security update"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android when the
+// Settings › Phones: a phone's line about Pinky on the phone when the
 // installed app is signed with the old public key and this Pinky carries
 // the version signed with its private key.
 func CompanionLinePublicKey() string { return In(i18n.Locale()).CompanionLinePublicKey() }
 
-// CompanionLinePublicKey says "Pinky for Android has a security update"
+// CompanionLinePublicKey says "Pinky on the phone has a security update"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android when the
+// Settings › Phones: a phone's line about Pinky on the phone when the
 // installed app is signed with the old public key and this Pinky carries
 // the version signed with its private key.
 func (msgs Messages) CompanionLinePublicKey() string {
 	return Catalog.Format(msgs.locale, "companionLinePublicKey", nil)
 }
 
-// CompanionLineReady says "Pinky for Android turns on only while an agent works"
+// CompanionLineReady says "Pinky on the phone turns on only while an agent works"
 // in the language the app shows.
 //
-// Settings › Phones: a phone's line about Pinky for Android, Pinky's app
+// Settings › Phones: a phone's line about Pinky on the phone, Pinky's app
 // for the phone, when it is installed and ready: Pinky turns its
 // accessibility service on only while an agent works on the phone, so that
 // the phone's apps (banking apps check for such services) see it only then.
 func CompanionLineReady() string { return In(i18n.Locale()).CompanionLineReady() }
 
-// CompanionLineReady says "Pinky for Android turns on only while an agent works"
+// CompanionLineReady says "Pinky on the phone turns on only while an agent works"
 // in the language of msgs.
 //
-// Settings › Phones: a phone's line about Pinky for Android, Pinky's app
+// Settings › Phones: a phone's line about Pinky on the phone, Pinky's app
 // for the phone, when it is installed and ready: Pinky turns its
 // accessibility service on only while an agent works on the phone, so that
 // the phone's apps (banking apps check for such services) see it only then.
@@ -6816,7 +6828,7 @@ func (msgs Messages) CompanionLineReady() string {
 // CompanionManualBody says "This phone doesn't let Pinky turn on the app's accessibility service over USB debugging, so agents control it the slo…"
 // in the language the app shows.
 //
-// The Pinky for Android card, on a phone that took Pinky's change to its
+// The Pinky on the phone card, on a phone that took Pinky's change to its
 // accessibility settings without an error and kept nothing of it (vivo's
 // OriginOS 6 does): what that means and what to do. Pinky then leaves the
 // service on after tasks, until the person turns it off on the phone, and
@@ -6828,7 +6840,7 @@ func CompanionManualBody() string { return In(i18n.Locale()).CompanionManualBody
 // CompanionManualBody says "This phone doesn't let Pinky turn on the app's accessibility service over USB debugging, so agents control it the slo…"
 // in the language of msgs.
 //
-// The Pinky for Android card, on a phone that took Pinky's change to its
+// The Pinky on the phone card, on a phone that took Pinky's change to its
 // accessibility settings without an error and kept nothing of it (vivo's
 // OriginOS 6 does): what that means and what to do. Pinky then leaves the
 // service on after tasks, until the person turns it off on the phone, and
@@ -6839,18 +6851,18 @@ func (msgs Messages) CompanionManualBody() string {
 	return Catalog.Format(msgs.locale, "companionManualBody", nil)
 }
 
-// CompanionManualTitle says "Turn on Pinky for Android on the phone"
+// CompanionManualTitle says "Turn on Pinky on the phone"
 // in the language the app shows.
 //
-// The title of the Pinky for Android card on a phone that does not let
+// The title of the Pinky on the phone card on a phone that does not let
 // Pinky turn the app's service on: only the person can, in the phone's
 // settings.
 func CompanionManualTitle() string { return In(i18n.Locale()).CompanionManualTitle() }
 
-// CompanionManualTitle says "Turn on Pinky for Android on the phone"
+// CompanionManualTitle says "Turn on Pinky on the phone"
 // in the language of msgs.
 //
-// The title of the Pinky for Android card on a phone that does not let
+// The title of the Pinky on the phone card on a phone that does not let
 // Pinky turn the app's service on: only the person can, in the phone's
 // settings.
 func (msgs Messages) CompanionManualTitle() string {
@@ -6860,53 +6872,151 @@ func (msgs Messages) CompanionManualTitle() string {
 // CompanionNotNow says "Not now"
 // in the language the app shows.
 //
-// The Pinky for Android card: the quiet button that hides the card for this
-// phone.
+// The Pinky on the phone card: the quiet button that hides the card for
+// this phone.
 func CompanionNotNow() string { return In(i18n.Locale()).CompanionNotNow() }
 
 // CompanionNotNow says "Not now"
 // in the language of msgs.
 //
-// The Pinky for Android card: the quiet button that hides the card for this
-// phone.
+// The Pinky on the phone card: the quiet button that hides the card for
+// this phone.
 func (msgs Messages) CompanionNotNow() string {
 	return Catalog.Format(msgs.locale, "companionNotNow", nil)
 }
 
-// CompanionOnToast says "Pinky for Android is ready on {name}"
+// PhoneTasksTitle says "Pinky on the phone can work by itself"
 // in the language the app shows.
 //
-// A notice after Pinky installed, updated or turned on Pinky for Android,
+// Title of the card in a phone's sidebar, and its accessible name, that
+// says Pinky's app on the phone (Pinky on the phone) can do tasks on the
+// phone without the computer. Shown once, until put away.
+func PhoneTasksTitle() string { return In(i18n.Locale()).PhoneTasksTitle() }
+
+// PhoneTasksTitle says "Pinky on the phone can work by itself"
+// in the language of msgs.
+//
+// Title of the card in a phone's sidebar, and its accessible name, that
+// says Pinky's app on the phone (Pinky on the phone) can do tasks on the
+// phone without the computer. Shown once, until put away.
+func (msgs Messages) PhoneTasksTitle() string {
+	return Catalog.Format(msgs.locale, "phoneTasksTitle", nil)
+}
+
+// PhoneTasksAndroid says "Open Pinky on {name}, choose an AI model and add its API key, then give it simple tasks there, without this computer.…"
+// in the language the app shows.
+//
+// The card's text, and the line in Settings › Phones, for an Android
+// phone with Pinky's app installed. name is the phone's name.
+func PhoneTasksAndroid(name string) string { return In(i18n.Locale()).PhoneTasksAndroid(name) }
+
+// PhoneTasksAndroid says "Open Pinky on {name}, choose an AI model and add its API key, then give it simple tasks there, without this computer.…"
+// in the language of msgs.
+//
+// The card's text, and the line in Settings › Phones, for an Android
+// phone with Pinky's app installed. name is the phone's name.
+func (msgs Messages) PhoneTasksAndroid(name string) string {
+	return Catalog.Format(msgs.locale, "phoneTasksAndroid", map[string]any{"name": name})
+}
+
+// PhoneTasksIPhone says "Pinky on the iPhone can do simple tasks on {name} by itself, without this computer. Install it from a Mac with Xcode,…"
+// in the language the app shows.
+//
+// The same for an iPhone. Pinky on the iPhone is Pinky's iPhone app; on a
+// Mac with Xcode the Install Pinky on the iPhone button follows. name is
+// the phone's name.
+func PhoneTasksIPhone(name string) string { return In(i18n.Locale()).PhoneTasksIPhone(name) }
+
+// PhoneTasksIPhone says "Pinky on the iPhone can do simple tasks on {name} by itself, without this computer. Install it from a Mac with Xcode,…"
+// in the language of msgs.
+//
+// The same for an iPhone. Pinky on the iPhone is Pinky's iPhone app; on a
+// Mac with Xcode the Install Pinky on the iPhone button follows. name is
+// the phone's name.
+func (msgs Messages) PhoneTasksIPhone(name string) string {
+	return Catalog.Format(msgs.locale, "phoneTasksIPhone", map[string]any{"name": name})
+}
+
+// PhoneTasksRow says "Tasks on the phone"
+// in the language the app shows.
+//
+// Settings › Phones: the title of a phone's row about Pinky's app doing
+// tasks on the phone by itself.
+func PhoneTasksRow() string { return In(i18n.Locale()).PhoneTasksRow() }
+
+// PhoneTasksRow says "Tasks on the phone"
+// in the language of msgs.
+//
+// Settings › Phones: the title of a phone's row about Pinky's app doing
+// tasks on the phone by itself.
+func (msgs Messages) PhoneTasksRow() string {
+	return Catalog.Format(msgs.locale, "phoneTasksRow", nil)
+}
+
+// PhoneTasksHow says "How to set it up"
+// in the language the app shows.
+//
+// Link on the card and the row that opens the README's section on setting
+// up Pinky on the phone.
+func PhoneTasksHow() string { return In(i18n.Locale()).PhoneTasksHow() }
+
+// PhoneTasksHow says "How to set it up"
+// in the language of msgs.
+//
+// Link on the card and the row that opens the README's section on setting
+// up Pinky on the phone.
+func (msgs Messages) PhoneTasksHow() string {
+	return Catalog.Format(msgs.locale, "phoneTasksHow", nil)
+}
+
+// PhoneTasksGotIt says "Got it"
+// in the language the app shows.
+//
+// The card's quiet button that puts it away for good, for every phone.
+func PhoneTasksGotIt() string { return In(i18n.Locale()).PhoneTasksGotIt() }
+
+// PhoneTasksGotIt says "Got it"
+// in the language of msgs.
+//
+// The card's quiet button that puts it away for good, for every phone.
+func (msgs Messages) PhoneTasksGotIt() string {
+	return Catalog.Format(msgs.locale, "phoneTasksGotIt", nil)
+}
+
+// CompanionOnToast says "Pinky on {name} is ready"
+// in the language the app shows.
+//
+// A notice after Pinky installed, updated or turned on Pinky on the phone,
 // its app for Android phones, and checked that its service comes on. It is
 // on only while an agent works on the phone. name is the phone's name.
 func CompanionOnToast(name string) string { return In(i18n.Locale()).CompanionOnToast(name) }
 
-// CompanionOnToast says "Pinky for Android is ready on {name}"
+// CompanionOnToast says "Pinky on {name} is ready"
 // in the language of msgs.
 //
-// A notice after Pinky installed, updated or turned on Pinky for Android,
+// A notice after Pinky installed, updated or turned on Pinky on the phone,
 // its app for Android phones, and checked that its service comes on. It is
 // on only while an agent works on the phone. name is the phone's name.
 func (msgs Messages) CompanionOnToast(name string) string {
 	return Catalog.Format(msgs.locale, "companionOnToast", map[string]any{"name": name})
 }
 
-// CompanionPublicKeyBody says "Pinky for Android on this phone is signed with an old key that is public, so anyone could make a fake update of it. T…"
+// CompanionPublicKeyBody says "Pinky on this phone is signed with an old key that is public, so anyone could make a fake update of it. The new versi…"
 // in the language the app shows.
 //
-// The Pinky for Android card, when the installed app is signed with the key
-// of the builds until 8 November 2026, which was public, and this Pinky
+// The Pinky on the phone card, when the installed app is signed with the
+// key of the builds until 8 November 2026, which was public, and this Pinky
 // carries the version signed with its private key: why to update soon.
 // Shown in place of the usual update text, often on phones where the person
 // has to click Update because the phone asks before installs over USB. Keep
 // it plain, not alarming. The card is in a narrow side panel.
 func CompanionPublicKeyBody() string { return In(i18n.Locale()).CompanionPublicKeyBody() }
 
-// CompanionPublicKeyBody says "Pinky for Android on this phone is signed with an old key that is public, so anyone could make a fake update of it. T…"
+// CompanionPublicKeyBody says "Pinky on this phone is signed with an old key that is public, so anyone could make a fake update of it. The new versi…"
 // in the language of msgs.
 //
-// The Pinky for Android card, when the installed app is signed with the key
-// of the builds until 8 November 2026, which was public, and this Pinky
+// The Pinky on the phone card, when the installed app is signed with the
+// key of the builds until 8 November 2026, which was public, and this Pinky
 // carries the version signed with its private key: why to update soon.
 // Shown in place of the usual update text, often on phones where the person
 // has to click Update because the phone asks before installs over USB. Keep
@@ -6918,14 +7028,14 @@ func (msgs Messages) CompanionPublicKeyBody() string {
 // CompanionStillWaiting says "Still waiting for the phone. Look for a prompt on its screen."
 // in the language the app shows.
 //
-// The Pinky for Android card: when the install has taken more than 20
+// The Pinky on the phone card: when the install has taken more than 20
 // seconds, as the phone may be asking to allow it.
 func CompanionStillWaiting() string { return In(i18n.Locale()).CompanionStillWaiting() }
 
 // CompanionStillWaiting says "Still waiting for the phone. Look for a prompt on its screen."
 // in the language of msgs.
 //
-// The Pinky for Android card: when the install has taken more than 20
+// The Pinky on the phone card: when the install has taken more than 20
 // seconds, as the phone may be asking to allow it.
 func (msgs Messages) CompanionStillWaiting() string {
 	return Catalog.Format(msgs.locale, "companionStillWaiting", nil)
@@ -6934,13 +7044,13 @@ func (msgs Messages) CompanionStillWaiting() string {
 // CompanionTurnOn says "Turn on"
 // in the language the app shows.
 //
-// The Pinky for Android card: the button that turns the app's service on.
+// The Pinky on the phone card: the button that turns the app's service on.
 func CompanionTurnOn() string { return In(i18n.Locale()).CompanionTurnOn() }
 
 // CompanionTurnOn says "Turn on"
 // in the language of msgs.
 //
-// The Pinky for Android card: the button that turns the app's service on.
+// The Pinky on the phone card: the button that turns the app's service on.
 func (msgs Messages) CompanionTurnOn() string {
 	return Catalog.Format(msgs.locale, "companionTurnOn", nil)
 }
@@ -6948,7 +7058,7 @@ func (msgs Messages) CompanionTurnOn() string {
 // CompanionTurnOnBody says "Pinky couldn't turn on the app's service the last time it tried, so agents control the phone the slower way. Try agai…"
 // in the language the app shows.
 //
-// The Pinky for Android card, when the app's service did not come on the
+// The Pinky on the phone card, when the app's service did not come on the
 // last time Pinky tried (some phones refuse settings changes from the
 // computer): why to try again. Turn on, the button, shows the reason if it
 // fails again.
@@ -6957,7 +7067,7 @@ func CompanionTurnOnBody() string { return In(i18n.Locale()).CompanionTurnOnBody
 // CompanionTurnOnBody says "Pinky couldn't turn on the app's service the last time it tried, so agents control the phone the slower way. Try agai…"
 // in the language of msgs.
 //
-// The Pinky for Android card, when the app's service did not come on the
+// The Pinky on the phone card, when the app's service did not come on the
 // last time Pinky tried (some phones refuse settings changes from the
 // computer): why to try again. Turn on, the button, shows the reason if it
 // fails again.
@@ -6965,33 +7075,33 @@ func (msgs Messages) CompanionTurnOnBody() string {
 	return Catalog.Format(msgs.locale, "companionTurnOnBody", nil)
 }
 
-// CompanionTurnOnLabel says "Turn on Pinky for Android on {name}"
+// CompanionTurnOnLabel says "Turn on Pinky on {name}"
 // in the language the app shows.
 //
-// The accessibility label of the Turn on button of the Pinky for Android
+// The accessibility label of the Turn on button of the Pinky on the phone
 // card. name is the phone's name.
 func CompanionTurnOnLabel(name string) string { return In(i18n.Locale()).CompanionTurnOnLabel(name) }
 
-// CompanionTurnOnLabel says "Turn on Pinky for Android on {name}"
+// CompanionTurnOnLabel says "Turn on Pinky on {name}"
 // in the language of msgs.
 //
-// The accessibility label of the Turn on button of the Pinky for Android
+// The accessibility label of the Turn on button of the Pinky on the phone
 // card. name is the phone's name.
 func (msgs Messages) CompanionTurnOnLabel(name string) string {
 	return Catalog.Format(msgs.locale, "companionTurnOnLabel", map[string]any{"name": name})
 }
 
-// CompanionTurnOnTitle says "Turn on Pinky for Android"
+// CompanionTurnOnTitle says "Turn on Pinky on the phone"
 // in the language the app shows.
 //
-// The title of the card that offers to turn on Pinky for Android's service
+// The title of the card that offers to turn on Pinky on the phone's service
 // when the app is installed but off.
 func CompanionTurnOnTitle() string { return In(i18n.Locale()).CompanionTurnOnTitle() }
 
-// CompanionTurnOnTitle says "Turn on Pinky for Android"
+// CompanionTurnOnTitle says "Turn on Pinky on the phone"
 // in the language of msgs.
 //
-// The title of the card that offers to turn on Pinky for Android's service
+// The title of the card that offers to turn on Pinky on the phone's service
 // when the app is installed but off.
 func (msgs Messages) CompanionTurnOnTitle() string {
 	return Catalog.Format(msgs.locale, "companionTurnOnTitle", nil)
@@ -7000,13 +7110,15 @@ func (msgs Messages) CompanionTurnOnTitle() string {
 // CompanionUpdate says "Update"
 // in the language the app shows.
 //
-// The Pinky for Android card: the button that updates the app on the phone.
+// The Pinky on the phone card: the button that updates the app on the
+// phone.
 func CompanionUpdate() string { return In(i18n.Locale()).CompanionUpdate() }
 
 // CompanionUpdate says "Update"
 // in the language of msgs.
 //
-// The Pinky for Android card: the button that updates the app on the phone.
+// The Pinky on the phone card: the button that updates the app on the
+// phone.
 func (msgs Messages) CompanionUpdate() string {
 	return Catalog.Format(msgs.locale, "companionUpdate", nil)
 }
@@ -7014,47 +7126,47 @@ func (msgs Messages) CompanionUpdate() string {
 // CompanionUpdateBody says "This Pinky comes with a newer version of its app for the phone. Updating keeps control fast and steady."
 // in the language the app shows.
 //
-// The Pinky for Android card, when the phone has an older version: why to
+// The Pinky on the phone card, when the phone has an older version: why to
 // update it.
 func CompanionUpdateBody() string { return In(i18n.Locale()).CompanionUpdateBody() }
 
 // CompanionUpdateBody says "This Pinky comes with a newer version of its app for the phone. Updating keeps control fast and steady."
 // in the language of msgs.
 //
-// The Pinky for Android card, when the phone has an older version: why to
+// The Pinky on the phone card, when the phone has an older version: why to
 // update it.
 func (msgs Messages) CompanionUpdateBody() string {
 	return Catalog.Format(msgs.locale, "companionUpdateBody", nil)
 }
 
-// CompanionUpdateLabel says "Update Pinky for Android on {name}"
+// CompanionUpdateLabel says "Update Pinky on {name}"
 // in the language the app shows.
 //
-// The accessibility label of the Update button of the Pinky for Android
+// The accessibility label of the Update button of the Pinky on the phone
 // card. name is the phone's name.
 func CompanionUpdateLabel(name string) string { return In(i18n.Locale()).CompanionUpdateLabel(name) }
 
-// CompanionUpdateLabel says "Update Pinky for Android on {name}"
+// CompanionUpdateLabel says "Update Pinky on {name}"
 // in the language of msgs.
 //
-// The accessibility label of the Update button of the Pinky for Android
+// The accessibility label of the Update button of the Pinky on the phone
 // card. name is the phone's name.
 func (msgs Messages) CompanionUpdateLabel(name string) string {
 	return Catalog.Format(msgs.locale, "companionUpdateLabel", map[string]any{"name": name})
 }
 
-// CompanionUpdateTitle says "Update Pinky for Android"
+// CompanionUpdateTitle says "Update Pinky on the phone"
 // in the language the app shows.
 //
-// The title of the card that offers to update Pinky for Android on the
-// phone to the version this Pinky comes with.
+// The title of the card that offers to update Pinky on the phone to the
+// version this Pinky comes with.
 func CompanionUpdateTitle() string { return In(i18n.Locale()).CompanionUpdateTitle() }
 
-// CompanionUpdateTitle says "Update Pinky for Android"
+// CompanionUpdateTitle says "Update Pinky on the phone"
 // in the language of msgs.
 //
-// The title of the card that offers to update Pinky for Android on the
-// phone to the version this Pinky comes with.
+// The title of the card that offers to update Pinky on the phone to the
+// version this Pinky comes with.
 func (msgs Messages) CompanionUpdateTitle() string {
 	return Catalog.Format(msgs.locale, "companionUpdateTitle", nil)
 }
@@ -7062,13 +7174,13 @@ func (msgs Messages) CompanionUpdateTitle() string {
 // CompanionUpdatingHint says "Agents can use the phone again in a few seconds."
 // in the language the app shows.
 //
-// Under the Pinky for Android card's progress bar while it updates.
+// Under the Pinky on the phone card's progress bar while it updates.
 func CompanionUpdatingHint() string { return In(i18n.Locale()).CompanionUpdatingHint() }
 
 // CompanionUpdatingHint says "Agents can use the phone again in a few seconds."
 // in the language of msgs.
 //
-// Under the Pinky for Android card's progress bar while it updates.
+// Under the Pinky on the phone card's progress bar while it updates.
 func (msgs Messages) CompanionUpdatingHint() string {
 	return Catalog.Format(msgs.locale, "companionUpdatingHint", nil)
 }
@@ -7076,29 +7188,31 @@ func (msgs Messages) CompanionUpdatingHint() string {
 // CompanionUpdatingLabel says "Updating"
 // in the language the app shows.
 //
-// The accessibility label of the Pinky for Android card's progress bar
+// The accessibility label of the Pinky on the phone card's progress bar
 // while it updates.
 func CompanionUpdatingLabel() string { return In(i18n.Locale()).CompanionUpdatingLabel() }
 
 // CompanionUpdatingLabel says "Updating"
 // in the language of msgs.
 //
-// The accessibility label of the Pinky for Android card's progress bar
+// The accessibility label of the Pinky on the phone card's progress bar
 // while it updates.
 func (msgs Messages) CompanionUpdatingLabel() string {
 	return Catalog.Format(msgs.locale, "companionUpdatingLabel", nil)
 }
 
-// CompanionUpdatingTitle says "Updating Pinky for Android"
+// CompanionUpdatingTitle says "Updating Pinky on the phone"
 // in the language the app shows.
 //
-// The Pinky for Android card's title while Pinky updates the app by itself.
+// The Pinky on the phone card's title while Pinky updates the app by
+// itself.
 func CompanionUpdatingTitle() string { return In(i18n.Locale()).CompanionUpdatingTitle() }
 
-// CompanionUpdatingTitle says "Updating Pinky for Android"
+// CompanionUpdatingTitle says "Updating Pinky on the phone"
 // in the language of msgs.
 //
-// The Pinky for Android card's title while Pinky updates the app by itself.
+// The Pinky on the phone card's title while Pinky updates the app by
+// itself.
 func (msgs Messages) CompanionUpdatingTitle() string {
 	return Catalog.Format(msgs.locale, "companionUpdatingTitle", nil)
 }
@@ -8143,13 +8257,13 @@ func (msgs Messages) ConnectionAuto() string {
 	return Catalog.Format(msgs.locale, "connectionAuto", nil)
 }
 
-// ConnectionAutoDesc says "On iOS 27 and later, without Pinky for iPhone. If Pinky for iPhone is installed, a task moves to it for apps that ref…"
+// ConnectionAutoDesc says "On iOS 27 and later, without Pinky on the iPhone. If Pinky on the iPhone is installed, a task moves to it for apps th…"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: what Automatic does.
 func ConnectionAutoDesc() string { return In(i18n.Locale()).ConnectionAutoDesc() }
 
-// ConnectionAutoDesc says "On iOS 27 and later, without Pinky for iPhone. If Pinky for iPhone is installed, a task moves to it for apps that ref…"
+// ConnectionAutoDesc says "On iOS 27 and later, without Pinky on the iPhone. If Pinky on the iPhone is installed, a task moves to it for apps th…"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: what Automatic does.
@@ -8215,7 +8329,7 @@ func (msgs Messages) ConnectionChoose() string {
 // The phone's page, its checkup and Add phone › iPhone, for an iPhone
 // below iOS 27 whose connection in Settings › Phones was set to
 // CoreDevice (connectionCoreDevice), which it cannot use. Automatic and
-// Pinky for iPhone are the other choices there (connectionAuto,
+// Pinky on the iPhone are the other choices there (connectionAuto,
 // connectionWDA). CoreDevice and WebDriverAgent are names.
 func ConnectionChosenNeedsIOS27(version string) string {
 	return In(i18n.Locale()).ConnectionChosenNeedsIOS27(version)
@@ -8227,7 +8341,7 @@ func ConnectionChosenNeedsIOS27(version string) string {
 // The phone's page, its checkup and Add phone › iPhone, for an iPhone
 // below iOS 27 whose connection in Settings › Phones was set to
 // CoreDevice (connectionCoreDevice), which it cannot use. Automatic and
-// Pinky for iPhone are the other choices there (connectionAuto,
+// Pinky on the iPhone are the other choices there (connectionAuto,
 // connectionWDA). CoreDevice and WebDriverAgent are names.
 func (msgs Messages) ConnectionChosenNeedsIOS27(version string) string {
 	return Catalog.Format(msgs.locale, "connectionChosenNeedsIOS27", map[string]any{"version": version})
@@ -8317,22 +8431,22 @@ func (msgs Messages) ConnectionNoAnswer() string {
 	return Catalog.Format(msgs.locale, "connectionNoAnswer", nil)
 }
 
-// ConnectionNotInstalled says "Pinky for iPhone isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in …"
+// ConnectionNotInstalled says "Pinky isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal. P…"
 // in the language the app shows.
 //
-// Settings › Phones, an iPhone's connection choice: why Pinky for iPhone
-// cannot be used yet, and how to install it. pinkyctl helper install is a
-// command typed in Terminal (macOS's app, named as Apple names it in the
-// language) and stays as it is.
+// Settings › Phones, an iPhone's connection choice: why Pinky on the
+// iPhone cannot be used yet, and how to install it. pinkyctl helper install
+// is a command typed in Terminal (macOS's app, named as Apple names it in
+// the language) and stays as it is.
 func ConnectionNotInstalled() string { return In(i18n.Locale()).ConnectionNotInstalled() }
 
-// ConnectionNotInstalled says "Pinky for iPhone isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in …"
+// ConnectionNotInstalled says "Pinky isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal. P…"
 // in the language of msgs.
 //
-// Settings › Phones, an iPhone's connection choice: why Pinky for iPhone
-// cannot be used yet, and how to install it. pinkyctl helper install is a
-// command typed in Terminal (macOS's app, named as Apple names it in the
-// language) and stays as it is.
+// Settings › Phones, an iPhone's connection choice: why Pinky on the
+// iPhone cannot be used yet, and how to install it. pinkyctl helper install
+// is a command typed in Terminal (macOS's app, named as Apple names it in
+// the language) and stays as it is.
 func (msgs Messages) ConnectionNotInstalled() string {
 	return Catalog.Format(msgs.locale, "connectionNotInstalled", nil)
 }
@@ -8355,20 +8469,22 @@ func (msgs Messages) ConnectionOffline(platform string) string {
 	return Catalog.Format(msgs.locale, "connectionOffline", map[string]any{"platform": platform})
 }
 
-// ConnectionReadOnly says "read-only, without Pinky for iPhone"
+// ConnectionReadOnly says "read-only, without Pinky on the iPhone"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: what Automatic picked
-// on an iPhone below iOS 27 without Pinky for iPhone, where Pinky can read
-// the screen but not act. Shown inside connectionAutoNow, so lower case.
+// on an iPhone below iOS 27 without Pinky on the iPhone, where Pinky can
+// read the screen but not act. Shown inside connectionAutoNow, so lower
+// case.
 func ConnectionReadOnly() string { return In(i18n.Locale()).ConnectionReadOnly() }
 
-// ConnectionReadOnly says "read-only, without Pinky for iPhone"
+// ConnectionReadOnly says "read-only, without Pinky on the iPhone"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: what Automatic picked
-// on an iPhone below iOS 27 without Pinky for iPhone, where Pinky can read
-// the screen but not act. Shown inside connectionAutoNow, so lower case.
+// on an iPhone below iOS 27 without Pinky on the iPhone, where Pinky can
+// read the screen but not act. Shown inside connectionAutoNow, so lower
+// case.
 func (msgs Messages) ConnectionReadOnly() string {
 	return Catalog.Format(msgs.locale, "connectionReadOnly", nil)
 }
@@ -8407,40 +8523,42 @@ func (msgs Messages) ConnectionTitle() string {
 	return Catalog.Format(msgs.locale, "connectionTitle", nil)
 }
 
-// ConnectionWDA says "Pinky for iPhone (WebDriverAgent)"
+// ConnectionWDA says "Pinky on the iPhone (WebDriverAgent)"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: the way through Pinky
-// for iPhone. WebDriverAgent is a name. Pinky for iPhone is the name of
-// Pinky's iPhone app (as Pinky for Android is the Android app's), which
-// hosts WebDriverAgent; older installs are the app Pinky Helper, which
-// works the same.
+// on the iPhone. WebDriverAgent is a name. Pinky on the iPhone is what the
+// computer calls Pinky's iPhone app, named just Pinky on the iPhone itself
+// (Pinky on the phone names the Android app the same way), which hosts
+// WebDriverAgent; older installs are the app Pinky Helper, which works the
+// same.
 func ConnectionWDA() string { return In(i18n.Locale()).ConnectionWDA() }
 
-// ConnectionWDA says "Pinky for iPhone (WebDriverAgent)"
+// ConnectionWDA says "Pinky on the iPhone (WebDriverAgent)"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: the way through Pinky
-// for iPhone. WebDriverAgent is a name. Pinky for iPhone is the name of
-// Pinky's iPhone app (as Pinky for Android is the Android app's), which
-// hosts WebDriverAgent; older installs are the app Pinky Helper, which
-// works the same.
+// on the iPhone. WebDriverAgent is a name. Pinky on the iPhone is what the
+// computer calls Pinky's iPhone app, named just Pinky on the iPhone itself
+// (Pinky on the phone names the Android app the same way), which hosts
+// WebDriverAgent; older installs are the app Pinky Helper, which works the
+// same.
 func (msgs Messages) ConnectionWDA() string {
 	return Catalog.Format(msgs.locale, "connectionWDA", nil)
 }
 
-// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky for i…"
+// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky on th…"
 // in the language the app shows.
 //
-// Settings › Phones, an iPhone's connection choice: what Pinky for iPhone
-// gives and costs.
+// Settings › Phones, an iPhone's connection choice: what Pinky on the
+// iPhone gives and costs.
 func ConnectionWDADesc() string { return In(i18n.Locale()).ConnectionWDADesc() }
 
-// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky for i…"
+// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky on th…"
 // in the language of msgs.
 //
-// Settings › Phones, an iPhone's connection choice: what Pinky for iPhone
-// gives and costs.
+// Settings › Phones, an iPhone's connection choice: what Pinky on the
+// iPhone gives and costs.
 func (msgs Messages) ConnectionWDADesc() string {
 	return Catalog.Format(msgs.locale, "connectionWDADesc", nil)
 }
@@ -9063,16 +9181,16 @@ func (msgs Messages) FlyoutPhones() string {
 // in the language the app shows.
 //
 // Menu bar flyout: what the Needs you row of an iPhone says after the
-// phone's name when iOS asks on the phone for its passcode before Pinky for
-// iPhone may control it.
+// phone's name when iOS asks on the phone for its passcode before Pinky on
+// the iPhone may control it.
 func FlyoutPasscode() string { return In(i18n.Locale()).FlyoutPasscode() }
 
 // FlyoutPasscode says "Enter the passcode on the phone"
 // in the language of msgs.
 //
 // Menu bar flyout: what the Needs you row of an iPhone says after the
-// phone's name when iOS asks on the phone for its passcode before Pinky for
-// iPhone may control it.
+// phone's name when iOS asks on the phone for its passcode before Pinky on
+// the iPhone may control it.
 func (msgs Messages) FlyoutPasscode() string {
 	return Catalog.Format(msgs.locale, "flyoutPasscode", nil)
 }
@@ -9531,14 +9649,14 @@ func (msgs Messages) GuideHuaweiDev() string {
 	return Catalog.Format(msgs.locale, "guideHuaweiDev", nil)
 }
 
-// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky for Android is blocked, turn off Enha…"
+// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky on the phone is blocked, turn off Enh…"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on HUAWEI phones: a note under the
 // switches.
 func GuideHuaweiNote() string { return In(i18n.Locale()).GuideHuaweiNote() }
 
-// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky for Android is blocked, turn off Enha…"
+// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky on the phone is blocked, turn off Enh…"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on HUAWEI phones: a note under the
@@ -9733,7 +9851,7 @@ func (msgs Messages) GuideOppoSwitchMonitor() string {
 	return Catalog.Format(msgs.locale, "guideOppoSwitchMonitor", nil)
 }
 
-// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on Pinky for Android. It's at the bottom of Developer options; restart the phone after turning it on.…"
+// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on Pinky on the phone. It's at the bottom of Developer options; restart the phone after turning it on…"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to
@@ -9742,7 +9860,7 @@ func (msgs Messages) GuideOppoSwitchMonitor() string {
 // phone shows: keep them in English.
 func GuideOppoSwitchMonitorWhy() string { return In(i18n.Locale()).GuideOppoSwitchMonitorWhy() }
 
-// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on Pinky for Android. It's at the bottom of Developer options; restart the phone after turning it on.…"
+// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on Pinky on the phone. It's at the bottom of Developer options; restart the phone after turning it on…"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to
@@ -10275,14 +10393,14 @@ func (msgs Messages) GuideXiaomiSwitchInstall() string {
 	return Catalog.Format(msgs.locale, "guideXiaomiSwitchInstall", nil)
 }
 
-// GuideXiaomiSwitchInstallWhy says "Lets Pinky install Pinky for Android. It needs your Xiaomi account signed in. Each install then asks on the phone: ta…"
+// GuideXiaomiSwitchInstallWhy says "Lets Pinky install Pinky on the phone. It needs your Xiaomi account signed in. Each install then asks on the phone: t…"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on Xiaomi phones: why to turn on Install
 // via USB, and what it needs.
 func GuideXiaomiSwitchInstallWhy() string { return In(i18n.Locale()).GuideXiaomiSwitchInstallWhy() }
 
-// GuideXiaomiSwitchInstallWhy says "Lets Pinky install Pinky for Android. It needs your Xiaomi account signed in. Each install then asks on the phone: ta…"
+// GuideXiaomiSwitchInstallWhy says "Lets Pinky install Pinky on the phone. It needs your Xiaomi account signed in. Each install then asks on the phone: t…"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on Xiaomi phones: why to turn on Install
@@ -10309,14 +10427,14 @@ func (msgs Messages) GuideXiaomiSwitchSecurity() string {
 	return Catalog.Format(msgs.locale, "guideXiaomiSwitchSecurity", nil)
 }
 
-// GuideXiaomiSwitchSecurityWhy says "Lets Pinky tap, type and turn on Pinky for Android. The phone shows three warnings, each with a 5-second wait. Restar…"
+// GuideXiaomiSwitchSecurityWhy says "Lets Pinky tap, type and turn on Pinky on the phone. The phone shows three warnings, each with a 5-second wait. Resta…"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on Xiaomi phones: why to turn on USB
 // debugging (Security settings), and what turning it on is like.
 func GuideXiaomiSwitchSecurityWhy() string { return In(i18n.Locale()).GuideXiaomiSwitchSecurityWhy() }
 
-// GuideXiaomiSwitchSecurityWhy says "Lets Pinky tap, type and turn on Pinky for Android. The phone shows three warnings, each with a 5-second wait. Restar…"
+// GuideXiaomiSwitchSecurityWhy says "Lets Pinky tap, type and turn on Pinky on the phone. The phone shows three warnings, each with a 5-second wait. Resta…"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on Xiaomi phones: why to turn on USB
@@ -12607,7 +12725,7 @@ func (msgs Messages) GwStatusBusyComputer() string {
 // in the language the app shows.
 //
 // A phone's status line in the sidebar and tiles: an agent's task waits
-// because Pinky for Android runs a task of its own on the phone (on-phone
+// because Pinky on the phone runs a task of its own on the phone (on-phone
 // mode), and only one of them uses the phone at a time. Shown only in other
 // languages; in English the gateway's own words show.
 func GwStatusBusyPhone() string { return In(i18n.Locale()).GwStatusBusyPhone() }
@@ -12616,7 +12734,7 @@ func GwStatusBusyPhone() string { return In(i18n.Locale()).GwStatusBusyPhone() }
 // in the language of msgs.
 //
 // A phone's status line in the sidebar and tiles: an agent's task waits
-// because Pinky for Android runs a task of its own on the phone (on-phone
+// because Pinky on the phone runs a task of its own on the phone (on-phone
 // mode), and only one of them uses the phone at a time. Shown only in other
 // languages; in English the gateway's own words show.
 func (msgs Messages) GwStatusBusyPhone() string {
@@ -12974,31 +13092,33 @@ func (msgs Messages) GwStatusReconnecting(task string) string {
 // GwStatusSwitchCoreDevice says "Switching to CoreDevice"
 // in the language the app shows.
 //
-// An iPhone's status line while Pinky moves it back from Pinky for iPhone
-// to CoreDevice after a task that needed it. Shown only in other languages.
+// An iPhone's status line while Pinky moves it back from Pinky on the
+// iPhone to CoreDevice after a task that needed it. Shown only in other
+// languages.
 func GwStatusSwitchCoreDevice() string { return In(i18n.Locale()).GwStatusSwitchCoreDevice() }
 
 // GwStatusSwitchCoreDevice says "Switching to CoreDevice"
 // in the language of msgs.
 //
-// An iPhone's status line while Pinky moves it back from Pinky for iPhone
-// to CoreDevice after a task that needed it. Shown only in other languages.
+// An iPhone's status line while Pinky moves it back from Pinky on the
+// iPhone to CoreDevice after a task that needed it. Shown only in other
+// languages.
 func (msgs Messages) GwStatusSwitchCoreDevice() string {
 	return Catalog.Format(msgs.locale, "gwStatusSwitchCoreDevice", nil)
 }
 
-// GwStatusSwitchHelper says "Switching to Pinky for iPhone"
+// GwStatusSwitchHelper says "Switching to Pinky on the iPhone"
 // in the language the app shows.
 //
-// An iPhone's status line while Pinky moves an agent's task to Pinky for
+// An iPhone's status line while Pinky moves an agent's task to Pinky on the
 // iPhone, for an app that refuses screen sharing. Shown only in other
 // languages.
 func GwStatusSwitchHelper() string { return In(i18n.Locale()).GwStatusSwitchHelper() }
 
-// GwStatusSwitchHelper says "Switching to Pinky for iPhone"
+// GwStatusSwitchHelper says "Switching to Pinky on the iPhone"
 // in the language of msgs.
 //
-// An iPhone's status line while Pinky moves an agent's task to Pinky for
+// An iPhone's status line while Pinky moves an agent's task to Pinky on the
 // iPhone, for an app that refuses screen sharing. Shown only in other
 // languages.
 func (msgs Messages) GwStatusSwitchHelper() string {
@@ -13821,24 +13941,24 @@ func (msgs Messages) GwSwitchRotation() string {
 	return Catalog.Format(msgs.locale, "gwSwitchRotation", nil)
 }
 
-// GwSetupPasscodeDetail says "iOS asks for it on the phone before Pinky for iPhone can control it, and stops asking after a while. {agent} is waiti…"
+// GwSetupPasscodeDetail says "iOS asks for it on the phone before Pinky on the iPhone can control it, and stops asking after a while. {agent} is wa…"
 // in the language the app shows.
 //
 // The second line of the card that asks the person to enter the iPhone's
-// passcode on the phone itself, so that Pinky for iPhone can start for an
-// agent's task. Shown only in other languages; in English the gateway's own
-// words show.
+// passcode on the phone itself, so that Pinky on the iPhone can start for
+// an agent's task. Shown only in other languages; in English the gateway's
+// own words show.
 func GwSetupPasscodeDetail(agent string, task string) string {
 	return In(i18n.Locale()).GwSetupPasscodeDetail(agent, task)
 }
 
-// GwSetupPasscodeDetail says "iOS asks for it on the phone before Pinky for iPhone can control it, and stops asking after a while. {agent} is waiti…"
+// GwSetupPasscodeDetail says "iOS asks for it on the phone before Pinky on the iPhone can control it, and stops asking after a while. {agent} is wa…"
 // in the language of msgs.
 //
 // The second line of the card that asks the person to enter the iPhone's
-// passcode on the phone itself, so that Pinky for iPhone can start for an
-// agent's task. Shown only in other languages; in English the gateway's own
-// words show.
+// passcode on the phone itself, so that Pinky on the iPhone can start for
+// an agent's task. Shown only in other languages; in English the gateway's
+// own words show.
 func (msgs Messages) GwSetupPasscodeDetail(agent string, task string) string {
 	return Catalog.Format(msgs.locale, "gwSetupPasscodeDetail", map[string]any{"agent": agent, "task": task})
 }
@@ -13847,7 +13967,7 @@ func (msgs Messages) GwSetupPasscodeDetail(agent string, task string) string {
 // in the language the app shows.
 //
 // The title of the card that asks the person to enter the iPhone's passcode
-// on the phone itself, where iOS asks for it before Pinky for iPhone may
+// on the phone itself, where iOS asks for it before Pinky on the iPhone may
 // control the phone. Shown only in other languages; in English the
 // gateway's own words show.
 func GwSetupPasscodeTitle(phone string) string { return In(i18n.Locale()).GwSetupPasscodeTitle(phone) }
@@ -13856,7 +13976,7 @@ func GwSetupPasscodeTitle(phone string) string { return In(i18n.Locale()).GwSetu
 // in the language of msgs.
 //
 // The title of the card that asks the person to enter the iPhone's passcode
-// on the phone itself, where iOS asks for it before Pinky for iPhone may
+// on the phone itself, where iOS asks for it before Pinky on the iPhone may
 // control the phone. Shown only in other languages; in English the
 // gateway's own words show.
 func (msgs Messages) GwSetupPasscodeTitle(phone string) string {
@@ -14088,49 +14208,51 @@ func (msgs Messages) GwValueUpsideDown() string {
 // HelperCancel says "Cancel"
 // in the language the app shows.
 //
-// Button that stops installing Pinky for iPhone while Xcode builds or
+// Button that stops installing Pinky on the iPhone while Xcode builds or
 // installs it.
 func HelperCancel() string { return In(i18n.Locale()).HelperCancel() }
 
 // HelperCancel says "Cancel"
 // in the language of msgs.
 //
-// Button that stops installing Pinky for iPhone while Xcode builds or
+// Button that stops installing Pinky on the iPhone while Xcode builds or
 // installs it.
 func (msgs Messages) HelperCancel() string {
 	return Catalog.Format(msgs.locale, "helperCancel", nil)
 }
 
-// HelperChooseTeam says "This Mac can sign Pinky for iPhone for more than one team. Which one should sign it?"
+// HelperChooseTeam says "This Mac can sign Pinky's iPhone app for more than one team. Which one should sign it?"
 // in the language the app shows.
 //
-// Installing Pinky for iPhone: the Mac has signing certificates of several
-// Apple developer teams, and the person picks one with the buttons below.
+// Installing Pinky on the iPhone: the Mac has signing certificates of
+// several Apple developer teams, and the person picks one with the buttons
+// below.
 func HelperChooseTeam() string { return In(i18n.Locale()).HelperChooseTeam() }
 
-// HelperChooseTeam says "This Mac can sign Pinky for iPhone for more than one team. Which one should sign it?"
+// HelperChooseTeam says "This Mac can sign Pinky's iPhone app for more than one team. Which one should sign it?"
 // in the language of msgs.
 //
-// Installing Pinky for iPhone: the Mac has signing certificates of several
-// Apple developer teams, and the person picks one with the buttons below.
+// Installing Pinky on the iPhone: the Mac has signing certificates of
+// several Apple developer teams, and the person picks one with the buttons
+// below.
 func (msgs Messages) HelperChooseTeam() string {
 	return Catalog.Format(msgs.locale, "helperChooseTeam", nil)
 }
 
-// HelperErrAppleID says "Xcode has no Apple ID to sign Pinky for iPhone with. Add yours in Xcode › Settings › Accounts (a free one works),…"
+// HelperErrAppleID says "Xcode has no Apple ID to sign Pinky's iPhone app with. Add yours in Xcode › Settings › Accounts (a free one works…"
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: Xcode has no Apple account or team to
-// sign with. Xcode › Settings › Accounts stays in English: Xcode has no
-// other language.
+// Installing Pinky on the iPhone failed: Xcode has no Apple account or team
+// to sign with. Xcode › Settings › Accounts stays in English: Xcode has
+// no other language.
 func HelperErrAppleID() string { return In(i18n.Locale()).HelperErrAppleID() }
 
-// HelperErrAppleID says "Xcode has no Apple ID to sign Pinky for iPhone with. Add yours in Xcode › Settings › Accounts (a free one works),…"
+// HelperErrAppleID says "Xcode has no Apple ID to sign Pinky's iPhone app with. Add yours in Xcode › Settings › Accounts (a free one works…"
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: Xcode has no Apple account or team to
-// sign with. Xcode › Settings › Accounts stays in English: Xcode has no
-// other language.
+// Installing Pinky on the iPhone failed: Xcode has no Apple account or team
+// to sign with. Xcode › Settings › Accounts stays in English: Xcode has
+// no other language.
 func (msgs Messages) HelperErrAppleID() string {
 	return Catalog.Format(msgs.locale, "helperErrAppleID", nil)
 }
@@ -14138,7 +14260,7 @@ func (msgs Messages) HelperErrAppleID() string {
 // HelperErrDeveloperMode says "Developer Mode is off on {phone}. Turn it on in Settings › Privacy & Security › Developer Mode (the phone restart…"
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: Developer Mode is off; the path is
+// Installing Pinky on the iPhone failed: Developer Mode is off; the path is
 // the iPhone's Settings, named as Apple names them in the language. phone
 // is the iPhone's name, or "the iPhone".
 func HelperErrDeveloperMode(phone string) string {
@@ -14148,25 +14270,25 @@ func HelperErrDeveloperMode(phone string) string {
 // HelperErrDeveloperMode says "Developer Mode is off on {phone}. Turn it on in Settings › Privacy & Security › Developer Mode (the phone restart…"
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: Developer Mode is off; the path is
+// Installing Pinky on the iPhone failed: Developer Mode is off; the path is
 // the iPhone's Settings, named as Apple names them in the language. phone
 // is the iPhone's name, or "the iPhone".
 func (msgs Messages) HelperErrDeveloperMode(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrDeveloperMode", map[string]any{"phone": phone})
 }
 
-// HelperErrDownload says "Pinky couldn't download Pinky for iPhone. Check this Mac's internet connection, then try again."
+// HelperErrDownload says "Pinky couldn't download its iPhone app. Check this Mac's internet connection, then try again."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: downloading what Pinky builds it from
-// failed.
+// Installing Pinky on the iPhone failed: downloading what Pinky builds it
+// from failed.
 func HelperErrDownload() string { return In(i18n.Locale()).HelperErrDownload() }
 
-// HelperErrDownload says "Pinky couldn't download Pinky for iPhone. Check this Mac's internet connection, then try again."
+// HelperErrDownload says "Pinky couldn't download its iPhone app. Check this Mac's internet connection, then try again."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: downloading what Pinky builds it from
-// failed.
+// Installing Pinky on the iPhone failed: downloading what Pinky builds it
+// from failed.
 func (msgs Messages) HelperErrDownload() string {
 	return Catalog.Format(msgs.locale, "helperErrDownload", nil)
 }
@@ -14174,33 +14296,33 @@ func (msgs Messages) HelperErrDownload() string {
 // HelperErrInUse says "An agent is working on {phone}. Try again once its task ends."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone refused: an agent's task holds the phone.
+// Installing Pinky on the iPhone refused: an agent's task holds the phone.
 // phone is the iPhone's name.
 func HelperErrInUse(phone string) string { return In(i18n.Locale()).HelperErrInUse(phone) }
 
 // HelperErrInUse says "An agent is working on {phone}. Try again once its task ends."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone refused: an agent's task holds the phone.
+// Installing Pinky on the iPhone refused: an agent's task holds the phone.
 // phone is the iPhone's name.
 func (msgs Messages) HelperErrInUse(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrInUse", map[string]any{"phone": phone})
 }
 
-// HelperErrOther says "Installing Pinky for iPhone on {phone} failed."
+// HelperErrOther says "Installing Pinky on {phone} failed."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed for a reason Pinky has no words for;
-// Xcode's own words follow in small print. phone is the iPhone's name, or
-// "the iPhone".
+// Installing Pinky on the iPhone failed for a reason Pinky has no words
+// for; Xcode's own words follow in small print. phone is the iPhone's name,
+// or "the iPhone".
 func HelperErrOther(phone string) string { return In(i18n.Locale()).HelperErrOther(phone) }
 
-// HelperErrOther says "Installing Pinky for iPhone on {phone} failed."
+// HelperErrOther says "Installing Pinky on {phone} failed."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed for a reason Pinky has no words for;
-// Xcode's own words follow in small print. phone is the iPhone's name, or
-// "the iPhone".
+// Installing Pinky on the iPhone failed for a reason Pinky has no words
+// for; Xcode's own words follow in small print. phone is the iPhone's name,
+// or "the iPhone".
 func (msgs Messages) HelperErrOther(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrOther", map[string]any{"phone": phone})
 }
@@ -14208,7 +14330,7 @@ func (msgs Messages) HelperErrOther(phone string) string {
 // HelperErrOtherTeam says "Another team signed Pinky Helper, already on {phone}, and iOS replaces it only with one of that team. Delete Pinky He…"
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: Pinky Helper, the older app Pinky
+// Installing Pinky on the iPhone failed: Pinky Helper, the older app Pinky
 // installed on the phone, was signed by a team this Mac cannot sign for.
 // Pinky Helper is its name on the iPhone's home screen in the language
 // (Pinky 助手, Pinky ヘルパー); WebDriverAgentRunner, an older one's,
@@ -14218,7 +14340,7 @@ func HelperErrOtherTeam(phone string) string { return In(i18n.Locale()).HelperEr
 // HelperErrOtherTeam says "Another team signed Pinky Helper, already on {phone}, and iOS replaces it only with one of that team. Delete Pinky He…"
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: Pinky Helper, the older app Pinky
+// Installing Pinky on the iPhone failed: Pinky Helper, the older app Pinky
 // installed on the phone, was signed by a team this Mac cannot sign for.
 // Pinky Helper is its name on the iPhone's home screen in the language
 // (Pinky 助手, Pinky ヘルパー); WebDriverAgentRunner, an older one's,
@@ -14230,17 +14352,17 @@ func (msgs Messages) HelperErrOtherTeam(phone string) string {
 // HelperErrPasscode says "Nobody entered the passcode in time when {phone} asked for it to allow automation. Try again, and enter it on the pho…"
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: iOS asked for the phone's passcode
-// before it lets Pinky for iPhone control the phone, and it was not entered
-// in time. phone is the iPhone's name, or "the iPhone".
+// Installing Pinky on the iPhone failed: iOS asked for the phone's passcode
+// before it lets Pinky on the iPhone control the phone, and it was not
+// entered in time. phone is the iPhone's name, or "the iPhone".
 func HelperErrPasscode(phone string) string { return In(i18n.Locale()).HelperErrPasscode(phone) }
 
 // HelperErrPasscode says "Nobody entered the passcode in time when {phone} asked for it to allow automation. Try again, and enter it on the pho…"
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: iOS asked for the phone's passcode
-// before it lets Pinky for iPhone control the phone, and it was not entered
-// in time. phone is the iPhone's name, or "the iPhone".
+// Installing Pinky on the iPhone failed: iOS asked for the phone's passcode
+// before it lets Pinky on the iPhone control the phone, and it was not
+// entered in time. phone is the iPhone's name, or "the iPhone".
 func (msgs Messages) HelperErrPasscode(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrPasscode", map[string]any{"phone": phone})
 }
@@ -14248,32 +14370,32 @@ func (msgs Messages) HelperErrPasscode(phone string) string {
 // HelperErrPhone says "Xcode can't reach {phone}. Connect it with a cable, or keep it unlocked on the same Wi-Fi as this Mac, then try again."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: Xcode does not see the phone. phone
-// is the iPhone's name, or "the iPhone".
+// Installing Pinky on the iPhone failed: Xcode does not see the phone.
+// phone is the iPhone's name, or "the iPhone".
 func HelperErrPhone(phone string) string { return In(i18n.Locale()).HelperErrPhone(phone) }
 
 // HelperErrPhone says "Xcode can't reach {phone}. Connect it with a cable, or keep it unlocked on the same Wi-Fi as this Mac, then try again."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: Xcode does not see the phone. phone
-// is the iPhone's name, or "the iPhone".
+// Installing Pinky on the iPhone failed: Xcode does not see the phone.
+// phone is the iPhone's name, or "the iPhone".
 func (msgs Messages) HelperErrPhone(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrPhone", map[string]any{"phone": phone})
 }
 
-// HelperErrSigning says "Xcode found no way to sign Pinky for iPhone for {phone}. Check your team in Xcode › Settings › Accounts, then try…"
+// HelperErrSigning says "Xcode found no way to sign Pinky for {phone}. Check your team in Xcode › Settings › Accounts, then try again."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: Xcode found no signing certificate or
-// provisioning profile that covers the phone. Xcode › Settings ›
+// Installing Pinky on the iPhone failed: Xcode found no signing certificate
+// or provisioning profile that covers the phone. Xcode › Settings ›
 // Accounts stays in English. phone is the iPhone's name, or "the iPhone".
 func HelperErrSigning(phone string) string { return In(i18n.Locale()).HelperErrSigning(phone) }
 
-// HelperErrSigning says "Xcode found no way to sign Pinky for iPhone for {phone}. Check your team in Xcode › Settings › Accounts, then try…"
+// HelperErrSigning says "Xcode found no way to sign Pinky for {phone}. Check your team in Xcode › Settings › Accounts, then try again."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: Xcode found no signing certificate or
-// provisioning profile that covers the phone. Xcode › Settings ›
+// Installing Pinky on the iPhone failed: Xcode found no signing certificate
+// or provisioning profile that covers the phone. Xcode › Settings ›
 // Accounts stays in English. phone is the iPhone's name, or "the iPhone".
 func (msgs Messages) HelperErrSigning(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrSigning", map[string]any{"phone": phone})
@@ -14282,8 +14404,8 @@ func (msgs Messages) HelperErrSigning(phone string) string {
 // HelperErrTrust says "Your developer certificate isn't trusted on {phone} yet. On the phone, trust it in Settings › General › VPN & Dev…"
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: the phone does not trust the
-// developer who signed Pinky for iPhone yet; the path is the iPhone's
+// Installing Pinky on the iPhone failed: the phone does not trust the
+// developer who signed Pinky on the iPhone yet; the path is the iPhone's
 // Settings, named as Apple names them in the language. phone is the
 // iPhone's name, or "the iPhone".
 func HelperErrTrust(phone string) string { return In(i18n.Locale()).HelperErrTrust(phone) }
@@ -14291,62 +14413,64 @@ func HelperErrTrust(phone string) string { return In(i18n.Locale()).HelperErrTru
 // HelperErrTrust says "Your developer certificate isn't trusted on {phone} yet. On the phone, trust it in Settings › General › VPN & Dev…"
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: the phone does not trust the
-// developer who signed Pinky for iPhone yet; the path is the iPhone's
+// Installing Pinky on the iPhone failed: the phone does not trust the
+// developer who signed Pinky on the iPhone yet; the path is the iPhone's
 // Settings, named as Apple names them in the language. phone is the
 // iPhone's name, or "the iPhone".
 func (msgs Messages) HelperErrTrust(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrTrust", map[string]any{"phone": phone})
 }
 
-// HelperErrUnlock says "Xcode couldn't install Pinky for iPhone while {phone} was locked. Unlock it, keep it unlocked, then try again."
+// HelperErrUnlock says "Xcode couldn't install Pinky while {phone} was locked. Unlock it, keep it unlocked, then try again."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: the phone stayed locked while Xcode
-// waited for it. phone is the iPhone's name, or "the iPhone".
+// Installing Pinky on the iPhone failed: the phone stayed locked while
+// Xcode waited for it. phone is the iPhone's name, or "the iPhone".
 func HelperErrUnlock(phone string) string { return In(i18n.Locale()).HelperErrUnlock(phone) }
 
-// HelperErrUnlock says "Xcode couldn't install Pinky for iPhone while {phone} was locked. Unlock it, keep it unlocked, then try again."
+// HelperErrUnlock says "Xcode couldn't install Pinky while {phone} was locked. Unlock it, keep it unlocked, then try again."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: the phone stayed locked while Xcode
-// waited for it. phone is the iPhone's name, or "the iPhone".
+// Installing Pinky on the iPhone failed: the phone stayed locked while
+// Xcode waited for it. phone is the iPhone's name, or "the iPhone".
 func (msgs Messages) HelperErrUnlock(phone string) string {
 	return Catalog.Format(msgs.locale, "helperErrUnlock", map[string]any{"phone": phone})
 }
 
-// HelperErrXcode says "Installing Pinky for iPhone needs Xcode. Install it from the App Store, open it once, then try again."
+// HelperErrXcode says "Installing Pinky on the iPhone needs Xcode. Install it from the App Store, open it once, then try again."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone failed: this Mac has no Xcode.
+// Installing Pinky on the iPhone failed: this Mac has no Xcode.
 func HelperErrXcode() string { return In(i18n.Locale()).HelperErrXcode() }
 
-// HelperErrXcode says "Installing Pinky for iPhone needs Xcode. Install it from the App Store, open it once, then try again."
+// HelperErrXcode says "Installing Pinky on the iPhone needs Xcode. Install it from the App Store, open it once, then try again."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone failed: this Mac has no Xcode.
+// Installing Pinky on the iPhone failed: this Mac has no Xcode.
 func (msgs Messages) HelperErrXcode() string {
 	return Catalog.Format(msgs.locale, "helperErrXcode", nil)
 }
 
-// HelperInstall says "Install Pinky for iPhone"
+// HelperInstall says "Install Pinky on the iPhone"
 // in the language the app shows.
 //
 // Button on a Mac with Xcode, in the checkup, on the Phone screen and in
-// Add phone: Pinky builds Pinky for iPhone (WebDriverAgent) with Xcode and
-// installs it on the iPhone. Pinky for iPhone is the name of Pinky's iPhone
-// app (as Pinky for Android is the Android app's), which hosts
+// Add phone: Pinky builds Pinky on the iPhone (WebDriverAgent) with Xcode
+// and installs it on the iPhone. Pinky on the iPhone is what the computer
+// calls Pinky's iPhone app, named just Pinky on the iPhone itself (Pinky on
+// the phone names the Android app the same way), which hosts
 // WebDriverAgent; older installs are the app Pinky Helper, which works the
 // same.
 func HelperInstall() string { return In(i18n.Locale()).HelperInstall() }
 
-// HelperInstall says "Install Pinky for iPhone"
+// HelperInstall says "Install Pinky on the iPhone"
 // in the language of msgs.
 //
 // Button on a Mac with Xcode, in the checkup, on the Phone screen and in
-// Add phone: Pinky builds Pinky for iPhone (WebDriverAgent) with Xcode and
-// installs it on the iPhone. Pinky for iPhone is the name of Pinky's iPhone
-// app (as Pinky for Android is the Android app's), which hosts
+// Add phone: Pinky builds Pinky on the iPhone (WebDriverAgent) with Xcode
+// and installs it on the iPhone. Pinky on the iPhone is what the computer
+// calls Pinky's iPhone app, named just Pinky on the iPhone itself (Pinky on
+// the phone names the Android app the same way), which hosts
 // WebDriverAgent; older installs are the app Pinky Helper, which works the
 // same.
 func (msgs Messages) HelperInstall() string {
@@ -14356,46 +14480,46 @@ func (msgs Messages) HelperInstall() string {
 // HelperInstallAgain says "Install again"
 // in the language the app shows.
 //
-// Button on a Mac with Xcode: installs Pinky for iPhone (WebDriverAgent)
+// Button on a Mac with Xcode: installs Pinky on the iPhone (WebDriverAgent)
 // again, as its signature runs out soon or ran out.
 func HelperInstallAgain() string { return In(i18n.Locale()).HelperInstallAgain() }
 
 // HelperInstallAgain says "Install again"
 // in the language of msgs.
 //
-// Button on a Mac with Xcode: installs Pinky for iPhone (WebDriverAgent)
+// Button on a Mac with Xcode: installs Pinky on the iPhone (WebDriverAgent)
 // again, as its signature runs out soon or ran out.
 func (msgs Messages) HelperInstallAgain() string {
 	return Catalog.Format(msgs.locale, "helperInstallAgain", nil)
 }
 
-// HelperInstallNote says "Pinky builds Pinky for iPhone with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done."
+// HelperInstallNote says "Pinky builds its iPhone app with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done."
 // in the language the app shows.
 //
-// Under the button that installs Pinky for iPhone from Pinky's window: what
-// it does, and what the person keeps in mind meanwhile.
+// Under the button that installs Pinky on the iPhone from Pinky's window:
+// what it does, and what the person keeps in mind meanwhile.
 func HelperInstallNote() string { return In(i18n.Locale()).HelperInstallNote() }
 
-// HelperInstallNote says "Pinky builds Pinky for iPhone with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done."
+// HelperInstallNote says "Pinky builds its iPhone app with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done."
 // in the language of msgs.
 //
-// Under the button that installs Pinky for iPhone from Pinky's window: what
-// it does, and what the person keeps in mind meanwhile.
+// Under the button that installs Pinky on the iPhone from Pinky's window:
+// what it does, and what the person keeps in mind meanwhile.
 func (msgs Messages) HelperInstallNote() string {
 	return Catalog.Format(msgs.locale, "helperInstallNote", nil)
 }
 
-// HelperInstalledToast says "Pinky for iPhone is installed on {phone}."
+// HelperInstalledToast says "Pinky is installed on {phone}."
 // in the language the app shows.
 //
-// Toast once Pinky for iPhone is installed from Pinky's window. phone is
+// Toast once Pinky on the iPhone is installed from Pinky's window. phone is
 // the iPhone's name, or "the iPhone".
 func HelperInstalledToast(phone string) string { return In(i18n.Locale()).HelperInstalledToast(phone) }
 
-// HelperInstalledToast says "Pinky for iPhone is installed on {phone}."
+// HelperInstalledToast says "Pinky is installed on {phone}."
 // in the language of msgs.
 //
-// Toast once Pinky for iPhone is installed from Pinky's window. phone is
+// Toast once Pinky on the iPhone is installed from Pinky's window. phone is
 // the iPhone's name, or "the iPhone".
 func (msgs Messages) HelperInstalledToast(phone string) string {
 	return Catalog.Format(msgs.locale, "helperInstalledToast", map[string]any{"phone": phone})
@@ -14404,49 +14528,49 @@ func (msgs Messages) HelperInstalledToast(phone string) string {
 // HelperShowLog says "Show the log"
 // in the language the app shows.
 //
-// Link after installing Pinky for iPhone failed: shows Xcode's log of the
-// install in Finder.
+// Link after installing Pinky on the iPhone failed: shows Xcode's log of
+// the install in Finder.
 func HelperShowLog() string { return In(i18n.Locale()).HelperShowLog() }
 
 // HelperShowLog says "Show the log"
 // in the language of msgs.
 //
-// Link after installing Pinky for iPhone failed: shows Xcode's log of the
-// install in Finder.
+// Link after installing Pinky on the iPhone failed: shows Xcode's log of
+// the install in Finder.
 func (msgs Messages) HelperShowLog() string {
 	return Catalog.Format(msgs.locale, "helperShowLog", nil)
 }
 
-// HelperStepBuilding says "Building Pinky for iPhone with Xcode. This takes a few minutes."
+// HelperStepBuilding says "Building Pinky's iPhone app with Xcode. This takes a few minutes."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone from Pinky's window: Xcode builds it on this
-// Mac.
+// Installing Pinky on the iPhone from Pinky's window: Xcode builds it on
+// this Mac.
 func HelperStepBuilding() string { return In(i18n.Locale()).HelperStepBuilding() }
 
-// HelperStepBuilding says "Building Pinky for iPhone with Xcode. This takes a few minutes."
+// HelperStepBuilding says "Building Pinky's iPhone app with Xcode. This takes a few minutes."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone from Pinky's window: Xcode builds it on this
-// Mac.
+// Installing Pinky on the iPhone from Pinky's window: Xcode builds it on
+// this Mac.
 func (msgs Messages) HelperStepBuilding() string {
 	return Catalog.Format(msgs.locale, "helperStepBuilding", nil)
 }
 
-// HelperStepInstalling says "Installing Pinky for iPhone on {phone}. If the phone asks for its passcode, enter it there."
+// HelperStepInstalling says "Installing Pinky on {phone}. If the phone asks for its passcode, enter it there."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone from Pinky's window: Xcode installs it on the
-// phone and starts it; iOS may ask for the phone's passcode to allow
+// Installing Pinky on the iPhone from Pinky's window: Xcode installs it on
+// the phone and starts it; iOS may ask for the phone's passcode to allow
 // automation, which the person enters on the phone. phone is the iPhone's
 // name, or "the iPhone" when Pinky does not know it yet.
 func HelperStepInstalling(phone string) string { return In(i18n.Locale()).HelperStepInstalling(phone) }
 
-// HelperStepInstalling says "Installing Pinky for iPhone on {phone}. If the phone asks for its passcode, enter it there."
+// HelperStepInstalling says "Installing Pinky on {phone}. If the phone asks for its passcode, enter it there."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone from Pinky's window: Xcode installs it on the
-// phone and starts it; iOS may ask for the phone's passcode to allow
+// Installing Pinky on the iPhone from Pinky's window: Xcode installs it on
+// the phone and starts it; iOS may ask for the phone's passcode to allow
 // automation, which the person enters on the phone. phone is the iPhone's
 // name, or "the iPhone" when Pinky does not know it yet.
 func (msgs Messages) HelperStepInstalling(phone string) string {
@@ -14456,17 +14580,17 @@ func (msgs Messages) HelperStepInstalling(phone string) string {
 // HelperStepPreparing says "Getting ready…"
 // in the language the app shows.
 //
-// Installing Pinky for iPhone from Pinky's window, first step: Pinky finds
-// the iPhone and the team that signs, and downloads Pinky for iPhone the
-// first time.
+// Installing Pinky on the iPhone from Pinky's window, first step: Pinky
+// finds the iPhone and the team that signs, and downloads Pinky on the
+// iPhone the first time.
 func HelperStepPreparing() string { return In(i18n.Locale()).HelperStepPreparing() }
 
 // HelperStepPreparing says "Getting ready…"
 // in the language of msgs.
 //
-// Installing Pinky for iPhone from Pinky's window, first step: Pinky finds
-// the iPhone and the team that signs, and downloads Pinky for iPhone the
-// first time.
+// Installing Pinky on the iPhone from Pinky's window, first step: Pinky
+// finds the iPhone and the team that signs, and downloads Pinky on the
+// iPhone the first time.
 func (msgs Messages) HelperStepPreparing() string {
 	return Catalog.Format(msgs.locale, "helperStepPreparing", nil)
 }
@@ -14474,16 +14598,16 @@ func (msgs Messages) HelperStepPreparing() string {
 // HelperStepUnlock says "Unlock {phone} and keep it unlocked: Xcode is waiting for it."
 // in the language the app shows.
 //
-// Installing Pinky for iPhone from Pinky's window, shown in bold: the phone
-// is locked and Xcode waits for the person to unlock it. phone is the
+// Installing Pinky on the iPhone from Pinky's window, shown in bold: the
+// phone is locked and Xcode waits for the person to unlock it. phone is the
 // iPhone's name, or "the iPhone".
 func HelperStepUnlock(phone string) string { return In(i18n.Locale()).HelperStepUnlock(phone) }
 
 // HelperStepUnlock says "Unlock {phone} and keep it unlocked: Xcode is waiting for it."
 // in the language of msgs.
 //
-// Installing Pinky for iPhone from Pinky's window, shown in bold: the phone
-// is locked and Xcode waits for the person to unlock it. phone is the
+// Installing Pinky on the iPhone from Pinky's window, shown in bold: the
+// phone is locked and Xcode waits for the person to unlock it. phone is the
 // iPhone's name, or "the iPhone".
 func (msgs Messages) HelperStepUnlock(phone string) string {
 	return Catalog.Format(msgs.locale, "helperStepUnlock", map[string]any{"phone": phone})
@@ -14492,15 +14616,15 @@ func (msgs Messages) HelperStepUnlock(phone string) string {
 // HelperTeam says "{name} ({id})"
 // in the language the app shows.
 //
-// Button choosing the Apple developer team that signs Pinky for iPhone: the
-// team's name and ID, as Xcode lists them.
+// Button choosing the Apple developer team that signs Pinky on the iPhone:
+// the team's name and ID, as Xcode lists them.
 func HelperTeam(name string, id string) string { return In(i18n.Locale()).HelperTeam(name, id) }
 
 // HelperTeam says "{name} ({id})"
 // in the language of msgs.
 //
-// Button choosing the Apple developer team that signs Pinky for iPhone: the
-// team's name and ID, as Xcode lists them.
+// Button choosing the Apple developer team that signs Pinky on the iPhone:
+// the team's name and ID, as Xcode lists them.
 func (msgs Messages) HelperTeam(name string, id string) string {
 	return Catalog.Format(msgs.locale, "helperTeam", map[string]any{"name": name, "id": id})
 }
@@ -14508,7 +14632,7 @@ func (msgs Messages) HelperTeam(name string, id string) string {
 // HelperThisIPhone says "the iPhone"
 // in the language the app shows.
 //
-// Stands for the phone's name in the messages about installing Pinky for
+// Stands for the phone's name in the messages about installing Pinky on the
 // iPhone, when Pinky does not know the phone yet (Add phone); written to
 // read well in their middle.
 func HelperThisIPhone() string { return In(i18n.Locale()).HelperThisIPhone() }
@@ -14516,7 +14640,7 @@ func HelperThisIPhone() string { return In(i18n.Locale()).HelperThisIPhone() }
 // HelperThisIPhone says "the iPhone"
 // in the language of msgs.
 //
-// Stands for the phone's name in the messages about installing Pinky for
+// Stands for the phone's name in the messages about installing Pinky on the
 // iPhone, when Pinky does not know the phone yet (Add phone); written to
 // read well in their middle.
 func (msgs Messages) HelperThisIPhone() string {
@@ -17623,24 +17747,24 @@ func (msgs Messages) PhoneHandBack() string {
 	return Catalog.Format(msgs.locale, "phoneHandBack", nil)
 }
 
-// PhoneHelperPasscode says "Enter the passcode on {phone}: iOS asks for it before Pinky for iPhone can work. Then try again."
+// PhoneHelperPasscode says "Enter the passcode on {phone}: iOS asks for it before Pinky on the iPhone can work. Then try again."
 // in the language the app shows.
 //
 // A toast after the person turned the screen (Rotate in ⋯ under the
-// mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to Pinky for
-// iPhone to turn it, and iOS asks on the phone for its passcode before
-// Pinky for iPhone starts. phone is the phone's name. WebDriverAgent is a
-// name.
+// mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to Pinky on
+// the iPhone to turn it, and iOS asks on the phone for its passcode before
+// Pinky on the iPhone starts. phone is the phone's name. WebDriverAgent is
+// a name.
 func PhoneHelperPasscode(phone string) string { return In(i18n.Locale()).PhoneHelperPasscode(phone) }
 
-// PhoneHelperPasscode says "Enter the passcode on {phone}: iOS asks for it before Pinky for iPhone can work. Then try again."
+// PhoneHelperPasscode says "Enter the passcode on {phone}: iOS asks for it before Pinky on the iPhone can work. Then try again."
 // in the language of msgs.
 //
 // A toast after the person turned the screen (Rotate in ⋯ under the
-// mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to Pinky for
-// iPhone to turn it, and iOS asks on the phone for its passcode before
-// Pinky for iPhone starts. phone is the phone's name. WebDriverAgent is a
-// name.
+// mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to Pinky on
+// the iPhone to turn it, and iOS asks on the phone for its passcode before
+// Pinky on the iPhone starts. phone is the phone's name. WebDriverAgent is
+// a name.
 func (msgs Messages) PhoneHelperPasscode(phone string) string {
 	return Catalog.Format(msgs.locale, "phoneHelperPasscode", map[string]any{"phone": phone})
 }
@@ -18124,7 +18248,7 @@ func (msgs Messages) PhoneRecordScreenTooltip() string {
 //
 // A row of ⋯ under the mirror: the buttons beside it turn the phone's
 // screen to portrait, landscape and the like. Also shown disabled, with
-// phoneRotateTooltip, on an iPhone or iPad without Pinky for iPhone.
+// phoneRotateTooltip, on an iPhone or iPad without Pinky on the iPhone.
 func PhoneRotate() string { return In(i18n.Locale()).PhoneRotate() }
 
 // PhoneRotate says "Rotate"
@@ -18132,7 +18256,7 @@ func PhoneRotate() string { return In(i18n.Locale()).PhoneRotate() }
 //
 // A row of ⋯ under the mirror: the buttons beside it turn the phone's
 // screen to portrait, landscape and the like. Also shown disabled, with
-// phoneRotateTooltip, on an iPhone or iPad without Pinky for iPhone.
+// phoneRotateTooltip, on an iPhone or iPad without Pinky on the iPhone.
 func (msgs Messages) PhoneRotate() string {
 	return Catalog.Format(msgs.locale, "phoneRotate", nil)
 }
@@ -18229,24 +18353,24 @@ func (msgs Messages) PhoneRotateReverseLandscape() string {
 	return Catalog.Format(msgs.locale, "phoneRotateReverseLandscape", nil)
 }
 
-// PhoneRotateTooltip says "Turning the screen needs Pinky for iPhone. Settings › Phones says how to install it, or lets you choose it for this…"
+// PhoneRotateTooltip says "Turning the screen needs Pinky on the iPhone. Settings › Phones says how to install it, or lets you choose it for t…"
 // in the language the app shows.
 //
 // The tooltip of the disabled Rotate item on an iPhone or iPad that cannot
-// use Pinky for iPhone: it is not installed, or the person chose CoreDevice
-// for it in Settings › Phones. The app calls both phones. Settings ›
-// Phones says how to install Pinky for iPhone and offers it as
-// connectionWDA. WebDriverAgent is a name.
+// use Pinky on the iPhone: it is not installed, or the person chose
+// CoreDevice for it in Settings › Phones. The app calls both phones.
+// Settings › Phones says how to install Pinky on the iPhone and offers it
+// as connectionWDA. WebDriverAgent is a name.
 func PhoneRotateTooltip() string { return In(i18n.Locale()).PhoneRotateTooltip() }
 
-// PhoneRotateTooltip says "Turning the screen needs Pinky for iPhone. Settings › Phones says how to install it, or lets you choose it for this…"
+// PhoneRotateTooltip says "Turning the screen needs Pinky on the iPhone. Settings › Phones says how to install it, or lets you choose it for t…"
 // in the language of msgs.
 //
 // The tooltip of the disabled Rotate item on an iPhone or iPad that cannot
-// use Pinky for iPhone: it is not installed, or the person chose CoreDevice
-// for it in Settings › Phones. The app calls both phones. Settings ›
-// Phones says how to install Pinky for iPhone and offers it as
-// connectionWDA. WebDriverAgent is a name.
+// use Pinky on the iPhone: it is not installed, or the person chose
+// CoreDevice for it in Settings › Phones. The app calls both phones.
+// Settings › Phones says how to install Pinky on the iPhone and offers it
+// as connectionWDA. WebDriverAgent is a name.
 func (msgs Messages) PhoneRotateTooltip() string {
 	return Catalog.Format(msgs.locale, "phoneRotateTooltip", nil)
 }
@@ -18404,8 +18528,8 @@ func (msgs Messages) PhoneStreaming() string {
 // PhoneSwitchCoreDeviceTitle says "Moving {phone} back to CoreDevice…"
 // in the language the app shows.
 //
-// The page of an iPhone while Pinky moves it back from Pinky for iPhone to
-// CoreDevice after a task. phone is its name.
+// The page of an iPhone while Pinky moves it back from Pinky on the iPhone
+// to CoreDevice after a task. phone is its name.
 func PhoneSwitchCoreDeviceTitle(phone string) string {
 	return In(i18n.Locale()).PhoneSwitchCoreDeviceTitle(phone)
 }
@@ -18413,26 +18537,26 @@ func PhoneSwitchCoreDeviceTitle(phone string) string {
 // PhoneSwitchCoreDeviceTitle says "Moving {phone} back to CoreDevice…"
 // in the language of msgs.
 //
-// The page of an iPhone while Pinky moves it back from Pinky for iPhone to
-// CoreDevice after a task. phone is its name.
+// The page of an iPhone while Pinky moves it back from Pinky on the iPhone
+// to CoreDevice after a task. phone is its name.
 func (msgs Messages) PhoneSwitchCoreDeviceTitle(phone string) string {
 	return Catalog.Format(msgs.locale, "phoneSwitchCoreDeviceTitle", map[string]any{"phone": phone})
 }
 
-// PhoneSwitchHelperTitle says "Moving {phone} to Pinky for iPhone…"
+// PhoneSwitchHelperTitle says "Moving {phone} to Pinky on the iPhone…"
 // in the language the app shows.
 //
-// The page of an iPhone while Pinky moves an agent's task to Pinky for
+// The page of an iPhone while Pinky moves an agent's task to Pinky on the
 // iPhone, which shares no screen, for an app that refuses screen sharing.
 // phone is its name.
 func PhoneSwitchHelperTitle(phone string) string {
 	return In(i18n.Locale()).PhoneSwitchHelperTitle(phone)
 }
 
-// PhoneSwitchHelperTitle says "Moving {phone} to Pinky for iPhone…"
+// PhoneSwitchHelperTitle says "Moving {phone} to Pinky on the iPhone…"
 // in the language of msgs.
 //
-// The page of an iPhone while Pinky moves an agent's task to Pinky for
+// The page of an iPhone while Pinky moves an agent's task to Pinky on the
 // iPhone, which shares no screen, for an app that refuses screen sharing.
 // phone is its name.
 func (msgs Messages) PhoneSwitchHelperTitle(phone string) string {
@@ -25124,15 +25248,15 @@ func (msgs Messages) StepNotDoneTookOver() string {
 // StepPhoneBusy says "Pinky on the phone was running a task"
 // in the language the app shows.
 //
-// The second line of a step that was not done because Pinky for Android ran
-// a task of its own on the phone, or Pinky on another computer used it.
+// The second line of a step that was not done because Pinky on the phone
+// ran a task of its own on the phone, or Pinky on another computer used it.
 func StepPhoneBusy() string { return In(i18n.Locale()).StepPhoneBusy() }
 
 // StepPhoneBusy says "Pinky on the phone was running a task"
 // in the language of msgs.
 //
-// The second line of a step that was not done because Pinky for Android ran
-// a task of its own on the phone, or Pinky on another computer used it.
+// The second line of a step that was not done because Pinky on the phone
+// ran a task of its own on the phone, or Pinky on another computer used it.
 func (msgs Messages) StepPhoneBusy() string {
 	return Catalog.Format(msgs.locale, "stepPhoneBusy", nil)
 }
@@ -27169,16 +27293,16 @@ func (msgs Messages) UpdateBusyControl(phone string) string {
 	return Catalog.Format(msgs.locale, "updateBusyControl", map[string]any{"phone": phone})
 }
 
-// UpdateBusyInstalling says "installing Pinky for Android on {phone}"
+// UpdateBusyInstalling says "installing Pinky on {phone}"
 // in the language the app shows.
 //
-// What a restart for an update would stop: installing Pinky for Android.
+// What a restart for an update would stop: installing Pinky on the phone.
 func UpdateBusyInstalling(phone string) string { return In(i18n.Locale()).UpdateBusyInstalling(phone) }
 
-// UpdateBusyInstalling says "installing Pinky for Android on {phone}"
+// UpdateBusyInstalling says "installing Pinky on {phone}"
 // in the language of msgs.
 //
-// What a restart for an update would stop: installing Pinky for Android.
+// What a restart for an update would stop: installing Pinky on the phone.
 func (msgs Messages) UpdateBusyInstalling(phone string) string {
 	return Catalog.Format(msgs.locale, "updateBusyInstalling", map[string]any{"phone": phone})
 }
@@ -27227,16 +27351,16 @@ func (msgs Messages) UpdateBusyUnlocking(phone string) string {
 	return Catalog.Format(msgs.locale, "updateBusyUnlocking", map[string]any{"phone": phone})
 }
 
-// UpdateBusyUpdating says "updating Pinky for Android on {phone}"
+// UpdateBusyUpdating says "updating Pinky on {phone}"
 // in the language the app shows.
 //
-// What a restart for an update would stop: updating Pinky for Android.
+// What a restart for an update would stop: updating Pinky on the phone.
 func UpdateBusyUpdating(phone string) string { return In(i18n.Locale()).UpdateBusyUpdating(phone) }
 
-// UpdateBusyUpdating says "updating Pinky for Android on {phone}"
+// UpdateBusyUpdating says "updating Pinky on {phone}"
 // in the language of msgs.
 //
-// What a restart for an update would stop: updating Pinky for Android.
+// What a restart for an update would stop: updating Pinky on the phone.
 func (msgs Messages) UpdateBusyUpdating(phone string) string {
 	return Catalog.Format(msgs.locale, "updateBusyUpdating", map[string]any{"phone": phone})
 }
@@ -27318,14 +27442,14 @@ func (msgs Messages) UpdateClose() string {
 // UpdateCompanionAuto says "Pinky updates it by itself when the phone is free."
 // in the language the app shows.
 //
-// The Pinky for Android card when an update is out and automatic updates
+// The Pinky on the phone card when an update is out and automatic updates
 // are on.
 func UpdateCompanionAuto() string { return In(i18n.Locale()).UpdateCompanionAuto() }
 
 // UpdateCompanionAuto says "Pinky updates it by itself when the phone is free."
 // in the language of msgs.
 //
-// The Pinky for Android card when an update is out and automatic updates
+// The Pinky on the phone card when an update is out and automatic updates
 // are on.
 func (msgs Messages) UpdateCompanionAuto() string {
 	return Catalog.Format(msgs.locale, "updateCompanionAuto", nil)
@@ -27334,7 +27458,7 @@ func (msgs Messages) UpdateCompanionAuto() string {
 // UpdateCompanionByHand says "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the…"
 // in the language the app shows.
 //
-// The Pinky for Android card when an update is out: Pinky's automatic
+// The Pinky on the phone card when an update is out: Pinky's automatic
 // update failed because the phone refuses installs over USB (Xiaomi's
 // Install via USB is off, or nobody allowed it on the phone in time), so it
 // leaves the update to the person. Update is the card's button
@@ -27345,7 +27469,7 @@ func UpdateCompanionByHand() string { return In(i18n.Locale()).UpdateCompanionBy
 // UpdateCompanionByHand says "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the…"
 // in the language of msgs.
 //
-// The Pinky for Android card when an update is out: Pinky's automatic
+// The Pinky on the phone card when an update is out: Pinky's automatic
 // update failed because the phone refuses installs over USB (Xiaomi's
 // Install via USB is off, or nobody allowed it on the phone in time), so it
 // leaves the update to the person. Update is the card's button
@@ -27355,33 +27479,33 @@ func (msgs Messages) UpdateCompanionByHand() string {
 	return Catalog.Format(msgs.locale, "updateCompanionByHand", nil)
 }
 
-// UpdateCompanionByHandCard says "{phone} refused to install the new version of Pinky for Android over USB, so Pinky won't try this version again. Inst…"
+// UpdateCompanionByHandCard says "{phone} refused to install the new version of Pinky over USB, so Pinky won't try this version again. Install it on th…"
 // in the language the app shows.
 //
-// A sidebar card, shown once: Pinky tried to update Pinky for Android on a
+// A sidebar card, shown once: Pinky tried to update Pinky on the phone on a
 // phone by itself (Update automatically), and the phone refused installs
 // over USB (Xiaomi's Install via USB is off, or nobody allowed it on the
-// phone in time). Pinky won't try this build of Pinky for Android again by
+// phone in time). Pinky won't try this build of Pinky on the phone again by
 // itself; the links companionShowAPK and companionByHandHow follow, and a
 // close button (updateNewsDismiss) hides the card.
 func UpdateCompanionByHandCard(phone string) string {
 	return In(i18n.Locale()).UpdateCompanionByHandCard(phone)
 }
 
-// UpdateCompanionByHandCard says "{phone} refused to install the new version of Pinky for Android over USB, so Pinky won't try this version again. Inst…"
+// UpdateCompanionByHandCard says "{phone} refused to install the new version of Pinky over USB, so Pinky won't try this version again. Install it on th…"
 // in the language of msgs.
 //
-// A sidebar card, shown once: Pinky tried to update Pinky for Android on a
+// A sidebar card, shown once: Pinky tried to update Pinky on the phone on a
 // phone by itself (Update automatically), and the phone refused installs
 // over USB (Xiaomi's Install via USB is off, or nobody allowed it on the
-// phone in time). Pinky won't try this build of Pinky for Android again by
+// phone in time). Pinky won't try this build of Pinky on the phone again by
 // itself; the links companionShowAPK and companionByHandHow follow, and a
 // close button (updateNewsDismiss) hides the card.
 func (msgs Messages) UpdateCompanionByHandCard(phone string) string {
 	return Catalog.Format(msgs.locale, "updateCompanionByHandCard", map[string]any{"phone": phone})
 }
 
-// UpdateCompanionByHandDismissLabel says "Dismiss the Pinky for Android update"
+// UpdateCompanionByHandDismissLabel says "Dismiss the update of Pinky on the phone"
 // in the language the app shows.
 //
 // The accessibility label of the close button of the sidebar card
@@ -27390,7 +27514,7 @@ func UpdateCompanionByHandDismissLabel() string {
 	return In(i18n.Locale()).UpdateCompanionByHandDismissLabel()
 }
 
-// UpdateCompanionByHandDismissLabel says "Dismiss the Pinky for Android update"
+// UpdateCompanionByHandDismissLabel says "Dismiss the update of Pinky on the phone"
 // in the language of msgs.
 //
 // The accessibility label of the close button of the sidebar card
@@ -27399,13 +27523,13 @@ func (msgs Messages) UpdateCompanionByHandDismissLabel() string {
 	return Catalog.Format(msgs.locale, "updateCompanionByHandDismissLabel", nil)
 }
 
-// UpdateCompanionByHandTitle says "Update Pinky for Android by hand"
+// UpdateCompanionByHandTitle says "Update Pinky on the phone by hand"
 // in the language the app shows.
 //
 // The title of the sidebar card updateCompanionByHandCard.
 func UpdateCompanionByHandTitle() string { return In(i18n.Locale()).UpdateCompanionByHandTitle() }
 
-// UpdateCompanionByHandTitle says "Update Pinky for Android by hand"
+// UpdateCompanionByHandTitle says "Update Pinky on the phone by hand"
 // in the language of msgs.
 //
 // The title of the sidebar card updateCompanionByHandCard.
@@ -27416,23 +27540,23 @@ func (msgs Messages) UpdateCompanionByHandTitle() string {
 // UpdateCompanionNeedsYou says "The phone asks before apps are installed over USB, so this update needs you."
 // in the language the app shows.
 //
-// The Pinky for Android card: the phone asks the person before installs, so
-// Pinky cannot update it by itself.
+// The Pinky on the phone card: the phone asks the person before installs,
+// so Pinky cannot update it by itself.
 func UpdateCompanionNeedsYou() string { return In(i18n.Locale()).UpdateCompanionNeedsYou() }
 
 // UpdateCompanionNeedsYou says "The phone asks before apps are installed over USB, so this update needs you."
 // in the language of msgs.
 //
-// The Pinky for Android card: the phone asks the person before installs, so
-// Pinky cannot update it by itself.
+// The Pinky on the phone card: the phone asks the person before installs,
+// so Pinky cannot update it by itself.
 func (msgs Messages) UpdateCompanionNeedsYou() string {
 	return Catalog.Format(msgs.locale, "updateCompanionNeedsYou", nil)
 }
 
-// UpdateCompanionReplacedToast says "Reinstalled Pinky for Android on {phone} with Pinky's private signing key"
+// UpdateCompanionReplacedToast says "Reinstalled Pinky on {phone} with Pinky's private signing key"
 // in the language the app shows.
 //
-// A toast after Pinky replaced Pinky for Android on a phone by itself: the
+// A toast after Pinky replaced Pinky on the phone on a phone by itself: the
 // installed one was signed with another key (the public one of builds until
 // 2026-11-08), so Pinky removed it and installed its own, signed with
 // Pinky's private key.
@@ -27440,10 +27564,10 @@ func UpdateCompanionReplacedToast(phone string) string {
 	return In(i18n.Locale()).UpdateCompanionReplacedToast(phone)
 }
 
-// UpdateCompanionReplacedToast says "Reinstalled Pinky for Android on {phone} with Pinky's private signing key"
+// UpdateCompanionReplacedToast says "Reinstalled Pinky on {phone} with Pinky's private signing key"
 // in the language of msgs.
 //
-// A toast after Pinky replaced Pinky for Android on a phone by itself: the
+// A toast after Pinky replaced Pinky on the phone on a phone by itself: the
 // installed one was signed with another key (the public one of builds until
 // 2026-11-08), so Pinky removed it and installed its own, signed with
 // Pinky's private key.
@@ -27451,16 +27575,16 @@ func (msgs Messages) UpdateCompanionReplacedToast(phone string) string {
 	return Catalog.Format(msgs.locale, "updateCompanionReplacedToast", map[string]any{"phone": phone})
 }
 
-// UpdateCompanionToast says "Updated Pinky for Android on {phone}"
+// UpdateCompanionToast says "Updated Pinky on {phone}"
 // in the language the app shows.
 //
-// A toast after Pinky updated Pinky for Android on a phone by itself.
+// A toast after Pinky updated Pinky on the phone on a phone by itself.
 func UpdateCompanionToast(phone string) string { return In(i18n.Locale()).UpdateCompanionToast(phone) }
 
-// UpdateCompanionToast says "Updated Pinky for Android on {phone}"
+// UpdateCompanionToast says "Updated Pinky on {phone}"
 // in the language of msgs.
 //
-// A toast after Pinky updated Pinky for Android on a phone by itself.
+// A toast after Pinky updated Pinky on the phone on a phone by itself.
 func (msgs Messages) UpdateCompanionToast(phone string) string {
 	return Catalog.Format(msgs.locale, "updateCompanionToast", map[string]any{"phone": phone})
 }
@@ -27945,19 +28069,19 @@ func (msgs Messages) UpdateNewsCardTitle() string {
 	return Catalog.Format(msgs.locale, "updateNewsCardTitle", nil)
 }
 
-// UpdateNewsCompanionHeading says "Pinky for Android"
+// UpdateNewsCompanionHeading says "Pinky on the phone"
 // in the language the app shows.
 //
 // What's new: the heading over the lines about Pinky's app on Android
-// phones (updateNewsCompanionLine). Pinky for Android is the app's name on
+// phones (updateNewsCompanionLine). Pinky on the phone is the app's name on
 // the computer.
 func UpdateNewsCompanionHeading() string { return In(i18n.Locale()).UpdateNewsCompanionHeading() }
 
-// UpdateNewsCompanionHeading says "Pinky for Android"
+// UpdateNewsCompanionHeading says "Pinky on the phone"
 // in the language of msgs.
 //
 // What's new: the heading over the lines about Pinky's app on Android
-// phones (updateNewsCompanionLine). Pinky for Android is the app's name on
+// phones (updateNewsCompanionLine). Pinky on the phone is the app's name on
 // the computer.
 func (msgs Messages) UpdateNewsCompanionHeading() string {
 	return Catalog.Format(msgs.locale, "updateNewsCompanionHeading", nil)
@@ -27966,7 +28090,7 @@ func (msgs Messages) UpdateNewsCompanionHeading() string {
 // UpdateNewsCompanionLine says "Updated on {phone} to {version}"
 // in the language the app shows.
 //
-// What's new, under the Pinky for Android heading: Pinky for Android was
+// What's new, under the Pinky on the phone heading: Pinky on the phone was
 // updated on a phone.
 func UpdateNewsCompanionLine(phone string, version string) string {
 	return In(i18n.Locale()).UpdateNewsCompanionLine(phone, version)
@@ -27975,7 +28099,7 @@ func UpdateNewsCompanionLine(phone string, version string) string {
 // UpdateNewsCompanionLine says "Updated on {phone} to {version}"
 // in the language of msgs.
 //
-// What's new, under the Pinky for Android heading: Pinky for Android was
+// What's new, under the Pinky on the phone heading: Pinky on the phone was
 // updated on a phone.
 func (msgs Messages) UpdateNewsCompanionLine(phone string, version string) string {
 	return Catalog.Format(msgs.locale, "updateNewsCompanionLine", map[string]any{"phone": phone, "version": version})
@@ -27984,9 +28108,9 @@ func (msgs Messages) UpdateNewsCompanionLine(phone string, version string) strin
 // UpdateNewsCompanionReplaced says "Reinstalled on {phone} as {version}, signed with Pinky's private key. The earlier build was signed with a public key,…"
 // in the language the app shows.
 //
-// What's new, under the Pinky for Android heading: Pinky replaced Pinky for
-// Android on a phone with a build signed with its private key, because the
-// installed one was signed with a public key.
+// What's new, under the Pinky on the phone heading: Pinky replaced Pinky on
+// the phone on a phone with a build signed with its private key, because
+// the installed one was signed with a public key.
 func UpdateNewsCompanionReplaced(phone string, version string) string {
 	return In(i18n.Locale()).UpdateNewsCompanionReplaced(phone, version)
 }
@@ -27994,23 +28118,23 @@ func UpdateNewsCompanionReplaced(phone string, version string) string {
 // UpdateNewsCompanionReplaced says "Reinstalled on {phone} as {version}, signed with Pinky's private key. The earlier build was signed with a public key,…"
 // in the language of msgs.
 //
-// What's new, under the Pinky for Android heading: Pinky replaced Pinky for
-// Android on a phone with a build signed with its private key, because the
-// installed one was signed with a public key.
+// What's new, under the Pinky on the phone heading: Pinky replaced Pinky on
+// the phone on a phone with a build signed with its private key, because
+// the installed one was signed with a public key.
 func (msgs Messages) UpdateNewsCompanionReplaced(phone string, version string) string {
 	return Catalog.Format(msgs.locale, "updateNewsCompanionReplaced", map[string]any{"phone": phone, "version": version})
 }
 
-// UpdateNewsCompanionUpdated says "Pinky for Android was updated"
+// UpdateNewsCompanionUpdated says "Pinky on the phone was updated"
 // in the language the app shows.
 //
-// The What's new card's title after only Pinky for Android was updated.
+// The What's new card's title after only Pinky on the phone was updated.
 func UpdateNewsCompanionUpdated() string { return In(i18n.Locale()).UpdateNewsCompanionUpdated() }
 
-// UpdateNewsCompanionUpdated says "Pinky for Android was updated"
+// UpdateNewsCompanionUpdated says "Pinky on the phone was updated"
 // in the language of msgs.
 //
-// The What's new card's title after only Pinky for Android was updated.
+// The What's new card's title after only Pinky on the phone was updated.
 func (msgs Messages) UpdateNewsCompanionUpdated() string {
 	return Catalog.Format(msgs.locale, "updateNewsCompanionUpdated", nil)
 }
@@ -28078,14 +28202,14 @@ func (msgs Messages) UpdateNewsNow(version string) string {
 // UpdateNewsOnPhone says "On {phone}"
 // in the language the app shows.
 //
-// The What's new card's second line after Pinky for Android was updated on
+// The What's new card's second line after Pinky on the phone was updated on
 // one phone.
 func UpdateNewsOnPhone(phone string) string { return In(i18n.Locale()).UpdateNewsOnPhone(phone) }
 
 // UpdateNewsOnPhone says "On {phone}"
 // in the language of msgs.
 //
-// The What's new card's second line after Pinky for Android was updated on
+// The What's new card's second line after Pinky on the phone was updated on
 // one phone.
 func (msgs Messages) UpdateNewsOnPhone(phone string) string {
 	return Catalog.Format(msgs.locale, "updateNewsOnPhone", map[string]any{"phone": phone})
@@ -28094,14 +28218,14 @@ func (msgs Messages) UpdateNewsOnPhone(phone string) string {
 // UpdateNewsOnPhones says "{count, plural, one {On # phone} other {On # phones}}"
 // in the language the app shows.
 //
-// The What's new card's second line after Pinky for Android was updated on
+// The What's new card's second line after Pinky on the phone was updated on
 // several phones.
 func UpdateNewsOnPhones(count int) string { return In(i18n.Locale()).UpdateNewsOnPhones(count) }
 
 // UpdateNewsOnPhones says "{count, plural, one {On # phone} other {On # phones}}"
 // in the language of msgs.
 //
-// The What's new card's second line after Pinky for Android was updated on
+// The What's new card's second line after Pinky on the phone was updated on
 // several phones.
 func (msgs Messages) UpdateNewsOnPhones(count int) string {
 	return Catalog.Format(msgs.locale, "updateNewsOnPhones", map[string]any{"count": count})
@@ -28309,25 +28433,25 @@ func (msgs Messages) UpdateRestartingLabel() string {
 // in the language the app shows.
 //
 // Settings › Advanced › Updates: the switch that lets Pinky update
-// itself and Pinky for Android.
+// itself and Pinky on the phone.
 func UpdateSettingsAuto() string { return In(i18n.Locale()).UpdateSettingsAuto() }
 
 // UpdateSettingsAuto says "Update automatically"
 // in the language of msgs.
 //
 // Settings › Advanced › Updates: the switch that lets Pinky update
-// itself and Pinky for Android.
+// itself and Pinky on the phone.
 func (msgs Messages) UpdateSettingsAuto() string {
 	return Catalog.Format(msgs.locale, "updateSettingsAuto", nil)
 }
 
-// UpdateSettingsAutoDesc says "Pinky, and Pinky for Android on your phones, update when no one is using them."
+// UpdateSettingsAutoDesc says "Pinky, and Pinky on your phones, update when no one is using them."
 // in the language the app shows.
 //
 // Under updateSettingsAuto.
 func UpdateSettingsAutoDesc() string { return In(i18n.Locale()).UpdateSettingsAutoDesc() }
 
-// UpdateSettingsAutoDesc says "Pinky, and Pinky for Android on your phones, update when no one is using them."
+// UpdateSettingsAutoDesc says "Pinky, and Pinky on your phones, update when no one is using them."
 // in the language of msgs.
 //
 // Under updateSettingsAuto.

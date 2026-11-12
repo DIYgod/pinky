@@ -352,6 +352,7 @@ type app struct {
 	bg        bgState        // background displays, per phone
 	conn      connState      // iPhones: how Pinky connects, per phone
 	helper    helperState    // iPhones: installing the helper from the window (helper.go)
+	tasksTip  tasksTipState  // the card about tasks on the phone itself (phonetasks.go)
 	rec       recState       // task recordings in Activity
 	remote    remoteState    // Settings › Agents › Remote agents
 	webMirror webMirrorState // Settings › Phones › Web mirror

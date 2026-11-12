@@ -226,7 +226,7 @@ func (g *Gateway) personPinchHelper(d *device, a driver.TouchAction) bool {
 // language (driver.SetupError's Setup).
 func personSetupWords(name, setup string) string {
 	if setup == driver.SetupPasscode {
-		return fmt.Sprintf("Enter the passcode on %s: iOS asks for it before Pinky for iPhone can work. Then try again.", name)
+		return fmt.Sprintf("Enter the passcode on %s: iOS asks for it before Pinky on the iPhone can work. Then try again.", name)
 	}
-	return fmt.Sprintf("%s needs a step before Pinky for iPhone can work: see its page. Then try again.", name)
+	return fmt.Sprintf("%s needs a step before Pinky on the iPhone can work: see its page. Then try again.", name)
 }

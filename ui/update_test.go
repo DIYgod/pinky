@@ -491,12 +491,12 @@ func TestCompanionUpdatesWhenThePhoneIsFree(t *testing.T) {
 	ut.updateTick(time.Now()) // looks the companion up
 	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionOutdated })
 	tt := mg.NewTester(ut.view, 1280, 820)
-	if !hasText(tt, "Update Pinky for Android") || !hasText(tt, "Pinky updates it by itself when the phone is free.") {
+	if !hasText(tt, "Update Pinky on the phone") || !hasText(tt, "Pinky updates it by itself when the phone is free.") {
 		t.Fatalf("the companion card: %q", tt.Texts())
 	}
 	ut.updateTick(time.Now())
 	tt.Frame()
-	if !hasText(tt, "Updating Pinky for Android") {
+	if !hasText(tt, "Updating Pinky on the phone") {
 		t.Errorf("the card while updating: %q", tt.Texts())
 	}
 	ut.waitFor(t, "the companion update", func() bool { return !ut.companionUpdating("pixel-9") })
@@ -507,10 +507,10 @@ func TestCompanionUpdatesWhenThePhoneIsFree(t *testing.T) {
 		t.Error("the automatic update went through the person's install")
 	}
 	tt.Frame()
-	if hasText(tt, "Update Pinky for Android") {
+	if hasText(tt, "Update Pinky on the phone") {
 		t.Errorf("the card stays: %q", tt.Texts())
 	}
-	if !hasText(tt, "Pinky for Android was updated") || !hasText(tt, "On Pixel 9") {
+	if !hasText(tt, "Pinky on the phone was updated") || !hasText(tt, "On Pixel 9") {
 		t.Errorf("no What's new for the companion: %q", tt.Texts())
 	}
 	st := ut.u.State()
@@ -680,7 +680,7 @@ func TestCompanionSignedWithThePublicKeyIsReplaced(t *testing.T) {
 	ut.waitFor(t, "the replacement", func() bool { return len(ut.api.CompanionUpdates()) == 1 && !ut.companionUpdating("pixel-9") })
 	tt := mg.NewTester(ut.view, 1280, 820)
 	tt.Frame()
-	if !hasText(tt, "Reinstalled Pinky for Android on Pixel 9 with Pinky's private signing key") {
+	if !hasText(tt, "Reinstalled Pinky on Pixel 9 with Pinky's private signing key") {
 		t.Errorf("no notice of the replacement: %q", tt.Texts())
 	}
 	if st := ut.u.State(); len(st.Changes) != 1 || st.Changes[0].Kind != "companion-replaced" {
@@ -720,8 +720,8 @@ func TestCompanionCardSaysWhyForThePublicKey(t *testing.T) {
 	tt := mg.NewTester(ut.view, 1280, 820)
 	tt.Frame()
 	for _, want := range []string{
-		"Update Pinky for Android",
-		"Pinky for Android on this phone is signed with an old key that is public, so anyone could make a fake update of it.",
+		"Update Pinky on the phone",
+		"Pinky on this phone is signed with an old key that is public, so anyone could make a fake update of it.",
 		"The new version is signed with Pinky's private key: once you update, it is safe.",
 		"The phone asks before apps are installed over USB, so this update needs you.",
 	} {
@@ -732,12 +732,12 @@ func TestCompanionCardSaysWhyForThePublicKey(t *testing.T) {
 	if hasText(tt, "Updating keeps control fast and steady.") {
 		t.Errorf("the usual update text is there too: %q", tt.Texts())
 	}
-	if err := tt.Click("Update Pinky for Android on Pixel 9"); err != nil {
+	if err := tt.Click("Update Pinky on Pixel 9"); err != nil {
 		t.Fatal(err)
 	}
 	ut.waitFor(t, "the person's update", func() bool { tt.Frame(); return ut.comp.state["pixel-9"] == driver.CompanionReady })
 	tt.Frame()
-	if !hasText(tt, "Reinstalled Pinky for Android on Pixel 9 with Pinky's private signing key") {
+	if !hasText(tt, "Reinstalled Pinky on Pixel 9 with Pinky's private signing key") {
 		t.Errorf("no notice of the replacement: %q", tt.Texts())
 	}
 	if got := ut.api.Installs(); len(got) != 1 || got[0] != "pixel-9" {
@@ -749,7 +749,7 @@ func TestCompanionCardSaysWhyForThePublicKey(t *testing.T) {
 }
 
 func TestCompanionLineAndCheckupForThePublicKey(t *testing.T) {
-	if got := companionLine(driver.CompanionPublicKey); got != "Pinky for Android has a security update" {
+	if got := companionLine(driver.CompanionPublicKey); got != "Pinky on the phone has a security update" {
 		t.Errorf("companionLine = %q", got)
 	}
 	ta := newTestApp(t, fakeapi.Companion)
@@ -770,7 +770,7 @@ func TestCompanionLineAndCheckupForThePublicKey(t *testing.T) {
 	}
 	ta.page, ta.set.sec = pageSettings, secPhones
 	tt.Frame()
-	if !hasText(tt, "Pinky for Android has a security update") {
+	if !hasText(tt, "Pinky on the phone has a security update") {
 		t.Errorf("Settings › Phones: %q", tt.Texts())
 	}
 }

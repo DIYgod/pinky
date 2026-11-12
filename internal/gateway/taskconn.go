@@ -95,7 +95,7 @@ func refusesSharing(names ...string) (string, bool) {
 // connection for a task. The caller holds g.mu.
 func switchingLine(d *device) string {
 	if d.switching == wayHelper {
-		return "Switching to Pinky for iPhone"
+		return "Switching to Pinky on the iPhone"
 	}
 	return "Switching to CoreDevice"
 }
