@@ -26,6 +26,25 @@ enum L {
         String(localized: "Type \(code) on the iPhone to pair it with Pinky.", comment: "Notification body while pairing on the phone")
     }
 
+    /// The VPN went down and the app turned it on again.
+    static func vpnRevived(_ why: String) -> String {
+        String(localized: "Pinky's VPN stopped (\(why)), so Pinky turned it on again.", comment: "The VPN went down by itself; the reason from iOS")
+    }
+    /// The VPN went down again soon after: the person turns it on.
+    static func vpnDown(_ why: String) -> String {
+        String(localized: "Pinky's VPN stopped again (\(why)). Turn it on when you want Pinky to work.", comment: "The VPN went down by itself twice; the reason from iOS")
+    }
+
+    static var profileTitle: String {
+        String(localized: "Pinky stops opening soon", comment: "Notification title: the app's signature runs out in two days")
+    }
+    /// The app's signature runs out on date.
+    static func profileEnds(_ date: Date) -> String {
+        let d = date.formatted(date: .abbreviated, time: .shortened)
+        return String(localized: "Pinky stops opening on this iPhone on \(d), when its signature runs out. Install it again from Pinky on your computer before then.",
+                      comment: "The app's provisioning profile runs out; the date and time")
+    }
+
     /// The title of a task that ended, by how it ended (pilot.End).
     static func ended(_ end: String) -> String {
         switch end {

@@ -14,6 +14,11 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             List {
+                if let e = Profile.endsSoon() {
+                    Section {
+                        Label(L.profileEnds(e), systemImage: "clock.badge.exclamationmark").foregroundStyle(.orange)
+                    }
+                }
                 connection
                 if m.paired && m.vpn == .on && !hasKey { keyStep }
                 ForEach(m.state?.needs ?? []) { NeedCard(need: $0) }

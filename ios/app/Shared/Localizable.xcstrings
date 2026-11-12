@@ -983,6 +983,40 @@
         }
       }
     },
+    "Pinky stops opening on this iPhone on %@, when its signature runs out. Install it again from Pinky on your computer before then." : {
+      "comment" : "The app's provisioning profile runs out; the date and time",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky の署名は %@ に期限切れになり、その後この iPhone で Pinky を開けなくなります。それまでにパソコンの Pinky からもう一度インストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 的签名将于 %@ 到期，到期后这台 iPhone 上将无法打开 Pinky。请在此之前用电脑上的 Pinky 重新安装。"
+          }
+        }
+      }
+    },
+    "Pinky stops opening soon" : {
+      "comment" : "Notification title: the app's signature runs out in two days",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky はまもなく開けなくなります"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 即将无法打开"
+          }
+        }
+      }
+    },
     "Pinky waits for you" : {
       "comment" : "Live Activity: an approval or handoff waits",
       "localizations" : {
@@ -1013,6 +1047,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 的 VPN 已关闭。打开它，Pinky 才能连接这台 iPhone。"
+          }
+        }
+      }
+    },
+    "Pinky's VPN stopped (%@), so Pinky turned it on again." : {
+      "comment" : "The VPN went down by itself; the reason from iOS",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky の VPN が停止したため（%@）、Pinky がもう一度オンにしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 的 VPN 停止了（%@），Pinky 已重新打开它。"
+          }
+        }
+      }
+    },
+    "Pinky's VPN stopped again (%@). Turn it on when you want Pinky to work." : {
+      "comment" : "The VPN went down by itself twice; the reason from iOS",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky の VPN がまた停止しました（%@）。Pinky を使うときはオンにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 的 VPN 又停止了（%@）。需要 Pinky 工作时，请打开它。"
           }
         }
       }

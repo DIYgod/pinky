@@ -123,6 +123,12 @@ final class AppModel: ObservableObject {
     private var manager: NETunnelProviderManager?
     /// Turn the VPN on again once it is off: the pairing changed.
     private var reconnect = false
+    /// The VPN was on since it last went down, to tell when it does.
+    private var wasOn = false
+    /// The person turned the VPN off here.
+    private var turnedOff = false
+    /// When the app last turned the VPN on again by itself.
+    private var revived: Date?
 
     private func loadManager() async {
         manager = try? await NETunnelProviderManager.loadAllFromPreferences().first
@@ -166,7 +172,33 @@ final class AppModel: ObservableObject {
     }
 
     func disconnect() {
+        turnedOff = true
         manager?.connection.stopVPNTunnel()
+    }
+
+    /// The VPN went down while it was on and nobody here turned it off: the
+    /// extension died (memory, a crash) or iOS stopped it. With an error,
+    /// the app turns it on again once in ten minutes and says why; without
+    /// one, the person turned it off in Settings › VPN, which stands.
+    private func vpnWentDown() {
+        manager?.connection.fetchLastDisconnectError { [weak self] err in
+            Task { @MainActor in self?.wentDown(err) }
+        }
+    }
+
+    private func wentDown(_ err: Error?) {
+        guard let err, vpn == .off else { return }
+        let why = err.localizedDescription
+        syslog.log("pinky vpn went down: \(why, privacy: .public)")
+        if let r = revived, Date.now.timeIntervalSince(r) < 600 {
+            problem = L.vpnDown(why)
+            return
+        }
+        revived = .now
+        Task {
+            await connect()
+            if problem == nil { problem = L.vpnRevived(why) }
+        }
     }
 
     private func vpnChanged() {
@@ -175,9 +207,17 @@ final class AppModel: ObservableObject {
         case .connecting, .reasserting: .connecting
         default: .off
         }
-        if vpn == .off && reconnect {
-            reconnect = false
-            Task { await connect() }
+        if vpn == .on { wasOn = true }
+        // Disconnected, not disconnecting: iOS has the reason only then.
+        if manager?.connection.status == .disconnected {
+            if reconnect {
+                reconnect = false
+                Task { await connect() }
+            } else if wasOn && !turnedOff {
+                vpnWentDown()
+            }
+            wasOn = false
+            turnedOff = false
         }
         guard vpn == .on else { return }
         // The core in the extension that just started has not heard that

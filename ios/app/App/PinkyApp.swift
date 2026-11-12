@@ -8,6 +8,7 @@ struct PinkyApp: App {
         guard !TestHost.active else { return }
         // Banners for approvals while Pinky works in other apps.
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        Profile.remind()
     }
 
     var body: some Scene {
