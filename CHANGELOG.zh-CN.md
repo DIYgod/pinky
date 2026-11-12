@@ -2,6 +2,11 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 每个版本现在都单独附带 Android 版 Pinky 的安装包（pinky-android.apk），同一个 APK 能装在所有 Android 手机上，包括 32 位手机和 x86_64 模拟器。
+- Android 版 Pinky 无障碍服务的说明里加上了：在需要你自己开启的手机上，开启后它会一直开着，直到你在那里关闭。
+
 ## 2026.1112.5 (2026-11-12)
 
 - 在只能由你自己打开 Android 版 Pinky 无障碍服务的手机上（比如 OriginOS 6 的 vivo），Pinky 现在会在任务结束、更新和 Pinky 重启后都让它开着，直到你在手机上关闭，不用每次任务前再开一遍。「设置 › 手机」和「体检」会说明它一直开着，手机上的 App（包括银行 App）能看到它。
