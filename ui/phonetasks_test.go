@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"image/png"
+	"os"
+	"path/filepath"
 	"testing"
 
 	mg "github.com/egoist/mygo/ui"
@@ -42,5 +45,51 @@ func TestPhoneTasksCard(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "Tasks on the phone") || !hasText(tt, "Open Pinky on Pixel 9") || !hasText(tt, "How to set it up") {
 		t.Errorf("Settings › Phones: %q", tt.Texts())
+	}
+}
+
+// TestPhoneTasksScreenshots writes the card on the phone's page and the
+// row in Settings › Phones, in each language and theme, to the folder
+// PINKY_SCREENSHOTS names.
+func TestPhoneTasksScreenshots(t *testing.T) {
+	dir := os.Getenv("PINKY_SCREENSHOTS")
+	if dir == "" {
+		t.Skip("set PINKY_SCREENSHOTS to a folder to write the screenshots")
+	}
+	ta := newTestApp(t, fakeapi.Companion)
+	ta.sync()
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "the companion state", func() bool { tt.Frame(); return ta.comp.state["pixel-9"] == driver.CompanionMissing })
+	tt.Frame()
+	if err := tt.Click("Install Pinky on Pixel 9"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the install", func() bool { return ta.comp.state["pixel-9"] == driver.CompanionReady })
+	for _, lang := range testLanguages() {
+		for _, dark := range []bool{false, true} {
+			theme := "light"
+			if dark {
+				theme = "dark"
+			}
+			tt.SetScale(2)
+			tt.SetDark(dark)
+			inLanguage(t, lang, tt)
+			for _, page := range []string{"phone", "settings"} {
+				if page == "settings" {
+					ta.page, ta.set.sec = pageSettings, secPhones
+				} else {
+					ta.page = pagePhones
+				}
+				tt.Frame()
+				f, err := os.Create(filepath.Join(dir, "phone-tasks-"+page+"-"+theme+"-"+langShort(lang)+".png"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := png.Encode(f, tt.Image()); err != nil {
+					t.Fatal(err)
+				}
+				f.Close()
+			}
+		}
 	}
 }
