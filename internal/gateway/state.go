@@ -270,6 +270,10 @@ type lease struct {
 	changes []change
 	// recorded is set once the task's recording started (video.go).
 	recorded bool
+	// readLists holds where each partial phone_read_list stopped, under
+	// the opaque id its continuation carries (read_list.go). They go with
+	// the lease, so a continuation never outlives its task or phone.
+	readLists map[string]*readCursor
 
 	ctx    context.Context
 	cancel context.CancelFunc
