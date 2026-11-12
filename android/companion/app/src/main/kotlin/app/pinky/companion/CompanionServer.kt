@@ -25,7 +25,7 @@ import java.util.concurrent.CopyOnWriteArraySet
  */
 class CompanionServer(private val service: PinkyAccessibilityService) {
 
-    val handler = RequestHandler(service) { connections.size }
+    val handler = RequestHandler(service) { pingCount }
     val events: EventHub get() = service.events
     private val connections = CopyOnWriteArraySet<Connection>()
 
@@ -35,14 +35,24 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
     @Volatile
     private var socket: LocalServerSocket? = null
 
-    val connectionCount: Int get() = connections.size
-
     /**
      * Open connections from other apps than this one: Pinky on a computer,
      * through adb (shell or root). This app's own parts on the phone, the
      * core and its screens, are not counted.
      */
     val externalCount: Int get() = connections.count { !it.own }
+
+    /**
+     * The connections ping reports. Pinky on a computer leaves the service
+     * on after a task when ping counts more than its own connection: another
+     * client still uses it. This app's own connections count only while
+     * on-phone mode is on, which needs the service on, so that a computer
+     * leaves it alone. Once the mode is off they must not count: the core
+     * stays loaded until the process ends (a Go runtime cannot be unloaded)
+     * and keeps its connection, which kept the service on after every task
+     * from a computer.
+     */
+    val pingCount: Int get() = if (service.onPhone) connections.size else externalCount
 
     fun start() {
         running = true

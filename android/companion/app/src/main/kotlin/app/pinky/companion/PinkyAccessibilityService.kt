@@ -176,6 +176,9 @@ class PinkyAccessibilityService : AccessibilityService() {
      * away and lets the idle watchdog turn the service off again once no
      * computer uses it. The core stays loaded but idle until the process
      * ends: a Go runtime cannot be unloaded.
+     *
+     * The reply says why the core did not start once it tried and failed
+     * (core_error): only this process knows, and Pinky's screens show it.
      */
     @SuppressLint("ApplySharedPref")
     fun setOnPhone(on: Boolean): String {
@@ -187,6 +190,7 @@ class PinkyAccessibilityService : AccessibilityService() {
         val j = Json()
         j.beginObject()
         j.field("on_phone", on)
+        j.fieldIfNotEmpty("core_error", Core.error)
         j.endObject()
         return j.toString()
     }

@@ -27,6 +27,9 @@ type DeviceState struct {
 }
 
 // AgentState is Ask Pinky's task: running, or the last one that ended.
+// End is a pilot.End; the screens say it in the person's language, and
+// Summary only says more for done, failed and error (it is the model's or
+// the API's own words, and English for the other ends).
 type AgentState struct {
 	Task    string  `json:"task"`
 	Model   string  `json:"model"`
@@ -37,6 +40,14 @@ type AgentState struct {
 	Cost    float64 `json:"cost"`
 	Tokens  int64   `json:"tokens"`
 	Seconds int64   `json:"seconds"`
+	// Priced says Cost is in US dollars; without it the model's prices are
+	// unknown, and the cost limit is TokenLimit tokens.
+	Priced bool `json:"priced"`
+	// The task's limits, so that the screens can say which one ended it.
+	MaxSteps   int     `json:"max_steps"`
+	MaxMinutes int     `json:"max_minutes"`
+	MaxCost    float64 `json:"max_cost"`
+	TokenLimit int64   `json:"token_limit"`
 }
 
 // TaskState is the gateway's task: its steps in plain words.
@@ -124,7 +135,9 @@ func agentState(s pilot.Status) *AgentState {
 	}
 	a := &AgentState{Task: s.Task, Model: s.Config.Model, Running: s.Running(), End: string(s.End),
 		Summary: s.Summary, Steps: s.Steps, Cost: s.Cost, Tokens: s.Tokens,
-		Seconds: int64(end.Sub(s.Started).Seconds())}
+		Seconds: int64(end.Sub(s.Started).Seconds()), Priced: s.Priced,
+		MaxSteps: s.Config.MaxSteps, MaxMinutes: int(s.Config.MaxTime / time.Minute), MaxCost: s.Config.MaxCost,
+		TokenLimit: s.Config.TokenLimit()}
 	if !s.Running() && a.Summary == "" {
 		a.Summary = pilot.Describe(s)
 	}
