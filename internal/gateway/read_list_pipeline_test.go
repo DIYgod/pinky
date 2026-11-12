@@ -236,6 +236,31 @@ func TestReadListContinuationIsRejectedElsewhere(t *testing.T) {
 			t.Fatalf("continuation used twice: %+v", res)
 		}
 	})
+	// A call that passes another direction or area with the continuation is
+	// told what to pass instead. The continuation is still there for that
+	// call: the error would be of no use otherwise.
+	t.Run("argument", func(t *testing.T) {
+		base := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+		dev := &readListDevice{Device: base, pages: threePages()}
+		g := newDevGateway(t, base, dev)
+		s, _ := connect(t, g, "Read a list")
+		token := read(t, s)
+		res := s.ReadList(context.Background(), ReadListRequest{Continuation: token, Direction: "down", MaxScreens: 2, MaxMS: 5000, OCR: "off"})
+		if res.Error != ErrInvalidArgument || !strings.Contains(res.Message, "leave direction out") || dev.swipes != 0 {
+			t.Fatalf("continuation with another direction: %+v", res)
+		}
+		res = s.ReadList(context.Background(), ReadListRequest{Continuation: token, Area: &screen.Rect{X: 0, Y: 300, W: 1080, H: 900},
+			MaxScreens: 2, MaxMS: 5000, OCR: "off"})
+		if res.Error != ErrInvalidArgument || !strings.Contains(res.Message, "another scroll_area") || dev.swipes != 0 {
+			t.Fatalf("continuation with another area: %+v", res)
+		}
+		if res := again(s, token); res.IsError() {
+			t.Fatalf("continuation after two refused calls: %+v", res)
+		}
+		if res := again(s, token); res.Error != ErrInvalidArgument {
+			t.Fatalf("continuation used twice: %+v", res)
+		}
+	})
 }
 
 func TestReadListEndMarkerCountsOnlyAtTheEndReadToward(t *testing.T) {
