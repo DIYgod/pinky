@@ -8,6 +8,7 @@ import (
 	"image"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/approval"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -165,8 +166,12 @@ const (
 
 // NeedView is a Needs you card.
 type NeedView struct {
-	ID         string
-	Kind       NeedKind
+	ID   string
+	Kind NeedKind
+	// Approval is what an approval holds (an Ask action, an agent's first
+	// connection, phone_request_approval, a handoff); "" for the cards
+	// that are not approvals (unlocking, setup).
+	Approval   approval.Kind
 	DeviceID   string
 	DeviceName string
 	App        string // the app's display name

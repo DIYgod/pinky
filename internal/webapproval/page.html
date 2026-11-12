@@ -119,15 +119,6 @@ async function call(path, body, auth) {
   return j;
 }
 
-function browserName() {
-  const ua = navigator.userAgent;
-  const dev = /iPad/.test(ua) ? "iPad" : /iPhone/.test(ua) ? "iPhone" : /Android/.test(ua) ? "Android" :
-    /Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "";
-  const br = /EdgA?\//.test(ua) ? "Edge" : /Firefox|FxiOS/.test(ua) ? "Firefox" : /Chrome|CriOS/.test(ua) ? "Chrome" :
-    /Safari/.test(ua) ? "Safari" : "";
-  return [dev, br].filter(Boolean).join(" · ");
-}
-
 function canPasskeys() {
   return window.isSecureContext && window.PublicKeyCredential && navigator.credentials &&
     typeof AuthenticatorAttestationResponse !== "undefined" &&
@@ -139,7 +130,7 @@ function canPasskeys() {
 async function pairFlow(link) {
   let begun;
   try { begun = await call("pair/begin", { link }); }
-  catch (e) { show(note("bad", "", e.error === "tailnet" ? T.tailnet : T.linkUsed)); return; }
+  catch (e) { show(note("bad", "", e.error === "tailnet" ? T.tailnet : e.error === "slow_down" ? T.slowDown : T.linkUsed)); return; }
   const btn = el("button", "btn primary", T.addButton);
   const n = note("", T.addTitle, T.addBody);
   const row = el("div"); row.style.marginTop = "12px"; row.append(btn); n.append(row);
@@ -170,7 +161,6 @@ async function pairFlow(link) {
       fin = await call("pair/finish", {
         id: begun.id, credentialId: b64.enc(cred.rawId), publicKey: b64.enc(r.getPublicKey()),
         alg: r.getPublicKeyAlgorithm(), clientData: b64.enc(r.clientDataJSON), authData: b64.enc(r.getAuthenticatorData()),
-        browser: browserName(),
       });
     } catch (e) { show(note("bad", "", e.error === "passkey" ? T.verifyFailed : T.linkUsed)); return; }
     const c = note("", T.compareTitle, T.compare);
@@ -180,7 +170,7 @@ async function pairFlow(link) {
     for (;;) {
       await new Promise(r => setTimeout(r, 1500));
       let st;
-      try { st = await call("pair/status", { id: begun.id }); } catch { continue; }
+      try { st = await call("pair/status", { id: begun.id, poll: fin.poll }); } catch { continue; }
       if (st.state === "allowed") { setSession(st.session); start(note("", "", T.added)); return; }
       if (st.state === "denied") { show(note("bad", "", T.turnedDown)); return; }
       if (st.state === "gone") { show(note("bad", "", T.linkUsed)); return; }
@@ -190,7 +180,8 @@ async function pairFlow(link) {
 
 // The approvals.
 const cards = new Map(); // id → {node, need, ch: {allow, deny}, state}
-let skew = 0, lastCount = 0, banner = null, timer = 0;
+let skew = 0, lastCount = 0, banner = null, timer = 0, busy = false;
+const busyNote = note("warn", "", T.busy);
 
 function start(first) {
   banner = first || null;
@@ -211,6 +202,7 @@ async function poll() {
     return;
   }
   skew = r.now - Date.now();
+  busy = !!r.busy;
   render(r.needs);
   timer = setTimeout(poll, document.hidden ? 10000 : 2000);
 }
@@ -219,7 +211,10 @@ function render(needs) {
   const seen = new Set();
   for (const n of needs) {
     seen.add(n.id);
-    if (!cards.has(n.id)) cards.set(n.id, makeCard(n));
+    // A card is made again when it can be answered here or no longer can
+    // (an agent started or stopped using this phone).
+    const c = cards.get(n.id);
+    if (!c || (!c.final && !c.busy && c.need.answerable !== n.answerable)) cards.set(n.id, makeCard(n));
   }
   for (const [id, c] of cards) {
     if (!seen.has(id) && !c.final) {
@@ -234,6 +229,7 @@ function render(needs) {
   document.title = (open ? "(" + open + ") " : "") + T.title;
   const nodes = [];
   if (banner) nodes.push(banner);
+  if (busy) nodes.push(busyNote);
   for (const c of cards.values()) nodes.push(c.node);
   if (!cards.size) nodes.push(note("", "", T.none));
   if (nodes.length !== main.children.length || nodes.some((n, i) => main.children[i] !== n)) show(...nodes);
@@ -263,7 +259,7 @@ function makeCard(n) {
     node.append(a);
     fetchChallenges(c);
   } else {
-    c.msg.textContent = T.onComputer;
+    c.msg.textContent = busy ? T.busy : T.onComputer;
     c.msg.style.paddingTop = "12px";
   }
   node.append(c.msg);
@@ -339,7 +335,7 @@ async function answer(c, d) {
     }, true);
   } catch (e) {
     c.busy = false; c.allow.disabled = c.deny.disabled = false;
-    c.msg.className = "msg bad"; c.msg.textContent = e.error === "computer" ? T.onComputer : T.verifyFailed;
+    c.msg.className = "msg bad"; c.msg.textContent = e.error === "computer" ? T.onComputer : e.error === "busy" ? T.busy : T.verifyFailed;
     fetchChallenges(c);
     return;
   }

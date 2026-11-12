@@ -42,6 +42,9 @@ type webMirrorState struct {
 	// approvals (webapprovals.go), made at approvalLinkAt; in memory only.
 	approvalLink   string
 	approvalLinkAt time.Time
+	// approvalPick is, by request, the phone the person said the
+	// browser runs on: a menu label (webApprovalsPicks).
+	approvalPick map[string]string
 }
 
 // webMirrorServe is the command that has Tailscale give the web mirror to

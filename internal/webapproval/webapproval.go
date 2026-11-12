@@ -11,8 +11,10 @@
 // comparing a code the phone shows; every answer is a fresh challenge
 // that names the approval and the decision, signed by that passkey with
 // the person verified (Face ID, a fingerprint, the phone's passcode). An
-// agent on this computer has no such passkey, and an agent that drives
-// the phone cannot pass the phone's own check.
+// agent on this computer has no such passkey. When the person says the
+// browser runs on a phone Pinky drives, its answers are refused while an
+// agent uses that phone: whoever drives it could tap Allow while the
+// person glances at the screen.
 //
 // Everything lives in memory only: the links that add a phone, the
 // requests waiting for the person, the phones added and their session
@@ -30,6 +32,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	_ "embed"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,7 +40,6 @@ import (
 	"image/jpeg"
 	"log/slog"
 	"math/big"
-	"net"
 	"net/http"
 	"net/url"
 	"sort"
@@ -45,6 +47,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/approval"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -55,10 +58,13 @@ const MaxPhones = 8
 // Path is where the page is, under the web mirror's address.
 const Path = "/approvals"
 
-// Source is the gateway, as far as the page reaches it.
+// Source is the gateway, as far as the page reaches it: the open needs,
+// answering one, and the phones (to see whether an agent uses the phone a
+// browser runs on).
 type Source interface {
 	Needs() []gateway.NeedView
 	Decide(needID string, d gateway.Decision, note string) error
+	Devices() []gateway.DeviceView
 }
 
 // Options configure a Server.
@@ -69,6 +75,11 @@ type Options struct {
 	// computer, "" when it has none (a tagged computer): only they may use
 	// the page.
 	Owner func(ctx context.Context) string
+	// Origin returns the origin `tailscale serve` gives the web mirror to
+	// the tailnet under, as "https://mac.tail1234.ts.net:8443", "" when it
+	// does not. Passkeys are bound to it when a phone is added, never to
+	// what a request names.
+	Origin func(ctx context.Context) string
 	// Proxied reports whether a request came through `tailscale serve`
 	// (webmirror.Proxied).
 	Proxied func(r *http.Request) bool
@@ -82,11 +93,14 @@ type Options struct {
 
 // Limits.
 const (
-	linkLife      = 5 * time.Minute // an add-a-phone link, and the request it starts
-	challengeLife = 2 * time.Minute // an answer's challenge, at most; never past the approval's deadline
-	maxPhones     = 8               // phones added at once
-	maxChallenges = 32              // challenges open per phone
-	maxBody       = 64 << 10        // a request's body
+	linkLife      = 5 * time.Minute    // an add-a-phone link, and the request it starts
+	challengeLife = 2 * time.Minute    // an answer's challenge, at most; never past the approval's deadline
+	sessionIdle   = 12 * time.Hour     // a phone not seen for this long is forgotten
+	sessionLife   = 7 * 24 * time.Hour // and any phone after this long
+	ownerLife     = 5 * time.Second    // how long the owner's login is kept
+	pairRate      = 30                 // pair/* requests a minute, from anyone
+	maxChallenges = 32                 // challenges open per phone
+	maxBody       = 64 << 10           // a request's body
 )
 
 // Errors of Allow.
@@ -98,18 +112,25 @@ var (
 // Request is a browser that asks to answer approvals, waiting for the
 // person to compare its code and allow it in Pinky's window.
 type Request struct {
+	// ID names the request in Pinky's window. It is not a secret: what
+	// the page holds to finish adding itself is another value.
 	ID      string
 	Login   string // the tailnet login `tailscale serve` named
-	Browser string // what the page says it is, as "iPhone · Safari"
+	Browser string // read from its User-Agent, from a fixed list, as "iPhone · Safari"; "" when unknown
 	Code    string // six digits the page shows too
 	Created time.Time
 }
 
 // Phone is a browser that may answer approvals.
 type Phone struct {
-	ID       string
-	Login    string
-	Browser  string
+	ID      string
+	Login   string
+	Browser string
+	// Device is the id of the phone connected to Pinky that this browser
+	// runs on, as the person said when they allowed it; "" when it runs
+	// on another device. Its answers are refused while an agent uses that
+	// phone.
+	Device   string
 	Added    time.Time
 	LastSeen time.Time
 }
@@ -119,11 +140,17 @@ type Server struct {
 	opt Options
 	log *slog.Logger
 
+	ownerMu  sync.Mutex
+	owner    string
+	ownerAt  time.Time
+	pairHits []time.Time
+
 	mu         sync.Mutex
 	on         bool
 	link       string // the one add-a-phone link's token, "" when none
 	linkExp    time.Time
-	pairs      map[string]*pairing   // by id
+	seq        int                   // numbers requests
+	pairs      map[string]*pairing   // by the page's secret
 	phones     map[[32]byte]*phone   // by the session token's hash
 	challenges map[string]*challenge // by the challenge, base64url
 }
@@ -140,17 +167,24 @@ const (
 type pairing struct {
 	Request
 	state     pairState
+	poll      string // the second secret pair/status needs, given with the code
 	challenge []byte
 	expires   time.Time
+	origin    string // where the passkey must be made and used
+	rpID      string
 	key       *ecdsa.PublicKey
 	credID    []byte
+	counter   uint32
 	session   string // set once allowed, until the page picks it up
 }
 
 type phone struct {
 	Phone
-	key    *ecdsa.PublicKey
-	credID []byte
+	key     *ecdsa.PublicKey
+	credID  []byte
+	origin  string
+	rpID    string
+	counter uint32 // the passkey's sign counter, 0 when it keeps none
 }
 
 type challenge struct {
@@ -205,15 +239,28 @@ func (s *Server) changed() {
 }
 
 // NewLink makes the token of a link that adds a phone, good once and for
-// a few minutes; it replaces an earlier one not yet used. "" while off.
+// a few minutes. It replaces an earlier one, and turns down the requests
+// still waiting, so only one browser at a time asks. "" while off.
 func (s *Server) NewLink() string {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if !s.on {
+		s.mu.Unlock()
 		return ""
 	}
+	dropped := false
+	for k, p := range s.pairs {
+		if p.state == pairBegun || p.state == pairWaiting {
+			delete(s.pairs, k)
+			dropped = true
+		}
+	}
 	s.link, s.linkExp = rand.Text(), time.Now().Add(linkLife)
-	return s.link
+	link := s.link
+	s.mu.Unlock()
+	if dropped {
+		s.changed()
+	}
+	return link
 }
 
 // Requests are the browsers waiting for the person to allow them, oldest
@@ -232,13 +279,24 @@ func (s *Server) Requests() []Request {
 	return out
 }
 
+func (s *Server) pairByIDLocked(id string) *pairing {
+	for _, p := range s.pairs {
+		if p.ID == id {
+			return p
+		}
+	}
+	return nil
+}
+
 // Allow adds the browser of a request; Pinky's window calls it when the
-// person clicks Allow. It is the only way a phone is added.
-func (s *Server) Allow(id string) error {
+// person clicks Allow, with the phone connected to Pinky the browser runs
+// on ("" for another device). It is the only way a phone is added.
+func (s *Server) Allow(id, device string) error {
 	s.mu.Lock()
-	s.sweepLocked(time.Now())
-	p, ok := s.pairs[id]
-	if !ok || p.state != pairWaiting {
+	now := time.Now()
+	s.sweepLocked(now)
+	p := s.pairByIDLocked(id)
+	if p == nil || p.state != pairWaiting {
 		s.mu.Unlock()
 		return ErrGone
 	}
@@ -247,12 +305,12 @@ func (s *Server) Allow(id string) error {
 		return ErrTooMany
 	}
 	tok := rand.Text()
-	now := time.Now()
-	ph := &phone{Phone: Phone{ID: p.ID, Login: p.Login, Browser: p.Browser, Added: now, LastSeen: now}, key: p.key, credID: p.credID}
+	ph := &phone{Phone: Phone{ID: p.ID, Login: p.Login, Browser: p.Browser, Device: device, Added: now, LastSeen: now},
+		key: p.key, credID: p.credID, origin: p.origin, rpID: p.rpID, counter: p.counter}
 	s.phones[sha256.Sum256([]byte(tok))] = ph
 	p.state, p.session = pairAllowed, tok
 	s.mu.Unlock()
-	s.log.Info("approvals in the browser: phone added", "login", p.Login, "browser", p.Browser)
+	s.log.Info("approvals in the browser: phone added", "login", p.Login, "browser", p.Browser, "device", device)
 	s.changed()
 	return nil
 }
@@ -260,12 +318,12 @@ func (s *Server) Allow(id string) error {
 // Deny turns a request down.
 func (s *Server) Deny(id string) {
 	s.mu.Lock()
-	p, ok := s.pairs[id]
-	if ok && p.state == pairWaiting {
+	p := s.pairByIDLocked(id)
+	if p != nil && p.state == pairWaiting {
 		p.state = pairDenied
 	}
 	s.mu.Unlock()
-	if ok {
+	if p != nil {
 		s.changed()
 	}
 }
@@ -273,10 +331,14 @@ func (s *Server) Deny(id string) {
 // Phones are the browsers that may answer approvals, oldest first.
 func (s *Server) Phones() []Phone {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	gone := s.expireLocked(time.Now())
 	var out []Phone
 	for _, p := range s.phones {
 		out = append(out, p.Phone)
+	}
+	s.mu.Unlock()
+	if gone {
+		s.changed()
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Added.Before(out[j].Added) })
 	return out
@@ -288,12 +350,7 @@ func (s *Server) Remove(id string) {
 	found := false
 	for h, p := range s.phones {
 		if p.ID == id {
-			delete(s.phones, h)
-			for k, c := range s.challenges {
-				if c.phone == h {
-					delete(s.challenges, k)
-				}
-			}
+			s.dropLocked(h)
 			found = true
 		}
 	}
@@ -301,6 +358,28 @@ func (s *Server) Remove(id string) {
 	if found {
 		s.changed()
 	}
+}
+
+func (s *Server) dropLocked(h [32]byte) {
+	delete(s.phones, h)
+	for k, c := range s.challenges {
+		if c.phone == h {
+			delete(s.challenges, k)
+		}
+	}
+}
+
+// expireLocked forgets phones not seen for sessionIdle, or added more
+// than sessionLife ago, and reports whether it forgot any.
+func (s *Server) expireLocked(now time.Time) bool {
+	gone := false
+	for h, p := range s.phones {
+		if now.Sub(p.LastSeen) > sessionIdle || now.Sub(p.Added) > sessionLife {
+			s.dropLocked(h)
+			gone = true
+		}
+	}
+	return gone
 }
 
 // sweepLocked forgets expired links, requests and challenges.
@@ -320,12 +399,28 @@ func (s *Server) sweepLocked(now time.Time) {
 	}
 }
 
-// Answerable reports whether the page may answer a need: an action's
+// Answerable reports whether the page may answer a need: an Ask action's
 // approval or an agent's own question, on a phone. Not an agent's first
 // connection (it needs a scope), opening a blocked app, handoffs,
 // unlocking or setup.
 func Answerable(n gateway.NeedView) bool {
-	return n.Kind == gateway.NeedApproval && n.DeviceID != "" && n.Rule != "New agent" && !n.Unblock
+	return n.Kind == gateway.NeedApproval && (n.Approval == approval.KindAction || n.Approval == approval.KindRequest) &&
+		n.DeviceID != "" && !n.Unblock
+}
+
+// busy reports whether an agent uses the phone the browser runs on: then
+// whoever drives it could open the page and tap Allow, and a glance at
+// the phone could pass Face ID, so its answers are refused.
+func (s *Server) busy(p *phone) bool {
+	if p.Device == "" {
+		return false
+	}
+	for _, d := range s.opt.Source.Devices() {
+		if d.Info.ID == p.Device {
+			return d.TaskID != ""
+		}
+	}
+	return false
 }
 
 // Handler serves the page and its API under Path. The web mirror serves
@@ -333,9 +428,9 @@ func Answerable(n gateway.NeedView) bool {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+Path, s.servePage)
-	mux.HandleFunc("POST "+Path+"/api/pair/begin", s.pairBegin)
-	mux.HandleFunc("POST "+Path+"/api/pair/finish", s.pairFinish)
-	mux.HandleFunc("POST "+Path+"/api/pair/status", s.pairStatus)
+	mux.HandleFunc("POST "+Path+"/api/pair/begin", s.limited(s.pairBegin))
+	mux.HandleFunc("POST "+Path+"/api/pair/finish", s.limited(s.pairFinish))
+	mux.HandleFunc("POST "+Path+"/api/pair/status", s.limited(s.pairStatus))
 	mux.HandleFunc("POST "+Path+"/api/needs", s.authed(s.needs))
 	mux.HandleFunc("POST "+Path+"/api/shot", s.authed(s.shot))
 	mux.HandleFunc("POST "+Path+"/api/challenge", s.authed(s.challenge))
@@ -367,26 +462,62 @@ func (s *Server) Handler() http.Handler {
 	})
 }
 
+// ownerLogin reports whether the request names the owner. The owner's
+// login is read from Tailscale at most every few seconds.
 func (s *Server) ownerLogin(r *http.Request) bool {
 	login := r.Header.Get("Tailscale-User-Login")
 	if login == "" || s.opt.Owner == nil {
 		return false
 	}
-	owner := s.opt.Owner(r.Context())
+	s.ownerMu.Lock()
+	owner, fresh := s.owner, time.Since(s.ownerAt) < ownerLife
+	s.ownerMu.Unlock()
+	if !fresh {
+		owner = s.opt.Owner(r.Context())
+		s.ownerMu.Lock()
+		s.owner, s.ownerAt = owner, time.Now()
+		s.ownerMu.Unlock()
+	}
 	return owner != "" && strings.EqualFold(owner, login)
 }
 
-// origin is the page's origin, which passkeys are bound to: HTTPS at the
-// name `tailscale serve` answers under.
-func origin(r *http.Request) string { return "https://" + r.Host }
-
-// rpID is the passkeys' relying party: the computer's tailnet name.
-func rpID(r *http.Request) string {
-	h := r.Host
-	if host, _, err := net.SplitHostPort(h); err == nil {
-		h = host
+// limited refuses pair/* past pairRate requests a minute, from anyone.
+func (s *Server) limited(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		s.ownerMu.Lock()
+		keep := s.pairHits[:0]
+		for _, t := range s.pairHits {
+			if now.Sub(t) < time.Minute {
+				keep = append(keep, t)
+			}
+		}
+		s.pairHits = keep
+		ok := len(keep) < pairRate
+		if ok {
+			s.pairHits = append(s.pairHits, now)
+		}
+		s.ownerMu.Unlock()
+		if !ok {
+			apiError(w, http.StatusTooManyRequests, "slow_down")
+			return
+		}
+		h(w, r)
 	}
-	return strings.ToLower(strings.TrimSuffix(h, "."))
+}
+
+// tailnetOrigin is the origin `tailscale serve` gives the page under, and
+// its host name, the passkeys' relying party; "" when it gives none or
+// the request did not come to it.
+func (s *Server) tailnetOrigin(r *http.Request) (origin, rpID string) {
+	if s.opt.Origin == nil {
+		return "", ""
+	}
+	u, err := url.Parse(s.opt.Origin(r.Context()))
+	if err != nil || u.Scheme != "https" || u.Host == "" || !strings.EqualFold(u.Host, r.Host) {
+		return "", ""
+	}
+	return "https://" + strings.ToLower(u.Host), strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
 }
 
 func sameOrigin(r *http.Request) bool {
@@ -441,14 +572,16 @@ func readJSON(r *http.Request, v any) error {
 
 // The pairing: the page sends the link's token (begin), makes a passkey
 // and sends its public key (finish), then asks until the person allowed or
-// denied it in Pinky's window (status).
+// denied it in Pinky's window (status). Begin gives the page a secret
+// that finish needs; finish gives it a second one that status needs, so
+// only the page that made the passkey picks up the session.
 
 type pairBeginReq struct {
 	Link string `json:"link"`
 }
 
 type pairBeginResp struct {
-	ID        string `json:"id"`
+	ID        string `json:"id"` // a secret, the page's own
 	Challenge string `json:"challenge"`
 	RPID      string `json:"rpId"`
 	User      string `json:"user"`
@@ -460,6 +593,11 @@ func (s *Server) pairBegin(w http.ResponseWriter, r *http.Request) {
 		apiError(w, http.StatusBadRequest, "bad_request")
 		return
 	}
+	origin, rp := s.tailnetOrigin(r)
+	if origin == "" {
+		apiError(w, http.StatusForbidden, "tailnet")
+		return
+	}
 	now := time.Now()
 	s.mu.Lock()
 	s.sweepLocked(now)
@@ -469,12 +607,14 @@ func (s *Server) pairBegin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.link = "" // once
+	s.seq++
 	ch := random(32)
-	p := &pairing{Request: Request{ID: rand.Text(), Login: r.Header.Get("Tailscale-User-Login"), Created: now},
-		challenge: ch, expires: now.Add(linkLife)}
-	s.pairs[p.ID] = p
+	secret := rand.Text()
+	p := &pairing{Request: Request{ID: fmt.Sprintf("req-%d", s.seq), Login: r.Header.Get("Tailscale-User-Login"), Created: now},
+		challenge: ch, expires: now.Add(linkLife), origin: origin, rpID: rp}
+	s.pairs[secret] = p
 	s.mu.Unlock()
-	writeJSON(w, http.StatusOK, pairBeginResp{ID: p.ID, Challenge: b64.EncodeToString(ch), RPID: rpID(r),
+	writeJSON(w, http.StatusOK, pairBeginResp{ID: secret, Challenge: b64.EncodeToString(ch), RPID: rp,
 		User: b64.EncodeToString(random(16))})
 }
 
@@ -485,11 +625,11 @@ type pairFinishReq struct {
 	Alg          int    `json:"alg"`
 	ClientData   string `json:"clientData"`
 	AuthData     string `json:"authData"`
-	Browser      string `json:"browser"`
 }
 
 type pairFinishResp struct {
 	Code string `json:"code"`
+	Poll string `json:"poll"` // what pair/status needs besides the id
 }
 
 func (s *Server) pairFinish(w http.ResponseWriter, r *http.Request) {
@@ -509,12 +649,12 @@ func (s *Server) pairFinish(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.sweepLocked(time.Now())
 	p, ok := s.pairs[req.ID]
-	if !ok || p.state != pairBegun || !strings.EqualFold(p.Login, r.Header.Get("Tailscale-User-Login")) {
+	if !ok || req.ID == "" || p.state != pairBegun || !strings.EqualFold(p.Login, r.Header.Get("Tailscale-User-Login")) {
 		s.mu.Unlock()
 		apiError(w, http.StatusForbidden, "gone")
 		return
 	}
-	ch := p.challenge
+	ch, origin, rp := p.challenge, p.origin, p.rpID
 	s.mu.Unlock()
 
 	key, err := parseKey(spki)
@@ -522,10 +662,10 @@ func (s *Server) pairFinish(w http.ResponseWriter, r *http.Request) {
 		err = errKey
 	}
 	if err == nil {
-		err = checkClientData(cd, "webauthn.create", ch, origin(r))
+		err = checkClientData(cd, "webauthn.create", ch, origin)
 	}
 	if err == nil {
-		err = checkAuthData(ad, rpID(r))
+		err = checkAuthData(ad, rp)
 	}
 	if err != nil {
 		s.log.Warn("approvals in the browser: a passkey was refused", "err", err, "login", r.Header.Get("Tailscale-User-Login"))
@@ -536,23 +676,25 @@ func (s *Server) pairFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.mu.Lock()
-	if p.state != pairBegun {
+	if s.pairs[req.ID] != p || p.state != pairBegun {
 		s.mu.Unlock()
 		apiError(w, http.StatusForbidden, "gone")
 		return
 	}
-	p.state, p.key, p.credID = pairWaiting, key, cred
-	p.Browser = clip(req.Browser, 60)
+	p.state, p.key, p.credID, p.counter = pairWaiting, key, cred, signCount(ad)
+	p.Browser = browserName(r.UserAgent())
 	p.Code = code()
-	c := p.Code
+	p.poll = rand.Text()
+	resp := pairFinishResp{Code: p.Code, Poll: p.poll}
 	s.mu.Unlock()
 	s.log.Info("approvals in the browser: a browser asks to be added", "login", p.Login, "browser", p.Browser)
 	s.changed()
-	writeJSON(w, http.StatusOK, pairFinishResp{Code: c})
+	writeJSON(w, http.StatusOK, resp)
 }
 
 type pairStatusReq struct {
-	ID string `json:"id"`
+	ID   string `json:"id"`
+	Poll string `json:"poll"`
 }
 
 type pairStatusResp struct {
@@ -570,7 +712,7 @@ func (s *Server) pairStatus(w http.ResponseWriter, r *http.Request) {
 	defer s.mu.Unlock()
 	s.sweepLocked(time.Now())
 	p, ok := s.pairs[req.ID]
-	if !ok || !strings.EqualFold(p.Login, r.Header.Get("Tailscale-User-Login")) {
+	if !ok || req.ID == "" || p.poll == "" || !constEq(req.Poll, p.poll) || !strings.EqualFold(p.Login, r.Header.Get("Tailscale-User-Login")) {
 		writeJSON(w, http.StatusOK, pairStatusResp{State: "gone"})
 		return
 	}
@@ -596,12 +738,17 @@ func (s *Server) authed(h func(http.ResponseWriter, *http.Request, [32]byte, *ph
 			return
 		}
 		hash := sha256.Sum256([]byte(tok))
+		now := time.Now()
 		s.mu.Lock()
+		gone := s.expireLocked(now)
 		p, ok := s.phones[hash]
 		if ok {
-			p.LastSeen = time.Now()
+			p.LastSeen = now
 		}
 		s.mu.Unlock()
+		if gone {
+			s.changed()
+		}
 		if !ok {
 			apiError(w, http.StatusUnauthorized, "session")
 			return
@@ -635,18 +782,20 @@ type shotView struct {
 
 type needsResp struct {
 	Now   int64      `json:"now"`
+	Busy  bool       `json:"busy,omitempty"` // an agent uses the phone this browser runs on
 	Needs []needView `json:"needs"`
 }
 
-func (s *Server) needs(w http.ResponseWriter, r *http.Request, _ [32]byte, _ *phone) {
-	out := needsResp{Now: time.Now().UnixMilli(), Needs: []needView{}}
+func (s *Server) needs(w http.ResponseWriter, r *http.Request, _ [32]byte, p *phone) {
+	out := needsResp{Now: time.Now().UnixMilli(), Busy: s.busy(p), Needs: []needView{}}
 	for _, n := range s.opt.Source.Needs() {
 		if n.Kind != gateway.NeedApproval {
 			continue
 		}
 		v := needView{ID: n.ID, Phone: n.DeviceName, Agent: n.Agent, Title: n.Title, Detail: n.Detail, Rule: n.Rule, App: n.App,
-			Created: n.Created.UnixMilli(), Deadline: n.Deadline.UnixMilli(), Answerable: Answerable(n)}
-		if n.Screenshot != nil {
+			Created: n.Created.UnixMilli(), Deadline: n.Deadline.UnixMilli(), Answerable: Answerable(n) && !out.Busy}
+		// The screenshot only of what the page may answer.
+		if n.Screenshot != nil && Answerable(n) {
 			b := n.Screenshot.Bounds()
 			v.Shot = &shotView{W: b.Dx(), H: b.Dy()}
 			if n.Target.W > 0 && n.Target.H > 0 {
@@ -680,7 +829,7 @@ type idReq struct {
 	ID string `json:"id"`
 }
 
-// shot sends an approval's screenshot as JPEG.
+// shot sends the screenshot of an approval the page may answer, as JPEG.
 func (s *Server) shot(w http.ResponseWriter, r *http.Request, _ [32]byte, _ *phone) {
 	var req idReq
 	if readJSON(r, &req) != nil {
@@ -688,7 +837,7 @@ func (s *Server) shot(w http.ResponseWriter, r *http.Request, _ [32]byte, _ *pho
 		return
 	}
 	n, ok := s.need(req.ID)
-	if !ok || n.Screenshot == nil {
+	if !ok || n.Screenshot == nil || !Answerable(n) {
 		apiError(w, http.StatusNotFound, "gone")
 		return
 	}
@@ -755,6 +904,10 @@ func (s *Server) challenge(w http.ResponseWriter, r *http.Request, hash [32]byte
 		apiError(w, http.StatusForbidden, "computer")
 		return
 	}
+	if s.busy(p) {
+		apiError(w, http.StatusForbidden, "busy")
+		return
+	}
 	now := time.Now()
 	exp := now.Add(challengeLife)
 	if n.Deadline.Before(exp) {
@@ -784,7 +937,7 @@ func (s *Server) challenge(w http.ResponseWriter, r *http.Request, hash [32]byte
 	}
 	s.challenges[k] = &challenge{phone: hash, need: n.ID, decision: d, value: v, expires: exp, deadline: n.Deadline}
 	s.mu.Unlock()
-	writeJSON(w, http.StatusOK, challengeResp{Challenge: k, CredentialID: b64.EncodeToString(p.credID), RPID: rpID(r),
+	writeJSON(w, http.StatusOK, challengeResp{Challenge: k, CredentialID: b64.EncodeToString(p.credID), RPID: p.rpID,
 		Expires: exp.UnixMilli()})
 }
 
@@ -838,19 +991,42 @@ func (s *Server) decide(w http.ResponseWriter, r *http.Request, hash [32]byte, p
 		apiError(w, http.StatusForbidden, "passkey")
 		return
 	}
-	if err := (assertion{ClientData: cd, AuthData: ad, Signature: sig}).verify(p.key, c.value, origin(r), rpID(r)); err != nil {
+	// The origin and RP id stored when the phone was added, never what
+	// this request names.
+	if err := (assertion{ClientData: cd, AuthData: ad, Signature: sig}).verify(p.key, c.value, p.origin, p.rpID); err != nil {
 		s.log.Warn("approvals in the browser: an answer was refused", "err", err, "login", p.Login, "browser", p.Browser)
 		apiError(w, http.StatusForbidden, "passkey")
 		return
 	}
+	// Still added (Remove, the switch, expiry may have come meanwhile),
+	// and a sign counter that went back means a copied passkey.
+	s.mu.Lock()
+	if s.phones[hash] != p {
+		s.mu.Unlock()
+		apiError(w, http.StatusUnauthorized, "session")
+		return
+	}
+	n := signCount(ad)
+	if (n != 0 || p.counter != 0) && n <= p.counter {
+		s.mu.Unlock()
+		s.log.Warn("approvals in the browser: a passkey's counter went back", "login", p.Login, "browser", p.Browser)
+		apiError(w, http.StatusForbidden, "passkey")
+		return
+	}
+	p.counter = n
+	s.mu.Unlock()
+	if s.busy(p) {
+		apiError(w, http.StatusForbidden, "busy")
+		return
+	}
 	// Check again what the approval is: the same id stays the same
 	// approval, but answer only what the page may.
-	n, ok := s.need(c.need)
+	nv, ok := s.need(c.need)
 	if !ok {
 		writeJSON(w, http.StatusOK, decideResp{Result: "gone", Late: !time.Now().Before(c.deadline)})
 		return
 	}
-	if !Answerable(n) {
+	if !Answerable(nv) {
 		apiError(w, http.StatusForbidden, "computer")
 		return
 	}
@@ -859,8 +1035,54 @@ func (s *Server) decide(w http.ResponseWriter, r *http.Request, hash [32]byte, p
 		return
 	}
 	s.log.Info("approvals in the browser: answered", "approval", c.need, "decision", c.decision,
-		"login", p.Login, "browser", p.Browser, "title", n.Title)
+		"login", p.Login, "browser", p.Browser, "title", nv.Title)
 	writeJSON(w, http.StatusOK, decideResp{Result: "done"})
+}
+
+// signCount is the authenticator data's sign counter.
+func signCount(ad []byte) uint32 {
+	if len(ad) < 37 {
+		return 0
+	}
+	return binary.BigEndian.Uint32(ad[33:37])
+}
+
+// browserName names a browser from its User-Agent, from a fixed list
+// only: what a page sends is never shown as it is.
+func browserName(ua string) string {
+	dev := ""
+	switch {
+	case strings.Contains(ua, "iPad"):
+		dev = "iPad"
+	case strings.Contains(ua, "iPhone"):
+		dev = "iPhone"
+	case strings.Contains(ua, "Android"):
+		dev = "Android"
+	case strings.Contains(ua, "Mac OS X"):
+		dev = "Mac"
+	case strings.Contains(ua, "Windows"):
+		dev = "Windows"
+	case strings.Contains(ua, "Linux"):
+		dev = "Linux"
+	}
+	br := ""
+	switch {
+	case strings.Contains(ua, "Edg/") || strings.Contains(ua, "EdgA/") || strings.Contains(ua, "EdgiOS/"):
+		br = "Edge"
+	case strings.Contains(ua, "Firefox/") || strings.Contains(ua, "FxiOS/"):
+		br = "Firefox"
+	case strings.Contains(ua, "Chrome/") || strings.Contains(ua, "CriOS/"):
+		br = "Chrome"
+	case strings.Contains(ua, "Safari/"):
+		br = "Safari"
+	}
+	switch {
+	case dev != "" && br != "":
+		return dev + " · " + br
+	case dev != "":
+		return dev
+	}
+	return br
 }
 
 func random(n int) []byte {
@@ -878,17 +1100,4 @@ func code() string {
 func constEq(a, b string) bool {
 	ha, hb := sha256.Sum256([]byte(a)), sha256.Sum256([]byte(b))
 	return ha == hb
-}
-
-func clip(s string, n int) string {
-	s = strings.TrimSpace(strings.Map(func(r rune) rune {
-		if r < 0x20 || r == 0x7f {
-			return -1
-		}
-		return r
-	}, s))
-	if r := []rune(s); len(r) > n {
-		return string(r[:n])
-	}
-	return s
 }

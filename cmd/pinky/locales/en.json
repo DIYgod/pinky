@@ -10612,9 +10612,9 @@
   "@webApprovalsRequest": {
     "description": "Settings › Phones › Web mirror: the title of a request from a browser that opened the link and made a passkey, waiting for the person to allow it."
   },
-  "webApprovalsRequestDesc": "{browser} · {login}. Allow it only if your phone shows {code}.",
+  "webApprovalsRequestDesc": "{browser} · {login}. Allow it only if your phone shows this code:",
   "@webApprovalsRequestDesc": {
-    "description": "Settings › Phones › Web mirror: the line under A browser asks to answer approvals. browser is as \"iPhone · Safari\", login the Tailscale login, code six digits the phone shows too.",
+    "description": "Settings › Phones › Web mirror: the line under A browser asks to answer approvals, followed by the six-digit code in large type. browser is as \"iPhone · Safari\", login the Tailscale login.",
     "placeholders": {
       "browser": {
         "type": "String",
@@ -10623,12 +10623,28 @@
       "login": {
         "type": "String",
         "example": "alex@example.com"
-      },
-      "code": {
-        "type": "String",
-        "example": "482 913"
       }
     }
+  },
+  "webApprovalsUnknownBrowser": "A browser",
+  "@webApprovalsUnknownBrowser": {
+    "description": "Settings › Phones › Web mirror: stands for the browser's name in a request to answer approvals when Pinky can't tell which browser it is."
+  },
+  "webApprovalsWhich": "Which phone is this browser on?",
+  "@webApprovalsWhich": {
+    "description": "Settings › Phones › Web mirror: in a request to answer approvals, the label of a menu of the phones connected to Pinky, and Another device. The person picks one before Allow."
+  },
+  "webApprovalsWhichDesc": "While an agent uses that phone, Pinky refuses answers from it: whoever drives the phone could tap Allow.",
+  "@webApprovalsWhichDesc": {
+    "description": "Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky asks."
+  },
+  "webApprovalsChoose": "Choose…",
+  "@webApprovalsChoose": {
+    "description": "Settings › Phones › Web mirror: the menu of webApprovalsWhich before the person picks a phone."
+  },
+  "webApprovalsOther": "Another device",
+  "@webApprovalsOther": {
+    "description": "Settings › Phones › Web mirror: in the menu of webApprovalsWhich, a device that is not a phone connected to Pinky."
   },
   "webApprovalsAllow": "Allow",
   "@webApprovalsAllow": {
@@ -10661,6 +10677,24 @@
       "login": {
         "type": "String",
         "example": "alex@example.com"
+      }
+    }
+  },
+  "webApprovalsPhoneOn": "{browser} · {login} · on {phone}",
+  "@webApprovalsPhoneOn": {
+    "description": "Settings › Phones › Web mirror: a browser added to answer approvals that runs on a phone connected to Pinky. browser is as \"iPhone · Safari\", login the Tailscale login, phone the phone's name.",
+    "placeholders": {
+      "browser": {
+        "type": "String",
+        "example": "iPhone · Safari"
+      },
+      "login": {
+        "type": "String",
+        "example": "alex@example.com"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Alex's iPhone"
       }
     }
   },
@@ -10797,6 +10831,14 @@
         "example": "Payments"
       }
     }
+  },
+  "webApprovalsPageBusy": "An agent is using this phone, so it can't answer approvals now. Answer on the computer or on another phone.",
+  "@webApprovalsPageBusy": {
+    "description": "The approvals page, on a phone Pinky drives, while an agent uses it."
+  },
+  "webApprovalsPageSlowDown": "Too many tries. Wait a minute, then make a new link in Pinky.",
+  "@webApprovalsPageSlowDown": {
+    "description": "The approvals page: adding a phone was refused because of too many tries in a minute."
   },
   "webMirrorControlDesc": "Taps, swipes, Back and Home from the page, as on Pinky's own mirror: they pause an agent's task.",
   "@webMirrorControlDesc": {

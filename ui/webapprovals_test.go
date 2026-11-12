@@ -5,6 +5,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -36,6 +37,7 @@ type fakeApprovals struct {
 	reqs    []webapproval.Request
 	phones  []webapproval.Phone
 	allowed []string
+	devices []string
 	denied  []string
 }
 
@@ -52,13 +54,14 @@ func (f *fakeApprovals) Requests() []webapproval.Request {
 	return append([]webapproval.Request(nil), f.reqs...)
 }
 
-func (f *fakeApprovals) Allow(id string) error {
+func (f *fakeApprovals) Allow(id, device string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.allowed = append(f.allowed, id)
+	f.devices = append(f.devices, device)
 	for i, r := range f.reqs {
 		if r.ID == id {
-			f.phones = append(f.phones, webapproval.Phone{ID: r.ID, Login: r.Login, Browser: r.Browser, Added: time.Now()})
+			f.phones = append(f.phones, webapproval.Phone{ID: r.ID, Login: r.Login, Browser: r.Browser, Device: device, Added: time.Now()})
 			f.reqs = append(f.reqs[:i], f.reqs[i+1:]...)
 			return nil
 		}
@@ -129,9 +132,23 @@ func TestWebApprovalsSettings(t *testing.T) {
 
 	fa.request()
 	ta.waitFor(t, "the request", func() bool { tt.Frame(); return hasText(tt, "A browser asks to answer approvals") })
-	if !hasText(tt, "iPhone · Safari · alex@example.com. Allow it only if your phone shows 482 913.") || hasText(tt, "Link for your phone") {
+	if !hasText(tt, "iPhone · Safari · alex@example.com. Allow it only if your phone shows this code:") || !hasText(tt, "482 913") ||
+		hasText(tt, "Link for your phone") {
 		t.Fatalf("request: %q", tt.Texts())
 	}
+	// No Allow until the person says which phone the browser is on.
+	if slices.Contains(tt.Texts(), "Allow") || !hasText(tt, "Which phone is this browser on?") {
+		t.Fatalf("Allow before the phone is chosen: %q", tt.Texts())
+	}
+	if err := tt.Click("Choose…"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	// The menu lists Choose…, the phones and Another device: the first
+	// phone.
+	tt.Key(0, mg.KeyDown)
+	tt.Key(0, mg.KeyEnter)
+	ta.waitFor(t, "Allow", func() bool { tt.Frame(); return slices.Contains(tt.Texts(), "Allow") })
 	if len(fa.allowed) != 0 {
 		t.Fatal("allowed by itself")
 	}
@@ -140,10 +157,10 @@ func TestWebApprovalsSettings(t *testing.T) {
 	}
 	ta.waitFor(t, "the phone", func() bool {
 		tt.Frame()
-		return hasText(tt, "iPhone · Safari · alex@example.com") && !hasText(tt, "A browser asks to answer approvals")
+		return hasText(tt, "iPhone · Safari · alex@example.com · on Pixel 9") && !hasText(tt, "A browser asks to answer approvals")
 	})
-	if len(fa.allowed) != 1 || fa.allowed[0] != "req1" {
-		t.Fatalf("allowed %v", fa.allowed)
+	if len(fa.allowed) != 1 || fa.allowed[0] != "req1" || fa.devices[0] != ta.devices[0].Info.ID || ta.devices[0].Info.Name != "Pixel 9" {
+		t.Fatalf("allowed %v on %v", fa.allowed, fa.devices)
 	}
 	if err := tt.Click("Remove"); err != nil {
 		t.Fatal(err)

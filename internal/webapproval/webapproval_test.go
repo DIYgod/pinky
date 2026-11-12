@@ -8,15 +8,19 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"image"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/approval"
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
@@ -28,6 +32,8 @@ import (
 const (
 	host  = "mac.tail1234.ts.net:8443"
 	owner = "person@example.com"
+	// iPhone Safari's User-Agent.
+	safariUA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 )
 
 // newGateway is the real gateway on a demo phone, as the gateway's own
@@ -87,17 +93,24 @@ type harness struct {
 	// What the requests carry, as `tailscale serve` would set them.
 	login   string
 	proxied bool
+	host    string // the Host requests name, and the origin the browser puts in the client data
+	ua      string
 	key     *ecdsa.PrivateKey
 	credID  []byte
 	session string
 	uv      bool
+	counter uint32 // the passkey's sign counter
+	device  string // the phone the person says the browser runs on
+	// tsOrigin is where `tailscale serve` gives the mirror.
+	tsOrigin string
 }
 
 func newHarness(t *testing.T, src Source) *harness {
-	h := &harness{t: t, login: owner, proxied: true, uv: true, credID: []byte("cred-1")}
+	h := &harness{t: t, login: owner, proxied: true, uv: true, credID: []byte("cred-1"), host: host, ua: safariUA,
+		tsOrigin: "https://" + host}
 	h.key, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	h.s = New(Options{Source: src, Owner: func(context.Context) string { return owner },
-		Proxied: webmirror.Proxied})
+		Origin: func(context.Context) string { return h.tsOrigin }, Proxied: webmirror.Proxied})
 	h.s.Set(true)
 	m := webmirror.New(webmirror.Options{Source: nil, OwnNames: func(context.Context) []string { return []string{"mac.tail1234.ts.net"} },
 		Approvals: h.s.Handler()})
@@ -111,7 +124,7 @@ func (h *harness) post(path string, body any, out any) int {
 	b, _ := json.Marshal(body)
 	req, _ := http.NewRequest("POST", h.srv.URL+Path+"/api/"+path, bytes.NewReader(b))
 	h.headers(req)
-	req.Header.Set("Origin", "https://"+host)
+	req.Header.Set("Origin", "https://"+h.host)
 	if h.session != "" {
 		req.Header.Set("Authorization", "Bearer "+h.session)
 	}
@@ -128,12 +141,10 @@ func (h *harness) post(path string, body any, out any) int {
 }
 
 func (h *harness) headers(req *http.Request) {
-	req.Host = host
+	req.Host = h.host
+	req.Header.Set("User-Agent", h.ua)
 	if h.proxied {
 		req.Header.Set("X-Forwarded-For", "100.64.0.2")
-	} else {
-		// Straight to the mirror's address on this computer.
-		req.Host = "127.0.0.1:7466"
 	}
 	if h.login != "" {
 		req.Header.Set("Tailscale-User-Login", h.login)
@@ -141,7 +152,7 @@ func (h *harness) headers(req *http.Request) {
 }
 
 func (h *harness) clientData(typ string, ch []byte) []byte {
-	b, _ := json.Marshal(map[string]any{"type": typ, "challenge": b64.EncodeToString(ch), "origin": "https://" + host})
+	b, _ := json.Marshal(map[string]any{"type": typ, "challenge": b64.EncodeToString(ch), "origin": "https://" + h.host})
 	return b
 }
 
@@ -151,7 +162,7 @@ func (h *harness) authData() []byte {
 	if h.uv {
 		flags |= flagUserVerified
 	}
-	return append(rp[:], flags, 0, 0, 0, 1)
+	return binary.BigEndian.AppendUint32(append(rp[:], flags), h.counter)
 }
 
 // pair adds the harness's phone, the person allowing it in Pinky's window.
@@ -166,22 +177,23 @@ func (h *harness) pair() {
 		h.t.Fatalf("finish: %d %+v", c, fin)
 	}
 	reqs := h.s.Requests()
-	if len(reqs) != 1 || reqs[0].Code != fin.Code || reqs[0].Login != owner || reqs[0].Browser != "iPhone · Safari" {
+	if len(reqs) != 1 || reqs[0].Code != fin.Code || reqs[0].Login != owner || reqs[0].Browser != "iPhone · Safari" ||
+		reqs[0].ID == begun.ID || fin.Poll == "" {
 		h.t.Fatalf("requests %+v, code %s", reqs, fin.Code)
 	}
 	var st pairStatusResp
-	if h.post("pair/status", pairStatusReq{ID: begun.ID}, &st); st.State != "waiting" {
+	if h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); st.State != "waiting" {
 		h.t.Fatalf("status before Allow: %+v", st)
 	}
-	if err := h.s.Allow(reqs[0].ID); err != nil {
+	if err := h.s.Allow(reqs[0].ID, h.device); err != nil {
 		h.t.Fatal(err)
 	}
-	if h.post("pair/status", pairStatusReq{ID: begun.ID}, &st); st.State != "allowed" || st.Session == "" {
+	if h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); st.State != "allowed" || st.Session == "" {
 		h.t.Fatalf("status after Allow: %+v", st)
 	}
 	h.session = st.Session
 	// Once.
-	if h.post("pair/status", pairStatusReq{ID: begun.ID}, &st); st.State != "gone" {
+	if h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); st.State != "gone" {
 		h.t.Fatalf("status again: %+v", st)
 	}
 }
@@ -191,7 +203,7 @@ func (h *harness) finishReq(begun pairBeginResp) pairFinishReq {
 	spki, _ := x509.MarshalPKIXPublicKey(&h.key.PublicKey)
 	return pairFinishReq{ID: begun.ID, CredentialID: b64.EncodeToString(h.credID), PublicKey: b64.EncodeToString(spki),
 		Alg: algES256, ClientData: b64.EncodeToString(h.clientData("webauthn.create", ch)),
-		AuthData: b64.EncodeToString(h.authData()), Browser: "iPhone · Safari"}
+		AuthData: b64.EncodeToString(h.authData())}
 }
 
 // sign makes the assertion the phone's passkey would for a challenge.
@@ -252,7 +264,7 @@ func TestRefused(t *testing.T) {
 
 	t.Run("not through Tailscale", func(t *testing.T) {
 		h := newHarness(t, g)
-		h.proxied, h.login = false, ""
+		h.proxied, h.login, h.host = false, "", "127.0.0.1:7466"
 		if c := h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, nil); c != http.StatusForbidden {
 			t.Fatalf("got %d", c)
 		}
@@ -322,10 +334,11 @@ func TestRefused(t *testing.T) {
 		h := newHarness(t, g)
 		var begun pairBeginResp
 		h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &begun)
-		h.post("pair/finish", h.finishReq(begun), nil)
+		var fin pairFinishResp
+		h.post("pair/finish", h.finishReq(begun), &fin)
 		h.s.Deny(h.s.Requests()[0].ID)
 		var st pairStatusResp
-		if h.post("pair/status", pairStatusReq{ID: begun.ID}, &st); st.State != "denied" || st.Session != "" || len(h.s.Phones()) != 0 {
+		if h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); st.State != "denied" || st.Session != "" || len(h.s.Phones()) != 0 {
 			t.Fatalf("status %+v, phones %+v", st, h.s.Phones())
 		}
 	})
@@ -449,16 +462,24 @@ func TestTimeoutUnchanged(t *testing.T) {
 }
 
 func TestAnswerable(t *testing.T) {
-	ok := gateway.NeedView{Kind: gateway.NeedApproval, DeviceID: "pixel", Rule: "Payments"}
-	if !Answerable(ok) {
-		t.Fatal("payment")
+	for name, n := range map[string]gateway.NeedView{
+		"action":  {Kind: gateway.NeedApproval, Approval: approval.KindAction, DeviceID: "pixel", Rule: "Payments"},
+		"request": {Kind: gateway.NeedApproval, Approval: approval.KindRequest, DeviceID: "pixel", Rule: "Agent request"},
+	} {
+		if !Answerable(n) {
+			t.Errorf("%s not answerable", name)
+		}
 	}
 	for name, n := range map[string]gateway.NeedView{
-		"new agent": {Kind: gateway.NeedApproval, Rule: "New agent"},
-		"unblock":   {Kind: gateway.NeedApproval, DeviceID: "pixel", Rule: "Finance apps", Unblock: true},
-		"handoff":   {Kind: gateway.NeedHandoff, DeviceID: "pixel"},
-		"unlock":    {Kind: gateway.NeedUnlock, DeviceID: "pixel"},
-		"setup":     {Kind: gateway.NeedSetup, DeviceID: "pixel"},
+		// By its kind, whatever its rule says.
+		"new agent":         {Kind: gateway.NeedApproval, Approval: approval.KindAgent, DeviceID: "pixel", Rule: "Payments"},
+		"no kind":           {Kind: gateway.NeedApproval, DeviceID: "pixel", Rule: "Payments"},
+		"unblock":           {Kind: gateway.NeedApproval, Approval: approval.KindAction, DeviceID: "pixel", Rule: "Finance apps", Unblock: true},
+		"no phone":          {Kind: gateway.NeedApproval, Approval: approval.KindAction, Rule: "Payments"},
+		"handoff":           {Kind: gateway.NeedHandoff, Approval: approval.KindHandoff, DeviceID: "pixel"},
+		"handoff as action": {Kind: gateway.NeedHandoff, Approval: approval.KindAction, DeviceID: "pixel"},
+		"unlock":            {Kind: gateway.NeedUnlock, DeviceID: "pixel"},
+		"setup":             {Kind: gateway.NeedSetup, DeviceID: "pixel"},
 	} {
 		if Answerable(n) {
 			t.Errorf("%s answerable", name)
@@ -466,31 +487,92 @@ func TestAnswerable(t *testing.T) {
 	}
 }
 
-// fakeSource holds cards the page cannot answer, and one with a
-// screenshot.
-type fakeSource struct{ needs []gateway.NeedView }
-
-func (f *fakeSource) Needs() []gateway.NeedView { return f.needs }
-func (f *fakeSource) Decide(string, gateway.Decision, string) error {
-	panic("the page answered what it may not")
+// fakeSource holds cards and phones; answering is counted, or panics
+// when no answer may come.
+type fakeSource struct {
+	mu       sync.Mutex
+	needs    []gateway.NeedView
+	devices  []gateway.DeviceView
+	answers  []string
+	noAnswer bool
 }
 
+func (f *fakeSource) Needs() []gateway.NeedView {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]gateway.NeedView(nil), f.needs...)
+}
+
+func (f *fakeSource) Devices() []gateway.DeviceView {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]gateway.DeviceView(nil), f.devices...)
+}
+
+func (f *fakeSource) Decide(id string, d gateway.Decision, _ string) error {
+	if f.noAnswer {
+		panic("the page answered what it may not")
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.answers = append(f.answers, id+":"+string(d))
+	return nil
+}
+
+func (f *fakeSource) setTask(device, task string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i := range f.devices {
+		if f.devices[i].Info.ID == device {
+			f.devices[i].TaskID = task
+		}
+	}
+}
+
+func payment(id string) gateway.NeedView {
+	return gateway.NeedView{ID: id, Kind: gateway.NeedApproval, Approval: approval.KindAction, DeviceID: "pixel", Rule: "Payments",
+		Title: "Pay $12.80?", Deadline: time.Now().Add(time.Minute), Screenshot: image.NewRGBA(image.Rect(0, 0, 90, 160)),
+		Target: screen.Rect{X: 10, Y: 20, W: 30, H: 40}, Point: screen.Point{X: 25, Y: 40}}
+}
+
+func (h *harness) shot(id string) int {
+	h.t.Helper()
+	b, _ := json.Marshal(idReq{ID: id})
+	req, _ := http.NewRequest("POST", h.srv.URL+Path+"/api/shot", bytes.NewReader(b))
+	h.headers(req)
+	req.Header.Set("Origin", "https://"+h.host)
+	req.Header.Set("Authorization", "Bearer "+h.session)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode == 200 && (resp.Header.Get("Content-Type") != "image/jpeg" || !strings.Contains(resp.Header.Get("Cache-Control"), "no-store")) {
+		h.t.Fatalf("shot: %v", resp.Header)
+	}
+	return resp.StatusCode
+}
+
+// Cards the page may not answer are listed without their screenshot, and
+// refused.
 func TestCardsAndComputerOnly(t *testing.T) {
-	src := &fakeSource{needs: []gateway.NeedView{
-		{ID: "ap_1", Kind: gateway.NeedApproval, Rule: "New agent", Title: "Let Codex use your phones?", Deadline: time.Now().Add(time.Minute)},
-		{ID: "ap_2", Kind: gateway.NeedApproval, DeviceID: "pixel", Rule: "Finance apps", Unblock: true, Title: "Open Bank?",
-			Deadline: time.Now().Add(time.Minute), Screenshot: image.NewRGBA(image.Rect(0, 0, 90, 160)),
-			Target: screen.Rect{X: 10, Y: 20, W: 30, H: 40}, Point: screen.Point{X: 25, Y: 40}},
-		{ID: "unlock:pixel", Kind: gateway.NeedUnlock, DeviceID: "pixel"},
-	}}
+	newAgent := payment("ap_1")
+	newAgent.Approval, newAgent.Rule, newAgent.Title = approval.KindAgent, "New agent", "Let Codex use your phones?"
+	unblock := payment("ap_2")
+	unblock.Rule, unblock.Unblock, unblock.Title = "Finance apps", true, "Open Bank?"
+	src := &fakeSource{noAnswer: true, needs: []gateway.NeedView{newAgent, unblock, payment("ap_3"),
+		{ID: "unlock:pixel", Kind: gateway.NeedUnlock, DeviceID: "pixel"}}}
 	h := newHarness(t, src)
 	h.pair()
 	var needs needsResp
 	h.post("needs", nil, &needs)
-	if len(needs.Needs) != 2 || needs.Needs[0].Answerable || needs.Needs[1].Answerable {
+	if len(needs.Needs) != 3 || needs.Needs[0].Answerable || needs.Needs[1].Answerable || !needs.Needs[2].Answerable {
 		t.Fatalf("needs %+v", needs.Needs)
 	}
-	n := needs.Needs[1]
+	if needs.Needs[0].Shot != nil || needs.Needs[1].Shot != nil || needs.Needs[1].Target != nil {
+		t.Fatalf("a screenshot of what the page may not answer: %+v", needs.Needs[:2])
+	}
+	n := needs.Needs[2]
 	if n.Shot == nil || n.Shot.W != 90 || n.Target == nil || n.Target.W != 30 || len(n.Points) != 1 {
 		t.Fatalf("card %+v", n)
 	}
@@ -499,20 +581,227 @@ func TestCardsAndComputerOnly(t *testing.T) {
 		if c := h.post("challenge", challengeReq{ID: id, Decision: "allow"}, &e); c != http.StatusForbidden || e.Error != "computer" {
 			t.Fatalf("%s: %d %+v", id, c, e)
 		}
+		if c := h.shot(id); c != http.StatusNotFound {
+			t.Fatalf("shot of %s: %d", id, c)
+		}
 	}
-	// The screenshot, as JPEG.
-	b, _ := json.Marshal(idReq{ID: "ap_2"})
-	req, _ := http.NewRequest("POST", h.srv.URL+Path+"/api/shot", bytes.NewReader(b))
-	h.headers(req)
-	req.Header.Set("Origin", "https://"+host)
-	req.Header.Set("Authorization", "Bearer "+h.session)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	if c := h.shot("ap_3"); c != 200 {
+		t.Fatalf("shot: %d", c)
+	}
+}
+
+// A browser on a phone an agent uses answers nothing while the agent uses
+// it: whoever drives the phone could tap Allow while the person glances at
+// it.
+func TestBusyPhone(t *testing.T) {
+	t.Run("gateway", func(t *testing.T) {
+		g := newGateway(t, 30*time.Second)
+		h := newHarness(t, g)
+		h.device = "pixel"
+		h.pair()
+		id, _ := ask(t, g) // the agent holds the Pixel
+		var needs needsResp
+		if h.post("needs", nil, &needs); !needs.Busy || len(needs.Needs) != 1 || needs.Needs[0].Answerable {
+			t.Fatalf("needs %+v", needs)
+		}
+		var e apiErr
+		if c := h.post("challenge", challengeReq{ID: id, Decision: "allow"}, &e); c != http.StatusForbidden || e.Error != "busy" {
+			t.Fatalf("challenge: %d %+v", c, e)
+		}
+		// Another device answers.
+		other := newHarness(t, g)
+		other.s, other.srv, other.credID = h.s, h.srv, []byte("cred-2")
+		other.key, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		other.pair()
+		var res decideResp
+		if c := other.post("decide", other.sign(other.challenge(id, "deny")), &res); c != 200 || res.Result != "done" {
+			t.Fatalf("other device: %d %+v", c, res)
+		}
+	})
+	t.Run("an agent starts after the challenge", func(t *testing.T) {
+		src := &fakeSource{needs: []gateway.NeedView{payment("ap_1")},
+			devices: []gateway.DeviceView{{Info: driver.Info{ID: "pixel"}}, {Info: driver.Info{ID: "iphone"}}}}
+		h := newHarness(t, src)
+		h.device = "iphone"
+		h.pair()
+		if ph := h.s.Phones(); len(ph) != 1 || ph[0].Device != "iphone" {
+			t.Fatalf("phones %+v", ph)
+		}
+		ch := h.challenge("ap_1", "allow")
+		src.setTask("iphone", "task-1")
+		var e apiErr
+		if c := h.post("decide", h.sign(ch), &e); c != http.StatusForbidden || e.Error != "busy" || len(src.answers) != 0 {
+			t.Fatalf("decide: %d %+v, answers %v", c, e, src.answers)
+		}
+		src.setTask("iphone", "")
+		var res decideResp
+		if c := h.post("decide", h.sign(h.challenge("ap_1", "allow")), &res); c != 200 || res.Result != "done" || len(src.answers) != 1 {
+			t.Fatalf("after the task: %d %+v %v", c, res, src.answers)
+		}
+	})
+}
+
+// Passkeys are bound to where `tailscale serve` gives the mirror, stored
+// when the phone is added; never to what a request names.
+func TestOriginFromTailscale(t *testing.T) {
+	src := &fakeSource{needs: []gateway.NeedView{payment("ap_1")}}
+	t.Run("not served", func(t *testing.T) {
+		h := newHarness(t, src)
+		h.tsOrigin = ""
+		var e apiErr
+		if c := h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &e); c != http.StatusForbidden || e.Error != "tailnet" {
+			t.Fatalf("got %d %+v", c, e)
+		}
+	})
+	t.Run("another port of this computer", func(t *testing.T) {
+		h := newHarness(t, src)
+		h.host = "mac.tail1234.ts.net:9443"
+		if c := h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, nil); c != http.StatusForbidden {
+			t.Fatalf("got %d", c)
+		}
+	})
+	t.Run("an answer made on another port", func(t *testing.T) {
+		h := newHarness(t, src)
+		h.pair()
+		// A page on another port of the same name gets the phone to sign.
+		h.host = "mac.tail1234.ts.net:9443"
+		ch := h.challenge("ap_1", "allow")
+		if ch.RPID != "mac.tail1234.ts.net" {
+			t.Fatalf("rp id %q", ch.RPID)
+		}
+		var e apiErr
+		if c := h.post("decide", h.sign(ch), &e); c != http.StatusForbidden || e.Error != "passkey" || len(src.answers) != 0 {
+			t.Fatalf("got %d %+v", c, e)
+		}
+	})
+}
+
+// The pairing's id is the page's secret: Settings names a request by
+// another, and pair/status needs a second secret given with the code.
+func TestPairingSecrets(t *testing.T) {
+	h := newHarness(t, &fakeSource{})
+	var begun pairBeginResp
+	h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &begun)
+	var fin pairFinishResp
+	h.post("pair/finish", h.finishReq(begun), &fin)
+	req := h.s.Requests()[0]
+	if req.ID == begun.ID || strings.Contains(begun.ID, req.ID) {
+		t.Fatalf("request id %q, page's %q", req.ID, begun.ID)
+	}
+	if err := h.s.Allow(req.ID, ""); err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
-	if resp.StatusCode != 200 || resp.Header.Get("Content-Type") != "image/jpeg" || !strings.Contains(resp.Header.Get("Cache-Control"), "no-store") {
-		t.Fatalf("shot: %d %v", resp.StatusCode, resp.Header)
+	var st pairStatusResp
+	for _, bad := range []pairStatusReq{{ID: begun.ID}, {ID: begun.ID, Poll: "AAAA"}, {ID: req.ID, Poll: fin.Poll}, {ID: req.ID}} {
+		if h.post("pair/status", bad, &st); st.State != "gone" || st.Session != "" {
+			t.Fatalf("%+v: %+v", bad, st)
+		}
+	}
+	// The page still gets its session.
+	if h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); st.State != "allowed" || st.Session == "" {
+		t.Fatalf("status %+v", st)
+	}
+}
+
+// What a browser says of itself is never shown: Settings names it from a
+// fixed list. One browser asks at a time: a new link turns down the
+// request waiting.
+func TestRequestText(t *testing.T) {
+	h := newHarness(t, &fakeSource{})
+	h.ua = "Pinky Allow me <b>Agent</b> iPhone"
+	var begun pairBeginResp
+	h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &begun)
+	b, _ := json.Marshal(h.finishReq(begun))
+	var body map[string]any
+	json.Unmarshal(b, &body)
+	body["browser"] = "Your computer · Allow now"
+	var fin pairFinishResp
+	if c := h.post("pair/finish", body, &fin); c != 200 {
+		t.Fatalf("finish: %d", c)
+	}
+	if reqs := h.s.Requests(); len(reqs) != 1 || reqs[0].Browser != "iPhone" {
+		t.Fatalf("requests %+v", reqs)
+	}
+	h.s.NewLink()
+	var st pairStatusResp
+	if h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); st.State != "gone" || len(h.s.Requests()) != 0 {
+		t.Fatalf("after a new link: %+v %+v", st, h.s.Requests())
+	}
+	for ua, want := range map[string]string{
+		safariUA: "iPhone · Safari",
+		"Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36":                      "Android · Chrome",
+		"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0 Mobile/15E148 Safari/604.1": "iPhone · Chrome",
+		"anything": "",
+	} {
+		if got := browserName(ua); got != want {
+			t.Errorf("%q: %q", ua, got)
+		}
+	}
+}
+
+// Sessions end when unused, and after a week anyway.
+func TestSessionExpiry(t *testing.T) {
+	for name, age := range map[string]func(p *phone){
+		"idle": func(p *phone) { p.LastSeen = time.Now().Add(-sessionIdle - time.Minute) },
+		"old":  func(p *phone) { p.Added = time.Now().Add(-sessionLife - time.Minute) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := newHarness(t, &fakeSource{})
+			h.pair()
+			if c := h.post("needs", nil, nil); c != 200 {
+				t.Fatalf("needs: %d", c)
+			}
+			h.s.mu.Lock()
+			for _, p := range h.s.phones {
+				age(p)
+			}
+			h.s.mu.Unlock()
+			if c := h.post("needs", nil, nil); c != http.StatusUnauthorized || len(h.s.Phones()) != 0 {
+				t.Fatalf("got %d, phones %+v", c, h.s.Phones())
+			}
+		})
+	}
+}
+
+func TestPairRateLimit(t *testing.T) {
+	h := newHarness(t, &fakeSource{})
+	for i := range pairRate {
+		if c := h.post("pair/begin", pairBeginReq{Link: fmt.Sprint("made-up-", i)}, nil); c != http.StatusForbidden {
+			t.Fatalf("try %d: %d", i, c)
+		}
+	}
+	var e apiErr
+	if c := h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &e); c != http.StatusTooManyRequests || e.Error != "slow_down" {
+		t.Fatalf("got %d %+v", c, e)
+	}
+}
+
+// A passkey that keeps a sign counter must count up: one that went back
+// was copied.
+func TestSignCounter(t *testing.T) {
+	src := &fakeSource{needs: []gateway.NeedView{payment("ap_1")}}
+	h := newHarness(t, src)
+	h.counter = 5
+	h.pair()
+	if c := h.post("decide", h.sign(h.challenge("ap_1", "allow")), nil); c != http.StatusForbidden {
+		t.Fatalf("same counter: %d", c)
+	}
+	h.counter = 7
+	var res decideResp
+	if c := h.post("decide", h.sign(h.challenge("ap_1", "allow")), &res); c != 200 || res.Result != "done" {
+		t.Fatalf("counted up: %d %+v", c, res)
+	}
+	h.counter = 6
+	if c := h.post("decide", h.sign(h.challenge("ap_1", "allow")), nil); c != http.StatusForbidden {
+		t.Fatalf("went back: %d", c)
+	}
+	// A passkey without a counter (Apple's) stays at 0.
+	h2 := newHarness(t, src)
+	h2.pair()
+	for range 2 {
+		if c := h2.post("decide", h2.sign(h2.challenge("ap_1", "allow")), &res); c != 200 {
+			t.Fatalf("no counter: %d", c)
+		}
 	}
 }
 

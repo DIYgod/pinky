@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	mg "github.com/egoist/mygo/ui"
@@ -21,7 +22,9 @@ type WebApprovals interface {
 	NewLink() string
 	// Requests are the browsers waiting for the person to allow them.
 	Requests() []webapproval.Request
-	Allow(id string) error
+	// Allow adds a request's browser; device is the phone connected to
+	// Pinky it runs on, "" for another device.
+	Allow(id, device string) error
 	Deny(id string)
 	// Phones are the browsers that may answer approvals.
 	Phones() []webapproval.Phone
@@ -72,28 +75,9 @@ func (a *app) webApprovalsSettings(c *mg.Context, tn RemoteTailnet) {
 			})
 		})
 	}
+	picks := a.webApprovalsPicks()
 	for _, q := range reqs {
-		code := q.Code
-		if len(code) == 6 {
-			code = code[:3] + " " + code[3:]
-		}
-		kc := c.Key("wa-req-" + q.ID)
-		mg.Row(kc).Gap(sp2).AlignItems(mg.Center).Padding(10, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).
-			Margin(0, sp4, sp2, sp4).Role(mg.RoleStatus).Children(func() {
-			mg.Icon(kc, icAlert).FontSize(16).TextColor(p.amber)
-			mg.Column(kc).Gap(2).Grow(1).MinWidth(0).Children(func() {
-				mg.Text(kc, locales.WebApprovalsRequest()).FontWeight(fwMedium)
-				mg.Text(kc, locales.WebApprovalsRequestDesc(q.Browser, q.Login, code)).FontSize(fsSmall).LineHeight(1.4)
-			})
-			if button(kc.Key("deny"), locales.WebApprovalsDeny(), btnOpt{small: true}).Clicked() {
-				wa.Deny(q.ID)
-			}
-			if button(kc.Key("allow"), locales.WebApprovalsAllow(), btnOpt{small: true, kind: btnPrimary}).Clicked() {
-				if errors.Is(wa.Allow(q.ID), webapproval.ErrTooMany) {
-					c.Toast(locales.WebApprovalsTooMany(webapproval.MaxPhones))
-				}
-			}
-		})
+		a.webApprovalsRequest(c, wa, q, picks)
 	}
 	phones := wa.Phones()
 	if len(phones) == 0 {
@@ -101,7 +85,15 @@ func (a *app) webApprovalsSettings(c *mg.Context, tn RemoteTailnet) {
 	}
 	for _, ph := range phones {
 		kc := c.Key("wa-phone-" + ph.ID)
-		settingRow(kc, locales.WebApprovalsPhones(), locales.WebApprovalsPhone(ph.Browser, ph.Login), false, func() {
+		desc := locales.WebApprovalsPhone(webApprovalsBrowser(ph.Browser), ph.Login)
+		if ph.Device != "" {
+			name := ph.Device
+			if d := a.device(ph.Device); d != nil {
+				name = d.Info.Name
+			}
+			desc = locales.WebApprovalsPhoneOn(webApprovalsBrowser(ph.Browser), ph.Login, name)
+		}
+		settingRow(kc, locales.WebApprovalsPhones(), desc, false, func() {
 			if button(kc.Key("remove"), locales.WebApprovalsRemove(), btnOpt{small: true}).Clicked() {
 				wa.Remove(ph.ID)
 				c.Toast(locales.WebApprovalsRemoved())
@@ -110,4 +102,107 @@ func (a *app) webApprovalsSettings(c *mg.Context, tn RemoteTailnet) {
 	}
 	// Requests come from the phone.
 	c.After(time.Second)
+}
+
+// webApprovalsPick is a choice in the menu of the phone a browser runs on.
+type webApprovalsPick struct {
+	label  string
+	device string // "" for another device
+}
+
+// webApprovalsPicks are the phones connected to Pinky, then Another
+// device; labels are told apart when two phones share a name.
+func (a *app) webApprovalsPicks() []webApprovalsPick {
+	var out []webApprovalsPick
+	seen := map[string]int{}
+	for _, d := range a.devices {
+		label := d.Info.Name
+		if label == "" {
+			label = d.Info.ID
+		}
+		if seen[label]++; seen[label] > 1 {
+			label = fmt.Sprintf("%s (%d)", label, seen[label])
+		}
+		out = append(out, webApprovalsPick{label: label, device: d.Info.ID})
+	}
+	return append(out, webApprovalsPick{label: locales.WebApprovalsOther()})
+}
+
+func webApprovalsBrowser(b string) string {
+	if b == "" {
+		return locales.WebApprovalsUnknownBrowser()
+	}
+	return b
+}
+
+// webApprovalsRequest is a browser asking to answer approvals: the code
+// to compare, large, which phone the browser runs on, and Deny and Allow.
+// Allow shows once the person says which phone.
+func (a *app) webApprovalsRequest(c *mg.Context, wa WebApprovals, q webapproval.Request, picks []webApprovalsPick) {
+	p := pal(c)
+	r := &a.webMirror
+	if r.approvalPick == nil {
+		r.approvalPick = map[string]string{}
+	}
+	code := q.Code
+	if len(code) == 6 {
+		code = code[:3] + " " + code[3:]
+	}
+	kc := c.Key("wa-req-" + q.ID)
+	mg.Row(kc).Gap(sp2).AlignItems(mg.Start).Padding(12, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).
+		Margin(0, sp4, sp2, sp4).Role(mg.RoleStatus).Children(func() {
+		mg.Icon(kc, icAlert).FontSize(16).TextColor(p.amber).Margin(2, 0, 0, 0)
+		mg.Column(kc).Gap(6).Grow(1).MinWidth(0).Children(func() {
+			mg.Text(kc, locales.WebApprovalsRequest()).FontWeight(fwMedium)
+			mg.Text(kc, locales.WebApprovalsRequestDesc(webApprovalsBrowser(q.Browser), q.Login)).FontSize(fsSmall).LineHeight(1.4)
+			mg.Text(kc, code).Font("monospace").FontSize(28).FontWeight(fwSemibold).TextColor(p.ink)
+			mg.Row(kc).Gap(8).AlignItems(mg.Center).Wrap().Children(func() {
+				mg.Text(kc, locales.WebApprovalsWhich()).FontSize(fsSmall).FontWeight(fwMedium)
+				labels := []string{locales.WebApprovalsChoose()}
+				for _, pk := range picks {
+					labels = append(labels, pk.label)
+				}
+				sel := r.approvalPick[q.ID]
+				if sel == "" {
+					sel = labels[0]
+				}
+				if mg.Select(kc.Key("which"), &sel, labels).Label(locales.WebApprovalsWhich()).Changed() {
+					if sel == labels[0] {
+						delete(r.approvalPick, q.ID)
+					} else {
+						r.approvalPick[q.ID] = sel
+					}
+				}
+			})
+			mg.Text(kc, locales.WebApprovalsWhichDesc()).FontSize(fsCaption).TextColor(p.ink2).LineHeight(1.4)
+			mg.Row(kc).Gap(8).Justify(mg.End).Children(func() {
+				if button(kc.Key("deny"), locales.WebApprovalsDeny(), btnOpt{small: true}).Clicked() {
+					wa.Deny(q.ID)
+					delete(r.approvalPick, q.ID)
+				}
+				pick, picked := r.approvalPick[q.ID]
+				if !picked {
+					return
+				}
+				device, found := "", false
+				for _, pk := range picks {
+					if pk.label == pick {
+						device, found = pk.device, true
+					}
+				}
+				if !found {
+					// That phone went away: ask again.
+					delete(r.approvalPick, q.ID)
+					return
+				}
+				if button(kc.Key("allow"), locales.WebApprovalsAllow(), btnOpt{small: true, kind: btnPrimary}).Clicked() {
+					err := wa.Allow(q.ID, device)
+					delete(r.approvalPick, q.ID)
+					if errors.Is(err, webapproval.ErrTooMany) {
+						c.Toast(locales.WebApprovalsTooMany(webapproval.MaxPhones))
+					}
+				}
+			})
+		})
+	})
 }

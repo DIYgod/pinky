@@ -28659,24 +28659,106 @@ func (msgs Messages) WebApprovalsRequest() string {
 	return Catalog.Format(msgs.locale, "webApprovalsRequest", nil)
 }
 
-// WebApprovalsRequestDesc says "{browser} · {login}. Allow it only if your phone shows {code}."
+// WebApprovalsRequestDesc says "{browser} · {login}. Allow it only if your phone shows this code:"
 // in the language the app shows.
 //
 // Settings › Phones › Web mirror: the line under A browser asks to
-// answer approvals. browser is as "iPhone · Safari", login the Tailscale
-// login, code six digits the phone shows too.
-func WebApprovalsRequestDesc(browser string, login string, code string) string {
-	return In(i18n.Locale()).WebApprovalsRequestDesc(browser, login, code)
+// answer approvals, followed by the six-digit code in large type. browser
+// is as "iPhone · Safari", login the Tailscale login.
+func WebApprovalsRequestDesc(browser string, login string) string {
+	return In(i18n.Locale()).WebApprovalsRequestDesc(browser, login)
 }
 
-// WebApprovalsRequestDesc says "{browser} · {login}. Allow it only if your phone shows {code}."
+// WebApprovalsRequestDesc says "{browser} · {login}. Allow it only if your phone shows this code:"
 // in the language of msgs.
 //
 // Settings › Phones › Web mirror: the line under A browser asks to
-// answer approvals. browser is as "iPhone · Safari", login the Tailscale
-// login, code six digits the phone shows too.
-func (msgs Messages) WebApprovalsRequestDesc(browser string, login string, code string) string {
-	return Catalog.Format(msgs.locale, "webApprovalsRequestDesc", map[string]any{"browser": browser, "login": login, "code": code})
+// answer approvals, followed by the six-digit code in large type. browser
+// is as "iPhone · Safari", login the Tailscale login.
+func (msgs Messages) WebApprovalsRequestDesc(browser string, login string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsRequestDesc", map[string]any{"browser": browser, "login": login})
+}
+
+// WebApprovalsUnknownBrowser says "A browser"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: stands for the browser's name in a
+// request to answer approvals when Pinky can't tell which browser it is.
+func WebApprovalsUnknownBrowser() string { return In(i18n.Locale()).WebApprovalsUnknownBrowser() }
+
+// WebApprovalsUnknownBrowser says "A browser"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: stands for the browser's name in a
+// request to answer approvals when Pinky can't tell which browser it is.
+func (msgs Messages) WebApprovalsUnknownBrowser() string {
+	return Catalog.Format(msgs.locale, "webApprovalsUnknownBrowser", nil)
+}
+
+// WebApprovalsWhich says "Which phone is this browser on?"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: in a request to answer approvals, the
+// label of a menu of the phones connected to Pinky, and Another device. The
+// person picks one before Allow.
+func WebApprovalsWhich() string { return In(i18n.Locale()).WebApprovalsWhich() }
+
+// WebApprovalsWhich says "Which phone is this browser on?"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: in a request to answer approvals, the
+// label of a menu of the phones connected to Pinky, and Another device. The
+// person picks one before Allow.
+func (msgs Messages) WebApprovalsWhich() string {
+	return Catalog.Format(msgs.locale, "webApprovalsWhich", nil)
+}
+
+// WebApprovalsWhichDesc says "While an agent uses that phone, Pinky refuses answers from it: whoever drives the phone could tap Allow."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky
+// asks.
+func WebApprovalsWhichDesc() string { return In(i18n.Locale()).WebApprovalsWhichDesc() }
+
+// WebApprovalsWhichDesc says "While an agent uses that phone, Pinky refuses answers from it: whoever drives the phone could tap Allow."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky
+// asks.
+func (msgs Messages) WebApprovalsWhichDesc() string {
+	return Catalog.Format(msgs.locale, "webApprovalsWhichDesc", nil)
+}
+
+// WebApprovalsChoose says "Choose…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the menu of webApprovalsWhich before
+// the person picks a phone.
+func WebApprovalsChoose() string { return In(i18n.Locale()).WebApprovalsChoose() }
+
+// WebApprovalsChoose says "Choose…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the menu of webApprovalsWhich before
+// the person picks a phone.
+func (msgs Messages) WebApprovalsChoose() string {
+	return Catalog.Format(msgs.locale, "webApprovalsChoose", nil)
+}
+
+// WebApprovalsOther says "Another device"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: in the menu of webApprovalsWhich, a
+// device that is not a phone connected to Pinky.
+func WebApprovalsOther() string { return In(i18n.Locale()).WebApprovalsOther() }
+
+// WebApprovalsOther says "Another device"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: in the menu of webApprovalsWhich, a
+// device that is not a phone connected to Pinky.
+func (msgs Messages) WebApprovalsOther() string {
+	return Catalog.Format(msgs.locale, "webApprovalsOther", nil)
 }
 
 // WebApprovalsAllow says "Allow"
@@ -28773,6 +28855,26 @@ func WebApprovalsPhone(browser string, login string) string {
 // browser is as "iPhone · Safari", login the Tailscale login.
 func (msgs Messages) WebApprovalsPhone(browser string, login string) string {
 	return Catalog.Format(msgs.locale, "webApprovalsPhone", map[string]any{"browser": browser, "login": login})
+}
+
+// WebApprovalsPhoneOn says "{browser} · {login} · on {phone}"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a browser added to answer approvals
+// that runs on a phone connected to Pinky. browser is as "iPhone ·
+// Safari", login the Tailscale login, phone the phone's name.
+func WebApprovalsPhoneOn(browser string, login string, phone string) string {
+	return In(i18n.Locale()).WebApprovalsPhoneOn(browser, login, phone)
+}
+
+// WebApprovalsPhoneOn says "{browser} · {login} · on {phone}"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a browser added to answer approvals
+// that runs on a phone connected to Pinky. browser is as "iPhone ·
+// Safari", login the Tailscale login, phone the phone's name.
+func (msgs Messages) WebApprovalsPhoneOn(browser string, login string, phone string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsPhoneOn", map[string]any{"browser": browser, "login": login, "phone": phone})
 }
 
 // WebApprovalsRemove says "Remove"
@@ -29195,6 +29297,36 @@ func WebApprovalsPageRule(rule string) string { return In(i18n.Locale()).WebAppr
 // The approvals page: the rule that asked, on a card.
 func (msgs Messages) WebApprovalsPageRule(rule string) string {
 	return Catalog.Format(msgs.locale, "webApprovalsPageRule", map[string]any{"rule": rule})
+}
+
+// WebApprovalsPageBusy says "An agent is using this phone, so it can't answer approvals now. Answer on the computer or on another phone."
+// in the language the app shows.
+//
+// The approvals page, on a phone Pinky drives, while an agent uses it.
+func WebApprovalsPageBusy() string { return In(i18n.Locale()).WebApprovalsPageBusy() }
+
+// WebApprovalsPageBusy says "An agent is using this phone, so it can't answer approvals now. Answer on the computer or on another phone."
+// in the language of msgs.
+//
+// The approvals page, on a phone Pinky drives, while an agent uses it.
+func (msgs Messages) WebApprovalsPageBusy() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageBusy", nil)
+}
+
+// WebApprovalsPageSlowDown says "Too many tries. Wait a minute, then make a new link in Pinky."
+// in the language the app shows.
+//
+// The approvals page: adding a phone was refused because of too many tries
+// in a minute.
+func WebApprovalsPageSlowDown() string { return In(i18n.Locale()).WebApprovalsPageSlowDown() }
+
+// WebApprovalsPageSlowDown says "Too many tries. Wait a minute, then make a new link in Pinky."
+// in the language of msgs.
+//
+// The approvals page: adding a phone was refused because of too many tries
+// in a minute.
+func (msgs Messages) WebApprovalsPageSlowDown() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageSlowDown", nil)
 }
 
 // WebMirrorControlDesc says "Taps, swipes, Back and Home from the page, as on Pinky's own mirror: they pause an agent's task."

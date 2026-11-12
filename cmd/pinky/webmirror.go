@@ -29,6 +29,7 @@ func newWebMirror(g *gateway.Gateway, log *slog.Logger) *webMirror {
 		Source:  g,
 		Log:     log,
 		Owner:   tailnetOwner,
+		Origin:  tailnetMirrorOrigin,
 		Proxied: webmirror.Proxied,
 		Text:    webApprovalsText,
 	})
@@ -52,6 +53,19 @@ func tailnetOwner(ctx context.Context) string {
 		return ""
 	}
 	return st.Owner
+}
+
+// tailnetMirrorOrigin is the origin `tailscale serve` gives the web mirror
+// to the tailnet under, as "https://mac.tail1234.ts.net:8443", "" when it
+// gives none. Passkeys that answer approvals are bound to it.
+func tailnetMirrorOrigin(ctx context.Context) string {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	s, err := tailnet.ReadServe(ctx)
+	if err != nil {
+		return ""
+	}
+	return s.Forwarding(webmirror.Addr)
 }
 
 // webMirror is the web mirror as Settings sees it (ui.WebMirror).
@@ -152,6 +166,8 @@ func webApprovalsText(acceptLanguage string) (string, map[string]string) {
 		"allowed":       m.WebApprovalsPageAllowed(),
 		"denied":        m.WebApprovalsPageDenied(),
 		"rule":          m.WebApprovalsPageRule("{rule}"),
+		"busy":          m.WebApprovalsPageBusy(),
+		"slowDown":      m.WebApprovalsPageSlowDown(),
 	}
 }
 
