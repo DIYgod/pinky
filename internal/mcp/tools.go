@@ -141,7 +141,7 @@ type launchIn struct {
 
 type appsIn struct {
 	Device string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
-	Query  string `json:"query,omitempty" jsonschema:"Only apps whose name or id contains this text."`
+	Query  string `json:"query,omitempty" jsonschema:"Only apps whose name, other name or id contains this text."`
 }
 
 type batchStep struct {

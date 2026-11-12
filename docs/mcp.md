@@ -374,9 +374,9 @@ On Android a link opens in the app the phone set for it, on the background displ
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `query` | string | Only apps whose name or id contains it |
+| `query` | string | Only apps whose name, other name or id contains it |
 
-Lists installed apps inside the agent's scope, user apps first, one per line: `Name (id)`, with `· system` for system apps. An iPhone app whose home screen shows another name than its own (`WeChat · 微信 (com.tencent.xin)`) lists both. Blocked apps are never listed.
+Lists installed apps inside the agent's scope, user apps first, one per line: `Name (id)`, with `· system` for system apps. An iPhone or Simulator app is named as its home screen names it, in the phone's language; when its bundle's own name differs, that follows as another name (`微信 · WeChat (com.tencent.xin)`). `query` and `phone_launch` find an app by either. Blocked apps are never listed.
 
 ### phone_batch
 
