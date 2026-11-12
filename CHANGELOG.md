@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On iPhones and iOS Simulators, apps are now named as the home screen names them, in the phone's language (微信, not WeChat). Agents can still find them by their English names.
+- Pinky no longer refuses to type into a field because of the text already in it. A message draft that mentions a "code", or Chrome's address bar showing an address with "code" in it, was taken for a one-time-code field.
+- Typing into a "Barcode" field is no longer refused as a one-time code.
+- Agents can read a long list in one call with `phone_read_list`: Pinky scrolls it, removes the overlap between screens and returns the text. Each scroll is a step in the task's history, and the read stops instead of asking you when a scroll needs your approval. Thanks to @lbyxunxunnini.
+- When Pinky on an Android phone is running a task of its own, agents on the computer now see the phone as busy instead of failing, and Stop on the phone ends the computer's task.
+
 ## 2026.1112.9 (2026-11-12)
 
 - Settings › Phones › Web mirror shows a phone's live screen in a web browser, on this computer or on your other devices through Tailscale. With "Let the browser use the phone" on, a second link also takes taps, swipes, Back and Home. Off by default. Thanks to @xcc3641.
