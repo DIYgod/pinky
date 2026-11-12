@@ -337,6 +337,9 @@ func (c *converter) element(n *uiNode, path []string, parentLabel string) (scree
 		Path:   strings.Join(path, "/"),
 		ID:     n.ResID,
 	}
+	if isInputNode(n) {
+		e.Content = inputContent(n)
+	}
 	if n.Focused {
 		e.States = append(e.States, screen.StateFocused)
 	}
@@ -395,6 +398,15 @@ func ownLabel(n *uiNode) string {
 		return s
 	}
 	return cleanLabel(n.Desc)
+}
+
+// inputContent is the text typed into an input, as ownLabel shows it: ""
+// while the field shows its hint, and for password fields.
+func inputContent(n *uiNode) string {
+	if n.Password || n.Text == n.Hint {
+		return ""
+	}
+	return cleanLabel(n.Text)
 }
 
 // cleanLabel collapses whitespace and cuts long text.

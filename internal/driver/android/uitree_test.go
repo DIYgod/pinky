@@ -137,7 +137,14 @@ func TestConvertInputsAndRoles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := strings.Join(lines(convertTree(tree, 1080, 1920)), "\n")
+	els := convertTree(tree, 1080, 1920)
+	got := strings.Join(lines(els), "\n")
+	// Only typed text is content: not a hint, never a password.
+	for i, want := range []string{"", "hello world", ""} {
+		if els[i].Content != want {
+			t.Errorf("%q: content %q, want %q", els[i].Label, els[i].Content, want)
+		}
+	}
 	want := strings.Join([]string{
 		`[0] input "Search" @540,150 focused editable`,    // empty field: its hint
 		`[0] input "hello world" @540,270 editable`,       // content, whitespace collapsed
