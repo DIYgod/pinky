@@ -162,6 +162,15 @@ func (d *Device) run() {
 
 // start reads the phone's displays and starts the stream.
 func (d *Device) start(ctx context.Context) error {
+	if err := d.readDisplays(ctx); err != nil {
+		return err
+	}
+	return d.restartMedia(ctx)
+}
+
+// readDisplays connects the display info service and reads the phone's
+// displays, which the stream starts on.
+func (d *Device) readDisplays(ctx context.Context) error {
 	svc, err := dialCoreDevice(d.l.entry, deviceInfoService)
 	if err != nil {
 		return err
@@ -173,9 +182,6 @@ func (d *Device) start(ctx context.Context) error {
 	}
 	d.info2 = svc
 	d.noteDisplays(di)
-	if err := d.restartMedia(ctx); err != nil {
-		return err
-	}
 	return nil
 }
 

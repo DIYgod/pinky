@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"slices"
 	"sort"
 	"strings"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/danielpaulus/go-ios/ios/installationproxy"
-	"github.com/danielpaulus/go-ios/ios/springboard"
 	"howett.net/plist"
 )
 
@@ -123,12 +123,7 @@ func (d *Device) catalogWithin(ctx context.Context, ttl time.Duration) (*appCata
 }
 
 func browseApps(l *link) (appList, error) {
-	conn, err := installationproxy.New(l.base)
-	if err != nil {
-		return appList{}, fmt.Errorf("installation proxy: %w", err)
-	}
-	defer conn.Close()
-	infos, err := conn.BrowseAllApps()
+	infos, err := l.appInfos()
 	if err != nil {
 		return appList{}, fmt.Errorf("list apps: %w", err)
 	}
@@ -215,24 +210,18 @@ func homeScreenNames(l *link, wait time.Duration) (map[string]string, error) {
 	}
 	ch := make(chan result, 1)
 	var mu sync.Mutex
-	var client *springboard.Client
+	var client io.Closer
 	timedOut := false
 	go func() {
-		c, err := springboard.NewClient(l.base)
-		if err != nil {
-			ch <- result{err: err}
-			return
-		}
-		mu.Lock()
-		if timedOut {
-			mu.Unlock()
-			c.Close()
-			return
-		}
-		client = c
-		mu.Unlock()
-		defer c.Close()
-		layout, err := c.GetIconLayout("2")
+		layout, err := l.iconLayout(func(c io.Closer) {
+			mu.Lock()
+			defer mu.Unlock()
+			if timedOut {
+				c.Close()
+				return
+			}
+			client = c
+		})
 		if err != nil {
 			ch <- result{err: err}
 			return
