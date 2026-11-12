@@ -107,7 +107,7 @@ Any step that fails says so in the install's output and the log and installs Pin
 
 **Agents on a computer and Pinky's screens.** WebDriverAgent starting in Pinky's app brings the app to the front, unlike the helper, whose screen is not Pinky's. Agents can only press Home or open another app on Pinky's screens (`policy.Evaluate`), which is what they do first anyway. Not checked on a phone whether the app stays in front after WebDriverAgent starts.
 
-Unit-tested: the claims (`claims_test.go`), the runner choice (`TestPickWDARunner`), the kit, the build's arguments, the mark, the copy and the xctestrun (`appinstall_test.go`). Both schemes built from a kit with automatic signing for a generic iOS device: `PinkyLite` with the maintainer's wildcard profile, `Pinky` refused by the wildcard profile for lacking Network Extensions, as expected without provisioning updates. Not yet run on a phone: whether `xcodebuild test-without-building` takes a host that is not an `.xctrunner`, and the whole install ([Needs the owner](#needs-the-owner)).
+Unit-tested: the claims (`claims_test.go`), the runner choice (`TestPickWDARunner`), the kit, the build's arguments, the mark, the copy and the xctestrun (`appinstall_test.go`). Both schemes built from a kit with automatic signing for a generic iOS device: `PinkyLite` with the maintainer's wildcard profile, `Pinky` refused by the wildcard profile for lacking Network Extensions, as expected without provisioning updates. On the iPhone 13 mini (iOS 27.0.1, 2026-11-12), `pinky helper install` with a kit over an installed Pinky Helper: `Pinky` was refused by the wildcard profile (no Network Extensions), so it built and installed `PinkyLite`; `xcodebuild test-without-building` takes it as the host, WDA served in it (`/status`, then a session in `TestWDAStopDevice`, stopped in about 0.4 s with no runner left), and the device tests observing the home screen and tapping Calculator passed afterwards. That run found two faults in the test mode, both fixed: `_XCTestMain` takes the test configuration as its argument, and called without one it got whatever the register held and aborted (`-[OS_os_log testInteropMode]: unrecognized selector`), so it is called with nil, which makes XCTest read the configuration testmanagerd set; and started from a main-queue block, XCTest kept the main queue busy for good, so WDA answered `/status` but hung on `/session`, so it starts from a run loop block. `TestDeviceType` fails on this phone on `main` as on this branch (one case or another reads the field unchanged), so it says nothing about the host. Not run on a phone: a task through the desktop app with the app as host, the hosting screen, and the full `Pinky` build with a profile that has Network Extensions.
 
 ## Signing
 
@@ -185,7 +185,7 @@ What the research found. [P] marks a primary source: Apple, or the project's own
 - A real model on the phone (the run used the fake model).
 - An approval, a handoff or Stop during a task on the phone: the calculator task needed none. The core's side of an approval is tested on a Mac with a fake phone (`TestApprovalInPinkysApp`); Allow behind Face ID, Stop on the Live Activity and how the activity ends were not tried on the phone.
 - Memory on other screens. The peak, 28 MB, came from reading the home screen, the biggest tree in the run; apps with bigger trees (long lists, web pages) were not tried.
-- Pinky's own app as WebDriverAgent's host on a phone (only the probe app was tried; see [Hosting WebDriverAgent](#hosting-webdriveragent)), and any host on iOS 17.4–26.
+- Any WDA host on iOS 17.4–26 (Pinky's app as the host ran on the iPhone 13 mini, iOS 27; see [Hosting WebDriverAgent](#hosting-webdriveragent)).
 
 ## Needs the owner
 
@@ -193,7 +193,7 @@ What the research found. [P] marks a primary source: Apple, or the project's own
 - A real-model run: the owner types the key into Pinky's Settings on the phone.
 - Pairing on the phone (iOS 27): a build without `build/Pairing.json`, installed fresh (deleting the app removes its Keychain pairing), then Pair, Settings › Privacy & Security › Developer Mode, and the code. Pairing touches a security setting, so only the owner does it.
 - A phone on iOS 17.4–26 to try the helper inside the app (M3).
-- Installing Pinky's app as WebDriverAgent's host on the iPhone 13 mini (`PINKY_IPHONE_KIT=<kit> pinkyctl helper install`, with the phone unlocked; it chooses the helper in Settings › Phones on iOS 27), then a task from the computer, the app's hosting screen, and a task started on the phone meanwhile, which should be refused.
+- A task from the computer with Pinky's app as WDA's host on the iPhone 13 mini (installed and its WDA checked on 2026-11-12), the app's hosting screen meanwhile, and a task started on the phone then, which should be refused.
 - Pause connection for the iPhone in desktop Pinky before a task on the phone, until desktop Pinky lets go of the phone's accessibility service by itself (Follow-ups).
 
 ## Cleanup list for the owner

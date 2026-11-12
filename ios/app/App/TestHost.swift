@@ -45,8 +45,11 @@ enum TestHost {
             DarwinNote.post(Pinky.computerOnNote)
         }
         // XCTest takes over the main run loop: give SwiftUI its first
-        // frame before.
-        DispatchQueue.main.async { runXCTest() }
+        // frame before. A run loop block, not the main queue: XCTest never
+        // returns, and from inside a main-queue block the main queue
+        // could run nothing else, so WebDriverAgent answered /status but
+        // hung on /session, which waits for the main queue.
+        RunLoop.main.perform(inModes: [.default]) { runXCTest() }
     }
 
     /// Where the Developer Disk Image puts XCTest: /System/Developer from
@@ -67,8 +70,12 @@ enum TestHost {
                 return
             }
             log.log("pinky testhost: running the test with XCTest at \(path, privacy: .public)")
-            typealias Main = @convention(c) () -> Void
-            unsafeBitCast(sym, to: Main.self)()
+            // _XCTestMain takes the test configuration; nil makes XCTest
+            // read it from the environment testmanagerd set, as XCTRunner
+            // does. Called without one, it took whatever the first
+            // argument register held (the logger just used) and aborted.
+            typealias Main = @convention(c) (UnsafeRawPointer?) -> Void
+            unsafeBitCast(sym, to: Main.self)(nil)
             return
         }
         log.error("pinky testhost: XCTest not found; is the Developer Disk Image mounted?")
