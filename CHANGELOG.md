@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On phones that accept Pinky's change to their accessibility settings without keeping it, such as vivo phones with OriginOS 6, Pinky now says so right away: the Pinky for Android card, the checkup and Settings › Phones tell you to turn on Pinky in the phone's accessibility settings by hand, and tasks on those phones no longer wait 10 seconds for it first.
+
 ## 2026.1112.2 (2026-11-12)
 
 - On a Mac that can sign the iPhone helper for more than one team, choosing a team in the reminder that the helper is about to stop working no longer pushes the phone off the window.
