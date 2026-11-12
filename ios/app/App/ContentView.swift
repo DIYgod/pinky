@@ -19,7 +19,7 @@ struct ContentView: View {
                     Section { Text(p).foregroundStyle(.red) }
                 }
             }
-            .navigationTitle("Pinky")
+            .navigationTitle(Text(verbatim: "Pinky"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showHistory = true } label: { Label("History", systemImage: "clock") }
@@ -144,12 +144,12 @@ struct AgentCard: View {
         Section {
             Text(agent.task).font(.headline)
             if agent.running {
-                Text("Working · \(agent.steps) steps · \(agent.seconds) s · \(cost)")
+                Text("Working · \(L.steps(agent.steps)) · \(agent.seconds) s · \(cost)")
                     .font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
             } else {
                 Text(L.ended(agent.end ?? "")).font(.subheadline.bold())
                 if let s = agent.summary, !s.isEmpty { Text(s).font(.callout) }
-                Text("\(agent.steps) steps · \(agent.seconds) s · \(cost)")
+                Text("\(L.steps(agent.steps)) · \(agent.seconds) s · \(cost)")
                     .font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
             }
             ForEach(Array((task?.steps ?? []).suffix(8).enumerated()), id: \.offset) { _, s in

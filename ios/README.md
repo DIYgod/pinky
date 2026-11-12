@@ -26,7 +26,10 @@ Xcode 27, XcodeGen and Go. On the Mac:
 go test ./ios/...                    # core, rppair
 ios/build.sh core                    # the Go core only
 PINKY_SIGN=0 ios/build.sh full       # compile check, unsigned
+ios/build.sh sim                     # for the Simulator: the app's screens only
 ```
+
+The app speaks English, Simplified Chinese and Japanese, with desktop Pinky's terms (`cmd/pinky/locales`). Its words are in the string catalogs `app/Shared/Localizable.xcstrings` (the app and its extensions) and `app/App/InfoPlist.xcstrings` (the permission prompts); add the Chinese and Japanese with every new or changed English string. A build collects new strings with `SWIFT_EMIT_LOC_STRINGS=YES`, then `xcrun xcstringstool sync app/Shared/Localizable.xcstrings --stringsdata <the build's .stringsdata files>` adds them to the catalog. Steps, approvals and summaries come from the core in English, as on Android. To see the screens in a language, launch with `-AppleLanguages "(ja)"`.
 
 The app's bundle id is yours to choose (`PINKY_BUNDLE_ID`, an App ID of your team; the default is the maintainer's). The app derives every other name from it. Choose `pinky.<your team id>`: Pinky on a computer then knows the app as Pinky's too and keeps its agents off the app's screen, as it does for the maintainer's `cc.diygod.pinky` ids.
 

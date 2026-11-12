@@ -5,6 +5,9 @@
 #   ios/build.sh full  [xcodebuild args] app + packet tunnel + Live Activity
 #   ios/build.sh lite  [xcodebuild args] app + Live Activity, no tunnel (use
 #                                        LocalDevVPN; for a personal team)
+#   ios/build.sh sim   [xcodebuild args] the full build for the Simulator,
+#                                        unsigned: for the app's screens (a
+#                                        Simulator runs no packet tunnel)
 #
 # Xcode builds unsigned; this script signs each part with the development
 # profile of its App ID, or the team's wildcard profile when it has none, so
@@ -29,8 +32,13 @@ what=${1:-full}
 
 mkdir -p "$out/core"
 
-sdk=$(xcrun --sdk iphoneos --show-sdk-path)
-cc="$(xcrun --sdk iphoneos -f clang) -isysroot $sdk -arch arm64 -miphoneos-version-min=17.0"
+if [ "$what" = sim ]; then
+	sdk=$(xcrun --sdk iphonesimulator --show-sdk-path)
+	cc="$(xcrun --sdk iphonesimulator -f clang) -isysroot $sdk -target arm64-apple-ios17.0-simulator"
+else
+	sdk=$(xcrun --sdk iphoneos --show-sdk-path)
+	cc="$(xcrun --sdk iphoneos -f clang) -isysroot $sdk -arch arm64 -miphoneos-version-min=17.0"
+fi
 echo "== Go core"
 (cd "$root" && GOOS=ios GOARCH=arm64 CGO_ENABLED=1 CC="$cc" \
 	go build -buildmode=c-archive -trimpath -ldflags=-s -o "$out/core/libpinkycore.a" ./ios/core)
@@ -116,11 +124,16 @@ sign() {
 	rm -f "$out/sign.entitlements"
 }
 
+platform=iphoneos destination=generic/platform=iOS
 case $what in
 full) scheme=Pinky ;;
 lite) scheme=PinkyLite ;;
+sim)
+	scheme=Pinky platform=iphonesimulator destination="generic/platform=iOS Simulator" PINKY_SIGN=0
+	set -- ARCHS=arm64 ONLY_ACTIVE_ARCH=NO "$@" # the Go core is arm64 only
+	;;
 *)
-	echo "usage: $0 core|full|lite [xcodebuild args]" >&2
+	echo "usage: $0 core|full|lite|sim [xcodebuild args]" >&2
 	exit 2
 	;;
 esac
@@ -128,8 +141,8 @@ esac
 set -- DEVELOPMENT_TEAM="$team" "$@"
 [ -n "${PINKY_BUNDLE_ID:-}" ] && set -- PINKY_BUNDLE_ID="$PINKY_BUNDLE_ID" "$@"
 xcodebuild -project "$app/Pinky.xcodeproj" -scheme "$scheme" \
-	-configuration Debug -destination generic/platform=iOS -derivedDataPath "$out/dd" \
+	-configuration Debug -destination "$destination" -derivedDataPath "$out/dd" \
 	CODE_SIGNING_ALLOWED=NO "$@" build
-bundle=$out/dd/Build/Products/Debug-iphoneos/$scheme.app
+bundle=$out/dd/Build/Products/Debug-$platform/$scheme.app
 [ "${PINKY_SIGN:-1}" = 1 ] && sign "$bundle"
 echo "built $bundle"

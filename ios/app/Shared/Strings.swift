@@ -4,6 +4,11 @@ import Foundation
 /// (Localizable.xcstrings). SwiftUI's literal texts come from the same
 /// catalog by themselves.
 enum L {
+    /// "3 steps", with the plural the language needs.
+    static func steps(_ n: Int) -> String {
+        String(localized: "\(n) steps", comment: "How many steps a task took")
+    }
+
     static var asks: String { String(localized: "Pinky asks", comment: "Notification title: an approval waits") }
     static var openToAnswer: String {
         String(localized: "Open Pinky to answer.", comment: "Notification body, after the approval's title")

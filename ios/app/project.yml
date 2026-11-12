@@ -5,6 +5,9 @@ options:
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
+  # English, Simplified Chinese and Japanese, as desktop Pinky: the words
+  # are in Shared/Localizable.xcstrings and App/InfoPlist.xcstrings.
+  developmentLanguage: en
 settings:
   base:
     DEVELOPMENT_TEAM: 492J8Q67PF
@@ -49,6 +52,7 @@ targetTemplates:
     sources:
       - Activity
       - Shared/Pinky.swift
+      - Shared/Localizable.xcstrings
     settings:
       base:
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) WIDGET_EXTENSION

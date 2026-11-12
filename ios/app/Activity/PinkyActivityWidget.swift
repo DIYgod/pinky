@@ -33,7 +33,7 @@ struct PinkyActivityWidget: Widget {
             let s = context.state
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Label { Text("Pinky") } icon: { Icon(state: s) }
+                    Label { Text(verbatim: "Pinky") } icon: { Icon(state: s) }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     StopButton(ended: s.ended)

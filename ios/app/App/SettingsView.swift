@@ -15,7 +15,7 @@ struct SettingsView: View {
             Form {
                 Section {
                     Picker("Provider", selection: $provider) {
-                        Text("Anthropic").tag("anthropic")
+                        Text(verbatim: "Anthropic").tag("anthropic")
                         Text("OpenAI-compatible").tag("openai")
                     }
                     TextField(provider == "anthropic" ? "Model (empty: claude-opus-5-5)" : "Model", text: $model)
@@ -42,7 +42,7 @@ struct SettingsView: View {
                         get: { Preset(rawValue: m.state?.preset ?? 1) ?? .commits },
                         set: { p in Task { await m.setPreset(p) } })) {
                         Text("Payments").tag(Preset.payments)
-                        Text("Payments, messages, commits and settings changes").tag(Preset.commits)
+                        Text("Payments, messages and deletions").tag(Preset.commits)
                         Text("Every action").tag(Preset.every)
                     }
                     .pickerStyle(.inline)
