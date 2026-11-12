@@ -70,8 +70,9 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 	// Wi-Fi itself. Not while PINKY_DEVICES limits Pinky to some phones:
 	// the others belong to other tools.
 	reconnect := strings.TrimSpace(os.Getenv("PINKY_DEVICES")) == ""
+	client := &adb.Client{}
 	return android.NewProvider(android.Config{
-		Client: &adb.Client{},
+		Client: client,
 		// Pinky uses the adb server that runs, or starts one, with the
 		// adb of the Android SDK, Homebrew or PATH, else its own
 		// (adb.StartServer): at the first List, and whenever the server
@@ -100,7 +101,12 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 			return nil
 		},
 		ReconnectWiFi: reconnect,
-		NetworkFile:   netFile,
+		// Another program's adb server, on another port, may hold a phone
+		// on a cable, which the server Pinky uses then never lists:
+		// CheckHost says which port (adb_other_server). Pinky leaves that
+		// server running.
+		OtherServers: client.OtherServers,
+		NetworkFile:  netFile,
 		// A phone reached over the network must carry the mark Pinky left
 		// on it, so that a device on the network cannot pose as it.
 		VerifyWiFi:   true,

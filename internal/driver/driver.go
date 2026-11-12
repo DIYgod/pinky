@@ -203,6 +203,13 @@ type HostCheck struct {
 	// Apple's iPhone driver, from the Apple Devices app or iTunes),
 	// "usbmuxd" (Linux: the usbmuxd package), "usbmuxd_stopped" (Linux:
 	// installed, but not running; it starts when an iPhone is plugged in).
+	// Android's: "adb" (no adb to start a server with), "adb_server" (no
+	// server runs, and starting one failed), "adb_old" (the server is
+	// older than protocol 41), "adb_no_network" (the server cannot reach
+	// phones on the local network), "adb_restarts" (another program keeps
+	// replacing the server), "adb_other_server" (another program's adb
+	// server, on another port, holds a phone on a cable; Detail begins
+	// "Another program's adb server, on port <port>,").
 	Missing string
 	Detail  string // the same in a sentence
 }

@@ -4689,6 +4689,28 @@ func (msgs Messages) CheckConnectionAndroidStepDebugging() string {
 	return Catalog.Format(msgs.locale, "checkConnectionAndroidStepDebugging", nil)
 }
 
+// CheckConnectionAndroidStepOtherServer says "Another program's adb server, on port {port}, may hold it: quit that program, or, once you're sure nothing else uses …"
+// in the language the app shows.
+//
+// The checkup, connection: the first step for an Android phone that is not
+// connected while another program's adb server, on another port, holds a
+// phone on a cable. adb -P {port} kill-server is a command: keep it as it
+// is.
+func CheckConnectionAndroidStepOtherServer(port string) string {
+	return In(i18n.Locale()).CheckConnectionAndroidStepOtherServer(port)
+}
+
+// CheckConnectionAndroidStepOtherServer says "Another program's adb server, on port {port}, may hold it: quit that program, or, once you're sure nothing else uses …"
+// in the language of msgs.
+//
+// The checkup, connection: the first step for an Android phone that is not
+// connected while another program's adb server, on another port, holds a
+// phone on a cable. adb -P {port} kill-server is a command: keep it as it
+// is.
+func (msgs Messages) CheckConnectionAndroidStepOtherServer(port string) string {
+	return Catalog.Format(msgs.locale, "checkConnectionAndroidStepOtherServer", map[string]any{"port": port})
+}
+
 // CheckConnectionFail says "{name} isn't connected."
 // in the language the app shows.
 //
@@ -5135,6 +5157,30 @@ func CheckHostADBOld() string { return In(i18n.Locale()).CheckHostADBOld() }
 // than Wi-Fi pairing needs.
 func (msgs Messages) CheckHostADBOld() string {
 	return Catalog.Format(msgs.locale, "checkHostADBOld", nil)
+}
+
+// CheckHostADBOtherServer says "Another program's adb server, on port {port}, holds a phone that's on a USB cable, so Pinky's adb server can't reach …"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: a second adb server, which another
+// program started on another port, holds a phone on a cable (one adb server
+// at a time gets a phone's USB connection), so the server Pinky uses never
+// sees it. Pinky does not stop it. adb -P {port} kill-server is a command:
+// keep it as it is.
+func CheckHostADBOtherServer(port string) string {
+	return In(i18n.Locale()).CheckHostADBOtherServer(port)
+}
+
+// CheckHostADBOtherServer says "Another program's adb server, on port {port}, holds a phone that's on a USB cable, so Pinky's adb server can't reach …"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: a second adb server, which another
+// program started on another port, holds a phone on a cable (one adb server
+// at a time gets a phone's USB connection), so the server Pinky uses never
+// sees it. Pinky does not stop it. adb -P {port} kill-server is a command:
+// keep it as it is.
+func (msgs Messages) CheckHostADBOtherServer(port string) string {
+	return Catalog.Format(msgs.locale, "checkHostADBOtherServer", map[string]any{"port": port})
 }
 
 // CheckHostADBRestarts says "Another program keeps replacing the adb server, so phones drop off now and then. It's usually a program with another …"

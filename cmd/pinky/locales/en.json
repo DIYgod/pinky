@@ -1616,6 +1616,16 @@
   "@checkConnectionAndroidStepDebugging": {
     "description": "The checkup, connection: the second step, above the menu path to Developer options."
   },
+  "checkConnectionAndroidStepOtherServer": "Another program's adb server, on port {port}, may hold it: quit that program, or, once you're sure nothing else uses it, run adb -P {port} kill-server in Terminal.",
+  "@checkConnectionAndroidStepOtherServer": {
+    "description": "The checkup, connection: the first step for an Android phone that is not connected while another program's adb server, on another port, holds a phone on a cable. adb -P {port} kill-server is a command: keep it as it is.",
+    "placeholders": {
+      "port": {
+        "type": "String",
+        "example": "5049"
+      }
+    }
+  },
   "checkConnectionFail": "{name} isn't connected.",
   "@checkConnectionFail": {
     "description": "The checkup, connection: a phone that is not connected.",
@@ -1767,6 +1777,16 @@
   "checkHostADBOld": "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such as an old Android SDK's tools, or update them: Pinky then starts its own.",
   "@checkHostADBOld": {
     "description": "The checkup and Add phone › Android: the adb server that runs is older than Wi-Fi pairing needs."
+  },
+  "checkHostADBOtherServer": "Another program's adb server, on port {port}, holds a phone that's on a USB cable, so Pinky's adb server can't reach it. Quit the program that started it, or, once you're sure nothing else uses it, run adb -P {port} kill-server in Terminal: Pinky then gets the phone.",
+  "@checkHostADBOtherServer": {
+    "description": "The checkup and Add phone › Android: a second adb server, which another program started on another port, holds a phone on a cable (one adb server at a time gets a phone's USB connection), so the server Pinky uses never sees it. Pinky does not stop it. adb -P {port} kill-server is a command: keep it as it is.",
+    "placeholders": {
+      "port": {
+        "type": "String",
+        "example": "5049"
+      }
+    }
   },
   "checkHostADBRestarts": "Another program keeps replacing the adb server, so phones drop off now and then. It's usually a program with another version of adb: quit it, or have it use the same adb as Pinky.",
   "@checkHostADBRestarts": {
