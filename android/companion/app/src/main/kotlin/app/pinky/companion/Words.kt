@@ -1,16 +1,22 @@
 package app.pinky.companion
 
+import android.content.Context
 import android.content.res.Resources
+import android.text.format.DateFormat
 import org.json.JSONObject
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 /**
- * Amounts, times, how a task ended and how its steps read, in the phone's
- * language and as desktop Pinky says them (ui/format.go, ui/ask.go and
- * ui/extras.go: elapsedIn, usageText, pilotEndIn, stepDisplay). The
- * agent's and the task's fields are those of the core's state
- * (internal/standalone/state.go, AgentState and TaskState).
+ * Amounts, times and days, how a task ended and how its steps read, in the
+ * phone's language and as desktop Pinky says them (ui/format.go, ui/ask.go
+ * and ui/extras.go: elapsedIn, usageText, dayLabel, pilotEndIn,
+ * stepDisplay). The agent's and the task's fields are those of the core's
+ * state (internal/standalone/state.go, AgentState and TaskState) and
+ * history (history.go, PastTask).
  */
 object Words {
 
@@ -85,6 +91,45 @@ object Words {
         val (title, reason) = end(res, agent)
         return if (reason.isEmpty()) title else res.getString(R.string.phone_end_line, title, reason)
     }
+
+    /** How a task of the history ended, in a word (PastTask.Outcome). */
+    fun outcome(res: Resources, outcome: String): String = res.getString(
+        when (outcome) {
+            "done" -> R.string.phone_end_done
+            "stopped" -> R.string.phone_end_stopped
+            "not_started" -> R.string.phone_end_not_started
+            else -> R.string.phone_end_failed
+        },
+    )
+
+    /**
+     * The day of a time (Unix ms), as desktop Pinky heads Activity's days
+     * (dayLabel): Today, Yesterday, else its date, with the weekday this
+     * year and with the year before it. short leaves the weekday out, for
+     * a row.
+     */
+    fun day(res: Resources, ms: Long, short: Boolean = false): String {
+        val t = Calendar.getInstance().apply { timeInMillis = ms }
+        val d = Calendar.getInstance()
+        if (sameDay(t, d)) return res.getString(R.string.phone_today)
+        val thisYear = t.get(Calendar.YEAR) == d.get(Calendar.YEAR)
+        d.add(Calendar.DAY_OF_YEAR, -1)
+        if (sameDay(t, d)) return res.getString(R.string.phone_yesterday)
+        val skeleton = when {
+            short && thisYear -> "MMMd"
+            short -> "yMMMd"
+            thisYear -> "MMMMEEEEd"
+            else -> "yMMMMd"
+        }
+        val locale = res.configuration.locales[0]
+        return SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(Date(ms))
+    }
+
+    /** A time of day (Unix ms), on the phone's 12- or 24-hour clock. */
+    fun clock(context: Context, ms: Long): String = DateFormat.getTimeFormat(context).format(Date(ms))
+
+    private fun sameDay(a: Calendar, b: Calendar) =
+        a.get(Calendar.YEAR) == b.get(Calendar.YEAR) && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
 
     /** A step's mark (ui/format.go, kindOf). */
     enum class Kind {

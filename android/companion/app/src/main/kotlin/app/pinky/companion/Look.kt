@@ -33,8 +33,9 @@ import android.widget.ScrollView
 import android.widget.TextView
 
 /**
- * The look of Pinky's own screens on the phone (TaskActivity and
- * SettingsActivity), built in code: desktop Pinky's palette
+ * The look of Pinky's own screens on the phone (TaskActivity,
+ * SettingsActivity, HistoryActivity and PastTaskActivity), built in code:
+ * desktop Pinky's palette
  * (res/values/colors.xml, dark in values-night) and type, grouped rows,
  * buttons and dialogs.
  *
@@ -437,6 +438,7 @@ class Look(private val activity: Activity) {
         const val SMALL = 13f
         const val BODY = 15f
         const val HEADLINE = 17f
+        const val TITLE2 = 20f
         const val TITLE1 = 28f
 
         /**

@@ -29,7 +29,16 @@
     <string name="phone_waiting_hint">请在屏幕底部的卡片上回答。</string>
     <string name="phone_stop">停止</string>
     <string name="phone_dismiss">关闭</string>
+    <string name="phone_task_steps">步骤</string>
     <string name="phone_activity">活动</string>
+
+    <string name="phone_history_all">显示全部</string>
+    <string name="phone_history_more">显示更多</string>
+    <string name="phone_history_empty">还没有已结束的任务。</string>
+    <string name="phone_history_failed">无法载入活动：%1$s</string>
+    <string name="phone_history_gone">活动里已经没有这个任务了。</string>
+    <string name="phone_today">今天</string>
+    <string name="phone_yesterday">昨天</string>
 
     <string name="phone_end_done">已完成</string>
     <string name="phone_end_stopped">已停止</string>

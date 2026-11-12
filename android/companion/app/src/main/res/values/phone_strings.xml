@@ -36,7 +36,18 @@
     <string name="phone_waiting_hint">Answer on the card at the bottom of the screen.</string>
     <string name="phone_stop">Stop</string>
     <string name="phone_dismiss">Dismiss</string>
+    <string name="phone_task_steps">Steps</string>
     <string name="phone_activity">Activity</string>
+
+    <!-- The history: Activity on the task screen, HistoryActivity and
+         PastTaskActivity (desktop: activity*, day*). -->
+    <string name="phone_history_all">Show all</string>
+    <string name="phone_history_more">Show more</string>
+    <string name="phone_history_empty">No finished tasks yet.</string>
+    <string name="phone_history_failed">Couldn\'t read Activity: %1$s</string>
+    <string name="phone_history_gone">This task is no longer in Activity.</string>
+    <string name="phone_today">Today</string>
+    <string name="phone_yesterday">Yesterday</string>
 
     <!-- How a task ended (desktop: ui/ask.go, pilotEndIn). -->
     <string name="phone_end_done">Done</string>

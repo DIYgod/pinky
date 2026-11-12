@@ -2,8 +2,6 @@ package app.pinky.companion
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,9 +27,10 @@ import java.io.Closeable
 /**
  * Pinky's own screen on the phone, in a process of its own (":ui"): the
  * person asks Pinky for a task, follows it and stops it, as in desktop
- * Pinky's Ask Pinky (ui/ask.go). Approvals and handoffs are answered on
- * the card over other apps (Overlays); the model, its key and a task's
- * limits are in SettingsActivity.
+ * Pinky's Ask Pinky (ui/ask.go), and finds the tasks that ended under
+ * Activity (PastTasks). Approvals and handoffs are answered on the card
+ * over other apps (Overlays); the model, its key and a task's limits are
+ * in SettingsActivity.
  *
  * The agent cannot use this screen: the gateway refuses every action
  * while it is in front and hides what it shows (policy.IsPinkyScreen),
@@ -74,24 +73,21 @@ class TaskActivity : Activity() {
     private lateinit var runWaiting: TextView
     private lateinit var runHint: TextView
     private lateinit var stopButton: TextView
-    private lateinit var endCard: View
-    private lateinit var endMark: TextView
-    private lateinit var endTitle: TextView
-    private lateinit var endReason: TextView
-    private lateinit var endUsage: TextView
+    private lateinit var endCard: EndCard
     private lateinit var askBox: View
     private lateinit var input: EditText
     private lateinit var modelLine: TextView
     private lateinit var limitLine: TextView
     private lateinit var startButton: TextView
     private lateinit var error: TextView
-    private lateinit var activityHeading: TextView
-    private lateinit var stepsGroup: LinearLayout
-    private val stepRows = ArrayList<StepRow>()
+    private lateinit var stepsHeading: TextView
+    private lateinit var steps: StepList
+    private lateinit var historyHeading: TextView
+    private lateinit var historyGroup: LinearLayout
+    private var historyShown = 0 // the tasks listed under Activity
+    private var historyFor: String? = null // the task above the list when it was read ("" for none); null reads it again
+    private var historyReads = 0 // counts reads, so that only the latest is shown
 
-    private class StepRow(val view: View, val mark: TextView, val text: TextView, val sub: TextView, val person: Drawable?)
-
-    private val semibold = Typeface.create(Typeface.DEFAULT, 600, false)
     private val rerender = Runnable { render() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -109,15 +105,20 @@ class TaskActivity : Activity() {
         col.addView(setupCard(), look.below(12))
         col.addView(computerCard(), look.below(12))
         col.addView(runCard(), look.below(12))
-        col.addView(endCard(), look.below(12))
+        endCard = EndCard(this, look) { dismiss() }
+        col.addView(endCard.view, look.below(12))
         col.addView(askBox(), look.below(12))
         error = look.text("", Look.SMALL, look.red).apply { setPadding(look.dp(4), look.dp(8), look.dp(4), 0) }
         error.say("")
         col.addView(error, look.matchWrap())
-        activityHeading = look.section(getString(R.string.phone_activity))
-        col.addView(activityHeading, look.matchWrap())
-        stepsGroup = look.group()
-        col.addView(stepsGroup, look.matchWrap())
+        stepsHeading = look.section(getString(R.string.phone_task_steps))
+        col.addView(stepsHeading, look.matchWrap())
+        steps = StepList(this, look)
+        col.addView(steps.group, look.matchWrap())
+        historyHeading = look.section(getString(R.string.phone_activity))
+        col.addView(historyHeading, look.matchWrap())
+        historyGroup = look.group()
+        col.addView(historyGroup, look.matchWrap())
         look.setScreen(col)
     }
 
@@ -132,6 +133,7 @@ class TaskActivity : Activity() {
         hasKey = secrets.has(settings.provider)
         update = UpdateCheck.offered(this)
         if (UpdateCheck.due(this)) checkUpdate()
+        historyFor = null // Activity is read again.
         render()
     }
 
@@ -224,22 +226,8 @@ class TaskActivity : Activity() {
             look.enable(stopButton, true)
         }
 
-        endCard.shown(agent != null && !running)
-        if (agent != null && !running) {
-            val (title, reason) = Words.end(resources, agent)
-            val end = agent.optString("end")
-            endMark.text = if (end == "done") "✓" else "●"
-            endMark.setTextColor(
-                when (end) {
-                    "done" -> look.green
-                    "stopped" -> look.ink3
-                    else -> look.amber
-                },
-            )
-            endTitle.say(title)
-            endReason.say(reason)
-            endUsage.say(Words.usage(resources, agent))
-        }
+        endCard.view.shown(agent != null && !running)
+        if (agent != null && !running) endCard.show(agent)
 
         askBox.shown(ready && setUp && !running)
         modelLine.say(settings.modelLabel())
@@ -248,7 +236,11 @@ class TaskActivity : Activity() {
         )
         updateStart()
         val task = st?.optJSONObject("task")
-        renderSteps(task?.optJSONArray("steps") ?: JSONArray(), task?.optString("state").orEmpty())
+        val taskSteps = task?.optJSONArray("steps") ?: JSONArray()
+        stepsHeading.shown(taskSteps.length() > 0)
+        steps.group.shown(taskSteps.length() > 0)
+        steps.show(taskSteps, task?.optString("state").orEmpty())
+        renderHistory(st, running)
     }
 
     private fun whyNotReady(device: JSONObject?): String {
@@ -369,74 +361,48 @@ class TaskActivity : Activity() {
         look.open(Intent(Intent.ACTION_VIEW, Uri.parse(u.url)))
     }
 
-    // The task's steps, as the core's gateway writes them and desktop
-    // Pinky words them (Words.step).
+    // Activity: the latest tasks that ended, without the one the screen
+    // shows above. It is read again when the screen comes back and when
+    // that task changes (one ended, or was dismissed), and hidden while a
+    // task runs and while the core cannot be reached. Show all opens the
+    // whole history.
 
-    private fun renderSteps(steps: JSONArray, taskState: String) {
-        val n = steps.length()
-        activityHeading.shown(n > 0)
-        stepsGroup.shown(n > 0)
-        if (n < stepRows.size) {
-            stepsGroup.removeAllViews()
-            stepRows.clear()
-        }
-        for (i in 0 until n) {
-            val s = steps.optJSONObject(i) ?: continue
-            val row = stepRows.getOrNull(i) ?: stepRow().also {
-                stepRows += it
-                look.addRow(stepsGroup, it.view)
+    private fun renderHistory(st: JSONObject?, running: Boolean) {
+        val shown = if (st == null || running) null else st.optJSONObject("task")?.optString("id").orEmpty()
+        if (shown != null && shown != historyFor) readHistory(shown)
+        val on = shown != null && historyShown > 0
+        historyHeading.shown(on)
+        historyGroup.shown(on)
+    }
+
+    private fun readHistory(shown: String) {
+        historyFor = shown
+        val n = ++historyReads
+        CoreClient.background {
+            // A read that fails keeps the list as it was, until the next.
+            val page = try {
+                PastTasks.page(0, RECENT + 1)
+            } catch (_: Exception) {
+                null
             }
-            val step = Words.step(resources, s, i == n - 1, taskState)
-            row.text.say(step.text)
-            row.sub.say(step.sub)
-            // What waits for the person is amber, and with the step the
-            // agent is on, bold (ui/extras.go).
-            row.text.setTextColor(if (step.kind == Words.Kind.WAIT) look.amber else look.ink)
-            row.text.typeface = if (step.kind == Words.Kind.WAIT || step.kind == Words.Kind.NOW) semibold else Typeface.DEFAULT
-            showMark(row, step.kind, s.optString("status"))
+            main.post { if (page != null && n == historyReads && !isDestroyed) showHistory(page, shown) }
         }
     }
 
-    // A step's mark: what waits, the step the agent is on, the person's own
-    // steps (a figure, as in desktop Pinky), and how the others ended.
-    private fun showMark(row: StepRow, kind: Words.Kind, status: String) {
-        val mark = row.mark
-        val figure = if (kind == Words.Kind.YOU) row.person else null
-        if (mark.compoundDrawablesRelative[0] !== figure) mark.setCompoundDrawablesRelative(figure, null, null, null)
-        val (glyph, color) = when {
-            kind == Words.Kind.YOU -> "" to look.ink2
-            kind == Words.Kind.WAIT -> "…" to look.amber
-            kind == Words.Kind.NOW -> "•" to look.accent
-            status == "uncertain" -> "✓" to look.amber
-            status in NOT_DONE -> "–" to look.ink3
-            status in RAN -> "✓" to look.green
-            else -> "✕" to look.red
+    private fun showHistory(page: PastTasks.Page, shown: String) {
+        val tasks = page.tasks.filter { it.optString("id") != shown }
+        historyGroup.removeAllViews()
+        for (t in tasks.take(RECENT)) {
+            val id = t.optString("id")
+            look.addRow(historyGroup, PastTasks.row(this, look, t, withDay = true) { PastTasks.open(this, id) }.view)
         }
-        if (mark.text.toString() != glyph) mark.text = glyph
-        mark.setTextColor(color)
-    }
-
-    private fun stepRow(): StepRow {
-        val mark = look.text("", Look.BODY, look.ink3, 600)
-        val text = look.text("", Look.BODY, look.ink)
-        val sub = look.text("", Look.SMALL, look.ink3).apply { setPadding(0, look.dp(2), 0, 0) }
-        sub.say("")
-        val person = getDrawable(R.drawable.ic_person)?.mutate()?.apply {
-            setTint(look.ink2)
-            setBounds(0, 0, look.dp(16), look.dp(16))
+        if (page.more || tasks.size > RECENT) {
+            val all = look.row(getString(R.string.phone_history_all)) { startActivity(Intent(this, HistoryActivity::class.java)) }
+            all.title.setTextColor(look.accent)
+            look.addRow(historyGroup, all.view)
         }
-        val texts = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(text)
-            addView(sub)
-        }
-        val v = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(look.dp(14), look.dp(10), look.dp(16), look.dp(10))
-            addView(mark, LinearLayout.LayoutParams(look.dp(22), ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        }
-        return StepRow(v, mark, text, sub, person)
+        historyShown = minOf(tasks.size, RECENT)
+        render()
     }
 
     // The cards.
@@ -554,29 +520,6 @@ class TaskActivity : Activity() {
         return c
     }
 
-    private fun endCard(): View {
-        val top = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        endMark = look.text("", Look.BODY, look.green, 600).apply { setPadding(0, 0, look.dp(8), 0) }
-        endTitle = look.text("", Look.BODY, look.ink, 600)
-        top.addView(endMark)
-        top.addView(endTitle, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        top.addView(look.button(getString(R.string.phone_dismiss), Look.Kind.PLAIN) { dismiss() })
-        endReason = look.text("", Look.BODY, look.ink2).apply {
-            setPadding(0, look.dp(6), 0, 0)
-            setTextIsSelectable(true)
-        }
-        endUsage = look.text("", Look.SMALL, look.ink3).apply { setPadding(0, look.dp(4), 0, 0) }
-        val c = look.card()
-        c.addView(top, look.matchWrap())
-        c.addView(endReason, look.matchWrap())
-        c.addView(endUsage, look.matchWrap())
-        endCard = c
-        return c
-    }
-
     private fun askBox(): View {
         input = EditText(this).apply {
             // Keeps what the person typed when the screen is made again.
@@ -628,15 +571,6 @@ class TaskActivity : Activity() {
 
     companion object {
         private const val CORE_GRACE_MS = 3_000L
-
-        // Steps that ran.
-        private val RAN = setOf("settled", "user", "", "running")
-
-        // Steps that did not happen, without anything having gone wrong
-        // (ui/extras.go, stepDisplay).
-        private val NOT_DONE = setOf(
-            "approval_denied", "stopped", "stale", "expired", "user_took_over", "paused",
-            "device_locked", "device_offline", "device_needs_setup", "device_paused",
-        )
+        private const val RECENT = 5 // the tasks Activity lists
     }
 }
