@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 
@@ -18,7 +19,7 @@ import (
 
 func TestAppBuildArgs(t *testing.T) {
 	args := appBuildArgs("/kit", "/dd", "UDID", "ABCDE12345", "PinkyLite", false)
-	for _, want := range []string{"-project", "/kit/Pinky.xcodeproj", "-scheme", "PinkyLite", "id=UDID",
+	for _, want := range []string{"-project", filepath.Join("/kit", "Pinky.xcodeproj"), "-scheme", "PinkyLite", "id=UDID",
 		"DEVELOPMENT_TEAM=ABCDE12345", "PINKY_BUNDLE_ID=pinky.abcde12345", "CODE_SIGN_STYLE=Automatic"} {
 		if !slices.Contains(args, want) {
 			t.Errorf("args lack %q: %v", want, args)
@@ -62,6 +63,11 @@ func writeXMLPlist(t *testing.T, path string, v any) {
 }
 
 func TestHostApp(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Installing Pinky for iPhone runs only on a Mac; Windows has no
+		// executable bit and writes links with its own separators.
+		t.Skip("the app bundle's executable bits and links are a Mac's")
+	}
 	dir := t.TempDir()
 	runner := filepath.Join(dir, "WebDriverAgentRunner-Runner.app")
 	test := filepath.Join(runner, "PlugIns", wdaTestBundle)
