@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Settings › Phones › Web mirror shows a phone's live screen in a web browser, on this computer or on your other devices through Tailscale. With "Let the browser use the phone" on, a second link also takes taps, swipes, Back and Home. Off by default. Thanks to @xcc3641.
+
 ## 2026.1112.8 (2026-11-12)
 
 - On iPhones with two screens (iPhone Duo), Home goes back to the home screen with a swipe when the button does nothing, and when taps don't reach the screen in use, Pinky tells the agent so instead of reporting success.
