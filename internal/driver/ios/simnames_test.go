@@ -66,7 +66,7 @@ func TestParseSimAppsLocalized(t *testing.T) {
 	none := filepath.Join(dir, "Plain.app")
 	os.MkdirAll(none, 0o755)
 
-	q := func(s string) string { return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"` }
+	q := func(s string) string { return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"` }
 	app := func(id, display, path string) string {
 		return q(id) + " = { ApplicationType = User; CFBundleDisplayName = " + q(display) + "; Path = " + q(path) + "; };\n"
 	}
