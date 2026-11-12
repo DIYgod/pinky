@@ -10,11 +10,20 @@ import (
 // State is what Pinky's screens show: the phone, the agent's task with its
 // steps, and what waits for the person.
 type State struct {
-	Device DeviceState `json:"device"`
-	Preset int         `json:"preset"` // when agents ask: policy.Preset
-	Agent  *AgentState `json:"agent,omitempty"`
-	Task   *TaskState  `json:"task,omitempty"`
-	Needs  []Need      `json:"needs"`
+	Device   DeviceState    `json:"device"`
+	Preset   int            `json:"preset"` // when agents ask: policy.Preset
+	Computer *ComputerState `json:"computer,omitempty"`
+	Agent    *AgentState    `json:"agent,omitempty"`
+	Task     *TaskState     `json:"task,omitempty"`
+	Needs    []Need         `json:"needs"`
+}
+
+// ComputerState is Pinky on a computer while it holds the phone: the
+// screens start no task meanwhile, and the pill offers Stop when it is
+// Stoppable (an older desktop Pinky is not).
+type ComputerState struct {
+	Task      string `json:"task,omitempty"`
+	Stoppable bool   `json:"stoppable"`
 }
 
 // DeviceState is the phone as the gateway sees it.
@@ -50,8 +59,10 @@ type AgentState struct {
 	TokenLimit int64   `json:"token_limit"`
 }
 
-// TaskState is the gateway's task: its steps in plain words.
+// TaskState is the gateway's task: its steps in plain words. ID is the
+// task's in the history (PastTask.ID).
 type TaskState struct {
+	ID    string `json:"id,omitempty"`
 	Title string `json:"title"`
 	State string `json:"state"`
 	Steps []Step `json:"steps"`
@@ -84,19 +95,17 @@ func (c *Core) State() State {
 		st.Device = DeviceState{Ready: d.Info.State == "online", Name: d.Info.Name, Status: string(d.Status),
 			Line: d.StatusLine, Detail: d.Info.Detail}
 	}
-	// Only the agent starts tasks here: its task is the newest one of the
-	// phone that started with it, never an earlier one or a dismissed one.
+	if cl := c.opt.Claims; cl != nil {
+		if task, stoppable, held := cl.Computer(); held {
+			st.Computer = &ComputerState{Task: task, Stoppable: stoppable}
+		}
+	}
+	// The agent's task, never an earlier one or a dismissed one.
 	var task *gateway.TaskView
 	if ok {
 		if s, has := c.pilot.Status(d.Info.ID); has {
 			st.Agent = agentState(s)
-			since := s.Started.Add(-time.Second)
-			for _, t := range c.G.Tasks() {
-				if t.DeviceID == d.Info.ID && !t.Started.Before(since) {
-					task = &t
-					break
-				}
-			}
+			task = c.taskOf(d.Info.ID, s)
 		}
 	}
 	c.mu.Lock()
@@ -107,11 +116,7 @@ func (c *Core) State() State {
 	}
 	c.mu.Unlock()
 	if task != nil {
-		ts := &TaskState{Title: task.Title, State: string(task.State)}
-		for _, s := range task.Steps {
-			ts.Steps = append(ts.Steps, Step{Text: s.Text, Status: s.Status, MS: s.Elapsed.Milliseconds()})
-		}
-		st.Task = ts
+		st.Task = &TaskState{ID: task.ID, Title: task.Title, State: string(task.State), Steps: stepsOf(*task)}
 	}
 	st.Needs = []Need{}
 	for _, n := range c.G.Needs() {

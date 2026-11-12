@@ -25,8 +25,9 @@ import java.io.Closeable
 
 /**
  * Pinky's controls over other apps, drawn by the accessibility service so
- * they stay above every app: the Working pill with Stop while a task runs,
- * and the card for an approval or a handoff. They follow the core's state
+ * they stay above every app: the Working pill with Stop while a task runs
+ * or while Pinky on a computer drives the phone, and the card for an
+ * approval or a handoff. They follow the core's state
  * (CoreClient.subscribe) and answer it on the control socket.
  *
  * The agent can never press them: their rects go to OwnUI, which refuses
@@ -48,10 +49,18 @@ class Overlays(private val service: PinkyAccessibilityService) {
     private var ended: String? = null // the task that ended and whose pill was closed
     private var endTimer: Runnable? = null
 
+    /** What the pill is about, and so which button it has. */
+    private enum class Pill {
+        TASK, // the task runs: Stop
+        ENDED, // the task ended: Close
+        COMPUTER, // Pinky on a computer drives the phone: Stop
+        COMPUTER_UNSTOPPABLE, // an older desktop Pinky does: no button
+    }
+
     private class Window(val root: View, val text: TextView, val buttons: LinearLayout) {
         var extra: TextView? = null
         var deadline: TextView? = null
-        var running: Boolean? = null // the pill's buttons are for a running task
+        var mode: Pill? = null // what the pill's buttons are for
     }
 
     fun start() {
@@ -74,14 +83,11 @@ class Overlays(private val service: PinkyAccessibilityService) {
     private fun render(st: JSONObject) {
         if (stopped) return
         val agent = st.optJSONObject("agent")
+        val computer = st.optJSONObject("computer")
         val needs = st.optJSONArray("needs")
         val need = if (needs != null && needs.length() > 0) needs.getJSONObject(0) else null
         when {
-            agent == null -> {
-                ended = null
-                hidePill()
-            }
-            agent.optBoolean("running") -> {
+            agent?.optBoolean("running") == true -> {
                 ended = null
                 val step = lastStep(st)
                 val line = when {
@@ -89,15 +95,35 @@ class Overlays(private val service: PinkyAccessibilityService) {
                     step != null -> service.getString(R.string.phone_pill_working, step)
                     else -> service.getString(R.string.phone_pill_starting)
                 }
-                showPill(line, running = true)
+                showPill(line, Pill.TASK)
+            }
+            // Pinky on a computer drives the phone (its claim): say so, and
+            // offer Stop when it can be stopped from here. A task that ended
+            // before it is old news once the computer is done.
+            computer != null -> {
+                if (agent != null) ended = endKey(agent)
+                showPill(
+                    service.getString(R.string.phone_pill_computer),
+                    if (computer.optBoolean("stoppable")) Pill.COMPUTER else Pill.COMPUTER_UNSTOPPABLE,
+                )
+            }
+            agent == null -> {
+                ended = null
+                hidePill()
             }
             else -> {
-                val key = agent.optString("task") + agent.optLong("seconds")
-                if (ended != key) showEnded(agent, key)
+                val key = endKey(agent)
+                if (ended != key) {
+                    showEnded(agent, key)
+                } else if (pill != null && pill?.mode != Pill.ENDED) {
+                    hidePill() // the computer's pill, once it is done
+                }
             }
         }
         if (need != null) showCard(need) else hideCard()
     }
+
+    private fun endKey(agent: JSONObject) = agent.optString("task") + agent.optLong("seconds")
 
     // lastStep is the task's last step as the person reads it in Pinky
     // (Words.step): an answered approval's step no longer says "Waiting
@@ -111,7 +137,7 @@ class Overlays(private val service: PinkyAccessibilityService) {
 
     // The pill: the task runs, or it just ended.
 
-    private fun showPill(text: String, running: Boolean) {
+    private fun showPill(text: String, mode: Pill) {
         endTimer?.let { main.removeCallbacks(it) }
         endTimer = null
         val w = pill ?: newPill().also {
@@ -119,24 +145,27 @@ class Overlays(private val service: PinkyAccessibilityService) {
             add(it, Gravity.TOP or Gravity.CENTER_HORIZONTAL, ViewGroup.LayoutParams.WRAP_CONTENT, topInset() + px(8))
         }
         w.text.text = text
-        if (w.running == running) return
-        w.running = running
+        if (w.mode == mode) return
+        w.mode = mode
         // A locked phone stops the task, and a person waiting on a card
         // is not touching the screen: keep it on while the task runs.
-        w.root.keepScreenOn = running
+        w.root.keepScreenOn = mode == Pill.TASK
         w.buttons.removeAllViews()
-        if (running) {
-            w.buttons.addView(button(service.getString(R.string.phone_stop), danger = true) { b ->
-                b.isEnabled = false
-                CoreClient.send(CoreClient.cmd("stop")) { err -> main.post { if (err != null) b.isEnabled = true } }
-            })
-        } else {
-            w.buttons.addView(button(service.getString(R.string.phone_close)) { hidePill() })
+        when (mode) {
+            Pill.TASK -> w.buttons.addView(stopButton(CoreClient.cmd("stop")))
+            Pill.COMPUTER -> w.buttons.addView(stopButton(CoreClient.cmd("stop", "computer" to true)))
+            Pill.COMPUTER_UNSTOPPABLE -> {}
+            Pill.ENDED -> w.buttons.addView(button(service.getString(R.string.phone_close)) { hidePill() })
         }
     }
 
+    private fun stopButton(cmd: JSONObject): TextView = button(service.getString(R.string.phone_stop), danger = true) { b ->
+        b.isEnabled = false
+        CoreClient.send(cmd) { err -> main.post { if (err != null) b.isEnabled = true } }
+    }
+
     private fun showEnded(agent: JSONObject, key: String) {
-        showPill(Words.endLine(service.resources, agent), running = false)
+        showPill(Words.endLine(service.resources, agent), Pill.ENDED)
         ended = key
         val t = Runnable { hidePill() }
         endTimer = t
@@ -223,8 +252,11 @@ class Overlays(private val service: PinkyAccessibilityService) {
                 hideCard()
                 whenGone(shown) {
                     CoreClient.send(CoreClient.cmd("decide", "need" to id, "decision" to decision)) { err ->
-                        val why = err?.let { service.getString(R.string.phone_err_answer, it.message ?: it.toString()) }
-                        main.post { if (why != null && !stopped) showCard(need, why) }
+                        if (err != null) {
+                            Log.w(TAG, "could not answer", err)
+                            val why = service.getString(R.string.phone_err_answer)
+                            main.post { if (!stopped) showCard(need, why) }
+                        }
                     }
                 }
                 Unit

@@ -13,8 +13,10 @@ import javax.crypto.spec.GCMParameterSpec
 /**
  * The person's model keys, one per provider, kept encrypted with an AES key
  * that lives in the Android Keystore and never leaves it. Only the
- * ciphertext is in this app's files, which are not backed up
- * (allowBackup="false"). Nothing here logs a key or says how long it is.
+ * ciphertext is in this app's files, and neither backups nor transfers to
+ * a new phone take it (allowBackup="false", data_extraction_rules.xml):
+ * nowhere else could it be read. Nothing here logs a key or says how long
+ * it is.
  */
 class Secrets(context: Context) {
 

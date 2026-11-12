@@ -30,6 +30,8 @@ type Info struct {
 	Connections         int      `json:"connections"` // open connections, this one included; the app's own only in on-phone mode
 	IncludeNotImportant bool     `json:"include_not_important"`
 	IdleDisableMS       int64    `json:"idle_disable_ms"`
+	// Claim is who holds the phone (FeatureClaim); nil when it is free.
+	Claim *Claim `json:"claim,omitempty"`
 }
 
 // FeatureDisplays means tree, set_text, events and wait_idle take displays
@@ -199,6 +201,8 @@ type SetTextResult struct {
 type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// Claim is who holds the phone, with CodeBusy.
+	Claim
 }
 
 func (e *Error) Error() string { return fmt.Sprintf("companion: %s: %s", e.Code, e.Message) }

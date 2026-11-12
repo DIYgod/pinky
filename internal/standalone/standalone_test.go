@@ -119,14 +119,16 @@ type harness struct {
 	sock string
 }
 
-func newHarness(t *testing.T) *harness {
+// newHarness starts a core on a demo phone, with tune's changes to its
+// options.
+func newHarness(t *testing.T, tune ...func(*Options)) *harness {
 	t.Helper()
 	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
 	dev.AddApp("app.pinky.companion", "Pinky")
 	h := &harness{dev: dev, api: &model{}}
 	srv := httptest.NewServer(h.api)
 	h.url = srv.URL
-	c, err := New(Options{
+	o := Options{
 		Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)},
 		Device:    "pixel",
 		Version:   "test",
@@ -135,7 +137,11 @@ func newHarness(t *testing.T) *harness {
 			PollInterval: 5 * time.Millisecond, MaxBlock: 50 * time.Millisecond, DiscoverEvery: 20 * time.Millisecond},
 		Pilot: pilot.Options{HTTPClient: srv.Client()},
 		Log:   quiet,
-	})
+	}
+	for _, f := range tune {
+		f(&o)
+	}
+	c, err := New(o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,6 +181,22 @@ func newHarness(t *testing.T) *harness {
 		}
 	}
 	return h
+}
+
+// key is the API key the core holds.
+func (h *harness) key() string {
+	h.core.mu.Lock()
+	defer h.core.mu.Unlock()
+	return h.core.key
+}
+
+func eventually(t *testing.T, what string, cond func() bool) {
+	t.Helper()
+	for deadline := time.Now().Add(3 * time.Second); !cond(); time.Sleep(5 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting until %s", what)
+		}
+	}
 }
 
 // conn is a connection to the control socket, as Pinky's screens open it.
@@ -304,9 +326,7 @@ func TestTaskThroughTheControlSocket(t *testing.T) {
 	if !blocked {
 		t.Fatalf("opening Pinky was not blocked: %+v", st.Task.Steps)
 	}
-	if h.core.key != "" {
-		t.Fatal("the key outlived the task")
-	}
+	eventually(t, "the key is gone with the task", func() bool { return h.key() == "" })
 
 	// A second task shows only its own steps, and Stop ends it.
 	asked := make(chan struct{})

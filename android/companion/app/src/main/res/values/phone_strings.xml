@@ -19,9 +19,14 @@
     <string name="phone_app_info">App info</string>
     <string name="phone_core_starting">Starting Pinky…</string>
     <string name="phone_core_failed">Pinky couldn\'t start on this phone.</string>
+    <string name="phone_core_failed_hint">Restart the phone and open Pinky again. If that doesn\'t help, reinstall Pinky.</string>
     <string name="phone_setup">Pinky can do simple tasks on your phone by itself, with an AI model you choose.</string>
     <string name="phone_setup_key">Add an API key</string>
     <string name="phone_setup_model">Choose a model</string>
+
+    <!-- The task screen: while Pinky on a computer uses the phone (its claim). -->
+    <string name="phone_computer_title">Pinky on your computer is using this phone</string>
+    <string name="phone_computer_detail">You can start a task here when it\'s done.</string>
 
     <!-- The task screen: a task, while it runs and once it ended. -->
     <string name="phone_task_hint">What should Pinky do on this phone?</string>
@@ -32,7 +37,18 @@
     <string name="phone_waiting_hint">Answer on the card at the bottom of the screen.</string>
     <string name="phone_stop">Stop</string>
     <string name="phone_dismiss">Dismiss</string>
+    <string name="phone_task_steps">Steps</string>
     <string name="phone_activity">Activity</string>
+
+    <!-- The history: Activity on the task screen, HistoryActivity and
+         PastTaskActivity (desktop: activity*, day*). -->
+    <string name="phone_history_all">Show all</string>
+    <string name="phone_history_more">Show more</string>
+    <string name="phone_history_empty">No finished tasks yet.</string>
+    <string name="phone_history_failed">Couldn\'t read Activity.</string>
+    <string name="phone_history_gone">This task is no longer in Activity.</string>
+    <string name="phone_today">Today</string>
+    <string name="phone_yesterday">Yesterday</string>
 
     <!-- How a task ended (desktop: ui/ask.go, pilotEndIn). -->
     <string name="phone_end_done">Done</string>
@@ -61,7 +77,8 @@
     <string name="phone_err_no_device">Pinky is off. Turn it on in Accessibility settings.</string>
     <string name="phone_err_no_model">Choose a model in Settings first.</string>
     <string name="phone_err_busy">Pinky is already working on a task.</string>
-    <string name="phone_err_start">Couldn\'t start: %1$s</string>
+    <string name="phone_err_computer">Pinky on your computer is using this phone. Try again when it\'s done.</string>
+    <string name="phone_err_start">Couldn\'t start the task. Try again.</string>
     <string name="phone_err_key_lost">The saved API key can\'t be read any more. Add it again in Settings.</string>
 
     <!-- Amounts and times (desktop: ui/format.go, elapsedIn). -->
@@ -86,6 +103,8 @@
     <string name="phone_pill_working">Working · %1$s</string>
     <string name="phone_pill_starting">Starting</string>
     <string name="phone_pill_waiting">Waiting for you</string>
+    <!-- Short: the pill stays over the screen Pinky on a computer works on. -->
+    <string name="phone_pill_computer">In use by your computer</string>
     <string name="phone_close">Close</string>
     <string name="phone_asks">Pinky asks</string>
     <string name="phone_rule">Rule: %1$s</string>
@@ -95,7 +114,7 @@
     <string name="phone_allow_once">Allow</string>
     <string name="phone_decline">Decline</string>
     <string name="phone_hand_back">Done</string>
-    <string name="phone_err_answer">Couldn\'t answer: %1$s</string>
+    <string name="phone_err_answer">Couldn\'t send your answer. Try again.</string>
 
     <!-- Settings: the AI model. -->
     <string name="phone_section_model">AI model</string>
@@ -112,7 +131,7 @@
     <string name="phone_key_hint">Paste the API key</string>
     <string name="phone_key_saved_toast">API key saved</string>
     <string name="phone_key_removed_toast">API key removed</string>
-    <string name="phone_key_err_save">Couldn\'t save the key: %1$s</string>
+    <string name="phone_key_err_save">Couldn\'t save the key. Try again.</string>
     <string name="phone_model">Model</string>
     <string name="phone_model_claude_desc">Opus is the most capable; Sonnet and Haiku cost less.</string>
     <string name="phone_model_desc">The model\'s name as the service gives it. It must read images and use tools.</string>
@@ -159,7 +178,8 @@
     <string name="phone_update_available">Pinky %1$s is available</string>
     <string name="phone_update_download">Download</string>
     <string name="phone_update_later">Later</string>
-    <string name="phone_update_failed">Couldn\'t check for updates: %1$s</string>
+    <string name="phone_update_failed">Couldn\'t check for updates. Try again later.</string>
+    <string name="phone_update_offline">Couldn\'t check for updates. Check the internet connection and try again.</string>
     <string name="phone_update_dev">Development builds don\'t update.</string>
 
     <!-- A task's steps in Activity, worded as desktop Pinky words them

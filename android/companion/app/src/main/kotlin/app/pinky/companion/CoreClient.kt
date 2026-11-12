@@ -22,7 +22,7 @@ object CoreClient {
     /**
      * The core said no. code names the reason when the screens know it
      * (control.go's Code constants: no_device, no_key, no_model, no_task,
-     * busy), else it is empty.
+     * busy, computer, gone), else it is empty.
      */
     class Refused(val code: String, message: String) : Exception(message)
 
@@ -100,9 +100,11 @@ object CoreClient {
      * Follows the state: onState gets each state the core sends, on a
      * background thread, and onDown the reason while the core cannot be
      * reached (it is retried every second): why the core failed to start
-     * when it did, else what went wrong with the socket. While the core is
-     * not there it turns on-phone mode on, which starts it once the
-     * service is on. Close the result to stop.
+     * when it did, else what went wrong with the socket. It keeps on-phone
+     * mode on: while the core is not there, which starts the core once the
+     * service is on, and each time the core has the phone again. The core
+     * outlives the service (a Go runtime cannot be unloaded), and a service
+     * that was turned off forgot the mode. Close the result to stop.
      */
     fun subscribe(onState: (JSONObject) -> Unit, onDown: (String) -> Unit): Closeable {
         val sub = Subscription(onState, onDown)
@@ -131,10 +133,19 @@ object CoreClient {
                     w.write("{\"cmd\":\"subscribe\"}\n")
                     w.flush()
                     val r = BufferedReader(InputStreamReader(s.inputStream, Charsets.UTF_8))
+                    // Whether on-phone mode was turned on since the core last
+                    // had the phone. Only then is the service surely on: the
+                    // core reaches the phone through it.
+                    var mode = false
                     while (!closed) {
                         val line = r.readLine() ?: break
                         val st = JSONObject(line).optJSONObject("state") ?: continue
                         onState(st)
+                        if (st.optJSONObject("device")?.optBoolean("ready") != true) {
+                            mode = false
+                        } else if (!mode) {
+                            mode = phoneMode()
+                        }
                     }
                 } catch (e: Exception) {
                     if (closed) break
@@ -153,6 +164,14 @@ object CoreClient {
                 }
                 if (!closed) Thread.sleep(1000)
             }
+        }
+
+        /** Turns on-phone mode on; false when the service did not take it (the next state tries again). */
+        private fun phoneMode(): Boolean = try {
+            setOnPhone(true)
+            true
+        } catch (_: Exception) {
+            false
         }
 
         override fun close() {

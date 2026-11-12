@@ -10,8 +10,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-/** A request failed in a way the client should see. Codes are documented in the protocol notes. */
-class RequestError(val code: String, message: String) : Exception(message)
+/**
+ * A request failed in a way the client should see. Codes are documented in
+ * the protocol notes; details adds fields to the error object.
+ */
+class RequestError(val code: String, message: String, val details: ((Json) -> Unit)? = null) : Exception(message)
 
 /** A reply line, plus work to run once it has been written. */
 class Reply(val line: String, val after: (() -> Unit)? = null)
@@ -24,7 +27,7 @@ class Reply(val line: String, val after: (() -> Unit)? = null)
  */
 class RequestHandler(
     private val service: PinkyAccessibilityService,
-    private val connectionCount: () -> Int,
+    private val server: CompanionServer,
 ) {
 
     private val worker = Executors.newSingleThreadExecutor { r ->
@@ -74,11 +77,12 @@ class RequestHandler(
                     if (!conn.own) throw RequestError("forbidden", "only Pinky on the phone may change its mode")
                     Reply(ok(id, service.setOnPhone(req.getBoolean("enabled"))))
                 }
+                "claim" -> Reply(ok(id, claim(req, conn)))
                 else -> service.actionCommand(cmd, req)?.let { Reply(ok(id, it)) }
                     ?: throw RequestError("unknown_command", "unknown command: $cmd")
             }
         } catch (e: RequestError) {
-            Reply(error(id, e.code, e.message ?: e.code))
+            Reply(error(id, e.code, e.message ?: e.code, e.details))
         } catch (e: JSONException) {
             Reply(error(id, "bad_request", e.message ?: "invalid JSON"))
         } catch (e: Exception) {
@@ -105,12 +109,55 @@ class RequestHandler(
         j.name("features").beginArray()
         features().forEach { j.value(it) }
         j.endArray()
-        j.field("connections", connectionCount())
+        j.field("connections", server.pingCount)
         j.field("include_not_important", service.includeNotImportant)
         j.field("idle_disable_ms", service.idleDisableMs)
         j.field("on_phone", service.onPhone)
+        server.holder?.let { h ->
+            j.name("claim").beginObject()
+            h.write(j)
+            j.endObject()
+        }
         j.endObject()
         return j.toString()
+    }
+
+    /**
+     * claim gives the phone to this connection; with release it ends the
+     * connection's claim, and with stop Pinky on the phone ends a computer's.
+     * The result is who holds the phone afterwards (nothing when it is
+     * free), and stop adds whether it ended a claim.
+     */
+    private fun claim(req: JSONObject, conn: Connection): String {
+        val j = Json()
+        j.beginObject()
+        when {
+            req.optBoolean("stop") -> {
+                if (!conn.own) throw RequestError("forbidden", "only Pinky on the phone may stop a computer's claim")
+                j.field("stopped", server.stopClaim())
+            }
+            req.optBoolean("release") -> server.release(conn)
+            else -> {
+                val by = req.getString("by")
+                val self = if (conn.own) CompanionServer.BY_PHONE else CompanionServer.BY_COMPUTER
+                if (by != self) throw RequestError("bad_request", "this connection claims as $self, not $by")
+                val task = if (req.isNull("task")) "" else clip(req.getString("task"), MAX_TASK_CHARS)
+                server.claim(conn, task)?.let { h ->
+                    val who = if (h.by == CompanionServer.BY_PHONE) "Pinky on the phone" else "Pinky on a computer"
+                    throw RequestError("busy", "$who is using the phone") { h.write(it) }
+                }
+            }
+        }
+        server.holder?.write(j)
+        j.endObject()
+        return j.toString()
+    }
+
+    // The first max chars of s, without splitting a surrogate pair.
+    private fun clip(s: String, max: Int): String {
+        if (s.length <= max) return s
+        val end = if (Character.isHighSurrogate(s[max - 1])) max - 1 else max
+        return s.substring(0, end)
     }
 
     /**
@@ -130,6 +177,8 @@ class RequestHandler(
         // down, and global presses back and enter (display_input).
         f += listOf(FEATURE_GESTURE, FEATURE_GLOBAL, FEATURE_OWN_UI)
         if (service.displays.multiDisplay) f += FEATURE_DISPLAY_INPUT
+        // claim and claim events: who drives the phone.
+        f += FEATURE_CLAIM
         f += service.actionFeatures()
         return f
     }
@@ -202,7 +251,7 @@ class RequestHandler(
         return sb.toString()
     }
 
-    private fun error(id: Any?, code: String, message: String): String {
+    private fun error(id: Any?, code: String, message: String, details: ((Json) -> Unit)? = null): String {
         val j = Json()
         j.beginObject()
         when (id) {
@@ -210,7 +259,9 @@ class RequestHandler(
             is String -> j.field("id", id)
         }
         j.field("ok", false)
-        j.name("error").beginObject().field("code", code).field("message", message).endObject()
+        j.name("error").beginObject().field("code", code).field("message", message)
+        details?.invoke(j)
+        j.endObject()
         j.endObject()
         return j.toString()
     }
@@ -231,6 +282,10 @@ class RequestHandler(
         const val FEATURE_GLOBAL = "global"
         const val FEATURE_OWN_UI = "own_ui"
         const val FEATURE_DISPLAY_INPUT = "display_input"
+        const val FEATURE_CLAIM = "claim"
         private const val DEFAULT_TIMEOUT_MS = 10_000L
+
+        // A claim's task as the phone keeps and shows it.
+        private const val MAX_TASK_CHARS = 500
     }
 }

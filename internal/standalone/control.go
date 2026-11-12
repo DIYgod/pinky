@@ -25,6 +25,10 @@ import (
 //	{"cmd":"decide","need":"...","decision":"allow_once"} → {"ok":true}
 //	{"cmd":"preset","preset":1}                         → {"ok":true}  (policy.Preset)
 //	{"cmd":"stop"} / {"cmd":"dismiss"}                  → {"ok":true}
+//	{"cmd":"stop","computer":true}                      → {"ok":true}  (StopComputer)
+//	{"cmd":"history","before":<ms>,"limit":20}          → {"ok":true,"history":[...],"more":true}
+//	                                                      (History: PastTask, newest first; both fields optional)
+//	{"cmd":"history","id":"..."}                        → {"ok":true,"history":[the task, with its steps]}
 //
 // A failed command replies {"ok":false,"error":"...","code":"..."}: the
 // code, when there is one, names an error the screens say in the person's
@@ -36,15 +40,26 @@ type request struct {
 	Decision string `json:"decision"`
 	Note     string `json:"note"`
 	Preset   int    `json:"preset"`
+	Computer bool   `json:"computer"` // stop: Pinky on a computer, not the task
+	// history: one task, or the tasks that started before Before (Unix
+	// milliseconds), Limit of them.
+	ID     string `json:"id"`
+	Before int64  `json:"before"`
+	Limit  int    `json:"limit"`
 	StartRequest
 }
 
 type reply struct {
-	OK    bool   `json:"ok"`
-	Error string `json:"error,omitempty"`
-	Code  string `json:"code,omitempty"`
-	State *State `json:"state,omitempty"`
+	OK      bool       `json:"ok"`
+	Error   string     `json:"error,omitempty"`
+	Code    string     `json:"code,omitempty"`
+	State   *State     `json:"state,omitempty"`
+	History []PastTask `json:"history,omitempty"`
+	More    bool       `json:"more,omitempty"` // older tasks follow
 }
+
+// historyWait bounds a history command, which reads the database.
+const historyWait = 10 * time.Second
 
 // The codes of errors the screens know.
 const (
@@ -53,6 +68,8 @@ const (
 	CodeNoModel  = "no_model"  // an OpenAI-compatible API without a model
 	CodeNoTask   = "no_task"   // an empty task
 	CodeBusy     = "busy"      // a task already runs
+	CodeComputer = "computer"  // ErrComputer: Pinky on a computer uses the phone
+	CodeGone     = "gone"      // ErrGone: the task is no longer in the history
 )
 
 // codeOf is the code of a command's error, or "" for one the screens show
@@ -69,6 +86,10 @@ func codeOf(err error) string {
 		return CodeNoTask
 	case errors.Is(err, pilot.ErrBusy):
 		return CodeBusy
+	case errors.Is(err, ErrComputer):
+		return CodeComputer
+	case errors.Is(err, ErrGone):
+		return CodeGone
 	}
 	return ""
 }
@@ -142,9 +163,15 @@ func (c *Core) handle(r request) reply {
 	case "preset":
 		err = c.SetPreset(policy.Preset(r.Preset))
 	case "stop":
-		c.Stop()
+		if r.Computer {
+			err = c.StopComputer()
+		} else {
+			c.Stop()
+		}
 	case "dismiss":
 		c.Dismiss()
+	case "history":
+		return c.history(r)
 	default:
 		err = fmt.Errorf("unknown command %q", r.Cmd)
 	}
@@ -152,6 +179,27 @@ func (c *Core) handle(r request) reply {
 		return reply{Error: err.Error(), Code: codeOf(err)}
 	}
 	return reply{OK: true}
+}
+
+func (c *Core) history(r request) reply {
+	ctx, cancel := context.WithTimeout(c.ctx, historyWait)
+	defer cancel()
+	if r.ID != "" {
+		t, err := c.PastTask(ctx, r.ID)
+		if err != nil {
+			return reply{Error: err.Error(), Code: codeOf(err)}
+		}
+		return reply{OK: true, History: []PastTask{t}}
+	}
+	var before time.Time
+	if r.Before > 0 {
+		before = time.UnixMilli(r.Before)
+	}
+	list, more, err := c.History(ctx, before, r.Limit)
+	if err != nil {
+		return reply{Error: err.Error(), Code: codeOf(err)}
+	}
+	return reply{OK: true, History: list, More: more}
 }
 
 // stream sends the state now and after each change, at most every 100 ms,

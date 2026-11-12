@@ -15,6 +15,7 @@
 
     <application
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -62,6 +63,23 @@
             android:process=":ui"
             android:theme="@style/Theme.Pinky.Screen"
             android:windowSoftInputMode="adjustResize" />
+
+        <!-- Its history and a task of it, opened only from it, in its
+             process. -->
+        <activity
+            android:name=".HistoryActivity"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:label="@string/phone_activity"
+            android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen" />
+        <activity
+            android:name=".PastTaskActivity"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:label="@string/phone_activity"
+            android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen" />
 
         <service
             android:name=".PinkyAccessibilityService"
