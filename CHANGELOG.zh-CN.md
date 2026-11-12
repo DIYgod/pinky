@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1112.10 (2026-11-12)
 
 - iPhone 和 iOS 模拟器上的 App 现在按主屏幕显示的名字、用手机当前的语言列出（显示「微信」而不是 WeChat），agent 仍可以用英文名找到它们。
 - Pinky 不再因为输入框里已有的文字而拒绝输入。以前，提到 “code” 的短信草稿，或显示含 “code” 网址的 Chrome 地址栏，会被当成验证码输入框。
