@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- A Wi-Fi Android phone now comes back after Pinky updates or restarts even while its screen is off: Pinky connects it again at the address it last used, instead of leaving it offline until you wake it. Some phones, such as those on HyperOS, stop announcing themselves on the network while asleep. Thanks to @vinsew for the report.
+
 ## 2026.1112.14 (2026-11-12)
 
 - When an agent passes a `phone_read_list` continuation with the wrong direction or scroll area, Pinky still tells it what to pass, and now the corrected call reads on from where the list stopped instead of finding the continuation gone. Thanks to @pseudoyu.
