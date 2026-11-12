@@ -38,6 +38,10 @@ type webMirrorState struct {
 	tn     RemoteTailnet
 	tnAt   time.Time
 	tnBusy bool
+	// approvalLink is the token of the link that adds a phone to answer
+	// approvals (webapprovals.go), made at approvalLinkAt; in memory only.
+	approvalLink   string
+	approvalLinkAt time.Time
 }
 
 // webMirrorServe is the command that has Tailscale give the web mirror to
@@ -104,6 +108,7 @@ func (a *app) webMirrorSettings(c *mg.Context) {
 				a.webMirrorLinks(c.Key("control"), tn, wm.ControlToken(), locales.WebMirrorControlLink(), locales.WebMirrorControlTailnetLink(),
 					locales.WebMirrorControlLinkDesc(), locales.WebMirrorControlTailnetLinkDesc())
 			}
+			a.webApprovalsSettings(c, tn)
 			settingRow(c, locales.WebMirrorNewLink(), locales.WebMirrorNewLinkDesc(), true, func() {
 				mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
 					watching := webMirrorWatching(wm.Watchers(), "", false)

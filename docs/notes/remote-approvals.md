@@ -66,7 +66,7 @@ Those stay in Pinky's window; the page lists them as "Answer this on the compute
 
 Settings › Phones › Web mirror gets **Answer approvals in the browser**, off by default, with the mirror on and Tailscale serving it. Then:
 
-1. **Add a phone** makes a one-time link, `https://<computer>.<tailnet>.ts.net:<port>/approvals#pair=<token>`, good for 5 minutes. The person opens it on their phone (copy it to the phone, or type it).
+1. **Make a link** next to **Add a phone** makes a one-time link, `https://<computer>.<tailnet>.ts.net:<port>/approvals#pair=<token>`, good for 5 minutes. The person opens it on their phone (copy it to the phone, or type it).
 2. The page asks the phone to make a passkey for this computer's tailnet name (`navigator.credentials.create`, user verification required, a resident key so the phone keeps it). It sends the passkey's public key (`getPublicKey()`, P-256 ES256) and shows a six-digit code.
 3. Settings shows "A browser asks to answer approvals" with the Tailscale login, the browser and the same code, and **Allow** and **Deny**. Allow adds the phone; the page then gets its session token, which it keeps in the browser's local storage.
 4. The page lists the open approvals, refreshing every 2 s while it is shown. A card shows the phone, the agent, the title and detail, the rule, the app, the time left, and the screenshot with the target box and the finger's path.
@@ -79,6 +79,12 @@ Code:
 - `internal/webmirror`: one additive option, `Approvals http.Handler`, served under `/approvals` behind the mirror's own checks (Funnel, host). The mirror's `Source` stays without approvals.
 - `ui`, `cmd/pinky`: the switch, the requests to allow and the list of phones; the page's words in `cmd/pinky/locales`.
 - No change to `internal/gateway` or `internal/approval`.
+
+## Tested (2026-11-12)
+
+- `internal/webapproval` against the real gateway on a demo phone, served through `webmirror`'s handler with a fake `tailscale serve` (headers) and a software P-256 passkey: Allow and Deny reach the agent; refused when not through Tailscale, from another tailnet login, while off, through Funnel, with a reused or made-up link, a passkey without user verification, a phone turned down in Settings, no or a made-up session, another origin; answers that do not count (no user verification, another key, a used challenge, another phone's session, a removed phone); a Deny challenge answers Deny; two places answering (the window first, the page is told); the timeout unchanged (a challenge never outlives the approval, a late answer is "gone"); cards the page may not answer (new agent, Unblock, unlock) are listed and refused; the screenshot as JPEG with `no-store`.
+- `ui`: the Settings section with fakes (`TestWebApprovalsSettings`), and screenshots in light and dark, English, Chinese and Japanese (`PINKY_SCREENSHOTS=dir go test -run TestWebApprovalsScreenshots ./ui`).
+- Not tested: a real passkey in Safari on an iPhone or in Chrome on Android, a real `tailscale serve`, a real phone.
 
 ## Later
 

@@ -37,6 +37,10 @@ Pictures from the fake phones (`pinky daemon --fake`) and the UI demo; never fro
 - Requests must name this computer (localhost, a loopback address, or its tailnet name, which `tailscale serve` forwards under); the WebSocket must come from the page's own origin (a program other than a browser can send any `Origin`, so this only stops other web pages). The page's CSP allows connections to its own origin only. `Tailscale-User-Login` is logged, and required for control through Tailscale, but it is never enough by itself: a local process can send it to 127.0.0.1, so every page still needs a token.
 - It shows what the window's mirror shows, blocked apps and one-time codes included: the window's mirror covers nothing either (only screenshots, history and recordings do), so Settings warns about it, and that a link shows every phone connected to Pinky.
 
+## Approvals
+
+`webmirror.Options.Approvals` serves another handler under `/approvals`, behind the mirror's own Funnel and host checks: Pinky passes `internal/webapproval`'s page, which answers approvals from a phone with a passkey ([remote-approvals.md](remote-approvals.md)). `webmirror.Proxied` is exported for it. The mirror's `Source` still has no approvals.
+
 ## Reaching it through Tailscale
 
 Pinky never runs `tailscale serve`. While Tailscale is connected and does not forward to the mirror yet, Settings shows the command, such as `tailscale serve --bg --https=8443 7466`, with an HTTPS port the person's `tailscale serve` does not use yet (8443, else 10000, 9443, 7443, 4443): taking one in use would replace what is served there. Once it runs, Settings shows the tailnet link, `https://<computer>.<tailnet>.ts.net:<port>/#<token>`. `tailscale serve --https=<port> off` stops it.
