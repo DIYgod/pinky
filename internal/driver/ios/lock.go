@@ -17,7 +17,7 @@ func (d *Device) Locked(ctx context.Context) (bool, error) {
 	}
 	ch := make(chan result, 1)
 	go func() {
-		v, err := d.l.lockdownValue("PasswordProtected")
+		v, err := d.cur().lockdownValue("PasswordProtected")
 		if err != nil {
 			ch <- result{err: err}
 			return

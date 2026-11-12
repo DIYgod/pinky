@@ -1082,6 +1082,30 @@ func TestIdlePhoneLockShows(t *testing.T) {
 	}
 }
 
+// TestIdleWiFiPhoneLockSlower reads an idle phone over Wi-Fi that nobody
+// watches only every idleLockEveryWiFi: each read is a lockdown session
+// over the network (GitHub issue #96).
+func TestIdleWiFiPhoneLockSlower(t *testing.T) {
+	saved, savedWiFi := idleLockEvery, idleLockEveryWiFi
+	idleLockEvery, idleLockEveryWiFi = 10*time.Millisecond, time.Hour
+	t.Cleanup(func() { idleLockEvery, idleLockEveryWiFi = saved, savedWiFi })
+	x := newExtraDev("iphone", "iPhone 16 Pro")
+	x.conn.Store("wifi")
+	g := newExtraGateway(t, x)
+	status := func() DeviceStatus { return g.Devices()[0].Status }
+	for deadline := time.Now().Add(3 * time.Second); len(g.Devices()) == 0 || status() != DeviceIdle; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the phone did not come online")
+		}
+	}
+	time.Sleep(100 * time.Millisecond) // the first read, at once
+	x.SetLocked(true)
+	time.Sleep(300 * time.Millisecond)
+	if s := status(); s != DeviceIdle {
+		t.Fatalf("an idle phone over Wi-Fi was read again within the hour: %q", s)
+	}
+}
+
 // TestDefaultAsksBeforePaymentsOnly runs the bundled policy as it ships:
 // a message goes out without asking, a payment still asks.
 func TestDefaultAsksBeforePaymentsOnly(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -718,11 +719,30 @@ func (g *Gateway) expireIdle() {
 // from the computer, before an agent needs it. A variable for tests.
 var idleLockEvery = 6 * time.Second
 
+// idleLockEveryWiFi is idleLockEvery for an idle phone over Wi-Fi whose
+// screen nobody watches: each read is a new lockdown session over the
+// network, which costs the phone more than one over a cable (GitHub issue
+// #96), and nothing shows the state at once but the phone's tile. A
+// variable for tests.
+var idleLockEveryWiFi = 30 * time.Second
+
+// watchedDevices returns the IDs of the devices whose picture has a hub.
+func (g *Gateway) watchedDevices() map[string]bool {
+	g.hubMu.Lock()
+	defer g.hubMu.Unlock()
+	w := make(map[string]bool, len(g.hubs))
+	for key := range g.hubs { // an ended hub leaves the map
+		w[strings.TrimSuffix(key, "#agent")] = true
+	}
+	return w
+}
+
 // pollLocks asks lock-reporting drivers about devices that have an agent,
-// and about idle ones every idleLockEvery. A locked device whose driver
-// cannot report locks is read instead, so the unlock card goes away when
-// the person unlocks.
+// and about idle ones every idleLockEvery (idleLockEveryWiFi over Wi-Fi
+// with nobody watching). A locked device whose driver cannot report locks
+// is read instead, so the unlock card goes away when the person unlocks.
 func (g *Gateway) pollLocks(ctx context.Context) {
+	watched := g.watchedDevices()
 	g.mu.Lock()
 	var report, read []*device
 	now := time.Now()
@@ -731,7 +751,11 @@ func (g *Gateway) pollLocks(ctx context.Context) {
 			continue
 		}
 		if d.lease == nil {
-			if _, ok := d.dev.(driver.LockReporter); ok && now.Sub(d.lockReadAt) >= idleLockEvery {
+			every := idleLockEvery
+			if !watched[d.id] && d.dev.Info().Connection == "wifi" {
+				every = idleLockEveryWiFi
+			}
+			if _, ok := d.dev.(driver.LockReporter); ok && now.Sub(d.lockReadAt) >= every {
 				d.lockReadAt = now
 				report = append(report, d)
 			}

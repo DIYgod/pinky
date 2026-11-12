@@ -83,7 +83,7 @@ func (d *Device) axReady(ctx context.Context) (*axSession, error) {
 			return d.ax, nil
 		}
 	}
-	a, err := dialAX(ctx, d.l.base)
+	a, err := dialAX(ctx, d.link().base)
 	if err != nil {
 		return nil, err
 	}

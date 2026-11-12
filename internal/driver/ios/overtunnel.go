@@ -6,7 +6,7 @@ import "context"
 // diagnostics; none on a device without one.
 func (d *Device) Services() []string {
 	var out []string
-	for name := range d.l.rsd.Services {
+	for name := range d.cur().rsd.Services {
 		out = append(out, name)
 	}
 	return out
@@ -21,8 +21,9 @@ func (d *Device) LaunchID(ctx context.Context, bundleID string) error {
 // Done is closed once the tunnel the device was opened over is gone; the
 // caller then opens it again. It is never closed on a device without one.
 func (d *Device) Done() <-chan struct{} {
-	if d.l.tunnel == nil {
+	l := d.cur()
+	if l.tunnel == nil {
 		return nil
 	}
-	return d.l.tunnel.Done()
+	return l.tunnel.Done()
 }

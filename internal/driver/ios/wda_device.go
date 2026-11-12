@@ -65,6 +65,7 @@ type WDADevice struct {
 	framesAfter atomic.Int64
 
 	closeOnce sync.Once
+	idle      wdaIdle // rest_wda.go
 
 	logs    appLogs // the apps whose logs a task reads (logs.go)
 	procMu  sync.Mutex
@@ -112,6 +113,8 @@ func openWDA(ctx context.Context, info driver.Info, c *wdaClient, entry goios.De
 		d.info.OSVersion = st.OS.Version
 	}
 	c.gone = d.gone
+	c.enter = d.idle.enter
+	d.idle.init()
 	return d, nil
 }
 
@@ -919,6 +922,7 @@ func (d *WDADevice) Stream(ctx context.Context, opt driver.StreamOptions) (drive
 	}
 	if fs, ok := s.(*frameStream); ok {
 		go d.followRotation(fs.done)
+		d.idle.watch(fs.done)
 	}
 	d.videoMu.Lock()
 	d.video = s
@@ -1021,6 +1025,7 @@ func (d *WDADevice) videoSize() (int, int) {
 // the test run Pinky started; WDA itself stays installed.
 func (d *WDADevice) Close() error {
 	d.closeOnce.Do(func() {
+		d.idle.close()
 		d.StopAppLogs()
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		d.c.deleteSession(ctx)

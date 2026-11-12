@@ -40,8 +40,9 @@ func OpenAccessibility(ctx context.Context, info driver.Info) (*AXDevice, error)
 	if err != nil {
 		return nil, err
 	}
-	d := &Device{info: info, l: l}
+	d := &Device{info: info, l: l, done: make(chan struct{}), openedAt: time.Now()}
 	d.info.Backend = backendAccessibility
+	d.reconnect = d.reconnectAX
 	png, err := d.ScreenshotPNG(ctx)
 	if err != nil {
 		l.Close()
@@ -61,6 +62,7 @@ func OpenAccessibility(ctx context.Context, info driver.Info) (*AXDevice, error)
 		defer cancel()
 		d.axReady(c)
 	}()
+	go d.restLoop() // rest.go
 	return &AXDevice{d: d}, nil
 }
 
