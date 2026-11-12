@@ -31,6 +31,7 @@ enum PinkyCore {
             DarwinNote.observe(Pinky.stopNote) { _, _, _, _, _ in PinkyStop() }
             DarwinNote.observe(Pinky.uiOnNote) { _, _, _, _, _ in PinkyUIActive(1) }
             DarwinNote.observe(Pinky.uiOffNote) { _, _, _, _, _ in PinkyUIActive(0) }
+            DarwinNote.observe(Pinky.computerOnNote) { _, _, _, _, _ in PinkyComputer() }
         }
         return out
     }

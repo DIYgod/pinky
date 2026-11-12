@@ -706,6 +706,39 @@
         }
       }
     },
+    "Pinky on your computer is using this iPhone" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パソコンの Pinky がこの iPhone を使用中です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电脑上的 Pinky 正在使用这台 iPhone"
+          }
+        }
+      }
+    },
+    "Pinky on your computer is using this iPhone. Start the task when it is done, or once you choose Pause connection for this iPhone there." : {
+      "comment" : "Start refused",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パソコンの Pinky がこの iPhone を使用中です。使い終わるか、パソコンでこの iPhone の「接続を一時停止」を選んでから、タスクを開始してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电脑上的 Pinky 正在使用这台 iPhone。等它用完，或者在电脑上为这台 iPhone 选择「暂停连接」后，再开始任务。"
+          }
+        }
+      }
+    },
     "Pinky reached its limit" : {
       "comment" : "A task ended: a step, time or cost limit",
       "localizations" : {
@@ -1049,6 +1082,22 @@
         }
       }
     },
+    "Tasks on this iPhone wait until the computer is done with it, or until you choose Pause connection for this iPhone there." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パソコンが使い終わるか、パソコンでこの iPhone の「接続を一時停止」を選ぶまで、この iPhone でのタスクは待機します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "电脑用完之前，或者在电脑上为这台 iPhone 选择「暂停连接」之前，这台 iPhone 上的任务需要等待。"
+          }
+        }
+      }
+    },
     "The VPN" : {
       "localizations" : {
         "ja" : {
@@ -1296,6 +1345,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在处理 · %1$@ · %2$lld 秒 · %3$@"
+          }
+        }
+      }
+    },
+    "You can switch to other apps; Pinky keeps working from your computer. Tasks on this iPhone wait until the computer is done with it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかのアプリに切り替えても、Pinky はパソコンから操作を続けます。パソコンが使い終わるまで、この iPhone でのタスクは待機します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你可以切换到其他 App，Pinky 会继续从电脑上操作。电脑用完之前，这台 iPhone 上的任务需要等待。"
           }
         }
       }

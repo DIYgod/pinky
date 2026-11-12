@@ -224,6 +224,19 @@ func TestPickWDARunner(t *testing.T) {
 	if got := pickWDARunner([]installationproxy.AppInfo{app("com.facebook.WebDriverAgentRunner.xctrunner", "WebDriverAgentRunner-Runner")}); got != "com.facebook.WebDriverAgentRunner.xctrunner" {
 		t.Errorf("picked %q", got)
 	}
+	// Pinky's app hosting WDA wins over the helper the phone keeps.
+	host := installationproxy.AppInfo{"CFBundleIdentifier": "pinky.abcde12345", "CFBundleName": "Pinky",
+		"CFBundleExecutable": "Pinky", wdaHostKey: true}
+	plain := installationproxy.AppInfo{"CFBundleIdentifier": "pinky.abcde12345", "CFBundleName": "Pinky", "CFBundleExecutable": "Pinky"}
+	helper := app("pinky.abcde12345.WebDriverAgentRunner.xctrunner", "WebDriverAgentRunner-Runner")
+	for _, apps := range [][]installationproxy.AppInfo{{helper, host}, {host, helper}} {
+		if got := pickWDARunner(apps); got != "pinky.abcde12345" {
+			t.Errorf("picked %q, want Pinky's app hosting WDA", got)
+		}
+	}
+	if got := pickWDARunner([]installationproxy.AppInfo{plain, helper}); got != "pinky.abcde12345.WebDriverAgentRunner.xctrunner" {
+		t.Errorf("picked %q, want the helper: the app holds no WDA", got)
+	}
 }
 
 func TestTouchRecorder(t *testing.T) {

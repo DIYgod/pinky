@@ -319,6 +319,13 @@ jobs:
         run: |
           go run ./scripts/release stamp "${TAG#v}"
           scripts/dist.sh darwin "$RUNNER_TEMP/dist"
+      # The iPhone app kit, from which desktop Pinky builds Pinky's iPhone
+      # app with the person's team to host WebDriverAgent
+      # (internal/driver/ios/appinstall.go).
+      - name: Pack the iPhone app kit
+        run: |
+          command -v xcodegen >/dev/null || brew install --quiet xcodegen
+          ios/build.sh kit "$RUNNER_TEMP/dist/pinky-iphone-${TAG#v}.tar.gz" "${TAG#v}"
       - name: Check that the apps' adb runs a server
         run: |
           for arch in arm64 amd64; do

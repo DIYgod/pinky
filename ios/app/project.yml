@@ -39,6 +39,15 @@ targetTemplates:
     type: application
     platform: iOS
     templates: [Core]
+    settings:
+      base:
+        # Where the Developer Disk Image puts XCTest, for the app hosting
+        # WebDriverAgent's test (App/TestHost.swift, build.sh: PINKY_WDA),
+        # as Xcode's XCTRunner.app has them.
+        LD_RUNPATH_SEARCH_PATHS: >-
+          $(inherited) @executable_path/Frameworks
+          /System/Developer/Library/Frameworks /System/Developer/usr/lib
+          /Developer/Library/Frameworks /Developer/usr/lib
     sources:
       - App
       - path: Shared

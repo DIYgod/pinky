@@ -36,6 +36,7 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 | `pinky_<version>_amd64.deb` | People on Debian and Ubuntu: the same in `/opt/pinky` |
 | `pinky-android.apk` | Pinky for Android on its own, without the version in its name so that `releases/latest/download/pinky-android.apk` always has the newest: the feed's `android-arm64`, which the app updates itself from, and a download that needs no computer. Each desktop package carries the same APK |
 | `pinky-<version>.mcpb` | People with Claude Desktop: an [MCP bundle](https://github.com/modelcontextprotocol/mcpb) that a double-click installs as the extension Pinky, which starts the Pinky installed on the computer (`go run ./scripts/release mcpb`, see [mcp.md](mcp.md#claude-desktop-extension)) |
+| `pinky-iphone-<version>.tar.gz` | Desktop Pinky on a Mac with Xcode, when it installs Pinky's iPhone app to host WebDriverAgent: the iPhone app kit, the Xcode project, the Swift sources and the Go core built for phones, from which it builds the app with the person's team (`ios/build.sh kit`, see [notes/iphone-app.md](notes/iphone-app.md#hosting-webdriveragent)) |
 | `latest.json` | The updater: the release's manifest, below |
 | `pinky.rb` | The Homebrew tap: the cask of this release |
 | `SHA256SUMS` | Everyone: every other file's SHA-256, as `sha256sum` writes it |

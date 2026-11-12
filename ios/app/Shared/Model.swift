@@ -15,9 +15,17 @@ struct CoreReply: Decodable {
 struct CoreState: Decodable, Equatable {
     var device: DeviceState
     var preset: Int
+    var computer: ComputerState?
     var agent: AgentState?
     var task: TaskState?
     var needs: [Need]
+}
+
+/// Pinky on a computer while it holds the phone: no task starts meanwhile
+/// (ios/onphone, claims.go).
+struct ComputerState: Decodable, Equatable {
+    var task: String?
+    var stoppable: Bool
 }
 
 struct DeviceState: Decodable, Equatable {

@@ -23,8 +23,8 @@
 //
 // A failed command replies {"ok":false,"error":"...","code":"..."}, where
 // code, when set, is what Pinky's screens put into words: no_device,
-// no_key, no_task, no_model, busy or gone (the need was answered or
-// expired).
+// no_key, no_task, no_model, busy, computer (Pinky on a computer uses the
+// phone: claims.go) or gone (the need was answered or expired).
 //
 // The key a task starts with stays in memory until the task ends. Nothing
 // here logs a request.
@@ -82,6 +82,7 @@ type Core struct {
 	sc     *standalone.Core
 	prov   *Provider
 	gate   *gate
+	claims *computerClaims
 	ctx    context.Context
 	cancel context.CancelFunc
 	kick   chan struct{}
@@ -104,6 +105,7 @@ func New(o Options) (*Core, error) {
 	}
 	g := newGate(o.Self)
 	prov := newProvider(o.ID)
+	claims := newComputerClaims()
 	gopt := o.Gateway
 	// The connection loop asks for a listing as the phone comes and goes,
 	// so the gateway need not look often; every wakeup costs battery.
@@ -126,14 +128,16 @@ func New(o Options) (*Core, error) {
 		Version: o.Version,
 		Gateway: gopt,
 		Pilot:   o.Pilot,
+		Claims:  claims,
 		Log:     o.Log,
 	})
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	c := &Core{opt: o, log: o.Log, sc: sc, prov: prov, gate: g, ctx: ctx, cancel: cancel,
+	c := &Core{opt: o, log: o.Log, sc: sc, prov: prov, gate: g, claims: claims, ctx: ctx, cancel: cancel,
 		kick: make(chan struct{}, 1), changed: make(chan struct{})}
+	claims.setNotify(c.poke)
 	c.publish()
 	go c.watch()
 	return c, nil
@@ -167,6 +171,10 @@ func (c *Core) Disconnected(state driver.State, reason, detail string) {
 
 // SetUI records whether Pinky's app is in front.
 func (c *Core) SetUI(on bool) { c.gate.setUI(on) }
+
+// ComputerSeen records that Pinky's app hosts WebDriverAgent for Pinky on
+// a computer (claims.go): the core starts no task for a while.
+func (c *Core) ComputerSeen() { c.claims.heard() }
 
 // Stop stops the task at once (the Live Activity's Stop).
 func (c *Core) Stop() {
@@ -321,6 +329,8 @@ func (c *Core) start(ctx context.Context, r standalone.StartRequest) reply {
 		return fail("no_key", standalone.ErrNoKey)
 	case st.Agent != nil && st.Agent.Running:
 		return fail("busy", errBusy)
+	case st.Computer != nil:
+		return fail(standalone.CodeComputer, standalone.ErrComputer)
 	}
 	if err := c.leave(ctx, d); err != nil {
 		return fail("", fmt.Errorf("leave Pinky: %w", err))
@@ -332,6 +342,8 @@ func (c *Core) start(ctx context.Context, r standalone.StartRequest) reply {
 			code, err = "no_device", errNoDevice
 		case errors.Is(err, pilot.ErrBusy):
 			code = "busy"
+		case errors.Is(err, standalone.ErrComputer):
+			code = standalone.CodeComputer
 		}
 		return fail(code, err)
 	}

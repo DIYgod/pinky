@@ -213,6 +213,16 @@ func PinkyUIActive(on C.int) {
 	}
 }
 
+// PinkyComputer records that Pinky's app, in test mode, hosts
+// WebDriverAgent for Pinky on a computer (ios/onphone, claims.go).
+//
+//export PinkyComputer
+func PinkyComputer() {
+	if k := current(); k != nil {
+		k.ComputerSeen()
+	}
+}
+
 // PinkyFree frees a string PinkyStart or PinkyCall returned.
 //
 //export PinkyFree

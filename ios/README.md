@@ -66,6 +66,8 @@ To run it on a phone:
 3. Install: `xcrun devicectl device install app --device <udid> <the .app the build printed>`.
 4. On the phone: open Pinky, allow notifications, Turn on (the full build asks to add a VPN configuration; with the lite build turn LocalDevVPN on first), add the model's API key in Settings, then type a task.
 
+To host WebDriverAgent for Pinky on a computer, as desktop Pinky's install builds it ([notes](../docs/notes/iphone-app.md#hosting-webdriveragent)), add `PINKY_WDA=<WebDriverAgentRunner.xctest>`, the test bundle from a `build-for-testing` of WebDriverAgent (in `WebDriverAgentRunner-Runner.app/PlugIns`). `ios/build.sh kit <out.tar.gz> [version]` packs the iPhone app kit a release carries; `PINKY_IPHONE_KIT=<the archive or its unpacked folder>` has desktop Pinky's `pinkyctl helper install` build the app from it.
+
 The core logs to the unified log with the prefix `pinky` (connection attempts and why they failed, slow or failed screen reads, and with `heartbeat_s` a heartbeat with memory), which a Mac reads with the device's syslog. It never logs a task's text, the model's key or what is on the screen.
 
 A debug build also starts a task from launch arguments once the phone is ready, so a test needs no typing. The key comes in the launch environment and stays in memory; never put it in a file. The `--` keeps devicectl from reading the app's arguments as its own. `-pinkyHeartbeat 1` has the core log its memory every second.

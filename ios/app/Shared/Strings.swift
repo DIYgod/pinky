@@ -46,6 +46,7 @@ enum L {
         case "no_task": String(localized: "Type a task first.", comment: "Start refused")
         case "no_model": String(localized: "Choose a model in Settings first.", comment: "Start refused")
         case "busy": String(localized: "Pinky is already working on a task.", comment: "Start refused")
+        case "computer": String(localized: "Pinky on your computer is using this iPhone. Start the task when it is done, or once you choose Pause connection for this iPhone there.", comment: "Start refused")
         case "gone": String(localized: "This was already answered, or the time to answer ran out.", comment: "Decide refused")
         default: error ?? String(localized: "Something went wrong.", comment: "Unknown error")
         }

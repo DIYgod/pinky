@@ -81,7 +81,33 @@ What it did not show:
 - WebDriverAgent could not write `com.apple.keyboard.preferences`, where it turns off autocorrection, prediction and the prediction bar at start: "setting preferences outside an application's container requires user-preference-write or file-write-data sandbox access". Whether Pinky Helper's runner gets the same refusal, and whether typed text then gets autocorrected, was not checked.
 - XCTest's diagnostic screen recording did not start (error 10005). This configuration prefers screenshots anyway, so it does no harm.
 
-For M2: the test mode in Pinky's app, WebDriverAgent's xctest and framework in its `PlugIns` signed with it, desktop Pinky installing Pinky's app where it installs the helper now, and the rename. Still to decide: what the app shows while it hosts WebDriverAgent for the computer, and what happens when the person starts a task on the phone at the same time.
+M2 built it: [Hosting WebDriverAgent](#hosting-webdriveragent).
+
+## Hosting WebDriverAgent
+
+(2026-11-12, M2.) Pinky's iPhone app hosts WebDriverAgent for desktop Pinky in place of Pinky Helper.
+
+**The app in test mode** (`ios/app/App/TestHost.swift`). Launched with `XCTestSessionIdentifier`, `XCTestBundlePath` or `XCTestConfigurationFilePath` in its environment, the app starts no core, no VPN and asks for no notifications (`PinkyApp`, whose `MainView` holds the model). It shows a screen of its own, `HostingView`: "Pinky on your computer is using this iPhone", and that the person can switch to other apps while tasks on this iPhone wait until the computer is done. After its first frame it loads XCTest from the developer disk image and calls `_XCTestMain`, as in the probe. The app's runpath has the image's framework folders (`project.yml`, `LD_RUNPATH_SEARCH_PATHS`), which XCTest's own libraries need. When the computer ends the test it kills the app; launched again by the person, it is the ordinary app.
+
+**One phone, one remote accessibility client.** While it hosts WebDriverAgent the app posts the Darwin notification `<app>.computer.on` every 5 s. Whichever process runs the core (the packet tunnel, or the app in the lite build) passes it on with `PinkyComputer`, and the core counts the computer as holding the phone until 15 s after the last one (`ios/onphone/claims.go`, standalone's `Claims`, so the same rules as Android's companion):
+
+- A task started on the phone meanwhile is refused with the code `computer`: "Pinky on your computer is using this iPhone. Start the task when it is done, or once you choose Pause connection for this iPhone there." The app's main screen says the same and turns Start off.
+- A task running on the phone when the computer takes it stops, as on Android when a computer takes the phone.
+- Stop on the phone cannot reach the computer (`stoppable` false): the person stops the computer's task there.
+- The computer holds the phone for as long as WebDriverAgent runs, idle or not: desktop Pinky keeps the runner up while the phone rests (`internal/driver/ios/rest_wda.go`, since starting it again may ask for the passcode). Pause connection on the computer ends the test; the notifications stop and the phone is free 15 s later. Whether a running WebDriverAgent that is not in use really keeps the phone's `remoteAXService` from the core was not tried; refusing is the safe side until it is.
+
+**Installing it** (`internal/driver/ios/appinstall.go`). Each release carries the iPhone app kit, `pinky-iphone-<version>.tar.gz` (`ios/build.sh kit`, run by the release workflow): the Xcode project XcodeGen made, the Swift sources and the Go core built for phones, an empty pairing. Desktop Pinky cannot build the core itself (no Go toolchain for iOS on the person's Mac), so the kit brings it. `pinkyctl helper install` and Install the helper in Pinky's window, after building WebDriverAgent's runner as before:
+
+1. download the kit of this Pinky's version into `<data>/WebDriverAgent` once (`PINKY_IPHONE_KIT` names an archive or folder instead; a development build without it skips to the helper);
+2. build the scheme `Pinky` with the person's team, bundle id `pinky.<team id>` (lower case), with automatic signing, first with the profiles on the Mac, then with provisioning updates as for the helper; a team that cannot sign Network Extensions (a personal team) falls back to `PinkyLite`, `pinky.<team id>.lite`; both are ids the policy takes for Pinky's app;
+3. copy WebDriverAgent's `WebDriverAgentRunner.xctest` from the runner into the app's `PlugIns`, mark the app (`PinkyWebDriverAgentHost` in its Info.plist) and add the background mode `continuous`, sign the test bundle and its frameworks with the app's certificate and then the app again (`resignApp`);
+4. write an xctestrun from the runner's with the app as the test host and run `xcodebuild test-without-building` with it, which installs the app and starts WebDriverAgent in it; WebDriverAgent answering is success, as for the helper.
+
+Any step that fails says so in the install's output and the log and installs Pinky Helper as before; `--helper-only` skips the app. A helper already on a phone goes on working: Pinky picks the runner by `pickRunnerApp`, which prefers an app with the mark over a helper, then helpers as before, so with both installed it starts WebDriverAgent in Pinky's app. `ios/build.sh` builds the same from source with `PINKY_WDA=<WebDriverAgentRunner.xctest>` ([ios/README.md](../../ios/README.md)).
+
+**Agents on a computer and Pinky's screens.** WebDriverAgent starting in Pinky's app brings the app to the front, unlike the helper, whose screen is not Pinky's. Agents can only press Home or open another app on Pinky's screens (`policy.Evaluate`), which is what they do first anyway. Not checked on a phone whether the app stays in front after WebDriverAgent starts.
+
+Unit-tested: the claims (`claims_test.go`), the runner choice (`TestPickWDARunner`), the kit, the build's arguments, the mark, the copy and the xctestrun (`appinstall_test.go`). Both schemes built from a kit with automatic signing for a generic iOS device: `PinkyLite` with the maintainer's wildcard profile, `Pinky` refused by the wildcard profile for lacking Network Extensions, as expected without provisioning updates. Not yet run on a phone: whether `xcodebuild test-without-building` takes a host that is not an `.xctrunner`, and the whole install ([Needs the owner](#needs-the-owner)).
 
 ## Signing
 
@@ -122,7 +148,7 @@ What the research found. [P] marks a primary source: Apple, or the project's own
 - **Onboarding on the phone**: pairing on iOS 27 and mounting the developer disk image from the phone ([Setup on the phone](#setup-on-the-phone)), then the VPN, the model and its key, in the app's first screens. Today the pairing comes from a Mac (`rppair pair`) and the DDI from Xcode.
 - **Three languages**, as desktop Pinky: English, Simplified Chinese and Japanese, with the terms `cmd/pinky/locales` already uses (CLAUDE.md, "The app's languages").
 - **The Live Activity with a real task**, an approval among its steps ("Pinky waits for you"), Stop from the activity, and how the activity ends.
-- **Pinky's app as WebDriverAgent's host** in place of Pinky Helper ([Pinky Helper inside the app](#pinky-helper-inside-the-app)): the test mode, WebDriverAgent's xctest and framework in `PlugIns` signed with the app, and desktop Pinky installing Pinky's app where `internal/driver/ios/helperinstall.go` installs the helper now, under `pinky.<team id>` ids, which the policy already takes for Pinky's app. To decide: what the app shows while it hosts WebDriverAgent for the computer, and what happens when the person starts a task on the phone meanwhile (one remote accessibility client per phone, [Pitfalls](#pitfalls-on-a-real-phone)). While Pinky's app is in front, agents on the computer can only press Home or open another app (`policy.Evaluate`).
+- **Pinky's app as WebDriverAgent's host** in place of Pinky Helper ([Pinky Helper inside the app](#pinky-helper-inside-the-app)): the test mode, WebDriverAgent's xctest and framework in `PlugIns` signed with the app, and desktop Pinky installing Pinky's app where `internal/driver/ios/helperinstall.go` installs the helper now, under `pinky.<team id>` ids, which the policy already takes for Pinky's app. Built; what the app shows meanwhile and what a task started on the phone does are in [Hosting WebDriverAgent](#hosting-webdriveragent). While Pinky's app is in front, agents on the computer can only press Home or open another app (`policy.Evaluate`).
 - **The rename**: Pinky Helper becomes Pinky, the iPhone app, in desktop Pinky's screens and messages (three languages), both READMEs and the docs. Helpers already installed keep working, and `IsPinkyApp` keeps counting every `.xctrunner`.
 - **The follow-ups below**, most of all desktop Pinky letting go of the phone's accessibility service while idle, the VPN reconnecting, and a retry for a failed read; and the warning before the profile expires ([Signing](#signing)).
 - **With the owner**: a real model, an approval with Face ID, a handoff and Stop during a task on the phone ([Needs the owner](#needs-the-owner)).
@@ -156,13 +182,14 @@ What the research found. [P] marks a primary source: Apple, or the project's own
 - A real model on the phone (the run used the fake model).
 - An approval, a handoff or Stop during a task on the phone: the calculator task needed none. The core's side of an approval is tested on a Mac with a fake phone (`TestApprovalInPinkysApp`); Allow behind Face ID, Stop on the Live Activity and how the activity ends were not tried on the phone.
 - Memory on other screens. The peak, 28 MB, came from reading the home screen, the biggest tree in the run; apps with bigger trees (long lists, web pages) were not tried.
-- Pinky's own app as WebDriverAgent's host (only the probe app was tried), and any host on iOS 17.4–26.
+- Pinky's own app as WebDriverAgent's host on a phone (only the probe app was tried; see [Hosting WebDriverAgent](#hosting-webdriveragent)), and any host on iOS 17.4–26.
 
 ## Needs the owner
 
 - Unlocking the phone and answering the first-launch prompts (notifications, Local Network, adding the VPN configuration) for each new build or bundle id.
 - A real-model run: the owner types the key into Pinky's Settings on the phone.
 - A phone on iOS 17.4–26 to try the helper inside the app (M3).
+- Installing Pinky's app as WebDriverAgent's host on the iPhone 13 mini (`PINKY_IPHONE_KIT=<kit> pinkyctl helper install`, with the phone unlocked; it chooses the helper in Settings › Phones on iOS 27), then a task from the computer, the app's hosting screen, and a task started on the phone meanwhile, which should be refused.
 - Pause connection for the iPhone in desktop Pinky before a task on the phone, until desktop Pinky lets go of the phone's accessibility service by itself (Follow-ups).
 
 ## Cleanup list for the owner

@@ -18,12 +18,15 @@ import (
 	"github.com/danielpaulus/go-ios/ios/testmanagerd"
 )
 
-// The WebDriverAgent runner is a UI test bundle inside an app whose bundle
-// id ends in ".xctrunner" (Xcode names it after the test target:
-// <prefix>.WebDriverAgentRunner.xctrunner). The person builds and installs
-// it once with their own signing team (see docs/notes/ios.md); Pinky finds
-// it on the phone and starts its test through testmanagerd, the way Xcode's
-// "Test" does, every time it opens the phone.
+// The WebDriverAgent runner is a UI test bundle inside an app: Pinky's
+// iPhone app, which desktop Pinky builds with the bundle in its PlugIns
+// (wdaHostKey), or a runner app whose bundle id ends in ".xctrunner"
+// (Xcode names it after the test target:
+// <prefix>.WebDriverAgentRunner.xctrunner), Pinky Helper among them. The
+// person installs it once with their own signing team (see
+// docs/notes/ios.md); Pinky finds it on the phone and starts its test
+// through testmanagerd, the way Xcode's "Test" does, every time it opens
+// the phone.
 
 // wdaTestBundle is the runner's test bundle.
 const wdaTestBundle = "WebDriverAgentRunner.xctest"
@@ -85,28 +88,63 @@ func findRunnerApp(e goios.DeviceEntry) (wdaRunner, error) {
 	return pickRunnerApp(apps), nil
 }
 
-// pickWDARunner chooses the runner among the installed apps: a test runner
-// named after WebDriverAgent. Pinky's own build wins over others.
+// pickWDARunner chooses the runner among the installed apps: Pinky's
+// iPhone app hosting WebDriverAgent, or a test runner named after
+// WebDriverAgent. Pinky's own build wins over others.
 func pickWDARunner(apps []installationproxy.AppInfo) string { return pickRunnerApp(apps).BundleID }
 
+// wdaHostKey marks Pinky's iPhone app built with WebDriverAgent's test
+// bundle in its PlugIns (ios/build.sh, PINKY_WDA): the app hosts the test
+// as the runner would (docs/notes/iphone-app.md, "Hosting WebDriverAgent").
+const wdaHostKey = "PinkyWebDriverAgentHost"
+
+// wdaHost reports whether an installed app is Pinky's app hosting
+// WebDriverAgent.
+func wdaHost(a installationproxy.AppInfo) bool {
+	switch v := a[wdaHostKey].(type) {
+	case bool:
+		return v
+	case uint64:
+		return v != 0
+	case int64:
+		return v != 0
+	}
+	return false
+}
+
+// pickRunnerApp chooses as pickWDARunner does: Pinky's app hosting
+// WebDriverAgent first, then Pinky Helper, then another runner. A phone
+// keeps the helper it had when Pinky's app comes, and Pinky uses the app.
 func pickRunnerApp(apps []installationproxy.AppInfo) wdaRunner {
 	var best wdaRunner
+	rank := 0
 	for _, a := range apps {
 		id, _ := a["CFBundleIdentifier"].(string)
-		if !strings.HasSuffix(id, ".xctrunner") {
+		r := 0
+		switch {
+		case wdaHost(a):
+			r = 3
+		case !strings.HasSuffix(id, ".xctrunner"):
 			continue
-		}
-		name, _ := a["CFBundleName"].(string)
-		exe, _ := a["CFBundleExecutable"].(string)
-		if !strings.Contains(strings.ToLower(id+" "+name+" "+exe), "webdriveragentrunner") {
-			continue
-		}
-		if best.BundleID == "" || strings.Contains(strings.ToLower(id), "pinky") {
-			best = wdaRunner{BundleID: id}
-			best.Path, _ = a["Path"].(string)
-			if ent, ok := a["Entitlements"].(map[string]any); ok {
-				best.AppID, _ = ent["application-identifier"].(string)
+		default:
+			name, _ := a["CFBundleName"].(string)
+			exe, _ := a["CFBundleExecutable"].(string)
+			if !strings.Contains(strings.ToLower(id+" "+name+" "+exe), "webdriveragentrunner") {
+				continue
 			}
+			r = 1
+			if strings.Contains(strings.ToLower(id), "pinky") {
+				r = 2
+			}
+		}
+		if r < rank || r == rank && r != 2 {
+			continue
+		}
+		rank = r
+		best = wdaRunner{BundleID: id}
+		best.Path, _ = a["Path"].(string)
+		if ent, ok := a["Entitlements"].(map[string]any); ok {
+			best.AppID, _ = ent["application-identifier"].(string)
 		}
 	}
 	return best

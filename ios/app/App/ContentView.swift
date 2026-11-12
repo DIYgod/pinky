@@ -51,6 +51,12 @@ struct ContentView: View {
                         .disabled(m.vpn == .connecting)
                 }
             }
+        } else if m.state?.computer != nil {
+            Section {
+                Label("Pinky on your computer is using this iPhone", systemImage: "desktopcomputer")
+                Text("Tasks on this iPhone wait until the computer is done with it, or until you choose Pause connection for this iPhone there.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
         } else if let st = m.state, !st.device.ready {
             Section {
                 Label(L.reason(m.reason), systemImage: "iphone.slash")
@@ -74,7 +80,8 @@ struct ContentView: View {
             } label: {
                 Label("Start", systemImage: "play.fill")
             }
-            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || m.state?.device.ready != true)
+            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || m.state?.device.ready != true
+                || m.state?.computer != nil)
         } header: {
             Text("New task")
         } footer: {

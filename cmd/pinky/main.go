@@ -24,12 +24,14 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/driver/ios"
 )
 
 // version is set at build time with -ldflags "-X main.version=...".
 var version = "0.0.0-dev"
 
 func main() {
+	ios.PinkyVersion = version // the iPhone app kit of this release
 	cmd := "app"
 	args := os.Args[1:]
 	if len(args) > 0 && (!strings.HasPrefix(args[0], "-") || isCommandFlag(args[0])) {

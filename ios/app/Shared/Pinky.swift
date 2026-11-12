@@ -21,6 +21,9 @@ enum Pinky {
     /// Pinky's app came to the front, or left it.
     static var uiOnNote: String { app + ".ui.on" }
     static var uiOffNote: String { app + ".ui.off" }
+    /// The app hosts WebDriverAgent for Pinky on a computer (TestHost),
+    /// said every few seconds while it does.
+    static var computerOnNote: String { app + ".computer.on" }
 }
 
 /// Darwin notifications: instant, payload-free signals between the app and
