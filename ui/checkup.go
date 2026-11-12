@@ -417,6 +417,11 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		case "":
 			if pass {
 				w.text, w.detail = locales.CheckCompanionPass(), false
+				if a.comp.state[d.Info.ID] == driver.CompanionManualOn {
+					// On a phone where only the person can turn it on,
+					// what they turned on stays on (issue #94).
+					w.text = locales.CheckCompanionManualOn()
+				}
 			} else {
 				w.text = locales.CheckCompanionNone()
 			}

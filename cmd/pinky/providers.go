@@ -56,7 +56,7 @@ func newSimProvider(log *slog.Logger) (driver.Provider, error) {
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 	var noADB sync.Once
-	var netFile, idFile string
+	var netFile, idFile, manualFile string
 	if dirs, err := api.DefaultDirs(); err == nil {
 		// The phones Pinky reaches over the network without Wireless
 		// debugging: moved to Wi-Fi, or away from home through Tailscale.
@@ -64,6 +64,10 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 		// The marks Pinky left on its phones, to tell them over the
 		// network from a device that claims their names.
 		idFile = filepath.Join(dirs.Config, "phone-identities.json")
+		// The phones that ignore Pinky's change to their accessibility
+		// settings (vivo's OriginOS 6), where Pinky leaves on the service
+		// of Pinky for Android that the person turned on.
+		manualFile = filepath.Join(dirs.Config, "companion-manual-phones.json")
 	}
 	// adb's own discovery stops seeing the network after the computer's
 	// network changes; the driver then reconnects the phones paired over
@@ -107,6 +111,8 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 		// server running.
 		OtherServers: client.OtherServers,
 		NetworkFile:  netFile,
+		// Known before the phone's first task, after a restart too.
+		CompanionManualFile: manualFile,
 		// A phone reached over the network must carry the mark Pinky left
 		// on it, so that a device on the network cannot pose as it.
 		VerifyWiFi:   true,

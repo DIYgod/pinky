@@ -166,7 +166,8 @@ func (a *app) forgetRefused(id string) {
 // setCompanionState notes what CompanionState answered for a phone.
 func (a *app) setCompanionState(id string, cs driver.CompanionState) {
 	a.comp.state[id], a.comp.checked[id] = cs, time.Now()
-	if cs == driver.CompanionOn || cs == driver.CompanionOff || cs == driver.CompanionReady || cs == driver.CompanionManual {
+	switch cs {
+	case driver.CompanionOn, driver.CompanionOff, driver.CompanionReady, driver.CompanionManual, driver.CompanionManualOn:
 		a.forgetRefused(id) // installed by hand, or the phone allows installs over USB now
 	}
 }
@@ -464,6 +465,9 @@ func companionLine(cs driver.CompanionState) string {
 		return locales.CompanionLineOff()
 	case driver.CompanionManual:
 		return locales.CompanionLineManual()
+	case driver.CompanionManualOn:
+		// The person turned it on, and Pinky leaves it on (issue #94).
+		return locales.CompanionLineManualOn()
 	case driver.CompanionMissing:
 		return locales.CompanionLineMissing()
 	case driver.CompanionOutdated:

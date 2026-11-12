@@ -66,6 +66,11 @@ type Config struct {
 	// network, with their addresses (network.go); "" keeps them in memory
 	// only.
 	NetworkFile string
+	// CompanionManualFile keeps the phones that ignore Pinky's change to
+	// their accessibility settings (vivo's OriginOS 6), on which a service
+	// the person turned on stays on (manual.go); "" keeps them in memory
+	// only.
+	CompanionManualFile string
 
 	// VerifyWiFi has the driver check that a phone it reaches over the
 	// network is the phone it set up, and refuse one that is not
@@ -164,6 +169,9 @@ type Provider struct {
 	// debugging, and link reconnects them (network.go).
 	net  *netStore
 	link *netLink
+	// manual keeps the phones on which only the person can turn Pinky for
+	// Android's service on (manual.go).
+	manual *manualStore
 	// ids checks the phones reached over the network (identity.go); nil
 	// without Config.VerifyWiFi.
 	ids *identity
@@ -196,6 +204,7 @@ func NewProvider(cfg Config) *Provider {
 	}
 	p.net = &netStore{path: cfg.NetworkFile, logf: cfg.logf}
 	p.link = newNetLink(p)
+	p.manual = &manualStore{path: cfg.CompanionManualFile, logf: cfg.logf}
 	if cfg.VerifyWiFi {
 		p.ids = newIdentity(p)
 	}
@@ -660,6 +669,7 @@ func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
 	}
 	d := newDevice(cfg, info, bestProps)
 	d.phoneID = id
+	d.useManuals(p.manual)
 	return d, nil
 }
 
