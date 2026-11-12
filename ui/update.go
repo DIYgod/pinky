@@ -751,7 +751,7 @@ func (a *app) updateDialogs(c *mg.Context) {
 	if s.notesOpen && s.rel != nil {
 		r := s.rel
 		sheet(c.Key("release-notes"), &s.notesOpen, func() {
-			a.notesDialog(c, "Pinky "+r.Version, r.Date, r.NotesIn(i18n.Locale()), func() {
+			a.notesDialog(c, "Pinky "+r.Version, releaseDay(r.Version, r.Date), r.NotesIn(i18n.Locale()), func() {
 				if s.phase == updIdle || s.phase == updFailed {
 					if button(c, locales.UpdateNowButton(), btnOpt{kind: btnPrimary}).Clicked() {
 						s.notesOpen = false
@@ -792,13 +792,38 @@ func (a *app) updateDialogs(c *mg.Context) {
 	}
 }
 
+// releaseDay is the day a release came out as its version says it,
+// YEAR.MDD.N, the day in Asia/Shanghai (docs/RELEASING.md): the day the
+// changelog's heading gives it, which What's new shows. It is that day's
+// midnight in UTC, as the changelog's dates are, so it reads the same by
+// every clock. The feed's time does not: by a clock far enough west of
+// Shanghai's, a release made early in the Shanghai day came out the day
+// before. A version that says no day falls back to the feed's time by the
+// local clock.
+func releaseDay(version string, date time.Time) time.Time {
+	if v, ok := update.Parse(version); ok && len(v) == 3 && v[0] >= 2000 {
+		y, m, d := v[0], time.Month(v[1]/100), v[1]%100
+		day := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+		if ty, tm, td := day.Date(); ty == y && tm == m && td == d {
+			return day
+		}
+	}
+	if date.IsZero() {
+		return date
+	}
+	return date.Local()
+}
+
+// notesDialog shows release notes: a title, the day (none when date is
+// zero), which it writes as the day date falls on in its own location
+// (releaseDay), the Markdown, and Close with extra's buttons beside it.
 func (a *app) notesDialog(c *mg.Context, title string, date time.Time, md string, extra func(), done func()) {
 	p := pal(c)
 	mg.Column(c).Width(520).MaxWidth(640).Gap(sp4).Children(func() {
 		mg.Column(c).Gap(2).Children(func() {
 			mg.Text(c, title).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
 			if !date.IsZero() {
-				mg.Text(c, locales.DayOtherYear(date.Local())).FontSize(fsSmall).TextColor(p.ink2)
+				mg.Text(c, locales.DayOtherYear(date)).FontSize(fsSmall).TextColor(p.ink2)
 			}
 		})
 		mg.Scroll(c).MaxHeight(420).Children(func() { markdown.View(c, md, nil) })
