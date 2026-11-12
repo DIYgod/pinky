@@ -149,11 +149,12 @@ type CompanionInstall struct {
 // the bundled APK with another; outdated when the installed versionCode is
 // lower than the bundled APK's, or it is signed with another key; on when
 // its accessibility service is on now (an agent works, or the person
-// turned it on); manual when it is off and the phone did not keep the
-// driver's last change to its accessibility settings, so only the person
-// can turn it on; off when it is off and did not come on the last time
-// the driver tried; ready otherwise: Pinky turns it on while an agent
-// works.
+// turned it on), manual_on instead on a phone where only the person can
+// turn it on, which then stays on until they turn it off; manual when it
+// is off and the phone did not keep the driver's last change to its
+// accessibility settings, so only the person can turn it on; off when it
+// is off and did not come on the last time the driver tried; ready
+// otherwise: Pinky turns it on while an agent works.
 func (d *Device) CompanionState(ctx context.Context) (driver.CompanionState, error) {
 	c := d.newCompanion()
 	defer c.Close()
@@ -178,8 +179,13 @@ func (d *Device) CompanionState(ctx context.Context) (driver.CompanionState, err
 			}
 		}
 	}
+	manual := d.companionManualPhone()
+	on := driver.CompanionOn
+	if manual {
+		on = driver.CompanionManualOn
+	}
 	if d.companionInUse() {
-		return driver.CompanionOn, nil
+		return on, nil
 	}
 	listed, err := c.Enabled(ctx)
 	if err != nil {
@@ -189,7 +195,13 @@ func (d *Device) CompanionState(ctx context.Context) (driver.CompanionState, err
 		pctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
 		if _, err := c.Ping(pctx); err == nil {
-			return driver.CompanionOn, nil
+			if manual {
+				// The person just turned it on, maybe with no task in
+				// sight: keep the app's backstop from turning it off a
+				// minute after the last computer left.
+				d.keepOn(pctx, c)
+			}
+			return on, nil
 		}
 		if ctx.Err() != nil {
 			return "", ctx.Err()

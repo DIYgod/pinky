@@ -22,6 +22,10 @@ type Device struct {
 	// phoneID is the id the provider lists the phone by, when it differs
 	// from the adb serial in info.ID (a phone on Wi-Fi).
 	phoneID string
+	// manuals keeps, across Pinky's restarts, whether the phone ignores
+	// Pinky's change to its accessibility settings (companionLink.manual);
+	// nil keeps it in memory only.
+	manuals *manualStore
 	cfg     Config
 	client  *adb.Client
 	info    driver.Info

@@ -942,6 +942,12 @@ const (
 	// Only the person can turn it on, in the phone's accessibility
 	// settings. Clients that do not know it treat it as CompanionOff.
 	CompanionManual CompanionState = "manual"
+	// CompanionManualOn: installed and current, and its service is on on a
+	// phone where only the person can turn it on (CompanionManual): they
+	// did, and Pinky leaves it on after tasks, until they turn it off on
+	// the phone. The phone's apps, banking apps among them, can see it
+	// while it is on. Clients that do not know it treat it as CompanionOn.
+	CompanionManualOn CompanionState = "manual_on"
 )
 
 // CompanionInstaller installs or updates the phone's companion app from the

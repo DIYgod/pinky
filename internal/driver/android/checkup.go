@@ -88,6 +88,10 @@ func (d *Device) checkCompanion(ctx context.Context) driver.Check {
 	switch cs {
 	case driver.CompanionOn, driver.CompanionReady:
 		c.Status = driver.CheckPass
+	case driver.CompanionManualOn:
+		c.Status = driver.CheckPass
+		c.Detail += ": the person turned its service on on a phone that does not let Pinky turn it on or off over USB debugging, " +
+			"so it stays on until they turn it off on the phone; the phone's apps, banking apps among them, can see it while it is on"
 	case driver.CompanionOff:
 		c.Status, c.Fix = driver.CheckFail, driver.FixTurnOnCompanion
 		if f := d.companionFailure(); f != nil {

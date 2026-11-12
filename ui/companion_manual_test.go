@@ -98,3 +98,43 @@ func TestCompanionInstallOnAPhoneThatIgnoresTheChange(t *testing.T) {
 		t.Errorf("the card: %q", tt.Texts())
 	}
 }
+
+// TestCompanionManualOn: once the person turned the service on on such a
+// phone, the checkup and Settings › Phones say that it stays on until they
+// turn it off on the phone, and that the phone's apps can see it; the card
+// offers nothing.
+func TestCompanionManualOn(t *testing.T) {
+	ta := newTestApp(t, fakeapi.Companion)
+	ta.api.SetCompanion("pixel-9", driver.CompanionManualOn)
+	ta.api.SetCheckup("pixel-9", driver.Checkup{Family: "vivo", System: "OriginOS 6", Checks: []driver.Check{
+		{ID: driver.CheckADB, Status: driver.CheckPass, Detail: "adb server version 41"},
+		{ID: driver.CheckCompanion},
+	}})
+	ta.sync()
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "the companion state", func() bool { tt.Frame(); return ta.comp.state["pixel-9"] == driver.CompanionManualOn })
+	tt.Frame()
+	for _, unwanted := range []string{locales.CompanionManualTitle(), locales.CompanionTurnOn(), locales.CompanionNotNow()} {
+		if hasText(tt, unwanted) {
+			t.Errorf("the card shows %q: %q", unwanted, tt.Texts())
+		}
+	}
+
+	if err := tt.Click("More phone controls"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click("Checkup"); err != nil {
+		t.Fatal(err)
+	}
+	ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf("pixel-9"); return r != nil && r.have })
+	if !hasText(tt, locales.CheckCompanionManualOn()) || hasText(tt, locales.CheckCompanionPass()) {
+		t.Errorf("the checkup: %q", tt.Texts())
+	}
+
+	ta.page, ta.set.sec = pageSettings, secPhones
+	tt.Frame()
+	if !hasText(tt, locales.CompanionLineManualOn()) {
+		t.Errorf("Settings › Phones: %q", tt.Texts())
+	}
+}
