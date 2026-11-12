@@ -1534,6 +1534,18 @@
   "@checkBackgroundUnlocked": {
     "description": "The checkup, working in the background: works on Android 11 and 12, only while the phone is unlocked."
   },
+  "checkCompanionManual": "Installed, but this phone doesn't let Pinky turn on its accessibility service over USB debugging. Turn on Pinky in the phone's accessibility settings by hand before an agent works on the phone; it goes off again after the task.",
+  "@checkCompanionManual": {
+    "description": "The checkup, Pinky for Android, on a phone that took Pinky's change to its accessibility settings without an error and kept nothing of it (vivo's OriginOS 6 does): only the person can turn the app's service on, in the phone's settings, and it goes off again when the task ends. A note follows that says where the switch is. Pinky is the app's name on the phone."
+  },
+  "checkCompanionManualOther": "In the phone's Settings, open Accessibility (search Settings for it if you can't find it), choose Pinky among the downloaded or installed apps, and turn it on.",
+  "@checkCompanionManualOther": {
+    "description": "The checkup and the Pinky for Android card, on a phone that does not let Pinky turn the app's service on: where to turn it on by hand. Accessibility is Android's own name for the settings page: use Android's own name for it in each language. Pinky is the app's name on the phone."
+  },
+  "checkCompanionManualVivo": "On vivo phones, Accessibility is usually in Settings, in the section for shortcuts and accessibility; search Settings for it if you can't find it. Choose Pinky there and turn it on.",
+  "@checkCompanionManualVivo": {
+    "description": "The checkup and the Pinky for Android card, on a vivo phone that does not let Pinky turn the app's service on (OriginOS 6 ignores the change): where to turn it on by hand. The menu names of OriginOS 6 could not be confirmed, so the section is described rather than quoted; Accessibility is Android's own name for the settings page. Pinky is the app's name on the phone."
+  },
   "checkCompanionMissing": "Not installed. With it, Pinky reads the screen in about 70 ms instead of 2 s, and types any language without the clipboard.",
   "@checkCompanionMissing": {
     "description": "The checkup, Pinky for Android: not installed; an Install button follows."
@@ -2100,6 +2112,10 @@
   "@companionErrRestrictedXiaomi": {
     "description": "The Pinky for Android card and the checkup, on a Xiaomi phone: the error when the phone blocked installs over USB (the switch is off, or nobody tapped Install in time). Install via USB and Install are Xiaomi's names: use those of its Simplified Chinese settings. Some Xiaomi phones cannot turn the switch on without a SIM card; the links companionShowAPK and companionByHandHow follow, for installing the APK by hand."
   },
+  "companionErrSettingIgnored": "The phone accepted the change but didn't keep it: it doesn't let Pinky turn on the app's accessibility service over USB debugging. Turn on Pinky in the phone's accessibility settings by hand.",
+  "@companionErrSettingIgnored": {
+    "description": "The Pinky for Android card and the checkup: Pinky added the app's service to the phone's accessibility settings, the phone took the change without an error, and reading the setting back showed it had not kept it (vivo's OriginOS 6 does this). Pinky is the app's name on the phone."
+  },
   "companionErrSettings": "The phone refuses to let the computer turn on the app's accessibility service: {detail}",
   "@companionErrSettings": {
     "description": "The Pinky for Android card and the checkup: turning on the app's service failed because the phone refuses settings changes from the computer, on a phone whose maker Pinky does not know.",
@@ -2170,6 +2186,10 @@
   "@companionInstallingTitle": {
     "description": "The Pinky for Android card's title while Pinky installs or updates the app."
   },
+  "companionLineManual": "Turn on Pinky for Android on the phone by hand",
+  "@companionLineManual": {
+    "description": "Settings › Phones: a phone's line about Pinky for Android when the phone does not let Pinky turn the app's service on, so only the person can, on the phone."
+  },
   "companionLineMissing": "Pinky for Android is not installed",
   "@companionLineMissing": {
     "description": "Settings › Phones: a phone's line about Pinky for Android when the app is not on the phone."
@@ -2197,6 +2217,14 @@
   "companionLineReady": "Pinky for Android turns on only while an agent works",
   "@companionLineReady": {
     "description": "Settings › Phones: a phone's line about Pinky for Android, Pinky's app for the phone, when it is installed and ready: Pinky turns its accessibility service on only while an agent works on the phone, so that the phone's apps (banking apps check for such services) see it only then."
+  },
+  "companionManualBody": "This phone doesn't let Pinky turn on the app's accessibility service over USB debugging, so agents control it the slower way. To use the app, turn on Pinky in the phone's accessibility settings by hand before an agent works on the phone; it goes off again after the task.",
+  "@companionManualBody": {
+    "description": "The Pinky for Android card, on a phone that took Pinky's change to its accessibility settings without an error and kept nothing of it (vivo's OriginOS 6 does): what that means and what to do. The service goes off again when the task ends. A note follows that says where the switch is. Pinky is the app's name on the phone."
+  },
+  "companionManualTitle": "Turn on Pinky for Android on the phone",
+  "@companionManualTitle": {
+    "description": "The title of the Pinky for Android card on a phone that does not let Pinky turn the app's service on: only the person can, in the phone's settings."
   },
   "companionNotNow": "Not now",
   "@companionNotNow": {

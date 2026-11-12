@@ -344,6 +344,9 @@ func TestCompanionErrors(t *testing.T) {
 		{fmt.Errorf("%w (and restoring the setting failed: x)", noAnswer), "xiaomi", false, locales.CompanionErrNoAnswer(noAnswer.Detail)},
 		{&driver.CompanionStartError{Reason: driver.CompanionStartUIAutomation, Detail: "x"}, "", false, locales.CompanionErrUIAutomation()},
 		{&driver.CompanionStartError{Reason: driver.CompanionStartNotUnlocked, Detail: "x"}, "", false, locales.CompanionErrNotUnlocked()},
+		// Issue #94: vivo's OriginOS 6 takes the change and keeps nothing.
+		{&driver.CompanionStartError{Reason: driver.CompanionStartSettingIgnored, Detail: "x"}, "vivo", false, locales.CompanionErrSettingIgnored()},
+		{fmt.Errorf("%w (and restoring the setting failed: x)", &driver.CompanionStartError{Reason: driver.CompanionStartSettingIgnored}), "", false, locales.CompanionErrSettingIgnored()},
 		{restricted, "xiaomi", false, locales.CompanionErrRestrictedXiaomi()},
 		{restricted, "", false, locales.CompanionErrRestricted()},
 		{restricted, "vivo", false, locales.CompanionErrRestricted()},

@@ -32,6 +32,13 @@ type fakePhone struct {
 	// rewrite simulates Android persisting the list again in its own form
 	// while the service is on.
 	rewrite func(string) string
+	// ignoreWrites takes `settings put` and `settings delete` without an
+	// error and changes nothing, as vivo's OriginOS 6 does with
+	// enabled_accessibility_services (issue #94).
+	ignoreWrites bool
+	// deaf closes every connection at once, even while Pinky's service is
+	// listed: a service that never starts.
+	deaf bool
 	// dropAfter closes a connection after that many requests on it.
 	dropAfter int
 	setText   func(req map[string]any) (any, *Error)
@@ -75,7 +82,10 @@ func (p *fakePhone) serve() {
 		if err != nil {
 			return
 		}
-		if !p.on() {
+		p.mu.Lock()
+		deaf := p.deaf
+		p.mu.Unlock()
+		if !p.on() || deaf {
 			c.Close()
 			continue
 		}
@@ -192,12 +202,18 @@ func (p *fakePhone) Shell(_ context.Context, cmd string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if p.ignoreWrites {
+			return "", nil
+		}
 		if p.rewrite != nil {
 			v = p.rewrite(v)
 		}
 		p.settings[f[3]] = v
 		return "", nil
 	case len(f) == 4 && f[0] == "settings" && f[1] == "delete" && f[2] == "secure":
+		if p.ignoreWrites {
+			return "", nil
+		}
 		delete(p.settings, f[3])
 		return "Deleted 1 rows\n", nil
 	case len(f) == 3 && f[0] == "pm" && f[1] == "path":

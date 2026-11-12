@@ -435,8 +435,15 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 			if a.comp.state[d.Info.ID] == driver.CompanionPublicKey {
 				w.text = locales.CheckCompanionPublicKey()
 			}
+		case driver.FixTurnOnCompanionByHand:
+			// The phone ignores Pinky's change to its accessibility
+			// settings (vivo's OriginOS 6): the text says so and the note
+			// says where the switch is. An install's error would only say
+			// the same again, so it does not replace the note.
+			w.text, w.detail = locales.CheckCompanionManual(), false
+			w.note = companionManualWhere(b.id)
 		}
-		if msg := a.comp.err[d.Info.ID]; msg != "" && !pass {
+		if msg := a.comp.err[d.Info.ID]; msg != "" && !pass && ck.Fix != driver.FixTurnOnCompanionByHand {
 			w.note = msg
 		}
 	case driver.CheckInput:

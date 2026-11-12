@@ -68,7 +68,14 @@ type companionLink struct {
 	reason  string    // why the companion is not used, logged once
 	// failed is why the service did not come on the last time the driver
 	// tried, for CompanionState; nil once it came on.
-	failed  error
+	failed error
+	// manual: the phone took the driver's last change to
+	// enabled_accessibility_services without an error and did not keep it
+	// (vivo's OriginOS 6, issue #94), so only the person can turn the
+	// service on, in the phone's accessibility settings (CompanionManual).
+	// It stays set when the service comes on without a change (the person
+	// turned it on), and goes when a change of the driver's is kept.
+	manual  bool
 	idle    *time.Timer
 	lastUse atomic.Int64 // Unix nanoseconds of the last driver call
 	sub     *companion.Subscription
@@ -172,10 +179,19 @@ func (d *Device) companionOnLocked(ctx context.Context) error {
 		if ctx.Err() == nil {
 			k.failed = err
 		}
+		if settingIgnored(err) {
+			if !k.manual {
+				d.cfg.logf("android: %s: the phone did not keep Pinky's change to its accessibility settings; only the person can turn the companion's service on", d.info.ID)
+			}
+			k.manual = true
+		}
 		if se := (*driver.CompanionStartError)(nil); errors.As(err, &se) {
 			return err // it says so, with what the phone showed
 		}
 		return fmt.Errorf("its service did not start: %w", err)
+	}
+	if k.client.EnabledForTask() {
+		k.manual = false // the phone kept the driver's change this time
 	}
 	info, err := k.client.Ping(ctx)
 	if err == nil && info.Protocol != companion.ProtocolVersion {
@@ -581,6 +597,28 @@ func (d *Device) companionFailure() error {
 	defer k.mu.Unlock()
 	return k.failed
 }
+
+// companionManual reports whether only the person can turn the service on:
+// the phone did not keep the driver's last change to its accessibility
+// settings, and nothing else kept the service off since.
+func (d *Device) companionManual() bool {
+	k := &d.comp
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return k.manual && (k.failed == nil || settingIgnored(k.failed))
+}
+
+// settingIgnored reports whether err says the phone took the change to
+// enabled_accessibility_services and did not keep it.
+func settingIgnored(err error) bool {
+	var se *driver.CompanionStartError
+	return errors.As(err, &se) && se.Reason == driver.CompanionStartSettingIgnored
+}
+
+// companionManualWords say, for an agent, why the service is off on a
+// phone where only the person can turn it on.
+const companionManualWords = "this phone does not let Pinky turn on Pinky for Android's accessibility service over USB debugging; " +
+	"the person can turn on Pinky in the phone's accessibility settings by hand"
 
 var _ driver.WorkWatcher = (*Device)(nil)
 

@@ -13,6 +13,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
+	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/driver/android/mdns"
 )
 
@@ -92,6 +93,10 @@ func (d *Device) checkCompanion(ctx context.Context) driver.Check {
 		if f := d.companionFailure(); f != nil {
 			c.Detail += ": " + f.Error()
 		}
+	case driver.CompanionManual:
+		// Turn on would write the setting again, which this phone ignores.
+		c.Status, c.Fix = driver.CheckFail, driver.FixTurnOnCompanionByHand
+		c.Detail += ": " + companion.IgnoredDetail
 	case driver.CompanionMissing:
 		c.Status, c.Fix = driver.CheckFail, driver.FixInstallCompanion
 	case driver.CompanionOutdated, driver.CompanionPublicKey:

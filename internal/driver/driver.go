@@ -928,6 +928,13 @@ const (
 	// Clients treat it as CompanionOutdated and say why.
 	CompanionPublicKey CompanionState = "public_key"
 	CompanionNoAPK     CompanionState = "no_apk" // Pinky has no APK to install (a build without it)
+	// CompanionManual: installed and current, its service is off, and the
+	// phone does not let Pinky turn it on over USB debugging: it took
+	// Pinky's change to its accessibility settings without an error and
+	// kept nothing of it (CompanionStartSettingIgnored; vivo's OriginOS 6).
+	// Only the person can turn it on, in the phone's accessibility
+	// settings. Clients that do not know it treat it as CompanionOff.
+	CompanionManual CompanionState = "manual"
 )
 
 // CompanionInstaller installs or updates the phone's companion app from the
@@ -968,6 +975,12 @@ const (
 	// CompanionStartNotUnlocked: the phone has not been unlocked since it
 	// started, and Android starts the service only after that.
 	CompanionStartNotUnlocked = "not_unlocked"
+	// CompanionStartSettingIgnored: the phone took the change to
+	// enabled_accessibility_services without an error and kept nothing of
+	// it, so it does not let Pinky turn the service on over USB debugging
+	// (vivo's OriginOS 6); only the person can, in the phone's
+	// accessibility settings. CompanionState says CompanionManual then.
+	CompanionStartSettingIgnored = "setting_ignored"
 )
 
 // AppManager installs, updates, uninstalls and stops apps for agents
@@ -1545,6 +1558,11 @@ const (
 	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
 	FixSameNetwork      = "same_network"       // put the phone on the same Wi-Fi as this computer, one that lets devices reach each other
 	FixWiFiSetting      = "wifi_setting"       // turn on Use iPhones and iPads over Wi-Fi in Settings › Phones
+
+	// FixTurnOnCompanionByHand: turn Pinky for Android's accessibility
+	// service on in the phone's accessibility settings, by hand: the phone
+	// does not let Pinky do it over USB debugging (CompanionManual).
+	FixTurnOnCompanionByHand = "turn_on_companion_by_hand"
 )
 
 // Setup steps of Android phones, in Info.Setup with the Setup constants:

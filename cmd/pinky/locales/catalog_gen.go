@@ -4343,6 +4343,74 @@ func (msgs Messages) CheckBackgroundUnlocked() string {
 	return Catalog.Format(msgs.locale, "checkBackgroundUnlocked", nil)
 }
 
+// CheckCompanionManual says "Installed, but this phone doesn't let Pinky turn on its accessibility service over USB debugging. Turn on Pinky in th…"
+// in the language the app shows.
+//
+// The checkup, Pinky for Android, on a phone that took Pinky's change to
+// its accessibility settings without an error and kept nothing of it
+// (vivo's OriginOS 6 does): only the person can turn the app's service on,
+// in the phone's settings, and it goes off again when the task ends. A note
+// follows that says where the switch is. Pinky is the app's name on the
+// phone.
+func CheckCompanionManual() string { return In(i18n.Locale()).CheckCompanionManual() }
+
+// CheckCompanionManual says "Installed, but this phone doesn't let Pinky turn on its accessibility service over USB debugging. Turn on Pinky in th…"
+// in the language of msgs.
+//
+// The checkup, Pinky for Android, on a phone that took Pinky's change to
+// its accessibility settings without an error and kept nothing of it
+// (vivo's OriginOS 6 does): only the person can turn the app's service on,
+// in the phone's settings, and it goes off again when the task ends. A note
+// follows that says where the switch is. Pinky is the app's name on the
+// phone.
+func (msgs Messages) CheckCompanionManual() string {
+	return Catalog.Format(msgs.locale, "checkCompanionManual", nil)
+}
+
+// CheckCompanionManualOther says "In the phone's Settings, open Accessibility (search Settings for it if you can't find it), choose Pinky among the dow…"
+// in the language the app shows.
+//
+// The checkup and the Pinky for Android card, on a phone that does not let
+// Pinky turn the app's service on: where to turn it on by hand.
+// Accessibility is Android's own name for the settings page: use Android's
+// own name for it in each language. Pinky is the app's name on the phone.
+func CheckCompanionManualOther() string { return In(i18n.Locale()).CheckCompanionManualOther() }
+
+// CheckCompanionManualOther says "In the phone's Settings, open Accessibility (search Settings for it if you can't find it), choose Pinky among the dow…"
+// in the language of msgs.
+//
+// The checkup and the Pinky for Android card, on a phone that does not let
+// Pinky turn the app's service on: where to turn it on by hand.
+// Accessibility is Android's own name for the settings page: use Android's
+// own name for it in each language. Pinky is the app's name on the phone.
+func (msgs Messages) CheckCompanionManualOther() string {
+	return Catalog.Format(msgs.locale, "checkCompanionManualOther", nil)
+}
+
+// CheckCompanionManualVivo says "On vivo phones, Accessibility is usually in Settings, in the section for shortcuts and accessibility; search Settings…"
+// in the language the app shows.
+//
+// The checkup and the Pinky for Android card, on a vivo phone that does not
+// let Pinky turn the app's service on (OriginOS 6 ignores the change):
+// where to turn it on by hand. The menu names of OriginOS 6 could not be
+// confirmed, so the section is described rather than quoted; Accessibility
+// is Android's own name for the settings page. Pinky is the app's name on
+// the phone.
+func CheckCompanionManualVivo() string { return In(i18n.Locale()).CheckCompanionManualVivo() }
+
+// CheckCompanionManualVivo says "On vivo phones, Accessibility is usually in Settings, in the section for shortcuts and accessibility; search Settings…"
+// in the language of msgs.
+//
+// The checkup and the Pinky for Android card, on a vivo phone that does not
+// let Pinky turn the app's service on (OriginOS 6 ignores the change):
+// where to turn it on by hand. The menu names of OriginOS 6 could not be
+// confirmed, so the section is described rather than quoted; Accessibility
+// is Android's own name for the settings page. Pinky is the app's name on
+// the phone.
+func (msgs Messages) CheckCompanionManualVivo() string {
+	return Catalog.Format(msgs.locale, "checkCompanionManualVivo", nil)
+}
+
 // CheckCompanionMissing says "Not installed. With it, Pinky reads the screen in about 70 ms instead of 2 s, and types any language without the clip…"
 // in the language the app shows.
 //
@@ -6247,6 +6315,26 @@ func (msgs Messages) CompanionErrRestrictedXiaomi() string {
 	return Catalog.Format(msgs.locale, "companionErrRestrictedXiaomi", nil)
 }
 
+// CompanionErrSettingIgnored says "The phone accepted the change but didn't keep it: it doesn't let Pinky turn on the app's accessibility service over U…"
+// in the language the app shows.
+//
+// The Pinky for Android card and the checkup: Pinky added the app's service
+// to the phone's accessibility settings, the phone took the change without
+// an error, and reading the setting back showed it had not kept it (vivo's
+// OriginOS 6 does this). Pinky is the app's name on the phone.
+func CompanionErrSettingIgnored() string { return In(i18n.Locale()).CompanionErrSettingIgnored() }
+
+// CompanionErrSettingIgnored says "The phone accepted the change but didn't keep it: it doesn't let Pinky turn on the app's accessibility service over U…"
+// in the language of msgs.
+//
+// The Pinky for Android card and the checkup: Pinky added the app's service
+// to the phone's accessibility settings, the phone took the change without
+// an error, and reading the setting back showed it had not kept it (vivo's
+// OriginOS 6 does this). Pinky is the app's name on the phone.
+func (msgs Messages) CompanionErrSettingIgnored() string {
+	return Catalog.Format(msgs.locale, "companionErrSettingIgnored", nil)
+}
+
 // CompanionErrSettings says "The phone refuses to let the computer turn on the app's accessibility service: {detail}"
 // in the language the app shows.
 //
@@ -6473,6 +6561,24 @@ func (msgs Messages) CompanionInstallingTitle() string {
 	return Catalog.Format(msgs.locale, "companionInstallingTitle", nil)
 }
 
+// CompanionLineManual says "Turn on Pinky for Android on the phone by hand"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky for Android when the
+// phone does not let Pinky turn the app's service on, so only the person
+// can, on the phone.
+func CompanionLineManual() string { return In(i18n.Locale()).CompanionLineManual() }
+
+// CompanionLineManual says "Turn on Pinky for Android on the phone by hand"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky for Android when the
+// phone does not let Pinky turn the app's service on, so only the person
+// can, on the phone.
+func (msgs Messages) CompanionLineManual() string {
+	return Catalog.Format(msgs.locale, "companionLineManual", nil)
+}
+
 // CompanionLineMissing says "Pinky for Android is not installed"
 // in the language the app shows.
 //
@@ -6591,6 +6697,46 @@ func CompanionLineReady() string { return In(i18n.Locale()).CompanionLineReady()
 // the phone's apps (banking apps check for such services) see it only then.
 func (msgs Messages) CompanionLineReady() string {
 	return Catalog.Format(msgs.locale, "companionLineReady", nil)
+}
+
+// CompanionManualBody says "This phone doesn't let Pinky turn on the app's accessibility service over USB debugging, so agents control it the slo…"
+// in the language the app shows.
+//
+// The Pinky for Android card, on a phone that took Pinky's change to its
+// accessibility settings without an error and kept nothing of it (vivo's
+// OriginOS 6 does): what that means and what to do. The service goes off
+// again when the task ends. A note follows that says where the switch is.
+// Pinky is the app's name on the phone.
+func CompanionManualBody() string { return In(i18n.Locale()).CompanionManualBody() }
+
+// CompanionManualBody says "This phone doesn't let Pinky turn on the app's accessibility service over USB debugging, so agents control it the slo…"
+// in the language of msgs.
+//
+// The Pinky for Android card, on a phone that took Pinky's change to its
+// accessibility settings without an error and kept nothing of it (vivo's
+// OriginOS 6 does): what that means and what to do. The service goes off
+// again when the task ends. A note follows that says where the switch is.
+// Pinky is the app's name on the phone.
+func (msgs Messages) CompanionManualBody() string {
+	return Catalog.Format(msgs.locale, "companionManualBody", nil)
+}
+
+// CompanionManualTitle says "Turn on Pinky for Android on the phone"
+// in the language the app shows.
+//
+// The title of the Pinky for Android card on a phone that does not let
+// Pinky turn the app's service on: only the person can, in the phone's
+// settings.
+func CompanionManualTitle() string { return In(i18n.Locale()).CompanionManualTitle() }
+
+// CompanionManualTitle says "Turn on Pinky for Android on the phone"
+// in the language of msgs.
+//
+// The title of the Pinky for Android card on a phone that does not let
+// Pinky turn the app's service on: only the person can, in the phone's
+// settings.
+func (msgs Messages) CompanionManualTitle() string {
+	return Catalog.Format(msgs.locale, "companionManualTitle", nil)
 }
 
 // CompanionNotNow says "Not now"

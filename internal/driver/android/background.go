@@ -421,6 +421,11 @@ func (b *Background) observeTree(ctx context.Context) (*screen.Screen, *companio
 	}
 	c := b.d.companionClientFor(ctx, forBackground)
 	if c == nil {
+		if b.d.companionManual() {
+			// The gateway passes this on to the agent, which can tell the
+			// person.
+			return nil, nil, fmt.Errorf("android: observing a virtual display needs the companion app, and %s: %w", companionManualWords, driver.ErrUnsupported)
+		}
 		return nil, nil, fmt.Errorf("android: observing a virtual display needs the companion app: %w", driver.ErrUnsupported)
 	}
 	t, err := c.Dump(ctx, companion.DumpOptions{Display: b.display})

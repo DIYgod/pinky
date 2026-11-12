@@ -105,6 +105,8 @@ func companionCheck(cs driver.CompanionState) driver.Check {
 		c.Status, c.Detail = driver.CheckPass, "the companion app is "+string(cs)
 	case driver.CompanionOff:
 		c.Status, c.Fix = driver.CheckFail, driver.FixTurnOnCompanion
+	case driver.CompanionManual:
+		c.Status, c.Fix = driver.CheckFail, driver.FixTurnOnCompanionByHand
 	case driver.CompanionMissing:
 		c.Status, c.Fix = driver.CheckFail, driver.FixInstallCompanion
 	case driver.CompanionOutdated, driver.CompanionPublicKey:
