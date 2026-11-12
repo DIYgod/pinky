@@ -33,8 +33,8 @@ func runDaemon(args []string) error {
 	verbose := fs.Bool("v", false, "log debug messages")
 	noUpdates := fs.Bool("no-update-check", false, "do not look for new versions of Pinky")
 	httpAddr := fs.String("http", "", `also serve MCP over Streamable HTTP at this address, such as "`+ui.DefaultRemoteAddr+`"; each request needs the agent token (`+"`pinky token`"+`)`)
-	mirror := fs.Bool("mirror", false, "also show the phones in a web browser at "+webmirror.URL()+"; the link with its key is printed")
-	mirrorControl := fs.Bool("mirror-control", false, "with --mirror, also let the browser use the phones; the control link is printed")
+	mirror := fs.Bool("mirror", false, "also show the phones in a web browser at "+webmirror.URL()+"; its secret link is printed to a terminal only")
+	mirrorControl := fs.Bool("mirror-control", false, "with --mirror, also let the browser use the phones; the control link is printed to a terminal only")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -91,19 +91,8 @@ func runDaemon(args []string) error {
 		if err := rg.Mirror.Set(true); err != nil {
 			return err
 		}
-		tok, err := rg.Mirror.Token()
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(os.Stderr, "Web mirror at %s#%s\n", webmirror.URL(), tok)
-		if *mirrorControl {
-			rg.Mirror.SetControl(true)
-			ctl, err := rg.Mirror.ControlToken()
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(os.Stderr, "Web mirror with control at %s#%s\n", webmirror.URL(), ctl)
-		}
+		rg.Mirror.SetControl(*mirrorControl)
+		printMirrorLinks(os.Stderr, rg.Mirror.Server)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -230,7 +219,7 @@ func startGateway(c gatewayConfig) (*runningGateway, error) {
 	srv := &api.Server{Gateway: g, MCP: m, Token: tok, Trusted: c.Fake, Version: version, Log: log}
 	log.Info("gateway ready", "socket", dirs.Socket(), "data", dataDir, "devices", len(g.Devices()), "fake", c.Fake, "pid", os.Getpid())
 	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, Remote: newRemoteAgents(m, tok, log), MCP: m,
-		Mirror: newWebMirror(dirs, g, log), ln: ln, srv: srv, log: log}, nil
+		Mirror: newWebMirror(g, log), ln: ln, srv: srv, log: log}, nil
 }
 
 // Serve answers agents and clients on the socket until ctx ends.

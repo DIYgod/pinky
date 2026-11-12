@@ -170,13 +170,15 @@ function store(k, v) { try { if (v === undefined) return localStorage.getItem(k)
 // never send to a server. It moves to this tab's session storage and out
 // of the address bar, so it stays out of the history and of a copied URL.
 function takeToken() {
-  const fromLink = decodeURIComponent(location.hash.slice(1));
+  let fromLink = "";
+  try { fromLink = decodeURIComponent(location.hash.slice(1)); } catch (e) {} // a mangled link: no key
+
   let saved = "";
   try {
     if (fromLink) sessionStorage.setItem("pinky-mirror-key", fromLink);
     saved = sessionStorage.getItem("pinky-mirror-key") || "";
   } catch (e) {}
-  if (fromLink) {
+  if (location.hash) {
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
   }
   return fromLink || saved;
@@ -219,7 +221,14 @@ function connect() {
   ws = new WebSocket(proto + "//" + location.host + "/ws");
   ws.binaryType = "arraybuffer";
   const sock = ws;
-  sock.onopen = () => sock.send(JSON.stringify({ token, device }));
+  sock.onopen = () => {
+    sock.send(JSON.stringify({ token, device }));
+    // The server cuts off a page it has not heard from in 90 s.
+    const ping = setInterval(() => {
+      if (sock.readyState === WebSocket.OPEN) sock.send('{"type":"ping"}');
+      else clearInterval(ping);
+    }, 20000);
+  };
   sock.onmessage = (ev) => {
     if (sock !== ws) return;
     if (typeof ev.data === "string") onText(JSON.parse(ev.data));

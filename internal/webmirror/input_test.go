@@ -3,6 +3,7 @@ package webmirror
 import (
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -42,9 +43,9 @@ func TestToPicture(t *testing.T) {
 // configuration, so touches have a picture size.
 func controlConn(t *testing.T, s *Server, st *fakeStream, dial func() *websocket.Conn) *websocket.Conn {
 	t.Helper()
-	tok, err := s.ControlToken()
-	if err != nil {
-		t.Fatal(err)
+	tok := s.ControlToken()
+	if tok == "" {
+		t.Fatal("no control token")
 	}
 	ws := dial()
 	websocket.JSON.Send(ws, hello{Token: tok})
@@ -126,9 +127,8 @@ func TestViewTokenCannotTouch(t *testing.T) {
 	st := &fakeStream{ch: make(chan driver.Packet, 8), keys: make(chan struct{}, 8)}
 	s, hs := newTestServer(t, fakeSource{st: st, in: in})
 	s.SetControl(true)
-	tok, _ := s.Token()
 	ws := dial(t, hs, hs.URL)
-	websocket.JSON.Send(ws, hello{Token: tok})
+	websocket.JSON.Send(ws, hello{Token: s.Token()})
 	if m := receive(t, ws); m.Type != "devices" || m.Control {
 		t.Fatalf("got %+v, want devices without control", m)
 	}
@@ -149,44 +149,53 @@ func TestViewTokenCannotTouch(t *testing.T) {
 func TestControlOff(t *testing.T) {
 	st := &fakeStream{ch: make(chan driver.Packet, 8), keys: make(chan struct{}, 8)}
 	s, hs := newTestServer(t, fakeSource{st: st})
-	tok, _ := s.ControlToken()
-	ws := dial(t, hs, hs.URL)
-	websocket.JSON.Send(ws, hello{Token: tok})
-	if m := receive(t, ws); m.Type != "error" || m.Error != "control_off" {
-		t.Fatalf("got %+v, want control_off", m)
-	}
 
-	// Turning control off cuts off the pages that use the phone.
+	// Turning control off cuts off the pages that use the phone, and
+	// their token no longer works.
 	s.SetControl(true)
-	ws = controlConn(t, s, st, func() *websocket.Conn { return dial(t, hs, hs.URL) })
-	if n := s.Controllers(); n != 1 {
-		t.Errorf("Controllers() = %d, want 1", n)
+	tok := s.ControlToken()
+	ws := controlConn(t, s, st, func() *websocket.Conn { return dial(t, hs, hs.URL) })
+	if w := s.Watchers(); len(w) != 1 || !w[0].Control {
+		t.Errorf("Watchers() = %+v, want one that can use the phone", w)
 	}
 	s.SetControl(false)
 	var b []byte
 	if err := websocket.Message.Receive(ws, &b); err == nil {
 		t.Fatal("a page kept control after control was turned off")
 	}
+	ws = dial(t, hs, hs.URL)
+	websocket.JSON.Send(ws, hello{Token: tok})
+	if m := receive(t, ws); m.Type != "error" || m.Error != "token" {
+		t.Fatalf("got %+v, want the old control token refused", m)
+	}
 }
 
-// Through Tailscale, control needs a person signed in to the tailnet,
-// which `tailscale serve` names in Tailscale-User-Login: a public Funnel
-// link or a tagged device has none.
-func TestControlThroughTailnetNeedsUser(t *testing.T) {
+// Through Tailscale, control needs the person who owns this computer,
+// whom `tailscale serve` names in Tailscale-User-Login (a public Funnel
+// link or a tagged device has none), whatever Host the request names.
+func TestControlThroughTailnetNeedsOwner(t *testing.T) {
 	st := &fakeStream{ch: make(chan driver.Packet, 8), keys: make(chan struct{}, 8)}
 	s, hs := newTestServer(t, fakeSource{st: st})
 	s.SetControl(true)
-	tok, _ := s.ControlToken()
 	for _, tc := range []struct {
-		user string
-		want string
-	}{{"", "error"}, {"someone@example.com", "devices"}} {
-		cfg, err := websocket.NewConfig("ws://mac.tail1234.ts.net:8443"+WebSocketPath, "https://mac.tail1234.ts.net:8443")
+		host    string
+		headers map[string]string
+		want    string
+	}{
+		{"mac.tail1234.ts.net:8443", nil, "error"},
+		{"mac.tail1234.ts.net:8443", map[string]string{"Tailscale-User-Login": "someone@example.com"}, "error"},
+		{"mac.tail1234.ts.net:8443", map[string]string{"Tailscale-User-Login": "Owner@example.com"}, "devices"},
+		// A Host of the client's choosing, through `tailscale serve`.
+		{"localhost:7466", map[string]string{"X-Forwarded-For": "100.101.2.2"}, "error"},
+		{"localhost:7466", map[string]string{"X-Forwarded-For": "100.101.2.2", "Tailscale-User-Login": "owner@example.com"}, "devices"},
+		{"localhost:7466", nil, "devices"},
+	} {
+		cfg, err := websocket.NewConfig("ws://"+tc.host+WebSocketPath, "http://"+tc.host)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if tc.user != "" {
-			cfg.Header.Set("Tailscale-User-Login", tc.user)
+		for k, v := range tc.headers {
+			cfg.Header.Set(k, v)
 		}
 		conn, err := net.Dial("tcp", strings.TrimPrefix(hs.URL, "http://"))
 		if err != nil {
@@ -197,10 +206,47 @@ func TestControlThroughTailnetNeedsUser(t *testing.T) {
 			t.Fatal(err)
 		}
 		ws.SetDeadline(time.Now().Add(5 * time.Second))
-		websocket.JSON.Send(ws, hello{Token: tok})
+		websocket.JSON.Send(ws, hello{Token: s.ControlToken()})
 		if m := receive(t, ws); m.Type != tc.want || (m.Type == "error" && m.Error != "tailnet_user") {
-			t.Errorf("user %q: got %+v, want %s", tc.user, m, tc.want)
+			t.Errorf("%s %v: got %+v, want %s", tc.host, tc.headers, m, tc.want)
 		}
 		ws.Close()
+	}
+}
+
+// While the gateway is busy, a page cannot pile up input: downs and keys
+// past maxQueue are dropped, and keys pass at keyRate after a burst.
+func TestInputLimits(t *testing.T) {
+	s := New(Options{})
+	ss := &session{s: s, device: "p1", w: 100, h: 200, keys: keyBurst, keysAt: time.Now(), done: make(chan struct{})}
+	ss.cond = sync.NewCond(&ss.mu) // no run: the gateway never takes the queue
+	for range 3 * maxQueue {
+		ss.touch(driver.TouchDown, 0.5, 0.5, 0)
+		ss.touch(driver.TouchMove, 0.6, 0.6, 0)
+		ss.touch(driver.TouchMove, 0.7, 0.7, 0)
+		ss.touch(driver.TouchUp, 0.7, 0.7, 0)
+	}
+	if n := len(ss.queue); n > maxQueue+3 {
+		t.Fatalf("queue of %d, want at most about %d", n, maxQueue)
+	}
+	if ss.down {
+		t.Fatal("a dropped down left the finger down")
+	}
+
+	ss = &session{s: s, device: "p1", w: 100, h: 200, done: make(chan struct{})}
+	ss.cond = sync.NewCond(&ss.mu)
+	now := time.Now()
+	ss.keys, ss.keysAt = keyBurst, now
+	n := 0
+	for range 20 {
+		if ss.takeKeyLocked(now) {
+			n++
+		}
+	}
+	if n != keyBurst {
+		t.Fatalf("%d keys at once, want %d", n, keyBurst)
+	}
+	if !ss.takeKeyLocked(now.Add(time.Second / keyRate)) {
+		t.Fatal("no key after waiting for one")
 	}
 }

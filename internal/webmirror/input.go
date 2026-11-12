@@ -3,6 +3,7 @@ package webmirror
 import (
 	"math"
 	"sync"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -21,6 +22,11 @@ import (
 // when the connection ends is lifted, or the phone would hold it (scrcpy's
 // injection keeps no state of its own). Only one connection at a time
 // holds a finger down on a phone; another's down waits for its up.
+//
+// A page cannot pile up input while the gateway is busy: the queue holds
+// at most maxQueue downs and keys (a down or a key past that is dropped,
+// its gesture with it), and keys pass at most keyBurst at once, keyRate a
+// second after that.
 
 // role is what a page's token lets it do.
 type role int
@@ -36,6 +42,13 @@ func (r role) String() string {
 	}
 	return "view"
 }
+
+// Input limits.
+const (
+	maxQueue = 32
+	keyBurst = 4
+	keyRate  = 4 // a second
+)
 
 // The keys the page may press.
 var pageKeys = map[string]driver.Key{"back": driver.KeyBack, "home": driver.KeyHome}
@@ -61,10 +74,14 @@ type session struct {
 	down   bool
 	last   screen.Point
 	done   chan struct{}
+
+	// keys is how many keys may pass now, keysAt when it was counted.
+	keys   float64
+	keysAt time.Time
 }
 
 func newSession(s *Server, device string) *session {
-	ss := &session{s: s, device: device, done: make(chan struct{})}
+	ss := &session{s: s, device: device, done: make(chan struct{}), keys: keyBurst, keysAt: time.Now()}
 	ss.cond = sync.NewCond(&ss.mu)
 	go ss.run()
 	return ss
@@ -90,7 +107,7 @@ func (ss *session) touch(a driver.TouchAction, x, y float64, turn int) {
 	p := toPicture(x, y, ss.w, ss.h, turn)
 	switch a {
 	case driver.TouchDown:
-		if ss.down || !ss.s.claimPress(ss.device, ss) {
+		if ss.down || len(ss.queue) >= maxQueue || !ss.s.claimPress(ss.device, ss) {
 			return
 		}
 		ss.down = true
@@ -119,9 +136,21 @@ func (ss *session) key(name string) {
 	}
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
-	if !ss.closed {
-		ss.pushLocked(inputEvent{key: k})
+	if ss.closed || len(ss.queue) >= maxQueue || !ss.takeKeyLocked(time.Now()) {
+		return
 	}
+	ss.pushLocked(inputEvent{key: k})
+}
+
+// takeKeyLocked lets one key pass at now, if the rate allows.
+func (ss *session) takeKeyLocked(now time.Time) bool {
+	ss.keys = min(keyBurst, ss.keys+now.Sub(ss.keysAt).Seconds()*keyRate)
+	ss.keysAt = now
+	if ss.keys < 1 {
+		return false
+	}
+	ss.keys--
+	return true
 }
 
 // pushLocked queues an event, merging a move into a move still queued.

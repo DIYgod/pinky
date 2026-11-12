@@ -1,13 +1,20 @@
 // Package webmirror shows a phone's live screen in a web browser, on this
-// computer or, through `tailscale serve`, on the person's other devices.
+// computer or, through `tailscale serve`, on the person's other devices,
+// and, while the person allows it, lets the browser use the phone
+// (input.go).
 //
-// It only shows: the page sends no input. It is off by default, the person
-// turns it on in Settings, and it listens on this computer only (Addr).
-// Other devices reach it through Tailscale, which the person points at it
-// with `tailscale serve`; Pinky never runs that itself. Every viewer needs
-// the mirror's own token, which can only watch, never the agent token:
-// the page's link carries it after the "#", which browsers do not send to
-// the server, and the page sends it as its first WebSocket message.
+// It is off by default, the person turns it on in Settings, and it
+// listens on this computer only (Addr). Other devices reach it through
+// Tailscale, which the person points at it with `tailscale serve`; Pinky
+// never runs that itself; Tailscale Funnel's public requests are refused.
+// Every page needs one of the mirror's own tokens, never the agent token:
+// one can only watch, the other can also use the phone and exists only
+// while the person allows control. Both live in memory only, so a new
+// start of Pinky makes new links and nothing on disk gives them away. The
+// page's link carries its token after the "#", which browsers do not send
+// to the server, and the page sends it as its first WebSocket message.
+// Through Tailscale, control also needs the person who owns this computer
+// on the tailnet.
 //
 // The phone's video goes to the browser as it comes from the phone,
 // without decoding or encoding it again: a WebSocket carries the decoder
@@ -23,18 +30,14 @@ import (
 	"crypto/subtle"
 	_ "embed"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -67,16 +70,16 @@ type Source interface {
 // Options configure a Server.
 type Options struct {
 	Source Source
-	// TokenFile keeps the mirror's token, which can only watch, and
-	// ControlTokenFile the one that can also use the phone; mode 0600.
-	TokenFile        string
-	ControlTokenFile string
-	Log              *slog.Logger
+	Log    *slog.Logger
 	// OwnNames returns this computer's own DNS names that `tailscale
 	// serve` forwards requests under, such as "mac.tail1234.ts.net".
 	// Requests under any other name than those and localhost's are
 	// refused (DNS rebinding).
 	OwnNames func(ctx context.Context) []string
+	// Owner returns the tailnet login of the person who owns this
+	// computer, "" when it has none (a tagged computer). Only they may
+	// use the phone through Tailscale.
+	Owner func(ctx context.Context) string
 	// Text returns the page's words, by key, in the language that best
 	// suits the browser's Accept-Language, and that language's tag.
 	Text func(acceptLanguage string) (lang string, text map[string]string)
@@ -87,13 +90,15 @@ type Server struct {
 	opt Options
 	log *slog.Logger
 
-	mu           sync.Mutex
-	ln           net.Listener
-	srv          *http.Server
+	mu  sync.Mutex
+	ln  net.Listener
+	srv *http.Server
+	// token can only watch; controlToken can also use the phone, and is
+	// "" while the person does not allow that. Both in memory only.
 	token        string
 	controlToken string
-	control      bool // the person lets the page use the phone
-	conns        map[*websocket.Conn]role
+	conns        map[*websocket.Conn]*Watcher
+	open         int                 // WebSockets open, said hello or not
 	pressing     map[string]*session // the one session holding a finger down, by phone
 	err          error               // why it could not turn on
 	// stopped is set once the mirror is turned off, so a viewer whose
@@ -107,7 +112,7 @@ func New(opt Options) *Server {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	return &Server{opt: opt, log: log, conns: map[*websocket.Conn]role{}, pressing: map[string]*session{}}
+	return &Server{opt: opt, log: log, token: newToken(), conns: map[*websocket.Conn]*Watcher{}, pressing: map[string]*session{}}
 }
 
 // Set turns the web mirror on or off. Turning it off ends every viewer's
@@ -122,10 +127,6 @@ func (s *Server) Set(on bool) error {
 	if !on {
 		s.stopLocked()
 		return nil
-	}
-	if err := s.tokensLocked(); err != nil {
-		s.err = fmt.Errorf("web mirror token: %w", err)
-		return s.err
 	}
 	ln, err := net.Listen("tcp", Addr)
 	if err != nil {
@@ -172,32 +173,35 @@ func (s *Server) stopLocked() {
 	defer cancel()
 	s.srv.Shutdown(ctx)
 	s.stopped = true
-	s.closeConnsLocked()
+	s.closeConnsLocked(false)
 	s.ln, s.srv = nil, nil
 	s.log.Info("web mirror off")
 }
 
-// closeConnsLocked ends the WebSockets of the role given, or of every
-// role, which Shutdown leaves alone.
-func (s *Server) closeConnsLocked(only ...role) {
-	for c, r := range s.conns {
-		if len(only) == 0 || only[0] == r {
+// closeConnsLocked ends the WebSockets that may use the phone, or every
+// one, which Shutdown leaves alone.
+func (s *Server) closeConnsLocked(controlOnly bool) {
+	for c, w := range s.conns {
+		if !controlOnly || w.Control {
 			c.Close()
 		}
 	}
 }
 
-// SetControl lets the page use the phone, or stops it: the browsers that
-// do are cut off.
+// SetControl lets the page use the phone, or stops it. Turning it on makes
+// a new control token; turning it off drops it and cuts off the browsers
+// that use the phone.
 func (s *Server) SetControl(on bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.control == on {
+	if on == (s.controlToken != "") {
 		return
 	}
-	s.control = on
-	if !on {
-		s.closeConnsLocked(roleControl)
+	if on {
+		s.controlToken = newToken()
+	} else {
+		s.controlToken = ""
+		s.closeConnsLocked(true)
 	}
 	s.log.Info("web mirror: control from the browser", "on", on)
 }
@@ -205,106 +209,59 @@ func (s *Server) SetControl(on bool) {
 func (s *Server) controlAllowed() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.control
+	return s.controlToken != ""
 }
 
-// Viewers is how many browsers watch now, Controllers how many of the
-// others can use the phone.
-func (s *Server) Viewers() int     { return s.count(roleView) }
-func (s *Server) Controllers() int { return s.count(roleControl) }
+// Watcher is a browser on the mirror.
+type Watcher struct {
+	Device  string // the phone it shows
+	Control bool   // it may use the phone
+	// Login is the tailnet login of the person `tailscale serve` named,
+	// "" on this computer or for a tagged device.
+	Login string
+}
 
-func (s *Server) count(r role) int {
+// Watchers are the browsers that watch now.
+func (s *Server) Watchers() []Watcher {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	n := 0
-	for _, cr := range s.conns {
-		if cr == r {
-			n++
+	out := make([]Watcher, 0, len(s.conns))
+	for _, w := range s.conns {
+		if w.Device != "" {
+			out = append(out, *w)
 		}
 	}
-	return n
+	return out
 }
 
 // Token returns the token that can only watch, ControlToken the one that
-// can also use the phone, each made the first time.
-func (s *Server) Token() (string, error) {
+// can also use the phone: "" while the person does not allow that.
+func (s *Server) Token() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	err := s.tokensLocked()
-	return s.token, err
+	return s.token
 }
 
-func (s *Server) ControlToken() (string, error) {
+func (s *Server) ControlToken() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	err := s.tokensLocked()
-	return s.controlToken, err
-}
-
-func (s *Server) tokensLocked() error {
-	if err := loadToken(s.opt.TokenFile, &s.token); err != nil {
-		return err
-	}
-	if s.opt.ControlTokenFile == "" {
-		return nil
-	}
-	return loadToken(s.opt.ControlTokenFile, &s.controlToken)
-}
-
-// loadToken reads the token in path into *tok, making it when there is
-// none.
-func loadToken(path string, tok *string) error {
-	if *tok != "" {
-		return nil
-	}
-	b, err := os.ReadFile(path)
-	if t := strings.TrimSpace(string(b)); err == nil && t != "" {
-		*tok = t
-		return nil
-	}
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
-	}
-	return newToken(path, tok)
+	return s.controlToken
 }
 
 // NewToken replaces both tokens: every link stops working, and the
 // browsers that watch or use the phone with them are cut off.
-func (s *Server) NewToken() (string, error) {
+func (s *Server) NewToken() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := newToken(s.opt.TokenFile, &s.token); err != nil {
-		return "", err
+	s.token = newToken()
+	if s.controlToken != "" {
+		s.controlToken = newToken()
 	}
-	if s.opt.ControlTokenFile != "" {
-		if err := newToken(s.opt.ControlTokenFile, &s.controlToken); err != nil {
-			return "", err
-		}
-	}
-	s.closeConnsLocked()
-	return s.token, nil
+	s.closeConnsLocked(false)
 }
 
-func newToken(path string, tok *string) error {
-	var b [24]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return err
-	}
-	t := hex.EncodeToString(b[:])
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
-	tmp := path + ".new"
-	if err := os.WriteFile(tmp, []byte(t+"\n"), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
-		return err
-	}
-	*tok = t
-	return nil
-}
+// newToken returns a random token of 26 base32 letters (130 bits).
+func newToken() string { return rand.Text() }
 
 // roleOf says what a hello's token lets the page do. Both tokens are
 // compared in full, in constant time.
@@ -327,8 +284,21 @@ func (s *Server) roleOf(tok string) (r role, ok bool) {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.servePage)
-	mux.Handle("GET "+WebSocketPath, websocket.Server{Handshake: s.handshake, Handler: s.serveViewer})
+	ws := websocket.Server{Handshake: s.handshake, Handler: s.serveViewer}
+	mux.HandleFunc("GET "+WebSocketPath, func(w http.ResponseWriter, r *http.Request) {
+		if !s.enter() {
+			http.Error(w, "Too many browsers on Pinky's web mirror.", http.StatusServiceUnavailable)
+			return
+		}
+		defer s.leave()
+		ws.ServeHTTP(w, r)
+	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Tailscale-Funnel-Request") != "" {
+			// Tailscale Funnel: anyone on the internet.
+			http.Error(w, "Pinky's web mirror is not for Tailscale Funnel.", http.StatusForbidden)
+			return
+		}
 		if !s.ownHost(r) {
 			http.Error(w, "Pinky's web mirror answers only at this computer's own names.", http.StatusForbidden)
 			return
@@ -359,6 +329,52 @@ func (s *Server) ownHost(r *http.Request) bool {
 		}
 	}
 	return false
+}
+
+// proxied reports whether r came through a proxy, as `tailscale serve`
+// forwards a request from another device: it names another host than
+// this computer's loopback, or carries a header a proxy adds. A request
+// with a Host of the client's choosing still shows the headers `tailscale
+// serve` adds (X-Forwarded-*, Tailscale-*).
+func proxied(r *http.Request) bool {
+	if !loopbackName(hostName(r.Host)) {
+		return true
+	}
+	for _, h := range []string{"X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto", "Forwarded",
+		"Tailscale-User-Login", "Tailscale-User-Name", "Tailscale-Funnel-Request"} {
+		if r.Header.Get(h) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// ownerLogin reports whether login is the tailnet login of the person who
+// owns this computer.
+func (s *Server) ownerLogin(ctx context.Context, login string) bool {
+	if login == "" || s.opt.Owner == nil {
+		return false
+	}
+	owner := s.opt.Owner(ctx)
+	return owner != "" && strings.EqualFold(owner, login)
+}
+
+// enter counts a WebSocket in, unless maxConns are open; leave counts it
+// out.
+func (s *Server) enter() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.open >= maxConns {
+		return false
+	}
+	s.open++
+	return true
+}
+
+func (s *Server) leave() {
+	s.mu.Lock()
+	s.open--
+	s.mu.Unlock()
 }
 
 func loopbackName(host string) bool {
@@ -396,7 +412,7 @@ func (s *Server) servePage(w http.ResponseWriter, r *http.Request) {
 	h.Set("Referrer-Policy", "no-referrer")
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("X-Content-Type-Options", "nosniff")
-	h.Set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' ws: wss:; img-src data:; frame-ancestors 'none'")
+	h.Set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src data:; frame-ancestors 'none'")
 	page.Execute(w, struct {
 		Lang string
 		Text map[string]string
@@ -412,7 +428,7 @@ type hello struct {
 }
 
 type clientMsg struct {
-	Type string `json:"type"` // "keyframe", "touch", "key"
+	Type string `json:"type"` // "keyframe", "touch", "key", "ping"
 	// A touch: its phase ("down", "move", "up"), where it is from 0 to 1
 	// across the upright picture the page shows, and the quarter turns the
 	// page turned the stream's picture by to show it.
@@ -449,6 +465,11 @@ type serverMsg struct {
 const (
 	helloTimeout = 10 * time.Second
 	writeTimeout = 10 * time.Second
+	// idleTimeout is how long a page may send nothing after its hello; the
+	// page pings every 20 s (a hidden tab's timers may run once a minute).
+	idleTimeout = 90 * time.Second
+	// maxConns is how many WebSockets may be open at once, hello or not.
+	maxConns = 16
 	// maxLag is how far the pictures sent may fall behind the phone before
 	// the viewer skips to the next key frame.
 	maxLag = 1500 * time.Millisecond
@@ -476,27 +497,28 @@ func (s *Server) serveViewer(ws *websocket.Conn) {
 	if err := websocket.JSON.Receive(ws, &h); err != nil {
 		return
 	}
-	ws.SetReadDeadline(time.Time{})
 	rl, ok := s.roleOf(h.Token)
 	if !ok {
 		send(ws, serverMsg{Type: "error", Error: "token"})
 		return
 	}
-	who := r.Header.Get("Tailscale-User-Login") // set by `tailscale serve` for the tailnet's signed-in users
+	// `tailscale serve` names the tailnet's signed-in person here, and
+	// drops a copy the client sent; a tagged device or a Funnel link has
+	// none.
+	who := r.Header.Get("Tailscale-User-Login")
 	if rl == roleControl {
 		if !s.controlAllowed() {
 			send(ws, serverMsg{Type: "error", Error: "control_off"})
 			return
 		}
-		// Through Tailscale, only a person signed in to the tailnet: a
-		// tagged device or a public Funnel link carries no user, and
-		// `tailscale serve` drops the header from the request it got.
-		if !loopbackName(hostName(r.Host)) && who == "" {
+		// Through Tailscale, only the person who owns this computer.
+		if proxied(r) && !s.ownerLogin(r.Context(), who) {
 			send(ws, serverMsg{Type: "error", Error: "tailnet_user"})
 			return
 		}
 	}
-	if !s.addConn(ws, rl) {
+	w := &Watcher{Control: rl == roleControl, Login: who}
+	if !s.addConn(ws, w) {
 		return
 	}
 	defer s.removeConn(ws)
@@ -511,6 +533,9 @@ func (s *Server) serveViewer(ws *websocket.Conn) {
 		send(ws, serverMsg{Type: "error", Error: "no_phone"})
 		return
 	}
+	s.mu.Lock()
+	w.Device = id
+	s.mu.Unlock()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	st, err := s.opt.Source.Stream(ctx, id, driver.StreamOptions{})
@@ -529,6 +554,7 @@ func (s *Server) serveViewer(ws *websocket.Conn) {
 		defer cancel()
 		for {
 			var m clientMsg
+			ws.SetReadDeadline(time.Now().Add(idleTimeout))
 			if err := websocket.JSON.Receive(ws, &m); err != nil {
 				return
 			}
@@ -686,13 +712,13 @@ func (s *Server) devices(want string) ([]deviceInfo, string) {
 	return out, pick
 }
 
-func (s *Server) addConn(ws *websocket.Conn, r role) bool {
+func (s *Server) addConn(ws *websocket.Conn, w *Watcher) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.stopped || (r == roleControl && !s.control) {
+	if s.stopped || (w.Control && s.controlToken == "") {
 		return false
 	}
-	s.conns[ws] = r
+	s.conns[ws] = w
 	return true
 }
 

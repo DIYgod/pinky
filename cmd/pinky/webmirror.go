@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
-	"path/filepath"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
-	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/tailnet"
 	"github.com/DIYgod/pinky/internal/webmirror"
@@ -15,18 +16,29 @@ import (
 )
 
 // newWebMirror returns the web mirror of the gateway's phones, off until
-// Settings › Phones › Web mirror turns it on. Its tokens are kept apart
-// from the agent token: one can only watch, the other can also use the
-// phone while the person allows control.
-func newWebMirror(dirs api.Dirs, g *gateway.Gateway, log *slog.Logger) *webMirror {
+// Settings › Phones › Web mirror turns it on. Its tokens are its own, in
+// memory only: one can only watch, the other can also use the phone while
+// the person allows control.
+func newWebMirror(g *gateway.Gateway, log *slog.Logger) *webMirror {
 	return &webMirror{webmirror.New(webmirror.Options{
-		Source:           g,
-		TokenFile:        filepath.Join(dirs.Config, "mirror-token"),
-		ControlTokenFile: filepath.Join(dirs.Config, "mirror-control-token"),
-		Log:              log,
-		OwnNames:         tailnetNames,
-		Text:             webMirrorText,
+		Source:   g,
+		Log:      log,
+		OwnNames: tailnetNames,
+		Owner:    tailnetOwner,
+		Text:     webMirrorText,
 	})}
+}
+
+// tailnetOwner is the tailnet login of the person this computer is signed
+// in as, "" when it is tagged or Tailscale is not running.
+func tailnetOwner(ctx context.Context) string {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	st, _ := tailnet.Read(ctx)
+	if !st.Running() {
+		return ""
+	}
+	return st.Owner
 }
 
 // webMirror is the web mirror as Settings sees it (ui.WebMirror).
@@ -82,4 +94,20 @@ func webMirrorText(acceptLanguage string) (string, map[string]string) {
 		"controlOff":   m.WebMirrorPageControlOff(),
 		"tailnetUser":  m.WebMirrorPageTailnetUser(),
 	}
+}
+
+// printMirrorLinks prints the web mirror's links, which are secret: with
+// one, anyone watches the phones, or uses them. Their keys go only to a
+// terminal, never to a pipe or a file a program reads.
+func printMirrorLinks(f *os.File, m *webmirror.Server) {
+	fi, err := f.Stat()
+	if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
+		fmt.Fprintf(f, "Web mirror at %s (its link with the key is printed to a terminal only)\n", webmirror.URL())
+		return
+	}
+	fmt.Fprintf(f, "Web mirror at %s#%s\n", webmirror.URL(), m.Token())
+	if ctl := m.ControlToken(); ctl != "" {
+		fmt.Fprintf(f, "Web mirror with control at %s#%s\n", webmirror.URL(), ctl)
+	}
+	fmt.Fprintln(f, "Keep these links secret: anyone with one can watch the phones, or use them.")
 }

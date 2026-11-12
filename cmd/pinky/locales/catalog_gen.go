@@ -28238,17 +28238,67 @@ func (msgs Messages) WebMirrorControlDesc() string {
 // WebMirrorControlLink says "Control link"
 // in the language the app shows.
 //
-// Settings › Phones › Web mirror: the rows of the links that can also
-// use the phone, on this computer and on the tailnet.
+// Settings › Phones › Web mirror: the row of the link that can also use
+// the phone, on this computer.
 func WebMirrorControlLink() string { return In(i18n.Locale()).WebMirrorControlLink() }
 
 // WebMirrorControlLink says "Control link"
 // in the language of msgs.
 //
-// Settings › Phones › Web mirror: the rows of the links that can also
-// use the phone, on this computer and on the tailnet.
+// Settings › Phones › Web mirror: the row of the link that can also use
+// the phone, on this computer.
 func (msgs Messages) WebMirrorControlLink() string {
 	return Catalog.Format(msgs.locale, "webMirrorControlLink", nil)
+}
+
+// WebMirrorControlLinkDesc says "On this computer. The page has Back and Home."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webMirrorControlLink.
+func WebMirrorControlLinkDesc() string { return In(i18n.Locale()).WebMirrorControlLinkDesc() }
+
+// WebMirrorControlLinkDesc says "On this computer. The page has Back and Home."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webMirrorControlLink.
+func (msgs Messages) WebMirrorControlLinkDesc() string {
+	return Catalog.Format(msgs.locale, "webMirrorControlLinkDesc", nil)
+}
+
+// WebMirrorControlTailnetLink says "Control link on your tailnet"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the row of the link that can also use
+// the phone, through Tailscale.
+func WebMirrorControlTailnetLink() string { return In(i18n.Locale()).WebMirrorControlTailnetLink() }
+
+// WebMirrorControlTailnetLink says "Control link on your tailnet"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the row of the link that can also use
+// the phone, through Tailscale.
+func (msgs Messages) WebMirrorControlTailnetLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorControlTailnetLink", nil)
+}
+
+// WebMirrorControlTailnetLinkDesc says "Works only for you, signed in to Tailscale as this computer's owner."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webMirrorControlTailnetLink.
+// Through Tailscale, only the tailnet login this computer is signed in as
+// may use the phone.
+func WebMirrorControlTailnetLinkDesc() string {
+	return In(i18n.Locale()).WebMirrorControlTailnetLinkDesc()
+}
+
+// WebMirrorControlTailnetLinkDesc says "Works only for you, signed in to Tailscale as this computer's owner."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webMirrorControlTailnetLink.
+// Through Tailscale, only the tailnet login this computer is signed in as
+// may use the phone.
+func (msgs Messages) WebMirrorControlTailnetLinkDesc() string {
+	return Catalog.Format(msgs.locale, "webMirrorControlTailnetLinkDesc", nil)
 }
 
 // WebMirrorControlToggle says "Let the browser use the phone"
@@ -28375,7 +28425,7 @@ func (msgs Messages) WebMirrorPageInControl() string {
 	return Catalog.Format(msgs.locale, "webMirrorPageInControl", nil)
 }
 
-// WebMirrorPageTailnetUser says "Using the phone through Tailscale needs a device signed in to your tailnet, not a tagged device or a public link."
+// WebMirrorPageTailnetUser says "Through Tailscale, only the owner of the computer running Pinky can use the phone: sign in to Tailscale on this devic…"
 // in the language the app shows.
 //
 // The web mirror's page: the control link was opened through Tailscale
@@ -28383,7 +28433,7 @@ func (msgs Messages) WebMirrorPageInControl() string {
 // is Tailscale's word: keep it.
 func WebMirrorPageTailnetUser() string { return In(i18n.Locale()).WebMirrorPageTailnetUser() }
 
-// WebMirrorPageTailnetUser says "Using the phone through Tailscale needs a device signed in to your tailnet, not a tagged device or a public link."
+// WebMirrorPageTailnetUser says "Through Tailscale, only the owner of the computer running Pinky can use the phone: sign in to Tailscale on this devic…"
 // in the language of msgs.
 //
 // The web mirror's page: the control link was opened through Tailscale
@@ -28541,14 +28591,14 @@ func (msgs Messages) WebMirrorNewLinkButton() string {
 	return Catalog.Format(msgs.locale, "webMirrorNewLinkButton", nil)
 }
 
-// WebMirrorNewLinkDesc says "The old links stop working, and browsers watching with them are cut off."
+// WebMirrorNewLinkDesc says "The old links stop working, and browsers watching with them are cut off. Pinky also makes new links each time it starts."
 // in the language the app shows.
 //
 // Settings › Phones › Web mirror: under webMirrorNewLink: what making a
 // new link does.
 func WebMirrorNewLinkDesc() string { return In(i18n.Locale()).WebMirrorNewLinkDesc() }
 
-// WebMirrorNewLinkDesc says "The old links stop working, and browsers watching with them are cut off."
+// WebMirrorNewLinkDesc says "The old links stop working, and browsers watching with them are cut off. Pinky also makes new links each time it starts."
 // in the language of msgs.
 //
 // Settings › Phones › Web mirror: under webMirrorNewLink: what making a
@@ -28923,14 +28973,14 @@ func (msgs Messages) WebMirrorViewers(count int) string {
 	return Catalog.Format(msgs.locale, "webMirrorViewers", map[string]any{"count": count})
 }
 
-// WebMirrorWarning says "Anyone with the link sees everything on the phone's screen, as Pinky's own mirror does, blocked apps and one-time cod…"
+// WebMirrorWarning says "Anyone with the link sees every phone connected to Pinky and everything on its screen, as Pinky's own mirror does, bl…"
 // in the language the app shows.
 //
 // Settings › Phones › Web mirror: the amber warning while the web
 // mirror is on.
 func WebMirrorWarning() string { return In(i18n.Locale()).WebMirrorWarning() }
 
-// WebMirrorWarning says "Anyone with the link sees everything on the phone's screen, as Pinky's own mirror does, blocked apps and one-time cod…"
+// WebMirrorWarning says "Anyone with the link sees every phone connected to Pinky and everything on its screen, as Pinky's own mirror does, bl…"
 // in the language of msgs.
 //
 // Settings › Phones › Web mirror: the amber warning while the web

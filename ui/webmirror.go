@@ -3,6 +3,9 @@ package ui
 import (
 	"context"
 	"net"
+	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	mg "github.com/egoist/mygo/ui"
@@ -14,17 +17,15 @@ import (
 // WebMirror shows the phones' screens in a web browser: on this computer
 // at webmirror.URL, and on the person's other devices through `tailscale
 // serve`, which the person runs. Each link carries one of the mirror's
-// tokens: Token's can only watch, ControlToken's can also use the phone
-// while Settings.WebMirrorControl is on.
+// tokens, kept in memory only: Token's can only watch, ControlToken's can
+// also use the phone, and is "" unless Settings.WebMirrorControl is on.
 type WebMirror interface {
-	Token() (string, error)
-	ControlToken() (string, error)
+	Token() string
+	ControlToken() string
 	// NewToken replaces both tokens, cutting off every browser.
-	NewToken() (string, error)
-	// Viewers is how many browsers watch now, Controllers how many can
-	// use the phone.
-	Viewers() int
-	Controllers() int
+	NewToken()
+	// Watchers are the browsers that watch now.
+	Watchers() []webmirror.Watcher
 	// Err says why the mirror could not turn on.
 	Err() error
 	// Tailnet says where `tailscale serve` gives the mirror to the
@@ -34,8 +35,6 @@ type WebMirror interface {
 
 // webMirrorState is Settings › Phones › Web mirror's.
 type webMirrorState struct {
-	token, control string
-
 	tn     RemoteTailnet
 	tnAt   time.Time
 	tnBusy bool
@@ -73,7 +72,6 @@ func (a *app) webMirrorSettings(c *mg.Context) {
 	}
 	p := pal(c)
 	st := &a.settings
-	r := &a.webMirror
 	mg.Column(c).Gap(10).Label(locales.WebMirrorTitle()).Children(func() {
 		settingsHeading(c, locales.WebMirrorTitle(), locales.WebMirrorIntro())
 		group(c).Children(func() {
@@ -89,11 +87,8 @@ func (a *app) webMirrorSettings(c *mg.Context) {
 					mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber)
 					mg.Text(c, locales.WebMirrorWarning()).FontSize(fsSmall).LineHeight(1.4).Grow(1).MinWidth(0)
 				})
-			if r.token == "" {
-				r.token, _ = wm.Token()
-			}
 			tn := a.webMirrorTailnet(c, wm)
-			a.webMirrorLinks(c, tn, r.token, locales.WebMirrorLink(), locales.WebMirrorTailnetLink(), locales.WebMirrorLinkDesc(), locales.WebMirrorTailnetLinkDesc())
+			a.webMirrorLinks(c.Key("view"), tn, wm.Token(), locales.WebMirrorLink(), locales.WebMirrorTailnetLink(), locales.WebMirrorLinkDesc(), locales.WebMirrorTailnetLinkDesc())
 			if tn.URL == "" && tn.Name != "" && tn.ServePort != "" {
 				url := "https://" + tn.Name + ":" + tn.ServePort + "/"
 				a.commandBlock(c, locales.WebMirrorTailnetTitle(), locales.WebMirrorTailnetHint(url), webMirrorServe(tn.ServePort),
@@ -106,27 +101,19 @@ func (a *app) webMirrorSettings(c *mg.Context) {
 						mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber)
 						mg.Text(c, locales.WebMirrorControlWarning()).FontSize(fsSmall).LineHeight(1.4).Grow(1).MinWidth(0)
 					})
-				if r.control == "" {
-					r.control, _ = wm.ControlToken()
-				}
-				a.webMirrorLinks(c, tn, r.control, locales.WebMirrorControlLink(), locales.WebMirrorControlLink(), locales.WebMirrorLink(), locales.WebMirrorTailnetLink())
+				a.webMirrorLinks(c.Key("control"), tn, wm.ControlToken(), locales.WebMirrorControlLink(), locales.WebMirrorControlTailnetLink(),
+					locales.WebMirrorControlLinkDesc(), locales.WebMirrorControlTailnetLinkDesc())
 			}
 			settingRow(c, locales.WebMirrorNewLink(), locales.WebMirrorNewLinkDesc(), true, func() {
 				mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
-					watching := locales.WebMirrorNoViewers()
-					if n := wm.Viewers() + wm.Controllers(); n > 0 {
-						watching = locales.WebMirrorViewers(n)
-					}
-					if n := wm.Controllers(); n > 0 {
-						watching += " · " + locales.WebMirrorControllers(n)
+					watching := webMirrorWatching(wm.Watchers(), "", false)
+					if watching == "" {
+						watching = locales.WebMirrorNoViewers()
 					}
 					mg.Text(c, watching).FontSize(fsSmall).TextColor(p.ink2)
 					if button(c, locales.WebMirrorNewLinkButton(), btnOpt{small: true}).Clicked() {
-						if tok, err := wm.NewToken(); err == nil {
-							r.token = tok
-							r.control, _ = wm.ControlToken()
-							c.Toast(locales.WebMirrorNewLinkDone())
-						}
+						wm.NewToken()
+						c.Toast(locales.WebMirrorNewLinkDone())
 					}
 				})
 			})
@@ -136,7 +123,8 @@ func (a *app) webMirrorSettings(c *mg.Context) {
 
 // webMirrorLinks are the rows of a link to the mirror with token: on this
 // computer, with Open and Copy, and through the tailnet while `tailscale
-// serve` gives the mirror to it.
+// serve` gives the mirror to it. c is keyed apart for each kind of link;
+// the token, a secret, is never a key.
 func (a *app) webMirrorLinks(c *mg.Context, tn RemoteTailnet, token, localTitle, tailnetTitle, localDesc, tailnetDesc string) {
 	if token == "" {
 		return
@@ -145,10 +133,10 @@ func (a *app) webMirrorLinks(c *mg.Context, tn RemoteTailnet, token, localTitle,
 	settingRow(c, localTitle, localDesc, false, func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, local+"#…").Font("monospace").FontSize(12.5)
-			if button(c.Key(token+"-open"), locales.WebMirrorOpen(), btnOpt{small: true}).Clicked() {
+			if button(c.Key("open"), locales.WebMirrorOpen(), btnOpt{small: true}).Clicked() {
 				openURL(c, local+"#"+token, func(error) {})
 			}
-			if button(c.Key(token+"-copy"), "", btnOpt{small: true, icon: icCopy, label: locales.WebMirrorCopyLink()}).Clicked() {
+			if button(c.Key("copy"), "", btnOpt{small: true, icon: icCopy, label: locales.WebMirrorCopyLink()}).Clicked() {
 				a.copy(c, local+"#"+token, locales.WebMirrorCopiedLink())
 			}
 		})
@@ -159,9 +147,70 @@ func (a *app) webMirrorLinks(c *mg.Context, tn RemoteTailnet, token, localTitle,
 	settingRow(c, tailnetTitle, tailnetDesc, false, func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, tn.URL+"#…").Font("monospace").FontSize(12.5)
-			if button(c.Key(token+"-copy-tn"), "", btnOpt{small: true, icon: icCopy, label: locales.WebMirrorCopyTailnetLink()}).Clicked() {
+			if button(c.Key("copy-tn"), "", btnOpt{small: true, icon: icCopy, label: locales.WebMirrorCopyTailnetLink()}).Clicked() {
 				a.copy(c, tn.URL+"#"+token, locales.WebMirrorCopiedLink())
 			}
 		})
+	})
+}
+
+// webMirrorWatching says how many browsers watch, those of the phone
+// device ("" for all), how many of them can use it, and with who, who
+// they are on the tailnet: "" when none watch.
+func webMirrorWatching(ws []webmirror.Watcher, device string, who bool) string {
+	n, ctl := 0, 0
+	var logins []string
+	for _, w := range ws {
+		if device != "" && w.Device != device {
+			continue
+		}
+		n++
+		if w.Control {
+			ctl++
+		}
+		if who && w.Login != "" && !slices.Contains(logins, w.Login) {
+			logins = append(logins, w.Login)
+		}
+	}
+	if n == 0 {
+		return ""
+	}
+	out := locales.WebMirrorViewers(n)
+	if ctl > 0 {
+		out += " · " + locales.WebMirrorControllers(ctl)
+	}
+	if len(logins) > 0 {
+		out += " · " + strings.Join(logins, ", ")
+	}
+	return out
+}
+
+// webMirrorBadge shows, on a phone's row of the sidebar, that browsers
+// watch it through the web mirror: an eye, or a hand when one can use the
+// phone, with how many; who they are in its tooltip.
+func (a *app) webMirrorBadge(c *mg.Context, device string) {
+	wm := a.opt.WebMirror
+	if wm == nil || !a.settings.WebMirror {
+		return
+	}
+	ws := wm.Watchers()
+	text := webMirrorWatching(ws, device, true)
+	if text == "" {
+		return
+	}
+	n, ic := 0, icEye
+	for _, w := range ws {
+		if w.Device == device {
+			n++
+			if w.Control {
+				ic = icHand
+			}
+		}
+	}
+	p := pal(c)
+	mg.Row(c).Gap(3).AlignItems(mg.Center).Padding(1, 6).Radius(99).Background(p.amberTint).TextColor(p.amber).
+		Tooltip(text).Label(text).Children(func() {
+		mg.Icon(c, ic).FontSize(12)
+		mg.Text(c, strconv.Itoa(n)).FontSize(fsCaption).FontWeight(fwMedium)
 	})
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -97,12 +96,9 @@ func (f fakeSource) Stream(ctx context.Context, id string, _ driver.StreamOption
 
 func newTestServer(t *testing.T, src Source) (*Server, *httptest.Server) {
 	t.Helper()
-	dir := t.TempDir()
-	s := New(Options{Source: src, TokenFile: filepath.Join(dir, "mirror-token"), ControlTokenFile: filepath.Join(dir, "mirror-control-token"),
-		OwnNames: func(context.Context) []string { return []string{"mac.tail1234.ts.net"} }})
-	if _, err := s.Token(); err != nil {
-		t.Fatal(err)
-	}
+	s := New(Options{Source: src,
+		OwnNames: func(context.Context) []string { return []string{"mac.tail1234.ts.net"} },
+		Owner:    func(context.Context) string { return "owner@example.com" }})
 	hs := httptest.NewServer(s.Handler())
 	t.Cleanup(hs.Close)
 	return s, hs
@@ -151,9 +147,8 @@ func TestViewerRefusesOtherOrigins(t *testing.T) {
 func TestViewerGetsPictures(t *testing.T) {
 	st := &fakeStream{ch: make(chan driver.Packet, 8), keys: make(chan struct{}, 8)}
 	s, hs := newTestServer(t, fakeSource{st: st})
-	tok, _ := s.Token()
 	ws := dial(t, hs, hs.URL)
-	websocket.JSON.Send(ws, hello{Token: tok})
+	websocket.JSON.Send(ws, hello{Token: s.Token()})
 
 	m := receive(t, ws)
 	if m.Type != "devices" || m.Device != "p1" || len(m.Devices) != 1 || m.Devices[0].Name != "iPhone" {
@@ -182,8 +177,8 @@ func TestViewerGetsPictures(t *testing.T) {
 			t.Fatalf("picture %x, want flags %b and NAL %x", b, want.flags, want.nal)
 		}
 	}
-	if n := s.Viewers(); n != 1 {
-		t.Errorf("Viewers() = %d, want 1", n)
+	if w := s.Watchers(); len(w) != 1 || w[0] != (Watcher{Device: "p1"}) {
+		t.Errorf("Watchers() = %+v, want one watching p1", w)
 	}
 
 	// The page asks for a key frame after a decoding error: the phone is
@@ -205,8 +200,10 @@ func TestViewerGetsPictures(t *testing.T) {
 	}
 
 	// A new token cuts the viewer off.
-	if _, err := s.NewToken(); err != nil {
-		t.Fatal(err)
+	old := s.Token()
+	s.NewToken()
+	if s.Token() == old {
+		t.Error("NewToken kept the token")
 	}
 	if err := websocket.Message.Receive(ws, &b); err == nil {
 		t.Fatal("the viewer stayed connected after a new token")
@@ -249,5 +246,94 @@ func TestLagMeter(t *testing.T) {
 	// A picture that waited 2 s in a queue.
 	if d := l.behind(6*time.Second, t0.Add(8*time.Second)); d < 2*time.Second || d > 2050*time.Millisecond {
 		t.Errorf("queued picture behind by %v, want about 2s", d)
+	}
+}
+
+// Tokens live in memory: each start makes new ones, and the control token
+// exists only while control is allowed.
+func TestTokens(t *testing.T) {
+	a, b := New(Options{}), New(Options{})
+	if a.Token() == "" || a.Token() == b.Token() {
+		t.Fatalf("tokens %q and %q, want two new ones", a.Token(), b.Token())
+	}
+	if a.ControlToken() != "" {
+		t.Fatal("a control token before control was allowed")
+	}
+	a.SetControl(true)
+	ctl := a.ControlToken()
+	if ctl == "" || ctl == a.Token() {
+		t.Fatalf("control token %q", ctl)
+	}
+	a.SetControl(true)
+	if a.ControlToken() != ctl {
+		t.Fatal("allowing control again changed its token")
+	}
+	a.SetControl(false)
+	if a.ControlToken() != "" {
+		t.Fatal("the control token outlived control")
+	}
+	if r, ok := a.roleOf(ctl); ok {
+		t.Fatalf("the dropped control token still works, as %v", r)
+	}
+	a.SetControl(true)
+	if a.ControlToken() == ctl {
+		t.Fatal("allowing control again brought the old token back")
+	}
+}
+
+func TestFunnelRefused(t *testing.T) {
+	_, hs := newTestServer(t, fakeSource{st: &fakeStream{ch: make(chan driver.Packet)}})
+	req, _ := http.NewRequest(http.MethodGet, hs.URL+"/", nil)
+	req.Header.Set("Tailscale-Funnel-Request", "?1")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("a Funnel request got %s", res.Status)
+	}
+}
+
+// WebSockets that never say hello still count: past maxConns the server
+// turns new ones away.
+func TestConnLimit(t *testing.T) {
+	s, hs := newTestServer(t, fakeSource{st: &fakeStream{ch: make(chan driver.Packet)}})
+	for range maxConns {
+		dial(t, hs, hs.URL)
+	}
+	if _, err := websocket.Dial("ws"+strings.TrimPrefix(hs.URL, "http")+WebSocketPath, "", hs.URL); err == nil {
+		t.Fatal("a WebSocket past the limit opened")
+	}
+	s.mu.Lock()
+	open := s.open
+	s.mu.Unlock()
+	if open != maxConns {
+		t.Fatalf("open = %d, want %d", open, maxConns)
+	}
+}
+
+func TestProxied(t *testing.T) {
+	for _, tc := range []struct {
+		host   string
+		header string
+		want   bool
+	}{
+		{"127.0.0.1:7466", "", false},
+		{"localhost:7466", "", false},
+		{"mac.tail1234.ts.net:8443", "", true},
+		{"localhost:7466", "X-Forwarded-For", true},
+		{"localhost", "X-Forwarded-Host", true},
+		{"127.0.0.1", "Tailscale-User-Login", true},
+		{"127.0.0.1", "Tailscale-Funnel-Request", true},
+	} {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Host = tc.host
+		if tc.header != "" {
+			r.Header.Set(tc.header, "x")
+		}
+		if got := proxied(r); got != tc.want {
+			t.Errorf("proxied(%s, %s) = %v, want %v", tc.host, tc.header, got, tc.want)
+		}
 	}
 }
