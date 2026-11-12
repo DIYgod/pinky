@@ -347,6 +347,16 @@ class Connection(private val socket: LocalSocket, private val server: CompanionS
         closed = true
         subscriber?.let { server.events.unsubscribe(it) }
         subscriber = null
+        // close() alone neither wakes this connection's reader nor tells the
+        // client on every Android version: the core then kept a connection
+        // to a stopped service (Android rebinds the service for every
+        // uiautomator dump) and learnt it only when its next claim failed,
+        // so the person's Start failed once. Shutting the socket down ends
+        // it on both sides at once.
+        try {
+            Os.shutdown(socket.fileDescriptor, OsConstants.SHUT_RDWR)
+        } catch (_: Exception) {
+        }
         CompanionServer.closeQuietly(socket)
         server.removed(this)
     }
