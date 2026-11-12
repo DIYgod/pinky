@@ -187,7 +187,8 @@ func TestIPhoneHelperInstallTeams(t *testing.T) {
 // client's languages. On the page of an iPhone that needs the helper, which
 // does not scroll, more teams than it has room for scroll, in a list whose
 // scroll bar takes no press on a team's end, and Cancel and the page's
-// links stay in the window; in the checkup, they keep within its panel. A
+// links stay in the window; in the checkup, scrolled to, they keep within
+// its panel. A
 // team's name wider than the page is cut, and whole in a tooltip.
 func TestIPhoneHelperTeamsFit(t *testing.T) {
 	ta, id := installApp(t)
@@ -281,6 +282,18 @@ func TestIPhoneHelperTeamsFit(t *testing.T) {
 				panel, ok := tt.Find(locales.CheckupFor(name))
 				if !ok || !hasText(tt, locales.HelperChooseTeam()) {
 					t.Fatalf("%s: no checkup %v (shown %v) with the teams: %q", what, panel, ok, tt.Texts())
+				}
+				// The checkup's items scroll, and where their fold falls
+				// depends on the fonts: with those of CI's Linux and Windows
+				// runners, the teams start just under it at 960×620. Scroll
+				// the first team into view, half a button at a time, as a
+				// person would; squashed, it would still be cut.
+				for range 40 {
+					if first, _ := tt.Find(labels[0]); first.H >= smallButtonHeight-eps {
+						break
+					}
+					tt.Scroll(panel.X+panel.W/2, panel.Y+panel.H/2, 0, smallButtonHeight/2)
+					tt.Frame()
 				}
 				teamsWithin(t, tt, what+", the checkup", panel, labels, buttonWidths(t, lang, true, labels), smallButtonHeight)
 			}
