@@ -62,6 +62,18 @@ type Action struct {
 	// it (prep.settleFull), waits the whole limit anyway, and the next
 	// action waits out the rest of a wait this cut short (settleOwed).
 	Settle *time.Duration
+	// list shapes a swipe by direction that phone_read_list sends
+	// (read_list.go); nil for every other swipe.
+	list *listSwipe
+}
+
+// listSwipe shapes a phone_read_list swipe: area, when set, takes the
+// place of a ref (a scroll_area on a web page); travel is how much of the
+// area the finger crosses, in percent; lane is where across the area it
+// runs, in percent of its width from the left.
+type listSwipe struct {
+	area         *screen.Rect
+	travel, lane int
 }
 
 // Keys agents may press.
@@ -507,6 +519,12 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		g.recordRefusal(l, c, a, p, res)
 		return res
 	case policy.Ask:
+		if !g.granted(l, v, p) && c.noAsk {
+			d.act.Unlock()
+			res := &Result{Status: StatusBlocked, Rule: v.Rule, Message: noAskMessage(v)}
+			g.recordRefusal(l, c, a, p, res)
+			return res
+		}
 		if !g.granted(l, v, p) {
 			info, res := g.ask(ctx, l, c, a, p, v, cur)
 			d.act.Unlock()
@@ -869,12 +887,18 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 					return p, res
 				}
 				p.target = e
+			} else if a.list != nil && a.list.area != nil {
+				e = &screen.Element{Bounds: *a.list.area}
 			}
 			area, res := swipeArea(cur, e, a.Direction)
 			if res != nil {
 				return p, res
 			}
-			p.from, p.to = swipeLine(area, a.Direction)
+			if a.list != nil {
+				p.from, p.to = listSwipeLine(area, a.Direction, a.list.travel, a.list.lane)
+			} else {
+				p.from, p.to = swipeLine(area, a.Direction)
+			}
 		}
 	case "pinch":
 		p.input.Op = policy.OpSwipe
@@ -967,6 +991,25 @@ func credentialOnScreen(s *screen.Screen) bool {
 		}
 	}
 	return false
+}
+
+// listSwipeLine is swipeLine for a phone_read_list swipe: the finger
+// crosses travel percent of area's height, centred, at lane percent of its
+// width (0 for the middle).
+func listSwipeLine(area screen.Rect, dir string, travel, lane int) (from, to screen.Point) {
+	if travel <= 0 {
+		return swipeLine(area, dir)
+	}
+	c := area.Center()
+	if lane > 0 {
+		c.X = area.X + area.W*lane/100
+	}
+	c.X = max(area.X+1, min(c.X, area.X+area.W-2))
+	dy := area.H * travel / 200
+	if dir == "down" {
+		return screen.Point{X: c.X, Y: c.Y - dy}, screen.Point{X: c.X, Y: c.Y + dy}
+	}
+	return screen.Point{X: c.X, Y: c.Y + dy}, screen.Point{X: c.X, Y: c.Y - dy}
 }
 
 // swipeLine returns a swipe across the middle of area, where direction is

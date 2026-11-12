@@ -24,6 +24,7 @@ Start a task with phone_connect (a one-line task name the person sees). Each act
 the new screen, or only what changed (+ added, - removed, ~ changed), so you rarely need phone_observe.
 When you need to read several screens of one vertical list, use phone_read_list instead of a swipe/observe loop.
 It returns compact page-labelled text with overlap removed. If it says partial, pass its continuation only when you need more.
+It never asks the person: when it stops at blocked_by_policy, swipe there with phone_swipe instead.
 Act on refs ([12]) from the latest screen; use x,y only for things without a ref.
 Statuses: settled = done; uncertain = it may have happened, observe before anything else and never repeat it blindly;
 approval_pending = the person is deciding, repeat the same call with the approval_id; approval_denied, blocked_by_policy,

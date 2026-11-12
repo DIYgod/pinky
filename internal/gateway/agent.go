@@ -140,6 +140,9 @@ type Call struct {
 
 	// reuse lets a batch step start from the previous step's read.
 	reuse bool
+	// noAsk refuses an action the rules would ask the person about,
+	// instead of asking: phone_read_list never opens an approval.
+	noAsk bool
 }
 
 // reuseAge is how old the previous step's read may be for the next batch
@@ -264,9 +267,6 @@ type ScanView struct {
 	OutputBytes  int
 	Sections     []ScanPage
 	Continuation string
-	// HistoryRedacted keeps text from a blocked app that the person allowed
-	// only for this task out of stored history.
-	HistoryRedacted bool
 }
 
 // Limits from DESIGN.md's tool table.
@@ -469,9 +469,7 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 	}
 	if ended && by == OutcomeStopped {
 		ran := r.Status == StatusSettled || r.Status == StatusUncertain
-		scan := r.Scan
 		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
-		r.Scan = scan
 		if ran {
 			r.Message += " The last action may have happened before the stop."
 		}

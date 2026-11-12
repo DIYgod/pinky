@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -31,9 +32,15 @@ type readListDevice struct {
 	ocrOnly      []screen.Element
 	sawOCR       bool
 	afterSwipe   func()
+	// failAfter makes reads fail once that many swipes went out; waits
+	// counts WaitSettled calls.
+	failAfter, swipes, waits int
 }
 
 func (d *readListDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
+	if d.failAfter > 0 && d.swipes >= d.failAfter {
+		return nil, errors.New("screen read failed")
+	}
 	if d.observeDelay > 0 {
 		select {
 		case <-time.After(d.observeDelay):
@@ -100,6 +107,7 @@ func (d *readListDevice) Swipe(ctx context.Context, from, to screen.Point, _ tim
 			return ctx.Err()
 		}
 	}
+	d.swipes++
 	if (d.reverse && from.Y < to.Y) || (!d.reverse && from.Y > to.Y) {
 		if d.page+1 < len(d.pages) {
 			d.page++
@@ -116,6 +124,7 @@ func (d *readListDevice) Swipe(ctx context.Context, from, to screen.Point, _ tim
 }
 
 func (d *readListDevice) WaitSettled(context.Context, time.Duration) (bool, error) {
+	d.waits++
 	return !d.unsettled, nil
 }
 
@@ -167,8 +176,15 @@ func TestReadListMergesOverlappingScreens(t *testing.T) {
 	if res.Scan.Complete || !res.Scan.Truncated || res.Scan.Stop != "max_screens" || res.Scan.Continuation == "" {
 		t.Fatalf("partial result flags: %+v", res.Scan)
 	}
+	// Every swipe is a step of its own in the task's history.
 	tasks := g.Tasks()
-	if len(tasks) != 1 || len(tasks[0].Steps) != 2 || tasks[0].Steps[1].Tool != "phone_read_list" {
+	swipes := 0
+	for _, st := range tasks[0].Steps {
+		if st.Tool == "phone_swipe" {
+			swipes++
+		}
+	}
+	if len(tasks) != 1 || swipes != 3 {
 		t.Fatalf("history: %+v", tasks)
 	}
 }
@@ -394,41 +410,6 @@ func TestReadListContinuation(t *testing.T) {
 	}
 }
 
-func TestReadListContinuationCarriesPinnedBoundsWithinTheTokenLimit(t *testing.T) {
-	base := demo.NewDevice("pixel", "Pixel 9", driver.Android)
-	dev := &readListDevice{Device: base, pages: [][]string{{"one"}}}
-	g := newDevGateway(t, base, dev)
-	s, _ := connect(t, g, "Read a list")
-	l, res := s.acquire("")
-	if res != nil {
-		t.Fatalf("acquire: %+v", res)
-	}
-	defer s.done(l)
-
-	previous := make([]screen.ViewportLine, 80)
-	for i := range previous {
-		previous[i] = screen.ViewportLine{
-			Text:   fmt.Sprintf("previous line %03d", i),
-			Bounds: screen.Rect{X: 0, Y: i * 20, W: 500, H: 18},
-		}
-	}
-	pinned := []screen.ViewportLine{{
-		Text: "Pinned feed controls", Bounds: screen.Rect{X: 0, Y: 20, W: 1000, H: 60},
-	}}
-	raw := encodeReadListCursor(l, demo.Dinely, "a/long/list/path", "up", 0, nil, 80, previous, pinned)
-	if len(raw) >= 8192 {
-		t.Fatalf("continuation is %d bytes", len(raw))
-	}
-	cursor, err := decodeReadListCursor(raw, l, ReadListRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := viewportFromCursorLines(cursor.Pinned)
-	if len(got) != 1 || !reflect.DeepEqual(got[0].Bounds, pinned[0].Bounds) {
-		t.Fatalf("pinned bounds = %#v, want %#v", got, pinned[0].Bounds)
-	}
-}
-
 func TestReadListAutoSelectsTheLargestList(t *testing.T) {
 	base := demo.NewDevice("pixel", "Pixel 9", driver.Android)
 	dev := &readListDevice{
@@ -501,7 +482,10 @@ func TestReadListKeepsAnAllowedBlockedAppOutOfHistory(t *testing.T) {
 	dev := &readListDevice{
 		Device: base,
 		app:    screen.App{ID: wallet, Name: "Google Wallet"},
-		pages:  [][]string{{"Visa •••• 4242", "Account balance", "Recent payments"}},
+		pages: [][]string{
+			{"Visa •••• 4242", "Account balance", "Recent payments"},
+			{"Account balance", "Recent payments", "Mastercard •••• 5555"},
+		},
 	}
 	g := newDevGateway(t, base, dev, func(o *Options) { o.DataDir = t.TempDir() })
 	s, _ := connect(t, g, "Read the wallet")
@@ -514,8 +498,8 @@ func TestReadListKeepsAnAllowedBlockedAppOutOfHistory(t *testing.T) {
 	g.mu.Unlock()
 	s.done(l)
 
-	res := s.ReadList(context.Background(), ReadListRequest{MaxScreens: 1, MaxMS: 5000, OCR: "off"})
-	if res.IsError() || res.Scan == nil || !strings.Contains(scanText(res.Scan), "Visa •••• 4242") {
+	res := s.ReadList(context.Background(), ReadListRequest{MaxScreens: 2, MaxMS: 5000, OCR: "off"})
+	if res.IsError() || res.Scan == nil || !strings.Contains(scanText(res.Scan), "Mastercard •••• 5555") {
 		t.Fatalf("allowed blocked app read: %+v\n%s", res, scanText(res.Scan))
 	}
 	s.Release(context.Background(), ReleaseRequest{})
@@ -528,16 +512,19 @@ func TestReadListKeepsAnAllowedBlockedAppOutOfHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	swipes := 0
 	for _, st := range steps {
-		if st.Tool != "phone_read_list" {
+		if st.Tool != "phone_swipe" {
 			continue
 		}
+		swipes++
 		if st.ScreenText != "" {
 			t.Fatalf("allowed blocked app text reached history: %+v", st)
 		}
-		return
 	}
-	t.Fatal("phone_read_list step not found")
+	if swipes != 1 {
+		t.Fatalf("%d swipe steps, want 1: %+v", swipes, steps)
+	}
 }
 
 func TestReadListStopsBeforeProtectedControl(t *testing.T) {
@@ -751,9 +738,9 @@ func TestReadListReturnsPreviousPagesAtDeadline(t *testing.T) {
 	dev := &readListDevice{
 		Device: base, delay: 1200 * time.Millisecond,
 		pages: [][]string{
-			{"first long title", "second long title"},
-			{"second long title", "third long title"},
-			{"third long title", "fourth long title"},
+			{"first long title", "second long title", "third long title"},
+			{"second long title", "third long title", "fourth long title"},
+			{"third long title", "fourth long title", "fifth long title"},
 		},
 	}
 	g := newDevGateway(t, base, dev)
@@ -770,12 +757,15 @@ func TestReadListReturnsPreviousPagesAtDeadline(t *testing.T) {
 	if res.Error != "" || res.Status != StatusSettled || res.Scan == nil {
 		t.Fatalf("deadline scan: %+v", res)
 	}
-	if res.Scan.Stop != "deadline_uncertain" || !res.Scan.Truncated || res.Scan.Lines == 0 {
+	// The swipe that outlasted max_ms was not cancelled: it settled and
+	// was read, and no further swipe started.
+	if res.Scan.Stop != "deadline" || !res.Scan.Truncated || res.Scan.Swipes != 1 || res.Scan.Pages != 2 ||
+		res.Scan.Continuation == "" {
 		t.Fatalf("deadline details: %+v", res.Scan)
 	}
 }
 
-func TestReadListReturnsDeadlineWhenTheFirstReadTimesOut(t *testing.T) {
+func TestReadListStartsNoSwipeAfterMaxMS(t *testing.T) {
 	base := demo.NewDevice("pixel", "Pixel 9", driver.Android)
 	dev := &readListDevice{
 		Device: base, observeDelay: 1200 * time.Millisecond,
@@ -786,8 +776,8 @@ func TestReadListReturnsDeadlineWhenTheFirstReadTimesOut(t *testing.T) {
 	res := s.ReadList(context.Background(), ReadListRequest{
 		MaxScreens: 2, MaxMS: 1000, OCR: "off",
 	})
-	if res.Error != "" || res.Status != StatusSettled || res.Scan == nil ||
-		res.Scan.Stop != "deadline" || !res.Scan.Truncated || res.Scan.Pages != 0 {
+	if res.Error != "" || res.Status != StatusSettled || res.Scan == nil || res.Scan.Stop != "deadline" ||
+		!res.Scan.Truncated || res.Scan.Pages != 1 || res.Scan.Swipes != 0 || res.Scan.Continuation == "" {
 		t.Fatalf("first read deadline: %+v", res)
 	}
 }
@@ -896,7 +886,7 @@ func TestReadListChecksOCROnlyProtectedSwipeTarget(t *testing.T) {
 	}
 }
 
-func TestReadListChecksOCRWhenTheSwipeLaneHasNoTreeElement(t *testing.T) {
+func TestReadListChecksOCRWhereTheSwipeStartsAndSwipesBesideIt(t *testing.T) {
 	base := demo.NewDevice("pixel", "Pixel 9", driver.Android)
 	dev := &readListDevice{
 		Device: base,
@@ -920,8 +910,8 @@ func TestReadListChecksOCRWhenTheSwipeLaneHasNoTreeElement(t *testing.T) {
 	if !dev.sawOCR {
 		t.Fatalf("the empty tree lane was not checked with OCR: %+v", res)
 	}
-	if res.Status != StatusBlocked || res.Rule != "Payments" || res.Scan == nil || res.Scan.Stop != "blocked" {
-		t.Fatalf("pixel-only protected target: %+v", res)
+	if res.Status != StatusSettled || res.Scan == nil || res.Scan.Swipes != 1 {
+		t.Fatalf("a swipe clear of the pixel-only control: %+v", res)
 	}
 }
 
@@ -947,10 +937,7 @@ func TestReadListStopsWhenThePersonTakesOverAfterSwipe(t *testing.T) {
 	res := s.ReadList(context.Background(), ReadListRequest{
 		Ref: listRef, MaxScreens: 3, MaxMS: 5000, OCR: "off",
 	})
-	if res.Status != StatusTookOver || res.Scan == nil || res.Scan.Stop != "took_over" {
+	if res.Status != StatusTookOver || res.Scan != nil {
 		t.Fatalf("takeover: %+v, trigger error: %v", res, takeoverErr)
-	}
-	if strings.Contains(scanText(res.Scan), "fourth long title") {
-		t.Fatalf("content after takeover leaked:\n%s", scanText(res.Scan))
 	}
 }

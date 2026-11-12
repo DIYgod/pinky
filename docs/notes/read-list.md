@@ -4,16 +4,21 @@
 
 ## Pipeline
 
-1. Read the current screen without OCR. If no `ref` was passed, choose the largest list or scrollable element that covers at least a quarter of the screen.
-2. Collect labelled elements whose centres are inside the list, ordered by y then x.
-3. If the element tree inside the list is sparse, read the screen again with local OCR. `ocr: "all"` always asks for pixel-only text; `ocr: "off"` keeps the tree-only path.
-4. Before each swipe, test several vertical lanes inside the list through the normal policy. A lane that would start on a protected control is skipped. The scan stops rather than starting a swipe when no safe lane exists.
-5. Drag a configurable 30–80% of the visible list height for one second and wait for the existing settle detector. The deliberate drag avoids the extra inertia of a short fling, which can otherwise skip more than a viewport.
-6. Compare adjacent viewports by contiguous line runs, not a global text set. This removes ordinary scroll overlap while keeping legitimate duplicate titles at different positions. Fixed controls are tracked separately so a changing nested-list boundary does not make the same toolbar appear as new text.
-7. If continuous video or decoration keeps the pixels moving, compare two element viewports and accept the result when their text and order are stable.
-8. Stop at an explicit end marker, two unchanged screens, the per-call screen limit, the time limit, output limit, a gap with no overlap, lock, Stop, takeover, blocked app, app/list change, or an unstable screen. At an explicit end, an accessibility tree may regroup or reorder an overlapping row; Pinky subtracts equal text by multiplicity and preserves extra occurrences before declaring the list complete. Anything already read is returned.
+The read is a loop around the action pipeline (`internal/gateway/read_list.go`); it adds no input path of its own.
 
-Each call records one history step. A partial result carries a continuation bound to the task, phone, app, list, scroll area and direction; `max_screens` is a fresh budget on each resumed call. It is not a replay of the task recording: reads use only the element tree, local OCR from policy-checked live frames, and the existing screen-capture path. A task MP4 is never used as input.
+1. Check the lease as an action does (`gate`: Stop, pause, takeover, an open approval, a locked phone, watch-only), take the action lock, wait out any settle the last action owes (`settleOwed`) and read the screen. If no `ref` was passed, choose the largest list or scrollable element that covers at least a quarter of the screen.
+2. Collect labelled elements whose centres are inside the list, ordered by y then x, from the agent's view of the screen (`agentView`: blocked apps hidden, one-time codes masked).
+3. If the element tree inside the list is sparse, read the screen again with local OCR. `ocr: "all"` always asks for pixel-only text; `ocr: "off"` keeps the tree-only path.
+4. Each swipe is a `phone_swipe` action (`act`): `budgetBefore` and `lockAct`, `settleOwed`, `prepare` on the latest settled screen with the start inside `swipeArea` (so never on the keyboard, issue #71), `ocrForVerdict` and `evaluate`, the input, `settleAction`, the read after it and `recordStep`. The first swipe of a call reads the screen afresh; later ones start from the read that ended the one before, as `phone_batch` steps do. Before each swipe the read tries a few lanes across the list on the latest screen (`listLane`) and sends the first the rules let through; the pipeline judges it again on its own read.
+5. The read never opens an approval (`Call.noAsk`): a swipe the rules would ask about returns `blocked_by_policy` with the rule, and under the "Approve every action" preset it says so in its own words. The agent swipes with `phone_swipe`, which asks, and reads on.
+6. Drag a configurable 30–80% of the visible list height for one second. The deliberate drag avoids the extra inertia of a short fling, which can otherwise skip more than a viewport.
+7. Compare adjacent viewports by contiguous line runs, not a global text set. This removes ordinary scroll overlap while keeping legitimate duplicate titles at different positions. Fixed controls are tracked separately so a changing nested-list boundary does not make the same toolbar appear as new text.
+8. If continuous video or decoration keeps the pixels moving, compare two element viewports and accept the result when their text and order are stable. The settle stays owed, so the next action waits for it.
+9. Stop at an end marker, two unchanged screens, the per-call screen limit, the time limit, output limit, a gap with no overlap, lock, blocked app, app/list change, or an unstable screen, returning what was read with the status that stopped it. Stop, a pause or a takeover end the call with nothing more, as they end `phone_batch`. An end marker counts only on the list's last row when reading downwards in the list: "No more results" in the middle of a screen, or at the bottom while reading back up, ends nothing. At an end, an accessibility tree may regroup or reorder an overlapping row; Pinky subtracts equal text by multiplicity and preserves extra occurrences before declaring the list complete.
+
+`max_ms` and the call's 45 s are soft: the read starts no swipe that may not finish in time (as long as its slowest swipe so far, at least 5 s for the call budget), and never cancels one already sent. When the screen cannot be read after a swipe, the result is `uncertain` and has no continuation.
+
+Every swipe is a step in the task's history, with the screen it settled on (text from a blocked app the person allowed for the task left out, as for any step). The call itself adds no step. A partial result carries a continuation: an opaque id (`rl_` and 16 random characters) for a cursor kept on the lease, so it goes with the task and phone, holds for 15 minutes and is used once. The cursor holds the app, the list's place and tree path (which agents never see), the scroll area, the direction and the last 80 lines and fixed controls; it is refused in another app or for another list, area or direction. `max_screens` is a fresh budget on each resumed call. It is not a replay of the task recording: reads use only the element tree, local OCR from policy-checked live frames, and the existing screen-capture path. A task MP4 is never used as input.
 
 ## Platform support
 
@@ -25,12 +30,13 @@ Each call records one history step. A partial result carries a continuation boun
 
 ## Safety
 
-- The list and every swipe still pass the gateway's lease, lock, takeover, app-scope and policy checks.
-- A blocked app contributes no text unless the person allowed it for this task. When allowed, text may be read while screenshots and recordings remain withheld.
-- A blocked app allowed only for the task is returned to the agent but its transcript is also withheld from stored task history.
+- Every swipe is an action through the pipeline, so the lease, lock, takeover, open approval, watch-only, read-only, app-scope and policy checks apply to it as to `phone_swipe`, before and after it. Reading the first screen is allowed wherever `phone_observe` is.
+- A blocked app contributes no text unless the person allowed it for this task. When allowed, text may be read while screenshots and recordings remain withheld, and its text stays out of stored task history.
 - One-time codes are masked before collection.
-- A scroll that could begin on a protected control stops the scan. If the chosen lane has no labelled element at all, Pinky asks OCR before swiping so a pixel-only control cannot be mistaken for blank space.
+- A swipe that would start on a protected control stops the read instead of asking. Where the tree shows nothing under the start, the pipeline checks OCR (`ocrForVerdict`), so a pixel-only control cannot be mistaken for blank space.
 - `max_ms` is at most 45 seconds. A partial result is explicit and must not be described as a complete list unless `complete: true`.
+
+Tests: `read_list_test.go` (merging, fixed controls, end markers, gaps, continuation, deadlines, takeover) and `read_list_pipeline_test.go` (Stop and pause mid-read, an open approval, watch-only, read-only, an agent limited to other apps, "Approve every action", continuations refused in another task, phone or app and used only once, end markers that do not count, the settle a swipe owes, the call budget, an unreadable screen after a swipe). None needs a phone.
 
 ## Simulator measurement
 

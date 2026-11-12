@@ -1,4 +1,4 @@
-package screen
+package gateway
 
 import (
 	"crypto/sha256"
@@ -7,46 +7,47 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
-// ViewportLine is one readable line in a scrolling viewport. Bounds are
+// viewportLine is one readable line in a scrolling viewport. Bounds are
 // kept for ordering only; the collection and merge code deliberately do
 // not use position to decide whether two pages overlap, because the same
 // content moves up or down as the list scrolls.
-type ViewportLine struct {
+type viewportLine struct {
 	Text   string
 	Role   string
-	Source Source
-	Bounds Rect
-	key    string // set only when reconstructing a continuation
+	Source screen.Source
+	Bounds screen.Rect
 }
 
-// CollectViewport returns the labelled content whose centres are inside
+// collectViewport returns the labelled content whose centres are inside
 // area, in visual reading order. Repeated labels stay repeated: two
 // products may legitimately have the same title. Hidden elements and
 // labels that are empty after whitespace normalization are omitted.
-func CollectViewport(s *Screen, area Rect) []ViewportLine {
-	return collectViewport(s, area, 0)
+func collectViewport(s *screen.Screen, area screen.Rect) []viewportLine {
+	return collectViewportIn(s, area, 0)
 }
 
-// CollectListViewport collects a list but omits the list container itself,
+// collectListViewport collects a list but omits the list container itself,
 // whose label is a control title rather than scrolled content.
-func CollectListViewport(s *Screen, list Element) []ViewportLine {
-	return collectViewport(s, list.Bounds, list.Ref)
+func collectListViewport(s *screen.Screen, list screen.Element) []viewportLine {
+	return collectViewportIn(s, list.Bounds, list.Ref)
 }
 
-func collectViewport(s *Screen, area Rect, excludeRef int) []ViewportLine {
+func collectViewportIn(s *screen.Screen, area screen.Rect, excludeRef int) []viewportLine {
 	if s == nil || area.Empty() {
 		return nil
 	}
-	lines := make([]ViewportLine, 0, len(s.Elements))
+	lines := make([]viewportLine, 0, len(s.Elements))
 	for _, e := range s.Elements {
 		text := cleanViewportText(e.Label)
 		if text == "" || (excludeRef != 0 && e.Ref == excludeRef) || e.Hidden ||
 			e.Bounds.Empty() || !area.Contains(e.Bounds.Center()) {
 			continue
 		}
-		line := ViewportLine{Text: text, Role: e.Role, Source: e.Source, Bounds: e.Bounds}
+		line := viewportLine{Text: text, Role: e.Role, Source: e.Source, Bounds: e.Bounds}
 		// A few platform trees repeat the same visible node at exactly the
 		// same place. Keep equal labels elsewhere, but discard those exact
 		// duplicates before they affect overlap detection.
@@ -75,11 +76,11 @@ func collectViewport(s *Screen, area Rect, excludeRef int) []ViewportLine {
 	return lines
 }
 
-// FilterPinned removes lines that stayed at the same place between two
+// filterPinned removes lines that stayed at the same place between two
 // viewports. Sticky bars and floating controls would otherwise interrupt the
 // text sequence that identifies the actual overlap.
-func FilterPinned(previous, current []ViewportLine) []ViewportLine {
-	out := make([]ViewportLine, 0, len(current))
+func filterPinned(previous, current []viewportLine) []viewportLine {
+	out := make([]viewportLine, 0, len(current))
 	for _, line := range current {
 		pinned := false
 		for _, old := range previous {
@@ -95,11 +96,11 @@ func FilterPinned(previous, current []ViewportLine) []ViewportLine {
 	return out
 }
 
-// PinnedLines returns previous lines that stayed at the same place and kept
+// pinnedLines returns previous lines that stayed at the same place and kept
 // the same content in current. A caller can retain this small set across
 // further captures even when a changing list container no longer exposes it.
-func PinnedLines(previous, current []ViewportLine) []ViewportLine {
-	out := make([]ViewportLine, 0, len(previous))
+func pinnedLines(previous, current []viewportLine) []viewportLine {
+	out := make([]viewportLine, 0, len(previous))
 	for _, line := range previous {
 		for _, now := range current {
 			if viewportKey(line) == viewportKey(now) && nearlySameRect(line.Bounds, now.Bounds) {
@@ -111,16 +112,16 @@ func PinnedLines(previous, current []ViewportLine) []ViewportLine {
 	return out
 }
 
-// AppendViewport returns the content on current that follows the adjacent
+// appendViewport returns the content on current that follows the adjacent
 // overlap with previous, and the number of overlapping lines. A contiguous
 // match is required so equal text elsewhere in either page does not erase a
 // legitimate repeated item. The caller compares the returned slice with an
 // empty slice to decide whether scrolling exposed new content.
-func AppendViewport(previous, current []ViewportLine) (fresh []ViewportLine, overlap int) {
+func appendViewport(previous, current []viewportLine) (fresh []viewportLine, overlap int) {
 	if len(previous) == 0 || len(current) == 0 {
-		return append([]ViewportLine(nil), current...), 0
+		return append([]viewportLine(nil), current...), 0
 	}
-	prevKeys, curKeys := ViewportKeys(previous), ViewportKeys(current)
+	prevKeys, curKeys := viewportKeys(previous), viewportKeys(current)
 	if sameKeys(prevKeys, curKeys) {
 		return nil, len(current)
 	}
@@ -146,20 +147,20 @@ func AppendViewport(previous, current []ViewportLine) (fresh []ViewportLine, ove
 		}
 	}
 	if bestLen == 0 {
-		return append([]ViewportLine(nil), current...), 0
+		return append([]viewportLine(nil), current...), 0
 	}
-	return append([]ViewportLine(nil), current[bestAt+bestLen:]...), bestLen
+	return append([]viewportLine(nil), current[bestAt+bestLen:]...), bestLen
 }
 
-// UnseenPrefix reports whether a forward viewport match starts after one or
+// unseenPrefix reports whether a forward viewport match starts after one or
 // more lines that were not present in the previous viewport. Such lines may
 // be newly prepended content, so silently appending only what follows the
 // overlap could lose them.
-func UnseenPrefix(previous, current []ViewportLine) bool {
+func unseenPrefix(previous, current []viewportLine) bool {
 	if len(previous) == 0 || len(current) == 0 {
 		return false
 	}
-	prevKeys, curKeys := ViewportKeys(previous), ViewportKeys(current)
+	prevKeys, curKeys := viewportKeys(previous), viewportKeys(current)
 	bestLen, bestAt := 0, 0
 	for j := 0; j < len(current); j++ {
 		for i := 0; i < len(previous); i++ {
@@ -198,7 +199,7 @@ func UnseenPrefix(previous, current []ViewportLine) bool {
 	return false
 }
 
-func longFragmentOfPrevious(line ViewportLine, previous []ViewportLine) bool {
+func longFragmentOfPrevious(line viewportLine, previous []viewportLine) bool {
 	text := viewportKeyText(line)
 	if utf8.RuneCountInString(text) < 24 {
 		return false
@@ -212,17 +213,17 @@ func longFragmentOfPrevious(line ViewportLine, previous []ViewportLine) bool {
 	return false
 }
 
-// NewViewportContent returns current content that is not already represented
+// newViewportContent returns current content that is not already represented
 // in previous. It is for a final viewport with an explicit end marker, where
 // accessibility grouping can reorder an overlapping row. Equal text is
 // subtracted by multiplicity, so a legitimate repeated item is kept when
 // current contains one more occurrence than previous.
-func NewViewportContent(previous, current []ViewportLine) []ViewportLine {
+func newViewportContent(previous, current []viewportLine) []viewportLine {
 	counts := map[string]int{}
 	for _, line := range previous {
 		counts[viewportKey(line)]++
 	}
-	out := make([]ViewportLine, 0, len(current))
+	out := make([]viewportLine, 0, len(current))
 	for _, line := range current {
 		key := viewportKey(line)
 		if counts[key] > 0 {
@@ -237,15 +238,15 @@ func NewViewportContent(previous, current []ViewportLine) []ViewportLine {
 	return out
 }
 
-// AppendViewportBackward is AppendViewport for a list read towards its top.
+// appendViewportBackward is appendViewport for a list read towards its top.
 // The current viewport shows content above previous, so the useful overlap is
 // a prefix of previous matched by a suffix of current. The newly exposed
 // content is the part of current before that suffix.
-func AppendViewportBackward(previous, current []ViewportLine) (fresh []ViewportLine, overlap int) {
+func appendViewportBackward(previous, current []viewportLine) (fresh []viewportLine, overlap int) {
 	if len(previous) == 0 || len(current) == 0 {
-		return append([]ViewportLine(nil), current...), 0
+		return append([]viewportLine(nil), current...), 0
 	}
-	prevKeys, curKeys := ViewportKeys(previous), ViewportKeys(current)
+	prevKeys, curKeys := viewportKeys(previous), viewportKeys(current)
 	if sameKeys(prevKeys, curKeys) {
 		return nil, len(current)
 	}
@@ -270,17 +271,13 @@ func AppendViewportBackward(previous, current []ViewportLine) (fresh []ViewportL
 		}
 	}
 	if bestLen == 0 {
-		return append([]ViewportLine(nil), current...), 0
+		return append([]viewportLine(nil), current...), 0
 	}
-	return append([]ViewportLine(nil), current[:bestAt]...), bestLen
+	return append([]viewportLine(nil), current[:bestAt]...), bestLen
 }
 
-// SameViewport reports whether two captures contain the same labelled
-// content in the same visual order.
-func SameViewport(a, b []ViewportLine) bool { return sameViewport(a, b) }
-
-// ViewportTexts returns the line labels for compact output.
-func ViewportTexts(lines []ViewportLine) []string {
+// viewportTexts returns the line labels for compact output.
+func viewportTexts(lines []viewportLine) []string {
 	out := make([]string, 0, len(lines))
 	for _, line := range lines {
 		out = append(out, line.Text)
@@ -288,8 +285,8 @@ func ViewportTexts(lines []ViewportLine) []string {
 	return out
 }
 
-// ViewportKeys returns the normalized comparison key of each line.
-func ViewportKeys(lines []ViewportLine) []string {
+// viewportKeys returns the normalized comparison key of each line.
+func viewportKeys(lines []viewportLine) []string {
 	out := make([]string, 0, len(lines))
 	for _, line := range lines {
 		out = append(out, viewportKey(line))
@@ -297,45 +294,34 @@ func ViewportKeys(lines []ViewportLine) []string {
 	return out
 }
 
-// ViewportLineFromKey reconstructs a comparison-only line from a stored
-// viewport key. Its text stays empty so it can never be emitted as content.
-func ViewportLineFromKey(key string) ViewportLine {
-	return ViewportLine{key: key}
-}
-
-// ViewportLineFromKeyAt reconstructs a comparison-only line with its former
-// screen position, for retaining fixed controls across a continuation.
-func ViewportLineFromKeyAt(key string, bounds Rect) ViewportLine {
-	return ViewportLine{Bounds: bounds, key: key}
-}
-
-// ViewportEndsAt reports a common explicit end-of-list line. It is
-// intentionally conservative: failing to recognise an end is harmless, but
-// claiming an end that the app did not show is not.
-func ViewportEndsAt(lines []ViewportLine) bool {
-	for _, line := range lines {
-		text := strings.TrimSpace(strings.ToLower(line.Text))
-		text = strings.TrimSpace(strings.Trim(text, "-–—_.·"))
-		switch text {
-		case "没有更多了", "没有更多", "到底了", "已经到底了", "已经到底",
-			"没有更多内容了", "暂无更多", "已显示全部",
-			"no more results", "no more items", "no more content", "end of list",
-			"you've reached the end", "you reached the end":
-			return true
-		}
+// endMarker reports whether the last of lines, the list's last row in
+// reading order, is a common explicit end-of-list line. Only the last row
+// counts: "No more results" in the middle of a screen, or at the end the
+// read moves away from, does not end the list. It is conservative on
+// purpose: missing an end is harmless, claiming one the app did not show
+// is not.
+func endMarker(lines []viewportLine) bool {
+	if len(lines) == 0 {
+		return false
+	}
+	text := strings.TrimSpace(strings.ToLower(lines[len(lines)-1].Text))
+	text = strings.TrimSpace(strings.Trim(text, "-–—_.·"))
+	switch text {
+	case "没有更多了", "没有更多", "到底了", "已经到底了", "已经到底",
+		"没有更多内容了", "暂无更多", "已显示全部",
+		"no more results", "no more items", "no more content", "end of list",
+		"you've reached the end", "you reached the end":
+		return true
 	}
 	return false
 }
 
-func viewportKey(line ViewportLine) string {
-	if line.key != "" {
-		return line.key
-	}
+func viewportKey(line viewportLine) string {
 	sum := sha256.Sum256([]byte(viewportKeyText(line)))
 	return hex.EncodeToString(sum[:8])
 }
 
-func viewportKeyText(line ViewportLine) string {
+func viewportKeyText(line viewportLine) string {
 	return strings.ToLower(cleanViewportText(line.Text))
 }
 
@@ -349,8 +335,8 @@ func cleanViewportText(s string) string {
 	return strings.Join(strings.Fields(strings.TrimSpace(s)), " ")
 }
 
-func sameViewport(a, b []ViewportLine) bool {
-	return sameKeys(ViewportKeys(a), ViewportKeys(b))
+func sameViewport(a, b []viewportLine) bool {
+	return sameKeys(viewportKeys(a), viewportKeys(b))
 }
 
 func sameKeys(a, b []string) bool {
@@ -382,7 +368,7 @@ func countKey(keys []string, key string) int {
 	return n
 }
 
-func overlapChars(lines []ViewportLine) int {
+func overlapChars(lines []viewportLine) int {
 	n := 0
 	for _, line := range lines {
 		n += utf8.RuneCountInString(line.Text)
@@ -390,7 +376,7 @@ func overlapChars(lines []ViewportLine) int {
 	return n
 }
 
-func nearlySameRect(a, b Rect) bool {
+func nearlySameRect(a, b screen.Rect) bool {
 	const tolerance = 4
 	abs := func(n int) int {
 		if n < 0 {

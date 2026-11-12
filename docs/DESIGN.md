@@ -189,7 +189,7 @@ Agents see one MCP server, `pinky`, with 20 tools. Every action waits for the sc
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 
-Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history), `approval_id?` (to keep waiting on a pending approval) and `settle_ms?` (0 to 3000: the most to wait for the screen to settle, for screens that never stop moving; see the action pipeline's Settle step). `phone_read_list` takes `device?` and `intent?`; Stop or takeover ends it with any pages already collected.
+Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history), `approval_id?` (to keep waiting on a pending approval) and `settle_ms?` (0 to 3000: the most to wait for the screen to settle, for screens that never stop moving; see the action pipeline's Settle step). `phone_read_list` takes `device?` and `intent?`; each of its swipes is a `phone_swipe` through the action pipeline and in history, it never opens an approval (a swipe that would ask stops it), and Stop, a pause or a takeover end it with nothing more, as they end `phone_batch`.
 
 ### Sessions and leases
 

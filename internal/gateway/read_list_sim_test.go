@@ -88,7 +88,7 @@ func TestReadListSimulatorBaseline(t *testing.T) {
 	if res.Error != "" {
 		t.Fatalf("observe Explore: %+v", res)
 	}
-	list, ok := largestList(res.Screen)
+	list, ok := simLargestList(res.Screen)
 	if !ok {
 		t.Skip("the long Explore feed is not in front")
 	}
@@ -109,7 +109,7 @@ func TestReadListSimulatorBaseline(t *testing.T) {
 		if res.Screen != nil {
 			labels += countLabels(res.Screen)
 		}
-		if cur, next := largestList(res.Screen); next {
+		if cur, next := simLargestList(res.Screen); next {
 			list = cur
 		} else {
 			// A diff may leave only part of the screen. Read the next full
@@ -118,7 +118,7 @@ func TestReadListSimulatorBaseline(t *testing.T) {
 			if res.Error != "" {
 				t.Fatalf("observe after swipe %d: %+v", i+1, res)
 			}
-			if list, ok = largestList(res.Screen); !ok {
+			if list, ok = simLargestList(res.Screen); !ok {
 				t.Fatalf("list disappeared after swipe %d", i+1)
 			}
 		}
@@ -193,7 +193,7 @@ func TestReadListSimulator(t *testing.T) {
 	if res = s.Observe(ctx, ObserveRequest{}); res.Error != "" {
 		t.Fatalf("observe Explore: %+v", res)
 	}
-	list, ok := largestList(res.Screen)
+	list, ok := simLargestList(res.Screen)
 	if !ok {
 		t.Skip("the long Explore feed is not in front")
 	}
@@ -241,7 +241,7 @@ func TestReadListSimulator(t *testing.T) {
 	}
 }
 
-func largestList(s *screen.Screen) (screen.Element, bool) {
+func simLargestList(s *screen.Screen) (screen.Element, bool) {
 	if s == nil {
 		return screen.Element{}, false
 	}
