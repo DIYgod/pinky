@@ -440,6 +440,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 			a.awayKeepAwakeRow(c)
 		}
 	})
+	a.webMirrorSettings(c)
 }
 
 // phoneHead is the head of a phone's group in Settings › Phones: its

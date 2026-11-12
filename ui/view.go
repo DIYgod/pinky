@@ -192,6 +192,7 @@ func (a *app) sidebarPhones(c *mg.Context) {
 					}
 					mg.Text(c, statusLine(d)).FontSize(fsCaption).TextColor(p.ink2).SingleLine()
 				})
+				a.webMirrorBadge(c, d.Info.ID)
 			})
 		}
 	})

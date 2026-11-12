@@ -10566,6 +10566,198 @@
   "@updateWhereUnsigned": {
     "description": "Why this Pinky cannot update itself: it is a local build. Shown only in other languages; in English internal/update's own words show."
   },
+  "webMirrorControlDesc": "Taps, swipes, Back and Home from the page, as on Pinky's own mirror: they pause an agent's task.",
+  "@webMirrorControlDesc": {
+    "description": "Settings › Phones › Web mirror: under webMirrorControlToggle, what control from the browser does."
+  },
+  "webMirrorControlLink": "Control link",
+  "@webMirrorControlLink": {
+    "description": "Settings › Phones › Web mirror: the row of the link that can also use the phone, on this computer."
+  },
+  "webMirrorControlLinkDesc": "On this computer. The page has Back and Home.",
+  "@webMirrorControlLinkDesc": {
+    "description": "Settings › Phones › Web mirror: under webMirrorControlLink."
+  },
+  "webMirrorControlTailnetLink": "Control link on your tailnet",
+  "@webMirrorControlTailnetLink": {
+    "description": "Settings › Phones › Web mirror: the row of the link that can also use the phone, through Tailscale."
+  },
+  "webMirrorControlTailnetLinkDesc": "Works only for you, signed in to Tailscale as this computer's owner.",
+  "@webMirrorControlTailnetLinkDesc": {
+    "description": "Settings › Phones › Web mirror: under webMirrorControlTailnetLink. Through Tailscale, only the tailnet login this computer is signed in as may use the phone."
+  },
+  "webMirrorControlToggle": "Let the browser use the phone",
+  "@webMirrorControlToggle": {
+    "description": "Settings › Phones › Web mirror: the switch that lets pages opened with the control link use the phone."
+  },
+  "webMirrorControlWarning": "Anyone with the control link can use the phone as you can, in any app, blocked apps included: Pinky's rules don't apply to you. Open it only on your own devices.",
+  "@webMirrorControlWarning": {
+    "description": "Settings › Phones › Web mirror: the amber warning while control from the browser is on."
+  },
+  "webMirrorControllers": "{count, plural, one {# can use the phone} other {# can use the phone}}",
+  "@webMirrorControllers": {
+    "description": "Settings › Phones › Web mirror: after webMirrorViewers, how many of those browsers can use the phone."
+  },
+  "webMirrorPageBack": "Back",
+  "@webMirrorPageBack": {
+    "description": "The web mirror's page: the button that presses Back on the phone."
+  },
+  "webMirrorPageControlOff": "Using the phone from the browser is off. Turn it on in Pinky: Settings › Phones › Web mirror.",
+  "@webMirrorPageControlOff": {
+    "description": "The web mirror's page opened with the control link while control is off in Settings."
+  },
+  "webMirrorPageFullScreen": "Full screen",
+  "@webMirrorPageFullScreen": {
+    "description": "The web mirror's page: the button that shows the page full screen, and its tooltip."
+  },
+  "webMirrorPageHome": "Home",
+  "@webMirrorPageHome": {
+    "description": "The web mirror's page: the button that goes to the phone's home screen."
+  },
+  "webMirrorPageInControl": "You're in control: the agent's task is paused. Hand it back in Pinky.",
+  "@webMirrorPageInControl": {
+    "description": "The web mirror's page, in the bar at the top, while the person's input paused an agent's task."
+  },
+  "webMirrorPageTailnetUser": "Through Tailscale, only the owner of the computer running Pinky can use the phone: sign in to Tailscale on this device as them. Tagged devices and public links can't.",
+  "@webMirrorPageTailnetUser": {
+    "description": "The web mirror's page: the control link was opened through Tailscale without a signed-in user (a tagged device, or Tailscale Funnel). tailnet is Tailscale's word: keep it."
+  },
+  "webMirrorCopiedLink": "Link copied",
+  "@webMirrorCopiedLink": {
+    "description": "Settings › Phones › Web mirror: the toast after a Copy button copies a link to the web mirror."
+  },
+  "webMirrorCopyLink": "Copy the link",
+  "@webMirrorCopyLink": {
+    "description": "Settings › Phones › Web mirror: the accessibility label of the Copy button of the link on this computer."
+  },
+  "webMirrorCopyTailnetLink": "Copy the tailnet link",
+  "@webMirrorCopyTailnetLink": {
+    "description": "Settings › Phones › Web mirror: the accessibility label of the Copy button of the tailnet link. tailnet is Tailscale's word for the person's private network: keep it."
+  },
+  "webMirrorFailed": "Couldn't turn on the web mirror: {error}",
+  "@webMirrorFailed": {
+    "description": "Settings › Phones › Web mirror: in red under the switch when the mirror could not start, as when another program uses its port. error is the system's own words, in English."
+  },
+  "webMirrorIntro": "Watch a phone's screen in a web browser, on this computer or on your other devices through Tailscale, and use the phone there if you allow it below.",
+  "@webMirrorIntro": {
+    "description": "Settings › Phones › Web mirror: under the heading webMirrorTitle, what the web mirror is. Tailscale is a product name: keep it."
+  },
+  "webMirrorLink": "On this computer",
+  "@webMirrorLink": {
+    "description": "Settings › Phones › Web mirror: the row of the mirror's link on this computer (http://127.0.0.1:7466/)."
+  },
+  "webMirrorLinkDesc": "Open it in Safari, Chrome or Edge.",
+  "@webMirrorLinkDesc": {
+    "description": "Settings › Phones › Web mirror: under webMirrorLink: the browsers that can show the phone's video. Product names: keep them."
+  },
+  "webMirrorNewLink": "Replace the link",
+  "@webMirrorNewLink": {
+    "description": "Settings › Phones › Web mirror: the row with the button that makes a new key for the links, so old links stop working."
+  },
+  "webMirrorNewLinkButton": "New link",
+  "@webMirrorNewLinkButton": {
+    "description": "Settings › Phones › Web mirror: the button on the webMirrorNewLink row."
+  },
+  "webMirrorNewLinkDesc": "The old links stop working, and browsers watching with them are cut off. Pinky also makes new links each time it starts.",
+  "@webMirrorNewLinkDesc": {
+    "description": "Settings › Phones › Web mirror: under webMirrorNewLink: what making a new link does."
+  },
+  "webMirrorNewLinkDone": "New link made. Copy it again.",
+  "@webMirrorNewLinkDone": {
+    "description": "Settings › Phones › Web mirror: the toast after New link."
+  },
+  "webMirrorNoViewers": "No one is watching",
+  "@webMirrorNoViewers": {
+    "description": "Settings › Phones › Web mirror: next to New link, while no browser shows the mirror."
+  },
+  "webMirrorOpen": "Open",
+  "@webMirrorOpen": {
+    "description": "Settings › Phones › Web mirror: the button that opens the mirror in the computer's web browser."
+  },
+  "webMirrorPageBadToken": "This link no longer works: its key was replaced. Copy it again in Pinky: Settings › Phones › Web mirror.",
+  "@webMirrorPageBadToken": {
+    "description": "The web mirror's page in a browser: the link's key is wrong, as after New link. Settings › Phones › Web mirror is the place in Pinky; translate it with the app's names."
+  },
+  "webMirrorPageConnecting": "Connecting to Pinky…",
+  "@webMirrorPageConnecting": {
+    "description": "The web mirror's page in a browser: while it connects."
+  },
+  "webMirrorPageEnded": "The phone's picture stopped. Reconnecting…",
+  "@webMirrorPageEnded": {
+    "description": "The web mirror's page in a browser: the phone's video ended, as when the phone was unplugged."
+  },
+  "webMirrorPageInsecure": "Browsers decode video only on secure pages. Open the tailnet link (https://…) that Pinky shows.",
+  "@webMirrorPageInsecure": {
+    "description": "The web mirror's page in a browser opened over plain HTTP from another device, where WebCodecs is not available. tailnet is Tailscale's word: keep it."
+  },
+  "webMirrorPageNoPhone": "No phone is connected to Pinky. Waiting for one…",
+  "@webMirrorPageNoPhone": {
+    "description": "The web mirror's page in a browser: no phone is online."
+  },
+  "webMirrorPageNoToken": "This link has no key. Copy it again in Pinky: Settings › Phones › Web mirror.",
+  "@webMirrorPageNoToken": {
+    "description": "The web mirror's page in a browser: opened without the key after the # of the link."
+  },
+  "webMirrorPageNoWebCodecs": "This browser can't decode video for the web mirror. Use a recent Safari, Chrome or Edge.",
+  "@webMirrorPageNoWebCodecs": {
+    "description": "The web mirror's page in a browser without WebCodecs."
+  },
+  "webMirrorPagePhone": "Phone",
+  "@webMirrorPagePhone": {
+    "description": "The web mirror's page in a browser: the accessibility label of the list that picks which phone to show."
+  },
+  "webMirrorPageReconnecting": "Lost the connection to Pinky. Reconnecting…",
+  "@webMirrorPageReconnecting": {
+    "description": "The web mirror's page in a browser: the connection dropped."
+  },
+  "webMirrorPageStreamFailed": "Couldn't get the phone's picture: {detail}. Trying again…",
+  "@webMirrorPageStreamFailed": {
+    "description": "The web mirror's page in a browser: the phone's video did not open. detail is Pinky's own words, in English."
+  },
+  "webMirrorPageTitle": "Phone screen · Pinky",
+  "@webMirrorPageTitle": {
+    "description": "The web mirror's page: the browser tab's title."
+  },
+  "webMirrorPageUnsupported": "This browser can't decode the phone's {codec} video. Try Safari, or Chrome or Edge on a Mac or a Windows PC.",
+  "@webMirrorPageUnsupported": {
+    "description": "The web mirror's page in a browser that cannot decode the phone's codec. codec is \"HEVC (H.265)\" or \"H.264\"."
+  },
+  "webMirrorTailnetCommandLabel": "Command to serve the web mirror on your tailnet",
+  "@webMirrorTailnetCommandLabel": {
+    "description": "Settings › Phones › Web mirror: the accessibility label of the tailscale serve command. tailnet is Tailscale's word: keep it."
+  },
+  "webMirrorTailnetHint": "Browsers decode video only on HTTPS pages, which Tailscale gives. Run this once on this computer; your devices on Tailscale then open the mirror at {url}.",
+  "@webMirrorTailnetHint": {
+    "description": "Settings › Phones › Web mirror: above the tailscale serve command, while Tailscale is connected here but does not serve the mirror yet. url is as https://macbook.tail1234.ts.net:8443/. Tailscale is a product name: keep it."
+  },
+  "webMirrorTailnetLink": "On your tailnet",
+  "@webMirrorTailnetLink": {
+    "description": "Settings › Phones › Web mirror: the row of the mirror's link through Tailscale. tailnet is Tailscale's word: keep it."
+  },
+  "webMirrorTailnetLinkDesc": "For your devices on Tailscale.",
+  "@webMirrorTailnetLinkDesc": {
+    "description": "Settings › Phones › Web mirror: under webMirrorTailnetLink."
+  },
+  "webMirrorTailnetTitle": "Your other devices",
+  "@webMirrorTailnetTitle": {
+    "description": "Settings › Phones › Web mirror: the heading of the tailscale serve command."
+  },
+  "webMirrorTitle": "Web mirror",
+  "@webMirrorTitle": {
+    "description": "Settings › Phones: the heading of the part that shows phones in a web browser, and its accessibility label."
+  },
+  "webMirrorToggle": "Show phones in a web browser",
+  "@webMirrorToggle": {
+    "description": "Settings › Phones › Web mirror: the switch that turns the web mirror on."
+  },
+  "webMirrorViewers": "{count, plural, one {# browser is watching} other {# browsers are watching}}",
+  "@webMirrorViewers": {
+    "description": "Settings › Phones › Web mirror: next to New link, how many browsers show the mirror now (1 or more)."
+  },
+  "webMirrorWarning": "Anyone with the link sees every phone connected to Pinky and everything on its screen, as Pinky's own mirror does, blocked apps and one-time codes included. Open it only on your own devices.",
+  "@webMirrorWarning": {
+    "description": "Settings › Phones › Web mirror: the amber warning while the web mirror is on."
+  },
   "wiFiAlsoAway": "Stopping it also stops Use away from home.",
   "@wiFiAlsoAway": {
     "description": "After wiFiOnDesc when the phone is used away from home too. Use away from home is awayTitle."

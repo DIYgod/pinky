@@ -179,6 +179,7 @@ func runApp(args []string) error {
 		// For phones that refuse installs over USB.
 		CompanionAPK:  bundledCompanion,
 		RemoteTailnet: remoteTailnet,
+		WebMirror:     rg.Mirror,
 		// What's new in the app's language.
 		ChangelogTranslations: pinky.ChangelogTranslations,
 		// The window is up: an update that just swapped this version in
@@ -335,6 +336,14 @@ func startSettings(rg *runningGateway, s ui.Settings, log *slog.Logger) {
 			log.Warn("settings: remote agents", "err", err)
 		}
 	}
+	if rg.Mirror != nil {
+		rg.Mirror.SetControl(s.WebMirrorControl)
+	}
+	if s.WebMirror && rg.Mirror != nil {
+		if err := rg.Mirror.Set(true); err != nil {
+			log.Warn("settings: web mirror", "err", err)
+		}
+	}
 }
 
 func remoteAddr(s ui.Settings) string {
@@ -396,6 +405,12 @@ func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
 	}
 	if rg.Remote != nil && (s.RemoteAgents != old.RemoteAgents || remoteAddr(s) != remoteAddr(old)) {
 		warn("remote agents", rg.Remote.Set(s.RemoteAgents, remoteAddr(s)))
+	}
+	if rg.Mirror != nil && s.WebMirrorControl != old.WebMirrorControl {
+		rg.Mirror.SetControl(s.WebMirrorControl)
+	}
+	if rg.Mirror != nil && s.WebMirror != old.WebMirror {
+		warn("web mirror", rg.Mirror.Set(s.WebMirror))
 	}
 	if s.Preset != old.Preset && s.Preset >= int(policy.PresetCommits) && s.Preset <= int(policy.PresetEvery) {
 		warn("preset", rg.Policy.SetPreset(policy.Preset(s.Preset)))

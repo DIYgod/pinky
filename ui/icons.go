@@ -47,6 +47,7 @@ var (
 	icIphone   = icon(`<rect x="6" y="2" width="12" height="20" rx="3.5"/><path d="M10 5h4"/>`)
 	icAlert    = icon(`<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>`)
 	icExpand   = icon(`<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>`)
+	icEye      = icon(`<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>`)
 	icEyeOff   = icon(`<path d="M10.7 5.1A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13.2 13.2 0 0 1-1.7 2.7"/><path d="M14.1 14.2a3 3 0 1 1-4.2-4.2"/><path d="M17.5 17.5A10.4 10.4 0 0 1 12 19c-7 0-10-7-10-7a13.2 13.2 0 0 1 4.6-5.3"/><path d="m2 2 20 20"/>`)
 	icCamera   = icon(`<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>`)
 	icMonitor  = icon(`<rect x="2" y="3" width="20" height="14" rx="2"/><rect x="9.5" y="6" width="5" height="8" rx="1"/><path d="M8 21h8"/><path d="M12 17v4"/>`)
