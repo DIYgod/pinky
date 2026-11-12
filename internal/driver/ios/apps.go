@@ -142,12 +142,11 @@ func readAppInfos(infos []installationproxy.AppInfo, names map[string]string) ap
 	all := map[string]driver.App{}
 	for _, a := range infos {
 		id, _ := a["CFBundleIdentifier"].(string)
-		name, _ := a["CFBundleDisplayName"].(string)
-		if name == "" {
-			name, _ = a["CFBundleName"].(string)
-		}
+		display, _ := a["CFBundleDisplayName"].(string)
+		bundle, _ := a["CFBundleName"].(string)
 		typ, _ := a["ApplicationType"].(string)
-		app := driver.App{ID: id, Name: name, System: typ != "User"}
+		app := driver.App{ID: id, System: typ != "User"}
+		app.Name, app.Aliases = appNames(names[id], display, bundle)
 		if path, _ := a["Path"].(string); path != "" && id != "" {
 			l.byPath[strings.TrimSuffix(path, "/")] = app
 		}
@@ -163,10 +162,6 @@ func readAppInfos(infos []installationproxy.AppInfo, names map[string]string) ap
 				declared[s] = append(declared[s], id)
 			}
 		}
-	}
-	addHomeScreenNames(l.apps, names)
-	for _, a := range l.apps {
-		all[a.ID] = a // with the home screen's name
 	}
 	for s, ids := range declared {
 		sort.Strings(ids)
@@ -270,16 +265,24 @@ func collectIconNames(v any, names map[string]string, depth int) {
 	}
 }
 
-// addHomeScreenNames gives apps whose home screen name differs from their
-// own that name as an alias.
-func addHomeScreenNames(apps []driver.App, names map[string]string) {
-	for i := range apps {
-		n := names[apps[i].ID]
-		if n == "" || strings.EqualFold(n, apps[i].Name) {
-			continue
-		}
-		apps[i].Aliases = append(apps[i].Aliases, n)
+// appNames names an app as the phone shows it: by its localized name, in
+// the phone's language (the home screen's "微信"), when there is one, else
+// by its Info.plist's display name, else its bundle name. The Info.plist's
+// name, the same in every language ("WeChat"), stays as an alias when it
+// differs, so agents can still find the app by it.
+func appNames(localized, display, bundle string) (string, []string) {
+	base := strings.TrimSpace(display)
+	if base == "" {
+		base = strings.TrimSpace(bundle)
 	}
+	localized = strings.TrimSpace(localized)
+	if localized == "" || strings.EqualFold(localized, base) {
+		return base, nil
+	}
+	if base == "" {
+		return localized, nil
+	}
+	return localized, []string{base}
 }
 
 // appForExecutable maps a process's executable path to its app.

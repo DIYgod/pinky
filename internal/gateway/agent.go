@@ -1587,7 +1587,7 @@ func (s *Session) Apps(ctx context.Context, req AppsRequest) *Result {
 		if scope.Mode == ScopeApps && !g.policy.IsSystem(app) && !appListed(app, scope.Apps) {
 			continue
 		}
-		if q != "" && !strings.Contains(strings.ToLower(a.Name), q) && !strings.Contains(strings.ToLower(a.ID), q) {
+		if q != "" && !appNamed(a, q, func(n string) bool { return strings.Contains(n, q) }) && !strings.Contains(strings.ToLower(a.ID), q) {
 			continue
 		}
 		out = append(out, a)
