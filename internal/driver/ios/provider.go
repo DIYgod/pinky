@@ -426,6 +426,23 @@ func (p *Provider) wdaState(ctx context.Context, key entryKey, info driver.Info)
 // waited for the passcode. When the phone asks for it, the runner is kept
 // for List to watch (see wdaState) instead of started again every pass.
 func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device, error) {
+	d, err := p.startWDADevice(ctx, info)
+	if err != nil {
+		return nil, err
+	}
+	if d.entry.Properties.SerialNumber != "" && d.c.routed() {
+		// It rests when unused, and starts the runner again on demand
+		// (rest_wda.go).
+		d.reopen = func(ctx context.Context) (*WDADevice, error) { return p.startWDADevice(ctx, info) }
+		d.done = make(chan struct{})
+		go d.restLoop()
+	}
+	return d, nil
+}
+
+// startWDADevice starts the helper's runner, or takes over one already
+// answering, and opens the phone through it.
+func (p *Provider) startWDADevice(ctx context.Context, info driver.Info) (*WDADevice, error) {
 	p.mu.Lock()
 	s := p.wdaWaits[info.ID]
 	delete(p.wdaWaits, info.ID)

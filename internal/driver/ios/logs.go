@@ -615,7 +615,8 @@ func (d *Device) DevBuild(ctx context.Context, app driver.App) (bool, error) {
 func (d *Device) StopAppLogs() { d.logs.stopAll() }
 
 func (d *Device) logPhone() logPhone {
-	return logPhone{entry: d.l.base, rsd: d.l.entry, logs: &d.logs, procs: func(ctx context.Context) (map[int]string, error) {
+	l := d.link()
+	return logPhone{entry: l.base, rsd: l.entry, logs: &d.logs, procs: func(ctx context.Context) (map[int]string, error) {
 		m, err := d.processPaths(ctx)
 		if err != nil {
 			return nil, err
@@ -630,6 +631,9 @@ func (d *Device) logPhone() logPhone {
 
 // AppLogs implements driver.AppLogger. A Simulator's logs are not read.
 func (d *WDADevice) AppLogs(ctx context.Context, q driver.LogQuery) (driver.LogResult, error) {
+	if err := d.awake(ctx); err != nil {
+		return driver.LogResult{}, err
+	}
 	p, err := d.logPhone()
 	if err != nil {
 		return driver.LogResult{}, err
@@ -639,6 +643,9 @@ func (d *WDADevice) AppLogs(ctx context.Context, q driver.LogQuery) (driver.LogR
 
 // AppCrashes implements driver.AppLogger.
 func (d *WDADevice) AppCrashes(ctx context.Context, q driver.LogQuery) ([]driver.CrashReport, error) {
+	if err := d.awake(ctx); err != nil {
+		return nil, err
+	}
 	p, err := d.logPhone()
 	if err != nil {
 		return nil, err
@@ -648,6 +655,9 @@ func (d *WDADevice) AppCrashes(ctx context.Context, q driver.LogQuery) ([]driver
 
 // DevBuild implements driver.AppLogger.
 func (d *WDADevice) DevBuild(ctx context.Context, app driver.App) (bool, error) {
+	if err := d.awake(ctx); err != nil {
+		return false, err
+	}
 	p, err := d.logPhone()
 	if err != nil {
 		return false, err
@@ -671,8 +681,8 @@ func (d *WDADevice) logPhone() (logPhone, error) {
 		return logPhone{}, fmt.Errorf("app logs on a Simulator: %w", driver.ErrUnsupported)
 	}
 	p := logPhone{entry: d.entry, logs: &d.logs, procs: d.processPaths}
-	if d.l != nil {
-		p.rsd = d.l.entry
+	if l := d.tunnelLink(); l != nil {
+		p.rsd = l.entry
 	}
 	return p, nil
 }
@@ -684,8 +694,8 @@ func (d *WDADevice) processPaths(ctx context.Context) (map[int]string, error) {
 	defer d.procMu.Unlock()
 	if d.procSvc == nil {
 		e := d.entry
-		if d.l != nil {
-			e = d.l.entry
+		if l := d.tunnelLink(); l != nil {
+			e = l.entry
 		}
 		var svc *instruments.DeviceInfoService
 		err := within(ctx, func() (err error) {

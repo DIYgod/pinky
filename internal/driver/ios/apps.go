@@ -107,7 +107,7 @@ func (d *Device) catalogWithin(ctx context.Context, ttl time.Duration) (*appCata
 	}
 	ch := make(chan result, 1)
 	go func() {
-		list, err := browseApps(d.l)
+		list, err := browseApps(d.link())
 		ch <- result{list, err}
 	}()
 	select {
@@ -314,7 +314,7 @@ const springBoard = "com.apple.springboard"
 
 // processPaths lists the device's processes as pid -> executable path.
 func (d *Device) processPaths(ctx context.Context) (map[uint64]string, error) {
-	svc, err := dialCoreDevice(d.l.entry, appService)
+	svc, err := dialCoreDevice(d.link().entry, appService)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func (d *Device) startApp(ctx context.Context, id, link string) error {
 	if err != nil {
 		return err
 	}
-	svc, err := dialCoreDevice(d.l.entry, appService)
+	svc, err := dialCoreDevice(d.link().entry, appService)
 	if err != nil {
 		return err
 	}

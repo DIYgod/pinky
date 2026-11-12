@@ -56,7 +56,10 @@ const raxRecheckFailures = 30 * time.Second
 // tunnelOnly reports whether the device was opened over the tunnel alone
 // (OpenOverTunnel): Pinky runs on the phone itself, with no usbmuxd and so
 // no inspector.
-func (d *Device) tunnelOnly() bool { return d.l != nil && d.l.tunnelOnly }
+func (d *Device) tunnelOnly() bool {
+	l := d.cur()
+	return l != nil && l.tunnelOnly
+}
 
 // raxLimits bound one walk over remoteAXService.
 var raxLimits = walkLimits{MaxElements: 400, Budget: 4 * time.Second}
@@ -109,7 +112,7 @@ func (d *Device) raxReady(ctx context.Context) (*raxSession, error) {
 		wait = raxAnswerWaitTunnel
 	}
 	start := time.Now()
-	s, err := dialRAX(ctx, d.l.entry, wait)
+	s, err := dialRAX(ctx, d.link().entry, wait)
 	if err != nil {
 		if ctx.Err() == nil {
 			d.raxErr, d.raxFailedAt = err, time.Now()

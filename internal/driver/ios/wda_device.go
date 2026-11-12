@@ -31,14 +31,33 @@ type WDADevice struct {
 	info  driver.Info
 	c     *wdaClient
 	entry goios.DeviceEntry // the usbmuxd entry; zero for a simulator
-	run   *wdaRun           // the test run hosting WDA, when Pinky started it
-	l     *link             // the tunnel the run goes through, from iOS 17.4
+
+	// rmu guards run, l, leftover and leftoverEnded, which a wake replaces,
+	// and what resting needs (rest_wda.go).
+	rmu sync.Mutex
+	run *wdaRun // the test run hosting WDA, when Pinky started it
+	l   *link   // the tunnel the run goes through, from iOS 17.4
 
 	// leftover is the runner app's folder when WDA was already answering
 	// and an earlier Pinky had started it (see runRecords): Close ends
 	// that runner too, then calls leftoverEnded. "" for any other.
 	leftover      string
 	leftoverEnded func()
+
+	resting   bool
+	wakeLost  error // why the last wake failed; the phone is gone then
+	closed    bool
+	inflight  int       // requests to WebDriverAgent under way
+	usedAt    time.Time // the last request's start or end
+	openedAt  time.Time
+	watchers  int // views of the picture open
+	watchedAt time.Time
+	done      chan struct{} // closed by Close; nil when nothing rests the device
+	wakeMu    sync.Mutex
+	working   atomic.Bool
+	// reopen starts the runner again for a wake (the provider's openWDA);
+	// nil: the device never rests.
+	reopen func(context.Context) (*WDADevice, error)
 
 	scale float64
 	// width and height are the screen's size in pixels when the phone was
@@ -112,6 +131,8 @@ func openWDA(ctx context.Context, info driver.Info, c *wdaClient, entry goios.De
 		d.info.OSVersion = st.OS.Version
 	}
 	c.gone = d.gone
+	c.enter = d.enter
+	d.openedAt = time.Now()
 	return d, nil
 }
 
@@ -128,7 +149,10 @@ func (d *WDADevice) gone(err error) error {
 		return err
 	}
 	var de *wdaDialError
-	if d.ended() || (d.run == nil && errors.As(err, &de)) {
+	d.rmu.Lock()
+	theirs := d.run == nil && !d.resting && d.leftover == ""
+	d.rmu.Unlock()
+	if d.ended() || (theirs && errors.As(err, &de)) {
 		return fmt.Errorf("%v: %w", err, driver.ErrOffline)
 	}
 	return err
@@ -137,14 +161,23 @@ func (d *WDADevice) gone(err error) error {
 // ended reports whether the runner's test Pinky started has ended or the
 // tunnel it went through stopped.
 func (d *WDADevice) ended() bool {
-	if d.run != nil {
-		if alive, _ := d.run.alive(); !alive {
+	d.rmu.Lock()
+	run, l, resting, lost := d.run, d.l, d.resting, d.wakeLost
+	d.rmu.Unlock()
+	if lost != nil {
+		return true
+	}
+	if resting {
+		return false // Pinky stopped it (rest_wda.go)
+	}
+	if run != nil {
+		if alive, _ := run.alive(); !alive {
 			return true
 		}
 	}
-	if d.l != nil && d.l.tunnel != nil {
+	if l != nil && l.tunnel != nil {
 		select {
-		case <-d.l.tunnel.Done():
+		case <-l.tunnel.Done():
 			return true
 		default:
 		}
@@ -264,7 +297,13 @@ func (s *wdaStart) open(ctx context.Context, info driver.Info) (*WDADevice, erro
 		}
 	}()
 	d, err := openWDA(wctx, info, s.c, s.base, s.run)
-	if err != nil {
+	if err == nil {
+		d.rmu.Lock()
+		d.l = s.l
+		d.rmu.Unlock()
+		return d, nil
+	}
+	{
 		if alive, rerr := s.run.alive(); !alive && rerr != nil {
 			err = fmt.Errorf("start WebDriverAgent: %w", rerr)
 		} else if alive && s.run.asking() {
@@ -272,8 +311,6 @@ func (s *wdaStart) open(ctx context.Context, info driver.Info) (*WDADevice, erro
 		}
 		return nil, err
 	}
-	d.l = s.l
-	return d, nil
 }
 
 // stop ends what the start began.
@@ -902,7 +939,7 @@ func (d *WDADevice) Locked(ctx context.Context) (bool, error) {
 // Stream implements driver.Device: WDA's MJPEG picture, encoded to H.264.
 // The picture is the screen at half size (wdaSettings).
 func (d *WDADevice) Stream(ctx context.Context, opt driver.StreamOptions) (driver.Stream, error) {
-	if _, err := d.c.session(ctx); err != nil { // applies the MJPEG settings
+	if _, err := d.c.session(ctx); err != nil { // applies the MJPEG settings; wakes a resting phone
 		return nil, err
 	}
 	d.interfaceTurn(ctx) // the first frames' turn
@@ -919,6 +956,7 @@ func (d *WDADevice) Stream(ctx context.Context, opt driver.StreamOptions) (drive
 	}
 	if fs, ok := s.(*frameStream); ok {
 		go d.followRotation(fs.done)
+		d.watchStream(fs.done) // the phone does not rest while it is watched (rest_wda.go)
 	}
 	d.videoMu.Lock()
 	d.video = s
@@ -1021,22 +1059,39 @@ func (d *WDADevice) videoSize() (int, int) {
 // the test run Pinky started; WDA itself stays installed.
 func (d *WDADevice) Close() error {
 	d.closeOnce.Do(func() {
+		// A rest or wake under way ends first, and none starts after.
+		d.wakeMu.Lock()
+		d.rmu.Lock()
+		d.closed = true
+		if d.done != nil {
+			close(d.done)
+		}
+		run, l, leftover, leftoverEnded := d.run, d.l, d.leftover, d.leftoverEnded
+		d.run, d.l, d.leftover, d.leftoverEnded = nil, nil, "", nil
+		d.rmu.Unlock()
+		d.wakeMu.Unlock()
 		d.StopAppLogs()
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		d.c.deleteSession(ctx)
 		cancel()
-		if d.run != nil {
-			d.run.stop()
-		} else if d.leftover != "" {
-			if endHelper(d.entry, d.entry, d.leftover, d.log) && d.leftoverEnded != nil {
-				d.leftoverEnded()
-			}
-		}
-		if d.l != nil {
-			d.l.Close()
+		stopRunner(d.entry, run, leftover, leftoverEnded, d.log)
+		if l != nil {
+			l.Close()
 		}
 	})
 	return nil
+}
+
+// stopRunner stops the runner's test run Pinky started, or ends a runner
+// an earlier Pinky left (leftover) and calls leftoverEnded once it did.
+func stopRunner(entry goios.DeviceEntry, run *wdaRun, leftover string, leftoverEnded func(), log *slog.Logger) {
+	if run != nil {
+		run.stop()
+	} else if leftover != "" {
+		if endHelper(entry, entry, leftover, log) && leftoverEnded != nil {
+			leftoverEnded()
+		}
+	}
 }
 
 var (

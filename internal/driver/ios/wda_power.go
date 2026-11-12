@@ -30,7 +30,7 @@ func (d *WDADevice) lockState(ctx context.Context) (bool, error) {
 		return d.c.locked(ctx)
 	}
 	locked, err := d.lockdownLocked(ctx)
-	if err != nil && ctx.Err() == nil {
+	if err != nil && ctx.Err() == nil && !d.Resting() { // asking WDA would start the runner again
 		if l, werr := d.c.locked(ctx); werr == nil {
 			return l, nil
 		}

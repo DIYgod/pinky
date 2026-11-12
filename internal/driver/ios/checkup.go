@@ -31,8 +31,8 @@ func (a *AXDevice) setImageDir(dir string)  { a.d.imageDir = dir }
 // Checkup implements driver.Checker on CoreDevice (iOS 27 and later).
 func (d *Device) Checkup(ctx context.Context) (driver.Checkup, error) {
 	return runChecks(ctx, d.info,
-		func(context.Context) driver.Check { return checkDevMode(d.l.base) },
-		func(ctx context.Context) driver.Check { return checkImage(ctx, d.l, d.imageDir, true) },
+		func(context.Context) driver.Check { return checkDevMode(d.cur().base) },
+		func(ctx context.Context) driver.Check { return checkImage(ctx, d.link(), d.imageDir, true) },
 		d.checkScreen,
 		d.checkInput,
 	)
@@ -53,12 +53,15 @@ func (d *Device) checkScreen(ctx context.Context) driver.Check {
 
 // Checkup implements driver.Checker through the WebDriverAgent helper.
 func (d *WDADevice) Checkup(ctx context.Context) (driver.Checkup, error) {
+	if err := d.awake(ctx); err != nil {
+		return driver.Checkup{}, err
+	}
 	checks := []func(context.Context) driver.Check{d.checkHelper,
 		func(ctx context.Context) driver.Check { return checkScreenshot(ctx, d.Screenshot) }}
 	if d.entry.Properties.SerialNumber != "" { // not a simulator
 		checks = append(checks,
 			func(context.Context) driver.Check { return checkDevMode(d.entry) },
-			func(ctx context.Context) driver.Check { return checkImage(ctx, d.l, d.imageDir, false) })
+			func(ctx context.Context) driver.Check { return checkImage(ctx, d.tunnelLink(), d.imageDir, false) })
 	}
 	return runChecks(ctx, d.info, checks...)
 }
@@ -68,8 +71,8 @@ func (d *WDADevice) Checkup(ctx context.Context) (driver.Checkup, error) {
 func (a *AXDevice) Checkup(ctx context.Context) (driver.Checkup, error) {
 	d := a.d
 	return runChecks(ctx, d.info,
-		func(context.Context) driver.Check { return checkDevMode(d.l.base) },
-		func(ctx context.Context) driver.Check { return checkImage(ctx, d.l, d.imageDir, false) },
+		func(context.Context) driver.Check { return checkDevMode(d.cur().base) },
+		func(ctx context.Context) driver.Check { return checkImage(ctx, d.link(), d.imageDir, false) },
 		func(ctx context.Context) driver.Check { return checkScreenshot(ctx, a.Screenshot) },
 		func(context.Context) driver.Check {
 			return driver.Check{ID: driver.CheckHelper, Status: driver.CheckFail, Fix: driver.FixInstallHelper,
@@ -217,14 +220,15 @@ func checkScreenshot(ctx context.Context, shot func(context.Context) (image.Imag
 // phone.
 func (d *Device) checkInput(ctx context.Context) driver.Check {
 	c := driver.Check{ID: driver.CheckInput}
-	if !d.l.has(universalHIDService) {
+	l := d.link()
+	if !l.has(universalHIDService) {
 		c.Status, c.Detail = driver.CheckFail, "the iPhone does not offer "+universalHIDService
 		return c
 	}
 	type result struct{ err error }
 	ch := make(chan result, 1)
 	go func() {
-		x, err := dialXPC(d.l.entry, universalHIDService)
+		x, err := dialXPC(l.entry, universalHIDService)
 		if err == nil {
 			x.Close()
 		}
