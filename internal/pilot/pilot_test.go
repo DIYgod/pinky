@@ -3,6 +3,7 @@ package pilot
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -13,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,6 +23,7 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/secret"
 )
 
@@ -355,6 +358,59 @@ func TestDoneTask(t *testing.T) {
 	msgs, _ := reqs[1].body["messages"].([]any)
 	if len(msgs) != 3 || fmt.Sprint(msgs[0]) != fmt.Sprint(b["messages"].([]any)[0]) || !strings.Contains(fmt.Sprint(msgs[1]), "Opening Dinely.") {
 		t.Fatalf("second request's messages: %v", msgs)
+	}
+}
+
+// flakyProvider's phones fail their first read, as the phone's own
+// accessibility service may.
+type flakyProvider struct {
+	*demo.Provider
+	reads atomic.Int32
+}
+
+func (p *flakyProvider) Open(ctx context.Context, id string) (driver.Device, error) {
+	d, err := p.Provider.Open(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &flakyDevice{Android: d.(demo.Android), p: p}, nil
+}
+
+type flakyDevice struct {
+	demo.Android
+	p *flakyProvider
+}
+
+func (d *flakyDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
+	if d.p.reads.Add(1) == 1 {
+		return nil, errors.New("remote accessibility service did not answer")
+	}
+	return d.Android.Observe(ctx, opt)
+}
+
+func TestFirstReadRetried(t *testing.T) {
+	old := firstReadRetry
+	firstReadRetry = 10 * time.Millisecond
+	t.Cleanup(func() { firstReadRetry = old })
+	var fp *flakyProvider
+	h := newHarness(t, func(o *gateway.Options) {
+		fp = &flakyProvider{Provider: o.Providers[0].(*demo.Provider)}
+		o.Providers = []driver.Provider{fp}
+	})
+	h.api.turns = []func(string, *http.Request) any{
+		func(last string, _ *http.Request) any {
+			if !strings.Contains(last, "settled · Pixel 9") {
+				t.Errorf("the model got no screen:\n%s", last)
+			}
+			return message("tool_use", 100, use("t1", "finish", map[string]any{"outcome": "done", "summary": "Looked."}))
+		},
+	}
+	st := h.run(t, Config{}, "Look at the screen")
+	if st.End != Done {
+		t.Fatalf("ended %v (%s), want done", st.End, st.Summary)
+	}
+	if n := fp.reads.Load(); n < 2 {
+		t.Errorf("%d reads, want the failed one and another", n)
 	}
 }
 

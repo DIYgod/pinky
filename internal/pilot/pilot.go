@@ -323,6 +323,10 @@ func (ru *run) update(f func(s *Status)) {
 	ru.r.notify()
 }
 
+// firstReadRetry is how long a task waits before it reads the first
+// screen again, when phone_connect could not.
+var firstReadRetry = time.Second
+
 // The tools of the MCP server the model does not get: phone_connect and
 // phone_release, which the runner calls itself, and those a simple task
 // on a phone it already holds does not need.
@@ -384,6 +388,19 @@ func (ru *run) work(ctx context.Context) (End, string) {
 
 	task := ru.st.Task
 	res := ru.call(ctx, cs, "phone_connect", map[string]any{"device": ru.st.Device, "task": oneLine(task)})
+	if res.status == "internal" && ctx.Err() == nil {
+		// The phone is leased; only its first screen failed to read. One
+		// failed read (a busy accessibility service, as on the phone
+		// itself) need not end the task before the model is asked: read
+		// once more.
+		select {
+		case <-time.After(firstReadRetry):
+		case <-ctx.Done():
+		}
+		if again := ru.call(ctx, cs, "phone_observe", map[string]any{"device": ru.st.Device}); ctx.Err() == nil && !again.isError {
+			res = again
+		}
+	}
 	switch {
 	case ctx.Err() != nil || res.status == "stopped":
 		return Stopped, ""
