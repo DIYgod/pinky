@@ -179,7 +179,9 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		// An app on the iPhone holds the camera or microphone: nothing to
 		// set up or fix in Pinky, which connects once it lets go.
 		mediaInUse := d.Info.Setup == driver.SetupMediaInUse && w.title != ""
-		mg.Column(c).AlignItems(mg.Center).Gap(sp2).MaxWidth(420).Children(func() {
+		// No higher than the stage, for the helper's teams to scroll in the
+		// room the rest leaves them: the page does not scroll.
+		mg.Column(c).AlignItems(mg.Center).Gap(sp2).MaxWidth(420).MinHeight(0).Children(func() {
 			mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
 			if mediaInUse {
 				stateTitle(c, w.title)
@@ -197,7 +199,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			// On a Mac with Xcode, Pinky installs a missing helper from
 			// here (helper.go), and the checkup is a link below.
 			installs := needsHelper(d) && a.helperInstall(c, d.Info.ID, d.Info.Name,
-				helperOpt{again: !d.Info.HelperExpires.IsZero(), center: true, note: true})
+				helperOpt{again: !d.Info.HelperExpires.IsZero(), center: true, note: true, fit: true})
 			switch {
 			case installs:
 				if linkButton(c, locales.PhoneCheckup()).Clicked() {

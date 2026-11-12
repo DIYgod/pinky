@@ -123,13 +123,10 @@ func reminderForms(name string, exp time.Time) []reminderForm {
 		text, _, _ := helperErrorWords(err, name)
 		forms = append(forms, reminderForm{what: "failed: " + err.Error(), here: true, run: &helperRun{err: text}, words: text, labels: again})
 	}
-	teams := slices.Clone(helperTeams)
 	for _, n := range []int{2, 9} {
-		for i := len(teams); i < n; i++ {
-			teams = append(teams, driver.HelperTeam{ID: fmt.Sprintf("KLMNO%05d", i), Name: "Shenzhen Example Technology Co., Ltd."})
-		}
-		f := reminderForm{what: fmt.Sprintf("%d teams", n), here: true, run: &helperRun{teams: teams[:n]}, words: locales.HelperChooseTeam()}
-		for _, team := range teams[:n] {
+		teams := exampleTeams(n)
+		f := reminderForm{what: fmt.Sprintf("%d teams", n), here: true, run: &helperRun{teams: teams}, words: locales.HelperChooseTeam()}
+		for _, team := range teams {
 			f.labels = append(f.labels, helperTeamLabel(team))
 		}
 		forms = append(forms, f)
@@ -742,6 +739,13 @@ func TestIPhoneHelperScreenshots(t *testing.T) {
 // of the size given, at two pixels a point, and writes the picture to file.
 func shootWindow(t *testing.T, ta *testApp, file, lang string, dark bool, size ...int) {
 	t.Helper()
+	shootScrolled(t, ta, file, lang, dark, 0, size...)
+}
+
+// shootScrolled is shootWindow with what scrolls in the middle of the stage
+// scrolled down by dy first, for what is below the fold.
+func shootScrolled(t *testing.T, ta *testApp, file, lang string, dark bool, dy float32, size ...int) {
+	t.Helper()
 	w, h := 1280, 820
 	if len(size) == 2 {
 		w, h = size[0], size[1]
@@ -752,6 +756,10 @@ func shootWindow(t *testing.T, ta *testApp, file, lang string, dark bool, size .
 	st.SetDark(dark)
 	st.Frame()
 	st.Frame()
+	if dy != 0 {
+		st.Scroll(sidebarWidth+float32(w-sidebarWidth-rightPanelWidth)/2, headerHeight+float32(h-headerHeight)/2, 0, dy)
+		st.Frame()
+	}
 	f, err := os.Create(file)
 	if err != nil {
 		t.Fatal(err)
