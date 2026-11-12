@@ -47,7 +47,7 @@ func TestMarkHost(t *testing.T) {
 	}
 }
 
-func writePlist(t *testing.T, path string, v any) {
+func writeXMLPlist(t *testing.T, path string, v any) {
 	t.Helper()
 	b, err := plist.Marshal(v, plist.XMLFormat)
 	if err != nil {
@@ -76,7 +76,7 @@ func TestHostApp(t *testing.T) {
 		t.Fatal(err)
 	}
 	app := filepath.Join(dir, "PinkyLite.app")
-	writePlist(t, filepath.Join(app, "Info.plist"), map[string]any{"CFBundleIdentifier": "pinky.t.lite"})
+	writeXMLPlist(t, filepath.Join(app, "Info.plist"), map[string]any{"CFBundleIdentifier": "pinky.t.lite"})
 
 	if err := hostApp(app, runner); err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func TestHostApp(t *testing.T) {
 func TestHostXctestrun(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "WebDriverAgentRunner_iphoneos.xctestrun")
-	writePlist(t, src, map[string]any{
+	writeXMLPlist(t, src, map[string]any{
 		"__xctestrun_metadata__": map[string]any{"FormatVersion": 1},
 		"WebDriverAgentRunner": map[string]any{
 			"TestBundlePath":           "__TESTHOST__/PlugIns/WebDriverAgentRunner.xctest",
@@ -139,7 +139,7 @@ func TestHostXctestrun(t *testing.T) {
 	}
 
 	empty := filepath.Join(dir, "empty.xctestrun")
-	writePlist(t, empty, map[string]any{"__xctestrun_metadata__": map[string]any{}})
+	writeXMLPlist(t, empty, map[string]any{"__xctestrun_metadata__": map[string]any{}})
 	if err := hostXctestrun(empty, dst, "x.app", "id", "exe"); err == nil {
 		t.Error("an xctestrun without a test passed")
 	}
