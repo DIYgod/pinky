@@ -295,6 +295,13 @@ func linkButton(c *mg.Context, text string) mg.Element {
 	return b
 }
 
+// quietButtonWidth returns how wide quietButton draws text, for what lays
+// it out beside other buttons.
+func quietButtonWidth(c *mg.Context, text string) float32 {
+	w, _ := c.MeasureText(0, mg.Span{Text: text, Size: fsSmall, Weight: fwMedium})
+	return w
+}
+
 // quietButton is a text button in the secondary ink.
 func quietButton(c *mg.Context, text string) mg.Element {
 	p := pal(c)

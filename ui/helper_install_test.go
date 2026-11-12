@@ -516,6 +516,9 @@ func TestIPhoneHelperInstallScreenshots(t *testing.T) {
 		ta.helper.runs = map[string]*helperRun{id: {teams: append(slices.Clone(helperTeams), driver.HelperTeam{ID: "KLMNO12345", Name: "Shenzhen Example Technology Co., Ltd."})}}
 		shoot("helper-again-teams", lang)
 		shoot("helper-again-teams-small", lang, 960, 620)
+		// More teams than it has room for there: they scroll, over Cancel.
+		ta.helper.runs[id] = &helperRun{teams: exampleTeams(9)}
+		shoot("helper-again-teams-many-small", lang, 960, 620)
 		ta.helper.runs = nil
 		tt := mg.NewTester(ta.view, 1280, 820)
 		ta.openCheckup(ta.iphoneView(t))
