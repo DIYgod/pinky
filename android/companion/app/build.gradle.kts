@@ -99,11 +99,13 @@ android {
 
     // Pinky's Go core (libpinkycore.so, internal/standalone/libcore), which
     // runs tasks on the phone itself: scripts/androidcore.sh builds it into
-    // build/go/jniLibs. Only debug builds carry it for now, and only when
-    // it was built; release builds stay what Pinky on a computer needs
-    // until tasks on the phone are finished (docs/notes/android-app.md).
+    // build/go/jniLibs, for arm64, with a tiny stand-in for armeabi-v7a and
+    // x86_64 so that one APK installs on every phone. Both build types carry
+    // it when it was built; a release always does (scripts/dist.sh checks),
+    // and runs tasks on the phone only once on_phone_ui is on there
+    // (docs/notes/android-app.md).
     sourceSets {
-        getByName("debug") {
+        getByName("main") {
             jniLibs.srcDirs("build/go/jniLibs")
         }
     }

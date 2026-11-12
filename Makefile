@@ -112,5 +112,8 @@ companion:
 # The companion's release build, signed with Pinky's release key
 # (PINKY_COMPANION_KEYSTORE and PINKY_COMPANION_KEYSTORE_PASSWORD, which only
 # the release workflow has); scripts/dist.sh companion runs it.
+# It carries Pinky's core, so it needs the Android NDK too
+# (scripts/androidcore.sh).
 companion-release:
+	scripts/androidcore.sh core
 	cd android/companion && ./gradlew --quiet assembleRelease

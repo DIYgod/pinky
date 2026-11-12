@@ -5,7 +5,11 @@
 #   scripts/dist.sh companion <out>   the companion APK, <out>/pinky-android.apk:
 #                                     the release build, signed with Pinky's
 #                                     release key, or without the key the
-#                                     development build (never to publish)
+#                                     development build (never to publish);
+#                                     with Pinky's core for arm64 and stand-ins
+#                                     for armeabi-v7a and x86_64, which
+#                                     scripts/androidcore.sh builds with the
+#                                     Android NDK, and checked for all three
 #   scripts/dist.sh darwin <out>      Pinky.app for Apple silicon and Intel Macs,
 #                                     signed with the Developer ID, notarized and
 #                                     stapled: pinky-<version>-darwin-<arch>.zip
@@ -164,6 +168,19 @@ companion() {
 	*"\"package\":\"$pkg\""*"\"version_name\":\"$version\""*) ;;
 	*) die "the APK says $info, not $pkg version $version" ;;
 	esac
+	# One APK for every phone: Pinky's core for arm64, and a stand-in for
+	# 32-bit phones and x86_64 emulators, or Android refuses to install it
+	# there (scripts/androidcore.sh). A release always carries them.
+	libs=$(unzip -Z1 "$apk" 'lib/*' 2>/dev/null || true)
+	for lib in lib/arm64-v8a/libpinkycore.so lib/armeabi-v7a/libpinkystub.so lib/x86_64/libpinkystub.so; do
+		case $libs in
+		*"$lib"*) ;;
+		*)
+			[ "$pkg" = app.pinky.companion ] && die "the APK lacks $lib (scripts/androidcore.sh core)"
+			lacking "the development APK lacks $lib (scripts/androidcore.sh core): it does not run tasks on the phone, or does not install on every phone"
+			;;
+		esac
+	done
 	cp "$apk" "$out/pinky-android.apk"
 	say "$out/pinky-android.apk: $info"
 }
