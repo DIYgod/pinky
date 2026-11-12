@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On macOS, the menu bar panel now has rounded corners, a translucent background and a shadow that follows its edge, like other menu bar apps. Thanks to @egoist for the report.
+
 ## 2026.1112.10 (2026-11-12)
 
 - On iPhones and iOS Simulators, apps are now named as the home screen names them, in the phone's language (微信, not WeChat). Agents can still find them by their English names.

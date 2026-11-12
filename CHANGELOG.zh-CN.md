@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- macOS 上的菜单栏面板改成了圆角、半透明背景，阴影也沿着圆角走，和其他菜单栏应用一样。感谢 @egoist 的反馈。
+
 ## 2026.1112.10 (2026-11-12)
 
 - iPhone 和 iOS 模拟器上的 App 现在按主屏幕显示的名字、用手机当前的语言列出（显示「微信」而不是 WeChat），agent 仍可以用英文名找到它们。
