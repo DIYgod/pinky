@@ -40,6 +40,9 @@ func newTestAppWith(t *testing.T, opt fakeapi.Options) *testApp {
 		opt.Now = testNow // the computer's clock, unless the test sets it (clockAt)
 	}
 	api := fakeapi.New(opt)
+	// After the app has ended (cleanups run last first): the step
+	// screenshots the fake wrote for it.
+	t.Cleanup(api.Close)
 	ta := &testApp{api: api}
 	ta.app = newApp(api, Options{NoTray: true, Shortcut: "-"})
 	testHooks(t, ta.app)
