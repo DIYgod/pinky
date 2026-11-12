@@ -1,5 +1,6 @@
 import dnssd
 import Foundation
+import os
 import UserNotifications
 
 /// Pairing Pinky with this iPhone from the iPhone itself, iOS 27 and later.
@@ -34,6 +35,9 @@ final class PhonePairing: @unchecked Sendable {
     }
 
     private static let codeNote = "pinky-pairing-code"
+    /// What happens in a pairing, for the device's syslog: the steps and
+    /// the errors, never the code.
+    private static let log = Logger(subsystem: Pinky.app, category: "pairing")
 
     private let lock = NSLock()
     private var ref: DNSServiceRef?
@@ -52,10 +56,12 @@ final class PhonePairing: @unchecked Sendable {
         guard out["ok"] as? Bool == true, let port = out["port"] as? Int, let name = out["identifier"] as? String,
               let txt = out["txt"] as? [String: String]
         else {
+            Self.log.error("pinky pairing: could not listen: \(out["error"] as? String ?? "?", privacy: .public)")
             report(.failed(out["error"] as? String ?? L.pairingFailed), nil)
             return
         }
         guard advertise(name: name, port: UInt16(port), txt: txt) else {
+            Self.log.error("pinky pairing: could not advertise")
             PinkyCore.pairStop()
             report(.failed(L.pairingFailed), nil)
             return
@@ -64,6 +70,7 @@ final class PhonePairing: @unchecked Sendable {
         run += 1
         let mine = run
         lock.unlock()
+        Self.log.log("pinky pairing: listening on \(port, privacy: .public)")
         report(.waiting, nil)
         Thread.detachNewThread { [self] in follow(mine) }
     }
@@ -87,13 +94,16 @@ final class PhonePairing: @unchecked Sendable {
             lock.unlock()
             guard current, ev["stopped"] as? Bool != true else { return }
             if let code = ev["pin"] as? String {
+                Self.log.log("pinky pairing: the phone asked for a code")
                 notify(code)
                 report(.code(code), nil)
             } else if let err = ev["error"] as? String {
+                Self.log.error("pinky pairing: a try failed: \(err, privacy: .public)")
                 UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [Self.codeNote])
                 report(err == "wrong_pin" ? .wrongCode : .retry(err), nil)
             } else if ev["paired"] as? Bool == true, let p = ev["pairing"] as? String {
                 let pairing = Pairing(udid: ev["udid"] as? String ?? "", pairing: p)
+                Self.log.log("pinky pairing: paired; the phone sent \(pairing.udid.isEmpty ? "no" : "a", privacy: .public) remotepairing_udid")
                 stop()
                 report(.paired, pairing)
                 return
@@ -121,7 +131,10 @@ final class PhonePairing: @unchecked Sendable {
             DNSServiceRegister(&r, 0, 0, name, rppairService, nil, nil, port.bigEndian,
                                UInt16(buf.count), buf.baseAddress, nil, nil)
         }
-        guard err == kDNSServiceErr_NoError, let r else { return false }
+        guard err == kDNSServiceErr_NoError, let r else {
+            Self.log.error("pinky pairing: DNSServiceRegister: \(err, privacy: .public)")
+            return false
+        }
         lock.lock()
         ref = r
         lock.unlock()

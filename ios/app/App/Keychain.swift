@@ -44,6 +44,9 @@ struct Pairing: Codable {
     var pairing: String
 
     static func load() -> Pairing? {
+        #if DEBUG
+        forgetOnce()
+        #endif
         if let s = Keychain.get("pairing"), let p = try? JSONDecoder().decode(Pairing.self, from: Data(s.utf8)) {
             return p
         }
@@ -54,6 +57,19 @@ struct Pairing: Codable {
         p.save()
         return p
     }
+
+    #if DEBUG
+    nonisolated(unsafe) private static var forgot = false
+
+    /// A debug build launched with -pinkyForgetPairing YES drops the pairing
+    /// the Keychain keeps (it outlives deleting the app), once per launch, so
+    /// a test reaches the unpaired first screen.
+    private static func forgetOnce() {
+        guard !forgot else { return }
+        forgot = true
+        if UserDefaults.standard.bool(forKey: "pinkyForgetPairing") { Keychain.set("pairing", "") }
+    }
+    #endif
 
     func save() {
         if let d = try? JSONEncoder().encode(self) { Keychain.set("pairing", String(data: d, encoding: .utf8)!) }

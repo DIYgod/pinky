@@ -70,7 +70,7 @@ To host WebDriverAgent for Pinky on a computer, as desktop Pinky's install build
 
 The core logs to the unified log with the prefix `pinky` (connection attempts and why they failed, slow or failed screen reads, and with `heartbeat_s` a heartbeat with memory), which a Mac reads with the device's syslog. It never logs a task's text, the model's key or what is on the screen.
 
-A debug build also starts a task from launch arguments once the phone is ready, so a test needs no typing. The key comes in the launch environment and stays in memory; never put it in a file. The `--` keeps devicectl from reading the app's arguments as its own. `-pinkyHeartbeat 1` has the core log its memory every second.
+A debug build also starts a task from launch arguments once the phone is ready, so a test needs no typing. The key comes in the launch environment and stays in memory; never put it in a file. The `--` keeps devicectl from reading the app's arguments as its own. `-pinkyHeartbeat 1` has the core log its memory every second. `-pinkyForgetPairing YES` drops the pairing the app keeps in its Keychain, which outlives deleting the app, so the app starts unpaired (for trying pairing on the phone); pairing logs its steps with the prefix `pinky pairing`.
 
 ```sh
 xcrun devicectl device process launch --device <udid> \
