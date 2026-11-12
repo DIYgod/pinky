@@ -68,6 +68,7 @@ class Look(private val activity: Activity) {
     private val ripple = (ink and 0x00ffffff) or 0x24000000
 
     private var dialog: AlertDialog? = null
+    private var dialogInput: EditText? = null // the dialog's box, unless it holds a secret
 
     fun dp(v: Int): Int = (v * density + 0.5f).toInt()
 
@@ -278,7 +279,8 @@ class Look(private val activity: Activity) {
         v.alpha = if (on) 1f else 0.45f
     }
 
-    // Dialogs: one at a time, dismissed with the screen.
+    // Dialogs: one at a time, dismissed with the screen, which may open it
+    // again when it is made anew (dialogOpen, dialogText).
 
     /** Picks one of options; checked is the current one, or -1. */
     fun choose(title: String, options: List<String>, checked: Int, onPick: (Int) -> Unit) {
@@ -377,13 +379,14 @@ class Look(private val activity: Activity) {
             }
         }
         d.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        show(d)
+        show(d, input.takeIf { field != Field.SECRET })
         input.requestFocus()
     }
 
-    private fun show(d: AlertDialog) {
+    private fun show(d: AlertDialog, input: EditText? = null) {
         dialog?.dismiss()
         dialog = d
+        dialogInput = input
         d.show()
         d.findViewById<View>(android.R.id.content)?.let { sensitive(it) }
     }
@@ -391,7 +394,17 @@ class Look(private val activity: Activity) {
     fun dismissDialog() {
         dialog?.dismiss()
         dialog = null
+        dialogInput = null
     }
+
+    /** Whether a dialog is open: one the person has not answered or closed yet. */
+    fun dialogOpen(): Boolean = dialog?.isShowing == true
+
+    /**
+     * What the open dialog's box holds, for the screen to open it again
+     * with when it is made anew; null without a box, and for a secret.
+     */
+    fun dialogText(): String? = if (dialogOpen()) dialogInput?.text?.toString() else null
 
     // Android's settings.
 

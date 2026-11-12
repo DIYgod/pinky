@@ -41,6 +41,7 @@ class SettingsActivity : Activity() {
     private var checking = false
     private var updateFound: UpdateCheck.Update? = null
     private var updateNote = ""
+    private var open: Open? = null // the dialog opened last, to open again with the screen
 
     private lateinit var serviceRow: Look.Row
     private lateinit var keyRow: Look.Row
@@ -70,21 +71,9 @@ class SettingsActivity : Activity() {
         urlRow = look.row(getString(R.string.phone_url)) { editUrl() }
         addGroup(col, R.string.phone_section_model, serviceRow.view, keyRow.view, modelRow.view, urlRow.view)
 
-        stepsRow = look.row(getString(R.string.phone_steps_limit), desc = getString(R.string.phone_steps_limit_desc)) {
-            chooseLimit(R.string.phone_steps_limit, TaskSettings.STEP_CHOICES, settings.maxSteps, { Words.steps(resources, it) }) {
-                settings.maxSteps = it
-            }
-        }
-        timeRow = look.row(getString(R.string.phone_time_limit), desc = getString(R.string.phone_time_limit_desc)) {
-            chooseLimit(R.string.phone_time_limit, TaskSettings.MINUTE_CHOICES, settings.maxMinutes, { Words.minutes(resources, it) }) {
-                settings.maxMinutes = it
-            }
-        }
-        costRow = look.row(getString(R.string.phone_cost_limit)) {
-            chooseLimit(R.string.phone_cost_limit, TaskSettings.COST_CHOICES, settings.maxCost, { costLabel(it) }) {
-                settings.maxCost = it
-            }
-        }
+        stepsRow = look.row(getString(R.string.phone_steps_limit), desc = getString(R.string.phone_steps_limit_desc)) { chooseSteps() }
+        timeRow = look.row(getString(R.string.phone_time_limit), desc = getString(R.string.phone_time_limit_desc)) { chooseTime() }
+        costRow = look.row(getString(R.string.phone_cost_limit)) { chooseCost() }
         addGroup(col, R.string.phone_section_limits, stepsRow.view, timeRow.view, costRow.view)
 
         for ((id, title, desc) in PRESETS) {
@@ -112,6 +101,36 @@ class SettingsActivity : Activity() {
     override fun onStart() {
         super.onStart()
         sub = CoreClient.subscribe({ st -> main.post { onState(st) } }, { main.post { onDown() } })
+    }
+
+    // The screen is made anew when it is turned, or its theme or language
+    // changes: the dialog open then opens again, with what was typed in its
+    // box. Never a key: its box starts again empty.
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val o = open
+        if (o != null && look.dialogOpen()) {
+            outState.putString(STATE_OPEN, o.name)
+            look.dialogText()?.let { outState.putString(STATE_TEXT, it) }
+        }
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        val o = savedInstanceState.getString(STATE_OPEN)?.let { runCatching { Open.valueOf(it) }.getOrNull() }
+        val typed = savedInstanceState.getString(STATE_TEXT)
+        when (o) {
+            Open.SERVICE -> chooseService()
+            Open.KEY_MENU -> keyMenu()
+            Open.KEY -> askKey(settings.provider)
+            Open.MODEL -> chooseModel(typed)
+            Open.URL -> editUrl(typed)
+            Open.STEPS -> chooseSteps()
+            Open.TIME -> chooseTime()
+            Open.COST -> chooseCost()
+            null -> {}
+        }
     }
 
     override fun onResume() {
@@ -185,6 +204,7 @@ class SettingsActivity : Activity() {
     // The AI model.
 
     private fun chooseService() {
+        open = Open.SERVICE
         val options = listOf(TaskSettings.ANTHROPIC, TaskSettings.OPENAI)
         look.choose(getString(R.string.phone_service), options.map { serviceName(it) }, options.indexOf(settings.provider)) { i ->
             settings.provider = options[i]
@@ -195,15 +215,16 @@ class SettingsActivity : Activity() {
     private fun keyMenu() {
         val p = settings.provider
         if (!secrets.has(p)) {
-            askKey(p, getString(R.string.phone_setup_key))
+            askKey(p)
             return
         }
+        open = Open.KEY_MENU
         look.menu(
             getString(R.string.phone_key),
             listOf(getString(R.string.phone_key_change), getString(R.string.phone_key_remove)),
         ) { i ->
             if (i == 0) {
-                askKey(p, getString(R.string.phone_key_change))
+                askKey(p)
             } else {
                 secrets.forget(p)
                 toast(getString(R.string.phone_key_removed_toast))
@@ -212,7 +233,10 @@ class SettingsActivity : Activity() {
         }
     }
 
-    private fun askKey(p: String, title: String) {
+    // Adds a key, or changes the saved one.
+    private fun askKey(p: String) {
+        open = Open.KEY
+        val title = getString(if (secrets.has(p)) R.string.phone_key_change else R.string.phone_setup_key)
         look.edit(title, getString(R.string.phone_key_desc), "", getString(R.string.phone_key_hint), Look.Field.SECRET) { v ->
             val key = v.trim()
             // The Keystore may take a moment, the first time above all.
@@ -233,13 +257,15 @@ class SettingsActivity : Activity() {
         }
     }
 
-    private fun chooseModel() {
+    // typed is what the box held when the screen was made anew.
+    private fun chooseModel(typed: String? = null) {
+        open = Open.MODEL
         val p = settings.provider
         if (!settings.claudeList(p)) {
             look.edit(
                 getString(R.string.phone_model),
                 getString(R.string.phone_model_desc),
-                settings.model(p),
+                typed ?: settings.model(p),
                 getString(R.string.phone_model_hint),
                 Look.Field.TEXT,
             ) { v ->
@@ -258,12 +284,13 @@ class SettingsActivity : Activity() {
         }
     }
 
-    private fun editUrl() {
+    private fun editUrl(typed: String? = null) {
+        open = Open.URL
         val p = settings.provider
         look.edit(
             getString(R.string.phone_url),
             urlDesc(p),
-            settings.baseUrl(p),
+            typed ?: settings.baseUrl(p),
             if (p == TaskSettings.OPENAI) "https://api.openai.com/v1" else "https://api.anthropic.com",
             Look.Field.URL,
             { v -> if (TaskSettings.urlOK(v)) null else getString(R.string.phone_url_err) },
@@ -280,6 +307,27 @@ class SettingsActivity : Activity() {
         getString(if (p == TaskSettings.OPENAI) R.string.phone_url_desc_openai else R.string.phone_url_desc_anthropic)
 
     // A task's limits.
+
+    private fun chooseSteps() {
+        open = Open.STEPS
+        chooseLimit(R.string.phone_steps_limit, TaskSettings.STEP_CHOICES, settings.maxSteps, { Words.steps(resources, it) }) {
+            settings.maxSteps = it
+        }
+    }
+
+    private fun chooseTime() {
+        open = Open.TIME
+        chooseLimit(R.string.phone_time_limit, TaskSettings.MINUTE_CHOICES, settings.maxMinutes, { Words.minutes(resources, it) }) {
+            settings.maxMinutes = it
+        }
+    }
+
+    private fun chooseCost() {
+        open = Open.COST
+        chooseLimit(R.string.phone_cost_limit, TaskSettings.COST_CHOICES, settings.maxCost, { costLabel(it) }) {
+            settings.maxCost = it
+        }
+    }
 
     private fun <T> chooseLimit(title: Int, choices: List<T>, cur: T, label: (T) -> String, set: (T) -> Unit) {
         // A value set some other way stays on the list, first.
@@ -356,8 +404,13 @@ class SettingsActivity : Activity() {
         Toast.makeText(applicationContext, s, Toast.LENGTH_SHORT).show()
     }
 
+    // The dialogs, as the screen keeps the one open when it is made anew.
+    private enum class Open { SERVICE, KEY_MENU, KEY, MODEL, URL, STEPS, TIME, COST }
+
     companion object {
         private const val TAG = "PinkyScreens"
+        private const val STATE_OPEN = "open_dialog"
+        private const val STATE_TEXT = "open_dialog_text"
 
         // policy.Preset's values, as desktop Pinky lists them.
         private val PRESETS = listOf(
