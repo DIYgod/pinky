@@ -72,7 +72,11 @@ const (
 	ErrDeviceOffline ErrorCode = "device_offline"
 	// ErrDevicePaused: the person paused Pinky's connection to the phone
 	// in Pinky (pause.go); it is unusable until they resume it.
-	ErrDevicePaused    ErrorCode = "device_paused"
+	ErrDevicePaused ErrorCode = "device_paused"
+	// ErrDeviceBusy: Pinky on the phone (Pinky for Android's on-phone
+	// mode), or Pinky on another computer, holds the phone for a task of
+	// its own (onphone.go); nothing was done.
+	ErrDeviceBusy      ErrorCode = "device_busy"
 	ErrLeaseHeld       ErrorCode = "lease_held"
 	ErrScopeDenied     ErrorCode = "scope_denied"
 	ErrNotFound        ErrorCode = "not_found"
@@ -426,7 +430,7 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 			r.Message += " The last action may have happened before the pause."
 		}
 	}
-	if ended && by == OutcomeStopped {
+	if ended && by == OutcomeStopped && r.Status != StatusStopped {
 		ran := r.Status == StatusSettled || r.Status == StatusUncertain
 		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
 		if ran {

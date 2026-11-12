@@ -4642,6 +4642,14 @@
       }
     }
   },
+  "gwStatusBusyComputer": "Busy · Pinky on another computer is using it",
+  "@gwStatusBusyComputer": {
+    "description": "A phone's status line in the sidebar and tiles: an agent's task waits because Pinky on another computer holds the phone. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusBusyPhone": "Busy · Pinky on the phone is running a task",
+  "@gwStatusBusyPhone": {
+    "description": "A phone's status line in the sidebar and tiles: an agent's task waits because Pinky for Android runs a task of its own on the phone (on-phone mode), and only one of them uses the phone at a time. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStatusConnecting": "Connecting",
   "@gwStatusConnecting": {
     "description": "A phone's status line while Pinky opens it (listed and ready, online in a moment). Shown only in other languages; in English the gateway's own words show."
@@ -9201,6 +9209,10 @@
   "stepNotDoneTookOver": "Not done: you took over",
   "@stepNotDoneTookOver": {
     "description": "The second line of a step that never ran because the person took over."
+  },
+  "stepPhoneBusy": "Pinky on the phone was running a task",
+  "@stepPhoneBusy": {
+    "description": "The second line of a step that was not done because Pinky for Android ran a task of its own on the phone, or Pinky on another computer used it."
   },
   "stepPhoneLocked": "The phone was locked",
   "@stepPhoneLocked": {
