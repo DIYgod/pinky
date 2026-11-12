@@ -784,6 +784,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	seen := l.baseline
 	readOnly := l.readOnly
 	fgAllowed := allowsLocked(l, fg)
+	prov := d.provider // discovery sets it again under g.mu
 	g.mu.Unlock()
 	p.input = policy.Input{Device: d.id, App: fg, Screen: cur, TaskApps: apps, LongPress: a.LongPress,
 		ReadOnly: scope.Mode == ScopeReadOnly || readOnly, AllowBlocked: fgAllowed}
@@ -828,7 +829,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			if res != nil {
 				return p, res
 			}
-			p.target, p.point = e, tapPoint(cur, t, d.provider.Platform())
+			p.target, p.point = e, tapPoint(cur, t, prov.Platform())
 		} else {
 			if !inBounds(*a.Point) {
 				return p, errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
@@ -917,7 +918,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 				return p, errResult(ErrUnsupported, "This phone cannot drag. Nothing was done.")
 			}
 		}
-		if res := p.prepareDrag(a, cur, d.provider.Platform(), byRef, inBounds); res != nil {
+		if res := p.prepareDrag(a, cur, prov.Platform(), byRef, inBounds); res != nil {
 			return p, res
 		}
 	case "key":
