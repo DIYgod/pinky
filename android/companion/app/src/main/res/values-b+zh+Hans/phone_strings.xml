@@ -14,6 +14,8 @@
     <string name="phone_app_info">应用信息</string>
     <string name="phone_core_starting">正在启动 Pinky…</string>
     <string name="phone_core_failed">Pinky 无法在这台手机上启动。</string>
+    <string name="phone_no_core_title">这台手机无法独立执行任务</string>
+    <string name="phone_no_core_body">Pinky 只能在 64 位 ARM 处理器的手机上独立执行任务。在这台手机上，Pinky 需要配合电脑使用：把手机连接到运行 Pinky 的电脑，电脑上的智能体就能操作它。</string>
     <string name="phone_core_failed_hint">请重启手机，然后再打开 Pinky。如果还是不行，请重新安装 Pinky。</string>
     <string name="phone_setup">Pinky 可以借助你选择的 AI 模型，自己在手机上完成简单的任务。</string>
     <string name="phone_setup_key">添加 API 密钥</string>
@@ -168,6 +170,10 @@
     <string name="phone_update_failed">无法检查更新，请稍后再试。</string>
     <string name="phone_update_offline">无法检查更新。请检查网络连接，然后再试一次。</string>
     <string name="phone_update_dev">开发版不会更新。</string>
+    <string name="phone_update_downloading">正在下载更新…</string>
+    <string name="phone_update_download_offline">无法下载更新。请检查网络连接，然后再试一次。</string>
+    <string name="phone_update_mismatch">下载的文件与 Pinky 的正式版本不符，Pinky 没有安装它。请稍后再试。</string>
+    <string name="phone_update_install_failed">无法安装更新，请稍后再试。</string>
 
     <string name="phone_step_waiting">等你确认：%1$s</string>
     <string name="phone_step_answered">你已回应：%1$s</string>

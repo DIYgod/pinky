@@ -16,9 +16,10 @@ import java.util.Locale
  * version_code: the APK changes only when the app does, so a release that
  * changes only the desktop app offers nothing here.
  *
- * Opening the APK's link is left to the browser the person installed
- * Pinky with, which already may install apps; Android installs it as an
- * update only when Pinky's own key signed it.
+ * Only an APK from Pinky's own releases is offered (UpdateRules), and
+ * UpdateInstall downloads it, checks it against the feed's sha256 and size,
+ * and hands it to Android's installer, which installs it as an update only
+ * when Pinky's own key signed it.
  */
 object UpdateCheck {
 
@@ -27,6 +28,8 @@ object UpdateCheck {
         val version: String,
         val versionCode: Int,
         val url: String,
+        val sha256: String,
+        val size: Long,
         val notes: String,
     )
 
@@ -53,9 +56,10 @@ object UpdateCheck {
         val e = prefs(context).edit().putLong("checked", System.currentTimeMillis())
         if (u != null) {
             e.putString("version", u.version).putInt("version_code", u.versionCode)
-                .putString("url", u.url).putString("notes", u.notes)
+                .putString("url", u.url).putString("sha256", u.sha256).putLong("size", u.size)
+                .putString("notes", u.notes)
         } else {
-            e.remove("version").remove("version_code").remove("url").remove("notes")
+            e.remove("version").remove("version_code").remove("url").remove("sha256").remove("size").remove("notes")
         }
         e.apply()
         return u
@@ -77,8 +81,12 @@ object UpdateCheck {
         val version = p.getString("version", null) ?: return null
         val code = p.getInt("version_code", 0)
         val url = p.getString("url", null) ?: return null
+        val sha256 = p.getString("sha256", null) ?: return null
+        val size = p.getLong("size", 0)
         if (!enabled || code <= BuildConfig.VERSION_CODE || p.getString("put_off", null) == version) return null
-        return Update(version, code, url, p.getString("notes", null).orEmpty())
+        // Kept by an older build, which took any address: checked again.
+        if (!UpdateRules.isReleaseApk(url) || !UpdateRules.isSha256(sha256) || !UpdateRules.sizeOk(size)) return null
+        return Update(version, code, url, sha256, size, p.getString("notes", null).orEmpty())
     }
 
     /** Stops offering this update; a later one is offered again. */
@@ -86,17 +94,26 @@ object UpdateCheck {
         prefs(context).edit().putString("put_off", u.version).apply()
     }
 
+    /** What Pinky tells the release servers it is. */
+    val userAgent: String
+        get() = "Pinky/${BuildConfig.VERSION_NAME} (android; ${Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"})"
+
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** The feed's update for Android, or null when it has none that is valid. */
+    /**
+     * The feed's update for Android, or null when it has none that is
+     * valid: an APK of Pinky's own releases, with its sha256 and size.
+     */
     fun parse(feed: JSONObject, locale: Locale): Update? {
         val version = feed.optString("version")
         if (version.isEmpty()) return null
         val a = feed.optJSONObject("assets")?.optJSONObject(ASSET) ?: return null
         val url = a.optString("url")
         val code = a.optInt("version_code", 0)
-        if (!url.startsWith("https://") || code <= 0) return null
-        return Update(version, code, url, notes(feed, locale))
+        val sha256 = a.optString("sha256").lowercase(Locale.ROOT)
+        val size = a.optLong("size", 0)
+        if (!UpdateRules.isReleaseApk(url) || code <= 0 || !UpdateRules.isSha256(sha256) || !UpdateRules.sizeOk(size)) return null
+        return Update(version, code, url, sha256, size, notes(feed, locale))
     }
 
     /** The release notes in the app's language: Chinese when it has them, else English. */
@@ -119,12 +136,12 @@ object UpdateCheck {
                 c.instanceFollowRedirects = false
                 c.connectTimeout = 15_000
                 c.readTimeout = 15_000
-                c.setRequestProperty("User-Agent", "Pinky/${BuildConfig.VERSION_NAME} (android; ${Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"})")
+                c.setRequestProperty("User-Agent", userAgent)
                 c.setRequestProperty("Accept", "application/json")
                 when (val code = c.responseCode) {
                     in 300..399 -> {
                         val next = URL(target, c.getHeaderField("Location") ?: throw IllegalStateException("redirect without a location"))
-                        if (next.protocol != "https") throw IllegalStateException("redirect to ${next.protocol}")
+                        if (!UpdateRules.isReleaseHost(next.toString())) throw IllegalStateException("redirect to ${next.protocol}://${next.host}")
                         target = next
                     }
                     200 -> {

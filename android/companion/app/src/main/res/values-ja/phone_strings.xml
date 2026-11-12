@@ -15,6 +15,8 @@
     <string name="phone_app_info">アプリ情報</string>
     <string name="phone_core_starting">Pinky を起動しています…</string>
     <string name="phone_core_failed">Pinky をこのスマホで起動できませんでした。</string>
+    <string name="phone_no_core_title">このスマホでは単独でタスクを実行できません</string>
+    <string name="phone_no_core_body">Pinky がスマホ上でタスクを実行できるのは、64 ビット ARM プロセッサのスマホだけです。このスマホでは、パソコンと一緒に使えます。Pinky を実行しているパソコンにこのスマホを接続すると、パソコンのエージェントが操作できます。</string>
     <string name="phone_core_failed_hint">スマホを再起動してから、もう一度 Pinky を開いてください。それでも起動しない場合は、Pinky を再インストールしてください。</string>
     <string name="phone_setup">Pinky は選んだ AI モデルを使って、スマホでの簡単なタスクを自分でこなせます。</string>
     <string name="phone_setup_key">API キーを追加</string>
@@ -169,6 +171,10 @@
     <string name="phone_update_failed">アップデートを確認できませんでした。しばらくしてからもう一度お試しください。</string>
     <string name="phone_update_offline">アップデートを確認できませんでした。インターネット接続を確認して、もう一度お試しください。</string>
     <string name="phone_update_dev">開発版はアップデートしません。</string>
+    <string name="phone_update_downloading">アップデートをダウンロードしています…</string>
+    <string name="phone_update_download_offline">アップデートをダウンロードできませんでした。インターネット接続を確認して、もう一度お試しください。</string>
+    <string name="phone_update_mismatch">ダウンロードしたファイルが Pinky の正式リリースと一致しないため、インストールしませんでした。しばらくしてからもう一度お試しください。</string>
+    <string name="phone_update_install_failed">アップデートをインストールできませんでした。しばらくしてからもう一度お試しください。</string>
 
     <string name="phone_step_waiting">確認待ち：%1$s</string>
     <string name="phone_step_answered">回答しました：%1$s</string>
