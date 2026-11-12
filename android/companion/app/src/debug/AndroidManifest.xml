@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Pinky on the phone itself talks to the AI model the person chose.
          Only builds that run tasks on the phone (on_phone_ui) need it. -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android's own dialog to lift Pinky's battery limits (Battery), so
+         that a long task on the phone is not stopped in the background.
+         Pinky is not in Google Play, whose policy limits this. -->
+    <uses-permission
+        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        tools:ignore="BatteryLife" />
 </manifest>
