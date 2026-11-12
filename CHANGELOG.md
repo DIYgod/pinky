@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- An iPhone on iOS 27 left idle in Pinky for a minute and a half no longer keeps Pinky's connections to it open, so it stays smooth after an agent is done; Pinky reconnects by itself the next time it is needed.
+- While nobody watches its screen, Pinky checks whether an idle iPhone on Wi-Fi is locked less often.
+
 ## 2026.1112.6 (2026-11-12)
 
 - Each release now also carries Pinky for Android as its own download (pinky-android.apk), and one APK installs on every Android phone, 32-bit ones and x86_64 emulators included.
