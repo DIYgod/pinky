@@ -75,6 +75,8 @@ build_release() {
 	export ADB_CACHE="${ADB_CACHE:-$HOME/Library/Caches/pinky-release/adb}"
 	export COMPANION_APK="$work/companion/pinky-android.apk"
 	"$work/src/scripts/dist.sh" companion "$work/companion"
+	# Published on its own too, as the feed's android-arm64.
+	cp "$COMPANION_APK" "$out/pinky-android.apk"
 	"$work/src/scripts/dist.sh" darwin "$out"
 	"$work/src/scripts/dist.sh" windows "$out"
 	"$work/src/scripts/dist.sh" linux "$out"

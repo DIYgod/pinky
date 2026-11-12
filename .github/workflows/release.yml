@@ -2,7 +2,8 @@ name: Release
 run-name: Release ${{ inputs.tag || github.ref_name }}
 
 # A tag v<version>, which `scripts/release.sh tag` pushes with its commit,
-# is a release: this builds the companion APK, Pinky for Windows and Linux
+# is a release: this builds the companion APK (Pinky for Android, one APK
+# with Pinky's core, built with the runner's Android NDK), Pinky for Windows and Linux
 # (Ubuntu, with the FFmpeg and adb that scripts/ffmpeg.sh and
 # scripts/adb.sh build in containers) and Pinky.app for Apple silicon and
 # Intel (macOS: signed with the Developer ID, both disk images notarized at
@@ -364,6 +365,12 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: macos
+          path: ${{ runner.temp }}/dist
+      # Pinky for Android on its own too: the feed's android-arm64, which the
+      # app updates itself from, and a download that needs no computer.
+      - uses: actions/download-artifact@v8
+        with:
+          name: companion
           path: ${{ runner.temp }}/dist
       - name: Publish the release
         env:
