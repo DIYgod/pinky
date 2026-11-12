@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1112.6 (2026-11-12)
 
 - Each release now also carries Pinky for Android as its own download (pinky-android.apk), and one APK installs on every Android phone, 32-bit ones and x86_64 emulators included.
 - The description of Pinky for Android's accessibility service now says that, on phones where you turn it on yourself, it stays on until you turn it off there.
