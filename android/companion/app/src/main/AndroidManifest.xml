@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Only for the debug page's test notification. Never requested at run time. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Android's own dialog to lift Pinky's battery limits (Battery), so
+         that a long task on the phone is not stopped in the background.
+         Only Pinky's screens for tasks on the phone (on_phone_ui) ask.
+         Pinky is not in Google Play, whose policy limits this. -->
+    <uses-permission
+        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        tools:ignore="BatteryLife" />
 
     <!-- Lets the service resolve the display name of launchable apps, and
          Pinky on the phone list and open them. -->
@@ -80,6 +89,12 @@
             android:label="@string/phone_activity"
             android:process=":ui"
             android:theme="@style/Theme.Pinky.Screen" />
+
+        <!-- Hears how an update from Pinky's releases went (UpdateInstall). -->
+        <receiver
+            android:name=".UpdateStatusReceiver"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false" />
 
         <service
             android:name=".PinkyAccessibilityService"

@@ -71,6 +71,9 @@ type device struct {
 	// agent works on the phone. workSent: dev was told at all.
 	working, workSent bool
 	locked            bool
+	// busy is who holds the phone while the agent's task waits for it:
+	// Pinky on the phone, or another computer (onphone.go).
+	busy *driver.BusyError
 	// settleDue is when the wait after the last input would have ended
 	// had it run its whole SettleMax: set before the input goes out,
 	// cleared once the screen is seen to settle. The next action waits for

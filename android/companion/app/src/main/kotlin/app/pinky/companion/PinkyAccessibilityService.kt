@@ -90,7 +90,7 @@ class PinkyAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         idleDisableMs = prefs.getLong(KEY_IDLE_DISABLE_MS, DEFAULT_IDLE_DISABLE_MS)
-        onPhone = onPhoneBuild && modePrefs.getBoolean(KEY_ON_PHONE, false)
+        onPhone = onPhoneBuild && Core.available(this) && modePrefs.getBoolean(KEY_ON_PHONE, false)
         includeNotImportant =
             serviceInfo.flags and AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS != 0
         val keep = prefs.getBoolean(KEY_INCLUDE_NOT_IMPORTANT, includeNotImportant)
@@ -183,6 +183,7 @@ class PinkyAccessibilityService : AccessibilityService() {
     @SuppressLint("ApplySharedPref")
     fun setOnPhone(on: Boolean): String {
         if (!onPhoneBuild) throw RequestError("unsupported", "this build does not run tasks on the phone")
+        if (on && !Core.available(this)) throw RequestError("unsupported", "this phone cannot run Pinky's core (${Core.ABI} only)")
         modePrefs.edit().putBoolean(KEY_ON_PHONE, on).commit()
         onPhone = on
         if (!on) IdleClock.touch() // a minute from now, not at once

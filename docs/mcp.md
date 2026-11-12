@@ -161,6 +161,7 @@ note: "<the person's note>"
 | --- | --- |
 | `device_offline` | The phone is not connected. A lease survives 60 s of disconnection |
 | `device_paused` | The person paused Pinky's connection to the phone (Pause connection in its ⋯ menu), and nothing was done. Pinky neither streams nor controls it, and a task on it ended when it was paused. Ask the person to resume it (Resume on its page, or plug it in by cable), or use another phone; then call `phone_connect` again. `phone_connect` returns it for a paused phone too |
+| `device_busy` | Pinky for Android runs a task of its own on the phone (or Pinky on another computer uses it), and only one of them uses the phone at a time, so nothing was done. The message names the task when it has a name. Try again in a while, or tell the person: they can stop that task on the phone or let it finish. The phone shows busy in Pinky meanwhile. If the person presses Stop on the phone's pill while your task holds the phone, your next call returns `stopped` |
 | `lease_held` | Another session holds the phone; `holder` names its agent and task |
 | `scope_denied` | The app is outside the agent's scope or the task's app list |
 | `not_found` | The ref is gone, no installed app matches, or no app opens the link |

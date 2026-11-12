@@ -12565,6 +12565,44 @@ func (msgs Messages) GwStatusBackground(work string) string {
 	return Catalog.Format(msgs.locale, "gwStatusBackground", map[string]any{"work": work})
 }
 
+// GwStatusBusyComputer says "Busy · Pinky on another computer is using it"
+// in the language the app shows.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky on another computer holds the phone. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStatusBusyComputer() string { return In(i18n.Locale()).GwStatusBusyComputer() }
+
+// GwStatusBusyComputer says "Busy · Pinky on another computer is using it"
+// in the language of msgs.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky on another computer holds the phone. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusBusyComputer() string {
+	return Catalog.Format(msgs.locale, "gwStatusBusyComputer", nil)
+}
+
+// GwStatusBusyPhone says "Busy · Pinky on the phone is running a task"
+// in the language the app shows.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky for Android runs a task of its own on the phone (on-phone
+// mode), and only one of them uses the phone at a time. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStatusBusyPhone() string { return In(i18n.Locale()).GwStatusBusyPhone() }
+
+// GwStatusBusyPhone says "Busy · Pinky on the phone is running a task"
+// in the language of msgs.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky for Android runs a task of its own on the phone (on-phone
+// mode), and only one of them uses the phone at a time. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusBusyPhone() string {
+	return Catalog.Format(msgs.locale, "gwStatusBusyPhone", nil)
+}
+
 // GwStatusConnecting says "Connecting"
 // in the language the app shows.
 //
@@ -25057,6 +25095,22 @@ func StepNotDoneTookOver() string { return In(i18n.Locale()).StepNotDoneTookOver
 // The second line of a step that never ran because the person took over.
 func (msgs Messages) StepNotDoneTookOver() string {
 	return Catalog.Format(msgs.locale, "stepNotDoneTookOver", nil)
+}
+
+// StepPhoneBusy says "Pinky on the phone was running a task"
+// in the language the app shows.
+//
+// The second line of a step that was not done because Pinky for Android ran
+// a task of its own on the phone, or Pinky on another computer used it.
+func StepPhoneBusy() string { return In(i18n.Locale()).StepPhoneBusy() }
+
+// StepPhoneBusy says "Pinky on the phone was running a task"
+// in the language of msgs.
+//
+// The second line of a step that was not done because Pinky for Android ran
+// a task of its own on the phone, or Pinky on another computer used it.
+func (msgs Messages) StepPhoneBusy() string {
+	return Catalog.Format(msgs.locale, "stepPhoneBusy", nil)
 }
 
 // StepPhoneLocked says "The phone was locked"

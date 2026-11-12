@@ -1,8 +1,6 @@
 package app.pinky.companion
 
 import android.app.Activity
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -378,7 +376,7 @@ class SettingsActivity : Activity() {
 
     private fun onUpdateRow() {
         updateFound?.let {
-            look.open(Intent(Intent.ACTION_VIEW, Uri.parse(it.url)))
+            UpdateInstall.startFrom(this, it)
             return
         }
         if (!UpdateCheck.enabled || checking) return

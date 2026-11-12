@@ -2095,6 +2095,9 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 // actionError maps a driver error from an input to a result. Only errors
 // that prove nothing happened become errors; the rest are uncertain.
 func (g *Gateway) actionError(l *lease, err error) *Result {
+	if res := g.onPhoneResult(l, err); res != nil {
+		return res
+	}
 	switch {
 	case errors.Is(err, driver.ErrUnsupported):
 		return errResult(ErrUnsupported, "This phone cannot do that: %v. Nothing was done.", err)
@@ -2114,6 +2117,9 @@ func (g *Gateway) actionError(l *lease, err error) *Result {
 
 // readError maps an error from reading the screen.
 func (g *Gateway) readError(l *lease, err error) *Result {
+	if res := g.onPhoneResult(l, err); res != nil {
+		return res
+	}
 	switch {
 	case errors.Is(err, driver.ErrOffline):
 		g.setOffline(l.dev, "")
@@ -2246,6 +2252,7 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 		}
 		return nil, errors.New("the driver returned no screen")
 	}
+	g.setBusy(d, nil)
 	// One-time codes are masked before anything else sees the read: the
 	// agent, history, approvals and refs (policy.MaskScreen).
 	g.policy.MaskScreen(s)

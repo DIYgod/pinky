@@ -162,6 +162,9 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		}
 		return DeviceInControl, "You're in control"
 	}
+	if line := busyLineLocked(d); line != "" {
+		return DeviceWorking, line
+	}
 	if l != nil {
 		line := l.session.agent.Name + " · " + l.task.title
 		if l.bg != nil {

@@ -987,6 +987,10 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusNeedsSetup()
 	case "Camera or microphone in use":
 		return locales.GwStatusMediaInUse()
+	case "Busy · Pinky on the phone is running a task":
+		return locales.GwStatusBusyPhone()
+	case "Busy · Pinky on another computer is using it":
+		return locales.GwStatusBusyComputer()
 	case "Found on Wi-Fi":
 		return locales.GwStatusFoundOnWiFi()
 	case "Not the same phone":
