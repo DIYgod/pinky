@@ -6,13 +6,11 @@
      settingsAsk*, needs*). Release builds do not show these screens yet
      (on_phone_ui). -->
 <resources>
-    <string name="phone_launcher">Pinky tasks</string>
     <string name="phone_settings">Settings</string>
     <string name="phone_save">Save</string>
     <string name="phone_cancel">Cancel</string>
 
     <!-- The task screen: what Pinky needs before it can work. -->
-    <string name="phone_off_title">Turn on Pinky</string>
     <string name="phone_off_body">Pinky works on this phone through its accessibility service. Open Accessibility settings, choose Pinky and turn it on.</string>
     <string name="phone_open_accessibility">Open Accessibility settings</string>
     <string name="phone_restricted">If Android says the setting is restricted, open App info, tap ⋮, choose Allow restricted settings and try again.</string>
@@ -22,6 +20,11 @@
     <string name="phone_no_core_title">This phone can\'t run tasks by itself</string>
     <string name="phone_no_core_body">Pinky runs tasks on the phone only on phones with a 64-bit ARM processor. Here Pinky works with a computer: connect this phone to a computer that runs Pinky, and agents there can use it.</string>
     <string name="phone_core_failed_hint">Restart the phone and open Pinky again. If that doesn\'t help, reinstall Pinky.</string>
+    <string name="phone_setup_title">Set up Pinky</string>
+    <string name="phone_setup_service">Turn on Pinky in Accessibility settings</string>
+    <string name="phone_setup_model_step">Choose the AI model and add its API key</string>
+    <string name="phone_setup_model_body">Pinky thinks with a model you choose and pays for: Claude through Anthropic\'s API, or another one through a service compatible with OpenAI\'s.</string>
+    <string name="phone_task_footer">Pinky leaves this screen and works in the other apps. You can watch it, answer when it asks, and stop it at any time.</string>
     <string name="phone_setup">Pinky can do simple tasks on your phone by itself, with an AI model you choose.</string>
     <string name="phone_setup_key">Add an API key</string>
     <string name="phone_setup_model">Choose a model</string>

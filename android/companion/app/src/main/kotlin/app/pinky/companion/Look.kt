@@ -27,6 +27,7 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.ScrollView
@@ -112,6 +113,65 @@ class Look(private val activity: Activity) {
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(4), dp(12), 0, dp(4))
         addView(text(title, TITLE1, color, 700), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+    }
+
+    /** A round button with an icon, for the title bar; desc says what it does. */
+    fun iconButton(icon: Int, desc: String, onClick: () -> Unit): ImageView = ImageView(activity).apply {
+        setImageDrawable(activity.getDrawable(icon)?.mutate()?.apply { setTint(accent) })
+        contentDescription = desc
+        tooltipText = desc
+        scaleType = ImageView.ScaleType.CENTER
+        minimumWidth = dp(44)
+        minimumHeight = dp(44)
+        val mask = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.WHITE)
+        }
+        background = RippleDrawable(ColorStateList.valueOf(ripple), null, mask)
+        setOnClickListener { onClick() }
+    }
+
+    /**
+     * A numbered step of a setup card: its mark, its title, and below them
+     * body, which the caller fills and which shows only while the step is
+     * the one to do.
+     */
+    inner class SetupStep(n: Int, title: String) {
+        private val number = n.toString()
+        val mark: TextView = text(number, SMALL, Color.WHITE, 700).apply {
+            gravity = Gravity.CENTER
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val title: TextView = text(title, BODY, ink, 600)
+        val body: LinearLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(36), dp(4), 0, 0)
+        }
+        val view: LinearLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(12), 0, 0)
+            val top = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(mark, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(12) })
+                addView(this@SetupStep.title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            }
+            addView(top, matchWrap())
+            addView(body, matchWrap())
+        }
+
+        /** Done (a green tick), the one to do now (the accent, with its body), or one for later. */
+        fun state(done: Boolean, now: Boolean) {
+            val t = if (done) "✓" else number
+            if (mark.text.toString() != t) mark.text = t
+            mark.background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(if (done) green else if (now) accentButton else bg3)
+            }
+            mark.setTextColor(if (done || now) Color.WHITE else ink3)
+            title.setTextColor(if (now) ink else ink3)
+            body.shown(now)
+        }
     }
 
     /** A section's heading above a group. */

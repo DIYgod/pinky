@@ -49,6 +49,11 @@ class Overlays(private val service: PinkyAccessibilityService) {
     private var ended: String? = null // the task that ended and whose pill was closed
     private var endTimer: Runnable? = null
 
+    // Pinky's own screen is in front. It says what the pill says, with its
+    // own Stop, and the pill would cover its title: the pill hides there.
+    private var ownScreen = false
+    private val checkOwnScreen = Runnable { updateOwnScreen() }
+
     /** What the pill is about, and so which button it has. */
     private enum class Pill {
         TASK, // the task runs: Stop
@@ -67,8 +72,42 @@ class Overlays(private val service: PinkyAccessibilityService) {
         sub = CoreClient.subscribe({ st -> main.post { render(st) } }, { main.post { render(JSONObject()) } })
     }
 
+    /** Windows came, went or changed: the service calls it for their events. */
+    fun windowsChanged() {
+        if (pill == null) return
+        main.removeCallbacks(checkOwnScreen)
+        main.postDelayed(checkOwnScreen, 100)
+    }
+
+    private fun updateOwnScreen() {
+        val own = ownScreenInFront()
+        if (own == ownScreen) return
+        ownScreen = own
+        pill?.root?.visibility = if (own) View.GONE else View.VISIBLE
+        reportRects()
+    }
+
+    // Whether the top application window on the phone's screen is one of
+    // Pinky's own (OwnUI knows them the same way).
+    private fun ownScreenInFront(): Boolean {
+        val windows = try {
+            service.windows
+        } catch (_: Exception) {
+            return false
+        }
+        return try {
+            val top = windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }.maxByOrNull { it.layer }
+            top?.root?.packageName?.toString() == service.packageName
+        } catch (_: Exception) {
+            false
+        } finally {
+            TreeDumper.recycleWindows(windows)
+        }
+    }
+
     fun stop() {
         stopped = true
+        main.removeCallbacks(checkOwnScreen)
         sub?.close()
         sub = null
         main.post {
@@ -142,6 +181,8 @@ class Overlays(private val service: PinkyAccessibilityService) {
         endTimer = null
         val w = pill ?: newPill().also {
             pill = it
+            ownScreen = ownScreenInFront()
+            if (ownScreen) it.root.visibility = View.GONE
             add(it, Gravity.TOP or Gravity.CENTER_HORIZONTAL, ViewGroup.LayoutParams.WRAP_CONTENT, topInset() + px(8))
         }
         w.text.text = text
@@ -385,7 +426,7 @@ class Overlays(private val service: PinkyAccessibilityService) {
         val rects = ArrayList<Rect>()
         for (w in listOfNotNull(pill, card)) {
             val v = w.root
-            if (!v.isAttachedToWindow || v.width == 0) continue
+            if (!v.isAttachedToWindow || v.width == 0 || v.visibility != View.VISIBLE) continue
             val loc = IntArray(2)
             v.getLocationOnScreen(loc)
             rects += Rect(loc[0], loc[1], loc[0] + v.width, loc[1] + v.height)

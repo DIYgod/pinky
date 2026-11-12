@@ -2,12 +2,9 @@
 <!-- values/phone_strings.xml in Simplified Chinese, worded as desktop
      Pinky's zh-Hans.json. -->
 <resources>
-    <string name="phone_launcher">Pinky 任务</string>
     <string name="phone_settings">设置</string>
     <string name="phone_save">保存</string>
     <string name="phone_cancel">取消</string>
-
-    <string name="phone_off_title">开启 Pinky</string>
     <string name="phone_off_body">Pinky 要通过无障碍服务在这台手机上操作。请在无障碍设置中找到 Pinky 并开启。</string>
     <string name="phone_open_accessibility">打开无障碍设置</string>
     <string name="phone_restricted">如果 Android 提示这项设置受限，请打开“应用信息”，点按 ⋮，选择“允许受限制的设置”，然后再试一次。</string>
@@ -17,6 +14,11 @@
     <string name="phone_no_core_title">这台手机无法独立执行任务</string>
     <string name="phone_no_core_body">Pinky 只能在 64 位 ARM 处理器的手机上独立执行任务。在这台手机上，Pinky 需要配合电脑使用：把手机连接到运行 Pinky 的电脑，电脑上的智能体就能操作它。</string>
     <string name="phone_core_failed_hint">请重启手机，然后再打开 Pinky。如果还是不行，请重新安装 Pinky。</string>
+    <string name="phone_setup_title">设置 Pinky</string>
+    <string name="phone_setup_service">在无障碍设置中开启 Pinky</string>
+    <string name="phone_setup_model_step">选择 AI 模型并添加 API 密钥</string>
+    <string name="phone_setup_model_body">Pinky 用你选择并付费的模型来思考：通过 Anthropic 的 API 使用 Claude，或通过兼容 OpenAI 的服务使用其他模型。</string>
+    <string name="phone_task_footer">Pinky 会离开这个界面，到其他 App 里操作。你可以随时旁观、在它询问时回答，也可以随时停止它。</string>
     <string name="phone_setup">Pinky 可以借助你选择的 AI 模型，自己在手机上完成简单的任务。</string>
     <string name="phone_setup_key">添加 API 密钥</string>
     <string name="phone_setup_model">选择模型</string>

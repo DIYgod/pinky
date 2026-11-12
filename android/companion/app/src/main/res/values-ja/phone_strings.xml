@@ -3,12 +3,9 @@
      ja.json (スマホ, 「設定」) and with Android's own names for its
      settings (ユーザー補助, アプリ情報, 制限付き設定を許可). -->
 <resources>
-    <string name="phone_launcher">Pinky タスク</string>
     <string name="phone_settings">設定</string>
     <string name="phone_save">保存</string>
     <string name="phone_cancel">キャンセル</string>
-
-    <string name="phone_off_title">Pinky をオンにする</string>
     <string name="phone_off_body">Pinky はユーザー補助サービスを使ってこのスマホを操作します。ユーザー補助の設定で Pinky を選んでオンにしてください。</string>
     <string name="phone_open_accessibility">ユーザー補助の設定を開く</string>
     <string name="phone_restricted">設定が制限されていると表示された場合は、「アプリ情報」を開いて ⋮ をタップし、「制限付き設定を許可」を選んでからもう一度お試しください。</string>
@@ -18,6 +15,11 @@
     <string name="phone_no_core_title">このスマホでは単独でタスクを実行できません</string>
     <string name="phone_no_core_body">Pinky がスマホ上でタスクを実行できるのは、64 ビット ARM プロセッサのスマホだけです。このスマホでは、パソコンと一緒に使えます。Pinky を実行しているパソコンにこのスマホを接続すると、パソコンのエージェントが操作できます。</string>
     <string name="phone_core_failed_hint">スマホを再起動してから、もう一度 Pinky を開いてください。それでも起動しない場合は、Pinky を再インストールしてください。</string>
+    <string name="phone_setup_title">Pinky を設定する</string>
+    <string name="phone_setup_service">ユーザー補助の設定で Pinky をオンにする</string>
+    <string name="phone_setup_model_step">AI モデルを選んで API キーを追加する</string>
+    <string name="phone_setup_model_body">Pinky は、あなたが選んで料金を払うモデルで考えます。Anthropic の API の Claude か、OpenAI 互換のサービスのほかのモデルを使えます。</string>
+    <string name="phone_task_footer">Pinky はこの画面を離れて、ほかのアプリで作業します。様子を見たり、確認されたときに答えたり、いつでも停止したりできます。</string>
     <string name="phone_setup">Pinky は選んだ AI モデルを使って、スマホでの簡単なタスクを自分でこなせます。</string>
     <string name="phone_setup_key">API キーを追加</string>
     <string name="phone_setup_model">モデルを選ぶ</string>

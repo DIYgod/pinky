@@ -59,13 +59,14 @@ class TaskActivity : Activity() {
     private lateinit var updateCard: View
     private lateinit var updateTitle: TextView
     private lateinit var updateNotes: TextView
-    private lateinit var offCard: View
     private lateinit var noCoreCard: View
     private var hasCore = true
     private lateinit var coreCard: View
     private lateinit var coreTitle: TextView
     private lateinit var coreDetail: TextView
     private lateinit var setupCard: View
+    private lateinit var serviceStep: Look.SetupStep
+    private lateinit var modelStep: Look.SetupStep
     private lateinit var setupButton: TextView
     private lateinit var batteryCard: View
     private lateinit var batteryBody: TextView
@@ -85,6 +86,7 @@ class TaskActivity : Activity() {
     private lateinit var modelLine: TextView
     private lateinit var limitLine: TextView
     private lateinit var startButton: TextView
+    private lateinit var askFooter: TextView
     private lateinit var error: TextView
     private lateinit var stepsHeading: TextView
     private lateinit var steps: StepList
@@ -104,13 +106,17 @@ class TaskActivity : Activity() {
         hasCore = Core.available(this)
         val col = look.column()
         val header = look.header(getString(R.string.app_name))
-        header.addView(look.button(getString(R.string.phone_settings), Look.Kind.PLAIN) { openSettings() })
+        header.addView(
+            look.iconButton(R.drawable.ic_activity, getString(R.string.phone_activity)) {
+                startActivity(Intent(this, HistoryActivity::class.java))
+            },
+        )
+        header.addView(look.iconButton(R.drawable.ic_settings, getString(R.string.phone_settings)) { openSettings() })
         col.addView(header, look.matchWrap())
         col.addView(noCoreCard(), look.below(12))
         col.addView(updateCard(), look.below(12))
-        col.addView(offCard(), look.below(12))
-        col.addView(coreCard(), look.below(12))
         col.addView(setupCard(), look.below(12))
+        col.addView(coreCard(), look.below(12))
         col.addView(batteryCard(), look.below(12))
         col.addView(computerCard(), look.below(12))
         col.addView(runCard(), look.below(12))
@@ -192,7 +198,7 @@ class TaskActivity : Activity() {
             // A phone the core does not run on: Pinky works there with a
             // computer, and this screen says only that.
             for (v in listOf(
-                updateCard, offCard, coreCard, setupCard, batteryCard, computerCard, runCard, endCard.view,
+                updateCard, coreCard, setupCard, batteryCard, computerCard, runCard, endCard.view,
                 askBox, error, stepsHeading, steps.group, historyHeading, historyGroup,
             )) v.shown(false)
             return
@@ -220,14 +226,17 @@ class TaskActivity : Activity() {
             updateNotes.say(u.notes)
         }
 
-        offCard.shown(!serviceOn)
+        // Setup, one step at a time: the service, then the model and its
+        // key. The core's own start is not a step: it says so on its card.
+        setupCard.shown(!serviceOn || (!setUp && !running))
+        serviceStep.state(done = serviceOn, now = !serviceOn)
+        modelStep.state(done = setUp, now = serviceOn && !setUp)
+        setupButton.text = getString(if (hasKey) R.string.phone_setup_model else R.string.phone_setup_key)
         coreCard.shown(serviceOn && !ready)
         if (serviceOn && !ready) {
             coreTitle.say(getString(if (startingCore) R.string.phone_core_starting else R.string.phone_core_failed))
             coreDetail.say(if (startingCore) "" else whyNotReady(device))
         }
-        setupCard.shown(ready && !setUp && !running)
-        setupButton.text = getString(if (hasKey) R.string.phone_setup_model else R.string.phone_setup_key)
         // Once Pinky is set up, what keeps it running through a long task,
         // until the person allows it or puts it off. Whether a vendor's
         // autostart is on cannot be read, so that card stays until put off.
@@ -263,6 +272,7 @@ class TaskActivity : Activity() {
         if (agent != null && !running) endCard.show(agent)
 
         askBox.shown(ready && setUp && !running)
+        askFooter.shown(ready && setUp && !running && agent == null)
         modelLine.say(settings.modelLabel())
         limitLine.say(
             getString(R.string.phone_task_limit, Words.limit(resources, settings.priced(), settings.maxCost, settings.tokenLimit)),
@@ -475,19 +485,27 @@ class TaskActivity : Activity() {
         return c
     }
 
-    private fun offCard(): View {
+    // Setting Pinky up: the service, then the model and its key.
+    private fun setupCard(): View {
         val c = look.card()
-        c.addView(look.text(getString(R.string.phone_off_title), Look.HEADLINE, look.ink, 600))
-        c.addView(look.text(getString(R.string.phone_off_body), Look.BODY, look.ink2).apply { setPadding(0, look.dp(6), 0, 0) })
-        c.addView(
-            look.button(getString(R.string.phone_open_accessibility), Look.Kind.PRIMARY) { look.openAccessibility() },
-            look.below(14),
+        c.addView(look.text(getString(R.string.phone_setup_title), Look.HEADLINE, look.ink, 600))
+        c.addView(look.text(getString(R.string.phone_setup), Look.SMALL, look.ink2).apply { setPadding(0, look.dp(4), 0, look.dp(2)) })
+
+        serviceStep = look.SetupStep(1, getString(R.string.phone_setup_service))
+        serviceStep.body.addView(look.text(getString(R.string.phone_off_body), Look.SMALL, look.ink2), look.matchWrap())
+        serviceStep.body.addView(
+            look.buttons(look.button(getString(R.string.phone_open_accessibility), Look.Kind.PRIMARY) { look.openAccessibility() })
+                .apply { gravity = Gravity.START },
+            look.matchWrap(),
         )
         // From Android 13 the setting is restricted for apps installed
         // outside an app store until the person allows it in App info.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            c.addView(look.text(getString(R.string.phone_restricted), Look.SMALL, look.ink3).apply { setPadding(0, look.dp(14), 0, 0) })
-            c.addView(
+            serviceStep.body.addView(
+                look.text(getString(R.string.phone_restricted), Look.SMALL, look.ink3).apply { setPadding(0, look.dp(12), 0, 0) },
+                look.matchWrap(),
+            )
+            serviceStep.body.addView(
                 look.buttons(look.button(getString(R.string.phone_app_info)) { look.openAppInfo() }).apply {
                     gravity = Gravity.START
                     setPadding(0, look.dp(8), 0, 0)
@@ -495,7 +513,14 @@ class TaskActivity : Activity() {
                 look.matchWrap(),
             )
         }
-        offCard = c
+        c.addView(serviceStep.view, look.matchWrap())
+
+        modelStep = look.SetupStep(2, getString(R.string.phone_setup_model_step))
+        modelStep.body.addView(look.text(getString(R.string.phone_setup_model_body), Look.SMALL, look.ink2), look.matchWrap())
+        setupButton = look.button("", Look.Kind.PRIMARY) { openSettings() }
+        modelStep.body.addView(look.buttons(setupButton).apply { gravity = Gravity.START }, look.matchWrap())
+        c.addView(modelStep.view, look.matchWrap())
+        setupCard = c
         return c
     }
 
@@ -507,15 +532,6 @@ class TaskActivity : Activity() {
         c.addView(coreTitle)
         c.addView(coreDetail)
         coreCard = c
-        return c
-    }
-
-    private fun setupCard(): View {
-        val c = look.card()
-        c.addView(look.text(getString(R.string.phone_setup), Look.BODY, look.ink2))
-        setupButton = look.button("", Look.Kind.PRIMARY) { openSettings() }
-        c.addView(look.buttons(setupButton), look.matchWrap())
-        setupCard = c
         return c
     }
 
@@ -563,7 +579,7 @@ class TaskActivity : Activity() {
         val detail = look.text(getString(R.string.phone_computer_detail), Look.SMALL, look.ink3).apply {
             setPadding(0, look.dp(6), 0, 0)
         }
-        val c = look.card()
+        val c = look.card(look.accentTint)
         c.addView(top, look.matchWrap())
         c.addView(computerTask, look.matchWrap())
         c.addView(detail, look.matchWrap())
@@ -587,7 +603,7 @@ class TaskActivity : Activity() {
         runUsage = look.text("", Look.SMALL, look.ink2).apply { setPadding(0, look.dp(4), 0, 0) }
         runWaiting = look.text("", Look.BODY, look.amber, 600).apply { setPadding(0, look.dp(10), 0, 0) }
         runHint = look.text(getString(R.string.phone_waiting_hint), Look.SMALL, look.ink3).apply { setPadding(0, look.dp(2), 0, 0) }
-        val c = look.card()
+        val c = look.card(look.accentTint)
         c.addView(top, look.matchWrap())
         for (v in listOf(runTask, runUsage, runWaiting, runHint)) c.addView(v, look.matchWrap())
         runCard = c
@@ -636,9 +652,11 @@ class TaskActivity : Activity() {
             addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(startButton)
         }
+        askFooter = look.note(getString(R.string.phone_task_footer))
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         box.addView(input, look.matchWrap())
         box.addView(row, look.matchWrap())
+        box.addView(askFooter, look.matchWrap())
         askBox = box
         return box
     }
