@@ -102,11 +102,11 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	}
 	progress(driver.HelperPreparing)
 	if runtime.GOOS != "darwin" {
-		return helperErr(driver.HelperFixXcode, errors.New("installing Pinky for iPhone needs a Mac with Xcode"), "")
+		return helperErr(driver.HelperFixXcode, errors.New("installing Pinky on the iPhone needs a Mac with Xcode"), "")
 	}
 	x, err := findXcode()
 	if err != nil {
-		return helperErr(driver.HelperFixXcode, fmt.Errorf("installing Pinky for iPhone needs Xcode: %w", err), "")
+		return helperErr(driver.HelperFixXcode, fmt.Errorf("installing Pinky on the iPhone needs Xcode: %w", err), "")
 	}
 	team := strings.ToUpper(strings.TrimSpace(o.Team))
 	if team != "" && !teamID.MatchString(team) {
@@ -209,11 +209,11 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	progress(driver.HelperBuilding)
 	tail, err := xr.run(ctx, driver.HelperBuilding, helperBuildArgs(src, dd, ph.UDID, team, bid, false), nil)
 	if err != nil && ctx.Err() == nil && !o.LocalSigning && needsProvisioning(tail) {
-		fmt.Fprintln(out, "No profile on this Mac signs the helper for this phone; letting Xcode get one from Apple (it may register the phone with your team).")
+		fmt.Fprintln(out, "No profile on this Mac signs Pinky on the iPhone for this phone; letting Xcode get one from Apple (it may register the phone with your team).")
 		tail, err = xr.run(ctx, driver.HelperBuilding, helperBuildArgs(src, dd, ph.UDID, team, bid, true), nil)
 	}
 	if err != nil {
-		return xcodeFailed(ctx, "building the helper", err, tail, logPath, o.LocalSigning)
+		return xcodeFailed(ctx, "building Pinky on the iPhone", err, tail, logPath, o.LocalSigning)
 	}
 	products := filepath.Join(dd, "Build", "Products")
 	app := runnerAppIn(products)
@@ -222,10 +222,10 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	}
 	profile, err := embeddedProfile(app)
 	if err != nil {
-		return fmt.Errorf("reading the profile Xcode signed the helper with: %w", err)
+		return fmt.Errorf("reading the profile Xcode signed Pinky on the iPhone with: %w", err)
 	}
 	if !profile.runsOn(ph.UDID) {
-		e := helperErr(driver.HelperFixSigning, fmt.Errorf("the profile Xcode signed the helper with, %q, does not include %s", profile.Name, ph.Name), logPath)
+		e := helperErr(driver.HelperFixSigning, fmt.Errorf("the profile Xcode signed Pinky on the iPhone with, %q, does not include %s", profile.Name, ph.Name), logPath)
 		if o.LocalSigning {
 			e.Hint = "Run this without --local-signing, or add the phone to your team in Xcode."
 		}
@@ -234,10 +234,10 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 
 	// Pinky's name and icon, then the signature again.
 	if _, err := brandRunner(ctx, x, app); err != nil {
-		return fmt.Errorf("giving the helper Pinky's name and icon: %w", err)
+		return fmt.Errorf("giving the app Pinky's name and icon: %w", err)
 	}
 	if err := resignApp(ctx, x, app); err != nil {
-		return fmt.Errorf("signing the helper again: %w", err)
+		return fmt.Errorf("signing Pinky on the iPhone again: %w", err)
 	}
 
 	// Pinky's iPhone app hosting WDA in place of the helper, when this
@@ -292,9 +292,9 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 			}
 			return helperErr(fix, fmt.Errorf("WebDriverAgent did not answer within %s of starting on %s", helperStartTimeout, ph.Name), logPath)
 		}
-		return xcodeFailed(ctx, "installing and starting the helper", err, tail, logPath, o.LocalSigning)
+		return xcodeFailed(ctx, "installing and starting Pinky on the iPhone", err, tail, logPath, o.LocalSigning)
 	}
-	return helperErr(helperFix(tail), fmt.Errorf("the helper's test ended before WebDriverAgent answered: %s", xcodeErrors(tail)), logPath)
+	return helperErr(helperFix(tail), fmt.Errorf("WebDriverAgent's test ended before it answered: %s", xcodeErrors(tail)), logPath)
 }
 
 // helperInstalls remembers, in Pinky's WebDriverAgent folder, the team and
@@ -832,9 +832,9 @@ func helperHintFor(fix string, local bool) string {
 		return "Add your Apple ID in Xcode › Settings › Accounts, or name another team with --team."
 	case driver.HelperFixSigning:
 		if local {
-			return "Xcode found no way to sign Pinky for iPhone for this phone. Run this without --local-signing to let Xcode get a profile, or check your team in Xcode › Settings › Accounts."
+			return "Xcode found no way to sign Pinky on the iPhone for this phone. Run this without --local-signing to let Xcode get a profile, or check your team in Xcode › Settings › Accounts."
 		}
-		return "Xcode found no way to sign Pinky for iPhone for this phone. Check your team in Xcode › Settings › Accounts, and that the phone is added to it."
+		return "Xcode found no way to sign Pinky on the iPhone for this phone. Check your team in Xcode › Settings › Accounts, and that the phone is added to it."
 	case driver.HelperFixDownload:
 		return "Check the internet connection, then run this again."
 	}

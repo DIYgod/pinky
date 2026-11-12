@@ -73,7 +73,7 @@ const (
 	// ErrDevicePaused: the person paused Pinky's connection to the phone
 	// in Pinky (pause.go); it is unusable until they resume it.
 	ErrDevicePaused ErrorCode = "device_paused"
-	// ErrDeviceBusy: Pinky on the phone (Pinky for Android's on-phone
+	// ErrDeviceBusy: Pinky on the phone (the Android app's on-phone
 	// mode), or Pinky on another computer, holds the phone for a task of
 	// its own (onphone.go); nothing was done.
 	ErrDeviceBusy      ErrorCode = "device_busy"

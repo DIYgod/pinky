@@ -19,7 +19,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver/android/companion/companiontest"
 )
 
-// quietPhone plays a phone with Pinky for Android for the driver: its
+// quietPhone plays a phone with Pinky on the phone for the driver: its
 // accessibility setting, its package manager, and the app's socket, which
 // answers while the service is listed and drops every connection when it
 // stops being listed, as the service does when it is turned off.

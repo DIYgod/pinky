@@ -337,7 +337,7 @@ func TestManifestAndCask(t *testing.T) {
 	if _, ok := asset["version_code"]; ok {
 		t.Errorf("the Windows asset of latest.json has a version_code: %s", data)
 	}
-	// Pinky for Android reads version_code (UpdateCheck.parse).
+	// Pinky on the phone reads version_code (UpdateCheck.parse).
 	if code := raw["assets"].(map[string]any)["android-arm64"].(map[string]any)["version_code"]; code != float64(1070) {
 		t.Errorf("the Android asset's version_code is %v: %s", code, data)
 	}

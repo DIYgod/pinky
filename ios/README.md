@@ -1,4 +1,4 @@
-# Pinky for iPhone
+# Pinky on the iPhone
 
 Pinky's iPhone app runs agent tasks on the iPhone itself, with no computer at run time: the person types a task, the agent works in the phone's other apps, and Pinky's rules, approvals (behind Face ID), Stop, Live Activity and history work as on the desktop. It is sideloaded only. Its design, the research behind it and what is left are in [docs/notes/iphone-app.md](../docs/notes/iphone-app.md).
 

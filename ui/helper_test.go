@@ -745,7 +745,7 @@ func TestIPhoneHelperRanOut(t *testing.T) {
 	exp := helperDate()
 	clockAt(t, exp.Add(3*time.Hour))
 	ta, id, opened := helperApp(t)
-	const detail = "The WebDriverAgent helper's provisioning profile ran out"
+	const detail = "The provisioning profile of Pinky on the iPhone ran out"
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, Detail: detail, HelperExpires: exp})
 	ta.sync()
 	d := ta.iphoneView(t)
@@ -789,7 +789,7 @@ func TestIPhoneHelperRanOut(t *testing.T) {
 
 	// Chosen in Settings › Phones without the helper installed.
 	ta.page = pagePhones
-	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, Detail: "The WebDriverAgent helper is not installed on this iPhone."})
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, Detail: "Pinky is not installed on this iPhone."})
 	ta.sync()
 	ta.selectPhone(id)
 	tt.Frame()
@@ -841,7 +841,7 @@ func TestIPhoneHelperScreenshots(t *testing.T) {
 		shoot("helper-checkup", lang)
 		ta.chk.showing = ""
 		ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, HelperExpires: exp.Add(-48 * time.Hour),
-			Detail: "The WebDriverAgent helper's provisioning profile ran out"})
+			Detail: "The provisioning profile of Pinky on the iPhone ran out"})
 		ta.sync()
 		shoot("helper-ran-out", lang)
 	}

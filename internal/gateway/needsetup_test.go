@@ -384,7 +384,7 @@ func TestUnopenedPhoneForgotten(t *testing.T) {
 
 // TestAgentWorkingAfterSetup: an agent connected while the phone waited for
 // a step. Once the gateway opens the phone, its driver hears that an agent
-// works on it (driver.WorkWatcher), so Pinky for Android comes on for the
+// works on it (driver.WorkWatcher), so Pinky on the phone comes on for the
 // task.
 func TestAgentWorkingAfterSetup(t *testing.T) {
 	w := &workDevice{Device: demo.NewDevice("px", "Pixel 8a", driver.Android)}

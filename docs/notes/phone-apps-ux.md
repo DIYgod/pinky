@@ -94,7 +94,7 @@ On Android the pill (Working · …, Waiting for you) floats over other apps onl
 
 ## Desktop Pinky
 
-Desktop Pinky names the apps as the Names table says, in its three languages, and the gateway's words that the person reads (the passcode step, Switching to Pinky on the iPhone) changed with them; the UI still matches the older words from a gateway that says them. Words only agents and logs read (the drivers' errors, MCP tool descriptions, `pinkyctl`) still say Pinky for iPhone and Pinky for Android.
+Desktop Pinky names the apps as the Names table says, in its three languages, and the gateway's words that the person reads (the passcode step, Switching to Pinky on the iPhone) changed with them; the UI still matches the older words from a gateway that says them. Words only agents and logs read (the drivers' errors, MCP tool descriptions and results, `pinkyctl`, the docs in `docs/mcp.md` and `docs/notes/ios.md`) say Pinky on the iPhone and Pinky on the phone too, with WebDriverAgent named where it matters; `docs/notes/ios.md` keeps its old anchors (`#installing-pinky-for-iphone`, `#when-pinky-for-iphones-signature-runs-out`, `#through-the-webdriveragent-helper`) for the links that use them. The connection value `helper` in `phone_connect` and the setup step `install_helper` keep their names.
 
 It tells people that the app can do tasks by itself, where they look, without nagging (`ui/phonetasks.go`):
 

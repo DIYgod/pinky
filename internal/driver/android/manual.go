@@ -12,7 +12,7 @@ import (
 // manualStore keeps the phones that ignore Pinky's change to their
 // accessibility settings (companionLink.manual; vivo's OriginOS 6, GitHub
 // issue #94) in a file, or in memory when it has no path. On such a phone
-// only the person can turn Pinky for Android's service on, and the driver
+// only the person can turn Pinky on the phone's service on, and the driver
 // leaves on a service they turned on; it must know the phone as it opens,
 // before the first AgentWorking(false) would turn a service left on off
 // (quietLocked), so the knowledge outlives Pinky's restarts. A nil store

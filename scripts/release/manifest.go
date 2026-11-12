@@ -36,14 +36,14 @@ type Asset struct {
 	SHA256 string `json:"sha256"`
 	Size   int64  `json:"size"`
 	// VersionCode is the Android APK's versionCode: the APK changes only
-	// when the app does, so Pinky for Android offers an update only for a
+	// when the app does, so Pinky on the phone offers an update only for a
 	// higher one (UpdateCheck). The apps' assets have none.
 	VersionCode int `json:"version_code,omitempty"`
 }
 
 // The Android app, one APK for every phone (scripts/androidcore.sh), by a
 // name without the version so that releases/latest/download/ always has
-// it. Pinky for Android reads it as androidPlatform (UpdateCheck.ASSET);
+// it. Pinky on the phone reads it as androidPlatform (UpdateCheck.ASSET);
 // desktop Pinky reads only its own platform.
 const (
 	androidPlatform = "android-arm64"

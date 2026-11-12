@@ -69,7 +69,7 @@ func TestFeedTheAppReads(t *testing.T) {
 	}
 }
 
-// TestFeedPinkyForAndroidReads: Pinky for Android looks for its APK in the
+// TestFeedPinkyForAndroidReads: Pinky on the phone looks for its APK in the
 // feed under the platform the release writes it as.
 func TestFeedPinkyForAndroidReads(t *testing.T) {
 	src, err := os.ReadFile(filepath.Join("..", "..", "android", "companion", "app", "src", "main", "kotlin", "app", "pinky", "companion", "UpdateCheck.kt"))

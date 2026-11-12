@@ -1053,7 +1053,7 @@ func (e *packageError) Is(target error) bool { return target == ErrPackage }
 // WorkWatcher is told whether an agent works on the phone: from the start
 // of a task to its end, except while the person is in control. A driver
 // keeps on, only while one does, what agents need and the phone's apps can
-// see: Pinky for Android, whose accessibility service banking apps
+// see: Pinky on the phone, whose accessibility service banking apps
 // refuse to sign in next to. The gateway calls AgentWorking right after it
 // opens the device and whenever the answer changes; it must return at once
 // and do any work in the background.
@@ -1488,7 +1488,7 @@ var (
 	// it until that one is done (BusyError says who).
 	ErrBusy = errors.New("another agent is using the phone")
 	// ErrStoppedOnPhone: the person stopped the agent's task on the phone
-	// itself (Stop on Pinky for Android's pill), and the task must end. A
+	// itself (Stop on Pinky on the phone's pill), and the task must end. A
 	// driver returns it from Observe and the actions until the agent stops
 	// working (WorkWatcher).
 	ErrStoppedOnPhone = errors.New("the person stopped this task on the phone")
@@ -1574,7 +1574,7 @@ const (
 	CheckADB          = "adb"           // Android: the adb server answers
 	CheckConnection   = "connection"    // the phone is connected and answers
 	CheckAuthorized   = "authorized"    // the phone allows this computer (USB debugging allowed, trusted)
-	CheckCompanion    = "companion"     // Android: Pinky for Android is installed, current and on
+	CheckCompanion    = "companion"     // Android: Pinky on the phone is installed, current and on
 	CheckInput        = "input"         // taps, swipes and keys reach the phone
 	CheckScreen       = "screen"        // screenshots and the live picture
 	CheckBackground   = "background"    // agents can work on a background display
@@ -1588,7 +1588,7 @@ const (
 	FixAuthorize        = "authorize"          // allow this computer on the phone (Allow USB debugging, Trust)
 	FixUSBPermission    = "usb_permission"     // Linux: the computer may not open the phone's USB device (udev rules)
 	FixUSBDriver        = "usb_driver"         // Windows: the phone's USB debugging has no driver
-	FixInstallCompanion = "install_companion"  // install Pinky for Android
+	FixInstallCompanion = "install_companion"  // install Pinky on the phone
 	FixUpdateCompanion  = "update_companion"   // update it to the version Pinky carries
 	FixTurnOnCompanion  = "turn_on_companion"  // turn its accessibility service on
 	FixInputPermission  = "input_permission"   // the phone refuses input from the computer (Xiaomi's USB debugging (Security settings), ColorOS's permission monitoring)
@@ -1603,7 +1603,7 @@ const (
 	FixSameNetwork      = "same_network"       // put the phone on the same Wi-Fi as this computer, one that lets devices reach each other
 	FixWiFiSetting      = "wifi_setting"       // turn on Use iPhones and iPads over Wi-Fi in Settings › Phones
 
-	// FixTurnOnCompanionByHand: turn Pinky for Android's accessibility
+	// FixTurnOnCompanionByHand: turn Pinky on the phone's accessibility
 	// service on in the phone's accessibility settings, by hand: the phone
 	// does not let Pinky do it over USB debugging (CompanionManual).
 	FixTurnOnCompanionByHand = "turn_on_companion_by_hand"

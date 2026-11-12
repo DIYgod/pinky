@@ -474,7 +474,7 @@ func (p *SimProvider) helperState(x xcode) (driver.State, string, string) {
 		p.startBuildLocked(x)
 	}
 	return driver.StateNeedsSetup, driver.SetupPreparing,
-		"Pinky is building the WebDriverAgent helper for Simulators with Xcode " + x.Version + ", once per Xcode version; it takes a minute or two."
+		"Pinky is building WebDriverAgent for Simulators with Xcode " + x.Version + ", once per Xcode version; it takes a minute or two."
 }
 
 // startBuildLocked builds WebDriverAgent in the background. Under p.mu.
@@ -608,9 +608,9 @@ func (p *SimProvider) brandBuild(ctx context.Context, x xcode, products string) 
 	case err != nil && ctx.Err() != nil:
 		p.brandOf = "" // the open gave up; the next one tries again
 	case err != nil:
-		p.logger().Warn("ios simulator: could not give the helper Pinky's name and icon", "err", err)
+		p.logger().Warn("ios simulator: could not give the WDA runner Pinky's name and icon", "err", err)
 	case changed:
-		p.logger().Info("ios simulator: gave the helper Pinky's name and icon", "took", time.Since(start).Round(time.Millisecond))
+		p.logger().Info("ios simulator: gave the WDA runner Pinky's name and icon", "took", time.Since(start).Round(time.Millisecond))
 	}
 }
 

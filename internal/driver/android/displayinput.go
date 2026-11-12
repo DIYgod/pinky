@@ -54,7 +54,7 @@ func (d *Device) displayInput(ctx context.Context, input string) (bool, error) {
 		return false, fmt.Errorf("android: unknown display input %q", input)
 	}
 	if d.props.SDK > 0 && d.props.SDK < 30 {
-		return false, fmt.Errorf("android: taps on a background display through Pinky for Android need Android 11: %w", driver.ErrUnsupported)
+		return false, fmt.Errorf("android: taps on a background display through Pinky on the phone need Android 11: %w", driver.ErrUnsupported)
 	}
 	c := d.companionClientFor(ctx, forBackground)
 	if c != nil && d.comp.has(companion.FeatureDisplayInput) {
@@ -71,7 +71,7 @@ func (d *Device) displayInput(ctx context.Context, input string) (bool, error) {
 		d.comp.mu.Unlock()
 	}
 	return false, fmt.Errorf("android: this phone ignores taps that USB debugging sends to a background display, "+
-		"and Pinky for Android cannot tap there instead (%s): %w", why, driver.ErrUnsupported)
+		"and Pinky on the phone cannot tap there instead (%s): %w", why, driver.ErrUnsupported)
 }
 
 // inputClient returns the companion client when the display's input goes
@@ -83,7 +83,7 @@ func (b *Background) inputClient(ctx context.Context) (*companion.Client, error)
 	}
 	c := b.d.companionClientFor(ctx, forBackground)
 	if c == nil || !b.d.comp.has(companion.FeatureDisplayInput) {
-		return nil, fmt.Errorf("android: input on display %d goes through Pinky for Android, whose service is not answering", b.display)
+		return nil, fmt.Errorf("android: input on display %d goes through Pinky on the phone, whose service is not answering", b.display)
 	}
 	return c, nil
 }

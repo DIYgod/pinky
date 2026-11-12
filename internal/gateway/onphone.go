@@ -7,7 +7,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 )
 
-// Pinky for Android can run tasks on the phone by itself (on-phone mode),
+// Pinky on the phone can run tasks on the phone by itself (on-phone mode),
 // and only one of the computer and the phone uses the phone at a time
 // (docs/notes/android-app.md, "Two modes on one phone"). The driver claims
 // the phone while an agent works on it and says when it cannot:

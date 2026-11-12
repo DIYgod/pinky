@@ -15,7 +15,7 @@ import (
 const crashTest = "dev.pinky.crashtest"
 
 // newLogsGateway runs a gateway on a fake Android phone with the test app
-// Crash Test, a finance app, Pinky (Pinky for Android) and Settings installed.
+// Crash Test, a finance app, Pinky (Pinky on the phone) and Settings installed.
 func newLogsGateway(t *testing.T) (*Gateway, *fake.Device) {
 	t.Helper()
 	dev := fake.NewDevice("pixel", "Pixel 9")

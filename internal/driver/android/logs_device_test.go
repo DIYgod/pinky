@@ -185,6 +185,6 @@ func TestDeviceAppLogs(t *testing.T) {
 
 	// Pinky's own app is never read.
 	if _, err := d.AppLogs(ctx, driver.LogQuery{App: driver.App{ID: "app.pinky.companion"}}); err == nil {
-		t.Fatal("read the logs of Pinky for Android")
+		t.Fatal("read the logs of Pinky on the phone")
 	}
 }

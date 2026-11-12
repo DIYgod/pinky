@@ -848,7 +848,7 @@ func settingIgnored(err error) bool {
 
 // companionManualWords say, for an agent, why the service is off on a
 // phone where only the person can turn it on.
-const companionManualWords = "this phone does not let Pinky turn on Pinky for Android's accessibility service over USB debugging; " +
+const companionManualWords = "this phone does not let Pinky turn on Pinky's accessibility service over USB debugging; " +
 	"the person can turn on Pinky in the phone's accessibility settings by hand"
 
 var _ driver.WorkWatcher = (*Device)(nil)
@@ -896,7 +896,7 @@ func (d *Device) observeCompanion(ctx context.Context, c *companion.Client) (*sc
 			}
 		}
 	}
-	// Pinky for Android's own pill and approval card, which on-phone mode
+	// Pinky on the phone's own pill and approval card, which on-phone mode
 	// shows while the agent holds the phone, lie over the app: a tap there
 	// lands on them.
 	s.Covered = append(s.Covered, read.OverlaysOf(c.App().Package)...)

@@ -66,7 +66,7 @@ func installed(t *testing.T, ta *testApp, id, name string) {
 // the phone has to be unlocked; once done, the phone is online.
 func TestIPhoneHelperInstallFromPage(t *testing.T) {
 	ta, id := installApp(t)
-	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, Detail: "The WebDriverAgent helper is not installed on this iPhone."})
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, Detail: "Pinky is not installed on this iPhone."})
 	ta.api.HoldHelper(true)
 	ta.sync()
 	name := ta.iphoneView(t).Info.Name

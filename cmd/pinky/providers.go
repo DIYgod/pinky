@@ -66,7 +66,7 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 		idFile = filepath.Join(dirs.Config, "phone-identities.json")
 		// The phones that ignore Pinky's change to their accessibility
 		// settings (vivo's OriginOS 6), where Pinky leaves on the service
-		// of Pinky for Android that the person turned on.
+		// of Pinky on the phone that the person turned on.
 		manualFile = filepath.Join(dirs.Config, "companion-manual-phones.json")
 	}
 	// adb's own discovery stops seeing the network after the computer's

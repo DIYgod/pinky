@@ -318,7 +318,7 @@ Apps can also see that USB debugging or Wireless debugging is on, which Pinky ne
 
 So Pinky turns the service on only while an agent works on the phone: as a task starts, and off again a few seconds after the task ends or you take over the phone, or a minute after the agent's last step. The rest of the time it is off, and those apps work as usual. While an agent works, even on the phone's background display, they see it: to use one of them then, click **Take over** in Pinky first, or end the task.
 
-To keep Pinky from turning the service on at all, uninstall Pinky on the phone on the phone (Android's Settings › Apps › Pinky). Pinky works without it, only more slowly: it reads a screen in about 2 s instead of 70 ms, and types text other than plain English through the phone's clipboard. **Not now** on the phone's page puts away Pinky's offer to install it again.
+To keep Pinky from turning the service on at all, uninstall Pinky from the phone (Android's Settings › Apps › Pinky). Pinky works without it, only more slowly: it reads a screen in about 2 s instead of 70 ms, and types text other than plain English through the phone's clipboard. **Not now** on the phone's page puts away Pinky's offer to install it again.
 
 </details>
 

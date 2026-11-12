@@ -86,7 +86,7 @@ func (a *AXDevice) Screenshot(ctx context.Context) (image.Image, error) {
 
 // errNeedsHelper explains what this path cannot do.
 func errNeedsHelper(what string) error {
-	return fmt.Errorf("%s needs Pinky for iPhone on iPhones below iOS 27 (docs/notes/ios.md): %w", what, driver.ErrUnsupported)
+	return fmt.Errorf("%s needs Pinky on the iPhone on iPhones below iOS 27 (docs/notes/ios.md): %w", what, driver.ErrUnsupported)
 }
 
 // Tap implements driver.Device.

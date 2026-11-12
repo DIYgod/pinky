@@ -24,7 +24,7 @@ const (
 	RuleInstall = "Installing from the computer"
 	// RuleUninstall asks before every uninstall.
 	RuleUninstall = "Uninstalling apps"
-	// RulePinkyApps refuses to touch Pinky for Android and the iPhone's
+	// RulePinkyApps refuses to touch Pinky on the phone and the iPhone's
 	// helper (an XCTest runner, see IsPinkyApp), which give Pinky its access
 	// to the phone.
 	RulePinkyApps = "Pinky's own apps"

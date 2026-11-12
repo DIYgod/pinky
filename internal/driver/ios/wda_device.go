@@ -207,7 +207,7 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 		return nil, err
 	}
 	if app.BundleID == "" {
-		return nil, fmt.Errorf("Pinky for iPhone is not installed on %s: %w", info.ID, driver.ErrNotFound)
+		return nil, fmt.Errorf("Pinky on the iPhone is not installed on %s: %w", info.ID, driver.ErrNotFound)
 	}
 	l, err := dialLinkEntry(ctx, base)
 	if err != nil {

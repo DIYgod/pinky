@@ -16,7 +16,7 @@ import (
 	"github.com/DIYgod/pinky/internal/update"
 )
 
-// Pinky for Android (Pinky Companion before November 2026; the package is
+// Pinky on the phone (Pinky Companion before November 2026; the package is
 // still app.pinky.companion) is the Android app that reads the screen and
 // types for Pinky. It ships inside Pinky; a phone without it, or with an
 // older one, gets an Install card on its page. Nothing is installed without

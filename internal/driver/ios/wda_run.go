@@ -288,9 +288,9 @@ func endHelper(entry, base goios.DeviceEntry, appPath string, logger *slog.Logge
 	lg := logTo(logger)
 	switch {
 	case err != nil:
-		lg.Warn("iphone: could not make sure the helper ended", "device", base.Properties.SerialNumber, "killed", killed, "err", err)
+		lg.Warn("iphone: could not make sure WDA ended", "device", base.Properties.SerialNumber, "killed", killed, "err", err)
 	case killed > 0:
-		lg.Info("iphone: ended the helper left running", "device", base.Properties.SerialNumber, "killed", killed)
+		lg.Info("iphone: ended the WDA run left running", "device", base.Properties.SerialNumber, "killed", killed)
 	}
 	return err == nil
 }
@@ -362,7 +362,7 @@ func endRunner(ctx context.Context, entry, base goios.DeviceEntry, appPath strin
 		}
 		select {
 		case <-ctx.Done():
-			return killed, fmt.Errorf("the helper still runs: %w", ctx.Err())
+			return killed, fmt.Errorf("WDA still runs: %w", ctx.Err())
 		case <-time.After(runnerRecheck):
 		}
 	}

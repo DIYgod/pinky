@@ -64,7 +64,7 @@ func writeXMLPlist(t *testing.T, path string, v any) {
 
 func TestHostApp(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		// Installing Pinky for iPhone runs only on a Mac; Windows has no
+		// Installing Pinky on the iPhone runs only on a Mac; Windows has no
 		// executable bit and writes links with its own separators.
 		t.Skip("the app bundle's executable bits and links are a Mac's")
 	}

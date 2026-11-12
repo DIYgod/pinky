@@ -27,7 +27,7 @@ import (
 // footer offers a newer version with its notes, Update now and Later.
 // With Settings › Advanced › Update automatically on, Pinky also installs
 // it by itself once nobody has used Pinky for a while and no agent works
-// (update.Idle), and updates Pinky for Android on phones that are free.
+// (update.Idle), and updates Pinky's app on phones that are free.
 // After an update a card offers What's new: the changelog entries
 // newer than the version that ran before, and the companion updates.
 
