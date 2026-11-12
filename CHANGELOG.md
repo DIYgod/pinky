@@ -9,6 +9,7 @@ What changed for people in each release of Pinky, newest first. A version is the
 - The reminder above an iPhone that asks which team should sign the helper now has Cancel.
 - When an update is available, What's new on its card gives the same day as What's new after the update; west of China it could show the day before.
 - Approvals in English now ask for the action itself, as "Tap at 540,1200?" or "Press back?", instead of "Tapped at 540,1200?".
+- When another program's adb server holds an Android phone on a USB cable, the checkup and Add phone › Android now say so, give its port, and explain how to free the phone for Pinky.
 
 ## 2026.1112.3 (2026-11-12)
 
