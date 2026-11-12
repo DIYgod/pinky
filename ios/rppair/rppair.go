@@ -14,6 +14,7 @@ package rppair
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/cipher"
 	"crypto/ecdh"
@@ -51,6 +52,9 @@ type Session struct {
 	addr string // host:port it was dialed at; "" when given a stream
 	r    *bufio.Reader
 	seq  uint64 // sequence number of the next frame we send
+	// origin is who we are in the conversation, "host" unless we answer a
+	// phone that pairs with us (Respond): "device".
+	origin string
 
 	secret         []byte // X25519 shared secret from pair-verify; the TLS PSK
 	client, server cipher.AEAD
@@ -378,7 +382,7 @@ func (s *Session) readEncrypted() (map[string]any, error) {
 func (s *Session) write(message map[string]any) error {
 	body, err := json.Marshal(map[string]any{
 		"message":        message,
-		"originatedBy":   "host",
+		"originatedBy":   cmp.Or(s.origin, "host"),
 		"sequenceNumber": s.seq,
 	})
 	if err != nil {

@@ -32,19 +32,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Pinky looks for this iPhone's own pairing service to control your apps."
+            "value" : "Pinky pairs with this iPhone and looks for its own pairing service to control your apps."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky はアプリを操作するために、この iPhone 自身のペアリングサービスを探します。"
+            "value" : "Pinky はこの iPhone とペアリングし、アプリを操作するためにこの iPhone 自身のペアリングサービスを探します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky 需要找到这台 iPhone 自己的配对服务，才能操作你的 App。"
+            "value" : "Pinky 需要与这台 iPhone 配对，并找到它自己的配对服务，才能操作你的 App。"
           }
         }
       }

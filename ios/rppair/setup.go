@@ -60,6 +60,12 @@ func newSRP() (*srp.SRP, error) {
 }
 
 func (s *Session) setup(id Identity) (Identity, error) {
+	return s.setupWith(id, lockdownPIN, nil)
+}
+
+// setupWith is pair-setup as the host with pin, sending info (OPACK) about
+// this host in M5; nil sends Pinky's.
+func (s *Session) setupWith(id Identity, pin string, info map[string]any) (Identity, error) {
 	m1 := tlv{}
 	m1.add(tMethod, []byte{0})
 	m1.add(tState, []byte{stateM1})
@@ -82,7 +88,7 @@ func (s *Session) setup(id Identity) (Identity, error) {
 	if err != nil {
 		return id, err
 	}
-	cs := srpc.NewClientSession([]byte("Pair-Setup"), []byte(lockdownPIN))
+	cs := srpc.NewClientSession([]byte("Pair-Setup"), []byte(pin))
 	key, err := cs.ComputeKey(salt, devPub)
 	if err != nil {
 		return id, fmt.Errorf("SRP: %w", err)
@@ -113,15 +119,18 @@ func (s *Session) setup(id Identity) (Identity, error) {
 	signed.Write(sign)
 	signed.WriteString(id.Identifier)
 	signed.Write(id.PublicKey())
-	info, err := opack.Encode(map[string]any{
-		"accountID":                   id.Identifier,
-		"altIRK":                      make([]byte, 16),
-		"btAddr":                      "00:00:00:00:00:00",
-		"mac":                         make([]byte, 6),
-		"model":                       "Pinky",
-		"name":                        hostName,
-		"remotepairing_serial_number": id.Identifier,
-	})
+	if info == nil {
+		info = map[string]any{
+			"accountID":                   id.Identifier,
+			"altIRK":                      make([]byte, 16),
+			"btAddr":                      "00:00:00:00:00:00",
+			"mac":                         make([]byte, 6),
+			"model":                       "Pinky",
+			"name":                        hostName,
+			"remotepairing_serial_number": id.Identifier,
+		}
+	}
+	enc, err := opack.Encode(info)
 	if err != nil {
 		return id, err
 	}
@@ -129,7 +138,7 @@ func (s *Session) setup(id Identity) (Identity, error) {
 	inner.add(tIdentifier, []byte(id.Identifier))
 	inner.add(tPublicKey, id.PublicKey())
 	inner.add(tSignature, ed25519.Sign(id.PrivateKey, signed.Bytes()))
-	inner.add(tInfo, info)
+	inner.add(tInfo, enc)
 	ek, err := hkdf.Key(sha512.New, key, []byte("Pair-Setup-Encrypt-Salt"), "Pair-Setup-Encrypt-Info", 32)
 	if err != nil {
 		return id, err

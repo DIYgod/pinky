@@ -14,6 +14,18 @@ enum L {
         String(localized: "Open Pinky to answer.", comment: "Notification body, after the approval's title")
     }
 
+    static var pairingFailed: String {
+        String(localized: "Pinky could not start pairing. Check that Wi-Fi is on and Pinky may use the local network.",
+               comment: "Pairing on the phone could not start")
+    }
+    static var pairingCodeTitle: String {
+        String(localized: "Pinky's pairing code", comment: "Notification title while pairing on the phone")
+    }
+    /// The notification with the code to type in Settings.
+    static func pairingCodeBody(_ code: String) -> String {
+        String(localized: "Type \(code) on the iPhone to pair it with Pinky.", comment: "Notification body while pairing on the phone")
+    }
+
     /// The title of a task that ended, by how it ended (pilot.End).
     static func ended(_ end: String) -> String {
         switch end {

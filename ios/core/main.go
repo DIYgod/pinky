@@ -98,6 +98,8 @@ var (
 	core *onphone.Core
 	cfg  config
 	log  *slog.Logger
+	// linked is the core having a pairing to connect with.
+	linked bool
 )
 
 func logLine(level int, s string) {
@@ -126,15 +128,14 @@ func fail(err error) *C.char {
 
 // PinkyStart starts the core and its connection to the phone. It returns
 // {"ok":true} or {"ok":false,"error":...}; free the result with PinkyFree.
-// A second call while the core runs changes nothing.
+// A second call while the core runs changes nothing, unless the core had
+// no pairing and the call brings one (the person just paired on the
+// phone, ios/core/pair.go): then it connects with it.
 //
 //export PinkyStart
 func PinkyStart(js *C.char) *C.char {
 	mu.Lock()
 	defer mu.Unlock()
-	if core != nil {
-		return C.CString(`{"ok":true}`)
-	}
 	var c config
 	if err := json.Unmarshal([]byte(C.GoString(js)), &c); err != nil {
 		return fail(err)
@@ -150,6 +151,17 @@ func PinkyStart(js *C.char) *C.char {
 		if err != nil {
 			return fail(fmt.Errorf("pairing: %w", err))
 		}
+	}
+	if core != nil {
+		if id != nil && !linked {
+			linked = true
+			if c.UDID != "" {
+				cfg.UDID = c.UDID
+			}
+			log.Info("paired on the phone")
+			go connectLoop(*id)
+		}
+		return C.CString(`{"ok":true}`)
 	}
 	if c.Addr == "" {
 		c.Addr = "10.7.0.1:49152"
@@ -167,6 +179,7 @@ func PinkyStart(js *C.char) *C.char {
 	if id == nil {
 		core.Disconnected(driver.StateNeedsSetup, onphone.ReasonNotPaired, "Pinky is not paired with this iPhone yet.")
 	} else {
+		linked = true
 		go connectLoop(*id)
 	}
 	if c.Heartbeat > 0 {

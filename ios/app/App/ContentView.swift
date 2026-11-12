@@ -1,9 +1,12 @@
 import SwiftUI
 
 /// Pinky's one screen: what waits for the person, the task, and a new
-/// task; History and Settings from the toolbar.
+/// task; History and Settings from the toolbar. Until Pinky can work, it
+/// leads through the setup, one step at a time: pairing, the VPN, then the
+/// model's key.
 struct ContentView: View {
     @EnvironmentObject var m: AppModel
+    @AppStorage("provider") private var provider = "anthropic"
     @State private var text = ""
     @State private var showSettings = false
     @State private var showHistory = false
@@ -12,6 +15,7 @@ struct ContentView: View {
         NavigationStack {
             List {
                 connection
+                if m.paired && m.vpn == .on && !hasKey { keyStep }
                 ForEach(m.state?.needs ?? []) { NeedCard(need: $0) }
                 if let a = m.state?.agent { AgentCard(agent: a, task: m.state?.task) }
                 if m.state?.agent?.running != true { composer }
@@ -36,8 +40,12 @@ struct ContentView: View {
     @ViewBuilder private var connection: some View {
         if !m.paired {
             Section {
-                Text("Pinky is not paired with this iPhone yet.")
-                Text("Pair it once from a Mac with Pinky (see ios/README.md).").font(.footnote).foregroundStyle(.secondary)
+                if PhonePairing.available {
+                    PairOnPhone()
+                } else {
+                    Text("Pinky is not paired with this iPhone yet.")
+                    Text("Pair it once from a Mac with Pinky (see ios/README.md).").font(.footnote).foregroundStyle(.secondary)
+                }
             } header: {
                 Text("Set up")
             }
@@ -67,6 +75,22 @@ struct ContentView: View {
         }
     }
 
+    /// Keychain is no observable store: the screen reads it again when
+    /// Settings closes, which is where the key is typed.
+    private var hasKey: Bool {
+        _ = showSettings
+        return !(Keychain.get(Keychain.keyAccount(provider)) ?? "").isEmpty
+    }
+
+    private var keyStep: some View {
+        Section {
+            Text("Last step: choose the model Pinky thinks with and add its API key.")
+            Button("Choose the model and key") { showSettings = true }
+        } header: {
+            Text("Set up")
+        }
+    }
+
     private var composer: some View {
         Section {
             TextField("What should Pinky do on this iPhone?", text: $text, axis: .vertical)
@@ -86,6 +110,47 @@ struct ContentView: View {
             Text("New task")
         } footer: {
             Text("Pinky leaves this app and works in the others. You can watch, answer here when it asks, and stop it from the Live Activity.")
+        }
+    }
+}
+
+/// Pairing Pinky with this iPhone from the iPhone itself (iOS 27): the
+/// steps in Settings and the code to type there.
+struct PairOnPhone: View {
+    @EnvironmentObject var m: AppModel
+
+    var body: some View {
+        Text("Pinky needs to pair with this iPhone once. You do it in Settings, with a code Pinky shows here.")
+        switch m.pairStep {
+        case .idle, .paired:
+            Button("Pair") { m.pairOnPhone() }
+        case .failed(let why):
+            Text(why).foregroundStyle(.red)
+            Button("Try again") { m.pairOnPhone() }
+        case .waiting, .code, .wrongCode, .retry:
+            VStack(alignment: .leading, spacing: 6) {
+                Text("1. Open Settings › Privacy & Security › Developer Mode.")
+                Text("2. Choose to pair with “Pinky”.")
+                Text("3. Type the code below. It also comes as a notification.")
+            }
+            .font(.callout)
+            switch m.pairStep {
+            case .code(let code):
+                Text(verbatim: code)
+                    .font(.system(.largeTitle, design: .monospaced).bold())
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel(Text("Pairing code \(code)"))
+            case .wrongCode:
+                Text("The code did not match. Pair again from Settings: Pinky shows a new code.").foregroundStyle(.red)
+            case .retry(let why):
+                Text("Pairing did not finish. Try again from Settings.").foregroundStyle(.red)
+                Text(verbatim: why).font(.footnote).foregroundStyle(.secondary)
+            default:
+                Label("Waiting for Settings…", systemImage: "hourglass")
+                    .foregroundStyle(.secondary)
+            }
+            Button("Cancel", role: .cancel) { m.stopPairing() }
         }
     }
 }

@@ -88,9 +88,11 @@ targets:
         UIBackgroundModes: [audio]
         NSFaceIDUsageDescription: Pinky asks for Face ID before it goes ahead with a step you approve.
         # remotepairingd's advertisement on the loopback interface gives the
-        # port the core dials (PairingPort.swift).
-        NSLocalNetworkUsageDescription: Pinky looks for this iPhone's own pairing service to control your apps.
-        NSBonjourServices: [_remotepairing._tcp]
+        # port the core dials (PairingPort.swift); on iOS 27 the app
+        # advertises itself as a host the phone may pair with
+        # (PhonePairing.swift).
+        NSLocalNetworkUsageDescription: Pinky pairs with this iPhone and looks for its own pairing service to control your apps.
+        NSBonjourServices: [_remotepairing._tcp, _remotepairing-pairable-host._tcp]
     # build.sh signs each part with build/gen/<target>.entitlements.
     entitlements:
       path: build/gen/Pinky.entitlements

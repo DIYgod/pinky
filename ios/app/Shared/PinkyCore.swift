@@ -14,19 +14,19 @@ enum PinkyCore {
     }
 
     /// Starts the core in this process; see ios/core for the keys of
-    /// config. A second start changes nothing.
+    /// config. A second start changes nothing, except that a core without
+    /// a pairing connects with the one it brings (paired on the phone).
     @discardableResult
     static func start(_ config: [String: Any]) -> [String: Any] {
         lock.lock()
         defer { lock.unlock() }
-        if started { return ["ok": true] }
         var config = config
         config["self"] = Pinky.app
         config["data_dir"] = dataDir()
         config["version"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         let json = String(data: try! JSONSerialization.data(withJSONObject: config), encoding: .utf8)!
         let out = decode(Data(withC(json) { PinkyStart($0) }.utf8))
-        if out["ok"] as? Bool == true {
+        if out["ok"] as? Bool == true, !started {
             started = true
             DarwinNote.observe(Pinky.stopNote) { _, _, _, _, _ in PinkyStop() }
             DarwinNote.observe(Pinky.uiOnNote) { _, _, _, _, _ in PinkyUIActive(1) }
@@ -41,6 +41,24 @@ enum PinkyCore {
         guard isStarted else { return Data(#"{"ok":false,"error":"Pinky's core is not running"}"#.utf8) }
         return Data(withC(String(data: data, encoding: .utf8) ?? "{}") { PinkyCall($0) }.utf8)
     }
+
+    /// Starts listening for this iPhone to pair from Settings (iOS 27 and
+    /// later, ios/core/pair.go): the port, and the service name and TXT
+    /// record to advertise.
+    static func pairStart(name: String) -> [String: Any] {
+        let json = String(data: try! JSONSerialization.data(withJSONObject: ["name": name]), encoding: .utf8)!
+        return decode(Data(withC(json) { PinkyPairStart($0) }.utf8))
+    }
+
+    /// What happens next in the pairing; it blocks, so call it off the
+    /// main thread.
+    static func pairNext() -> [String: Any] {
+        guard let r = PinkyPairNext() else { return ["stopped": true] }
+        defer { PinkyFree(r) }
+        return decode(Data(String(cString: r).utf8))
+    }
+
+    static func pairStop() { PinkyPairStop() }
 
     static func decode(_ data: Data) -> [String: Any] {
         (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? ["ok": false, "error": "bad reply"]

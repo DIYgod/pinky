@@ -70,6 +70,54 @@
         }
       }
     },
+    "1. Open Settings › Privacy & Security › Developer Mode." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 「設定 › プライバシーとセキュリティ › デベロッパモード」を開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1. 打开「设置 › 隐私与安全性 › 开发者模式」。"
+          }
+        }
+      }
+    },
+    "2. Choose to pair with “Pinky”." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. 「Pinky」とのペアリングを選びます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2. 选择与「Pinky」配对。"
+          }
+        }
+      }
+    },
+    "3. Type the code below. It also comes as a notification." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. 下のコードを入力します。コードは通知でも届きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3. 输入下面的配对码。配对码也会以通知的形式出现。"
+          }
+        }
+      }
+    },
     "API key" : {
       "localizations" : {
         "ja" : {
@@ -183,6 +231,22 @@
         }
       }
     },
+    "Cancel" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
+    },
     "Choose a model in Settings first." : {
       "comment" : "Start refused",
       "localizations" : {
@@ -196,6 +260,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请先在「设置」中选择模型。"
+          }
+        }
+      }
+    },
+    "Choose the model and key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルとキーを設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择模型并填写密钥"
           }
         }
       }
@@ -361,6 +441,22 @@
         }
       }
     },
+    "Last step: choose the model Pinky thinks with and add its API key." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最後のステップ：Pinky が使うモデルを選び、その API キーを入力します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后一步：选择 Pinky 使用的模型，并填写它的 API 密钥。"
+          }
+        }
+      }
+    },
     "Model" : {
       "localizations" : {
         "ja" : {
@@ -506,6 +602,22 @@
         }
       }
     },
+    "Pair" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリング"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对"
+          }
+        }
+      }
+    },
     "Pair it once from a Mac with Pinky (see ios/README.md)." : {
       "localizations" : {
         "ja" : {
@@ -518,6 +630,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请用装有 Pinky 的 Mac 配对一次（见 ios/README.md）。"
+          }
+        }
+      }
+    },
+    "Pairing code %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングコード %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对码 %@"
+          }
+        }
+      }
+    },
+    "Pairing did not finish. Try again from Settings." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングが完了しませんでした。「設定」からもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对没有完成。请在「设置」里重试。"
           }
         }
       }
@@ -601,6 +745,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 没能完成"
+          }
+        }
+      }
+    },
+    "Pinky could not start pairing. Check that Wi-Fi is on and Pinky may use the local network." : {
+      "comment" : "Pairing on the phone could not start",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky はペアリングを開始できませんでした。Wi-Fi がオンで、Pinky にローカルネットワークの使用を許可しているか確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 无法开始配对。请确认 Wi-Fi 已打开，并且允许 Pinky 访问本地网络。"
           }
         }
       }
@@ -702,6 +863,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 会离开这个 App，到其他 App 里操作。你可以在旁边看着，它询问时回到这里回答，也可以在实时活动里停止它。"
+          }
+        }
+      }
+    },
+    "Pinky needs to pair with this iPhone once. You do it in Settings, with a code Pinky shows here." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky はこの iPhone と一度ペアリングする必要があります。「設定」で、ここに表示されるコードを使って行います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 需要与这台 iPhone 配对一次。在「设置」里完成，配对码会显示在这里。"
           }
         }
       }
@@ -852,6 +1029,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 的核心运行于"
+          }
+        }
+      }
+    },
+    "Pinky's pairing code" : {
+      "comment" : "Notification title while pairing on the phone",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky のペアリングコード"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 的配对码"
           }
         }
       }
@@ -1114,6 +1308,22 @@
         }
       }
     },
+    "The code did not match. Pair again from Settings: Pinky shows a new code." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コードが一致しませんでした。「設定」からもう一度ペアリングしてください。Pinky が新しいコードを表示します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对码不对。请在「设置」里重新配对，Pinky 会显示新的配对码。"
+          }
+        }
+      }
+    },
     "The key stays in this iPhone's Keychain. Pinky sends it only to the model's address, with what the task needs." : {
       "localizations" : {
         "ja" : {
@@ -1214,6 +1424,22 @@
         }
       }
     },
+    "Try again" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再試行"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        }
+      }
+    },
     "Turn off" : {
       "localizations" : {
         "ja" : {
@@ -1278,6 +1504,23 @@
         }
       }
     },
+    "Type %@ on the iPhone to pair it with Pinky." : {
+      "comment" : "Notification body while pairing on the phone",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone で %@ を入力すると、Pinky とペアリングできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上输入 %@，即可与 Pinky 配对。"
+          }
+        }
+      }
+    },
     "Type a task first." : {
       "comment" : "Start refused",
       "localizations" : {
@@ -1307,6 +1550,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "VPN"
+          }
+        }
+      }
+    },
+    "Waiting for Settings…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「設定」を待っています…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在等待「设置」…"
           }
         }
       }

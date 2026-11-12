@@ -20,6 +20,8 @@ final class AppModel: ObservableObject {
     @Published var problem: String?
     @Published private(set) var history: [HistoryTask] = []
     @Published private(set) var paired = Pairing.load() != nil
+    /// Pairing from this iPhone itself (iOS 27), while it runs.
+    @Published private(set) var pairStep = PhonePairing.Step.idle
 
     enum VPN { case off, connecting, on }
 
@@ -30,6 +32,7 @@ final class AppModel: ObservableObject {
     private let syslog = Logger(subsystem: Pinky.app, category: "app")
     private var addr: String?
     private var notifier: Notifier?
+    private lazy var phonePairing = PhonePairing { [weak self] step, p in self?.pairChanged(step, p) }
 
     /// Where the core runs: in the packet-tunnel extension, which iOS keeps
     /// running while other apps are in front, or, in a build without one,
@@ -52,6 +55,55 @@ final class AppModel: ObservableObject {
         listen()
     }
 
+    // MARK: Pairing
+
+    /// Starts pairing from this iPhone: Pinky waits for the person to pick
+    /// it in Settings › Privacy & Security › Developer Mode.
+    func pairOnPhone() {
+        problem = nil
+        phonePairing.start()
+    }
+
+    func stopPairing() {
+        phonePairing.stop()
+        pairStep = .idle
+        keepAlive(isBusy)
+    }
+
+    private func pairChanged(_ step: PhonePairing.Step, _ p: Pairing?) {
+        // A phone that looks at the advertisement and leaves is no failed try.
+        if case .retry = step, pairStep == .waiting { return }
+        pairStep = step
+        keepAlive(isBusy)
+        if let p { pairedOnPhone(p) }
+    }
+
+    /// Keeps the pairing made on the phone and connects with it: the VPN
+    /// starts, or restarts so that the extension's core gets it; without a
+    /// tunnel the core in the app takes it.
+    private func pairedOnPhone(_ p: Pairing) {
+        p.save()
+        paired = true
+        syslog.log("pinky paired on the phone")
+        #if NO_TUNNEL
+        Task {
+            if PinkyCore.isStarted {
+                let out = PinkyCore.start(["pairing": p.pairing, "udid": p.udid])
+                if out["ok"] as? Bool != true { problem = out["error"] as? String }
+            } else {
+                await startInApp()
+            }
+        }
+        #else
+        if vpn == .off {
+            Task { await connect() }
+        } else {
+            reconnect = true
+            disconnect()
+        }
+        #endif
+    }
+
     // MARK: Connection
 
     /// The address the core dials: remotepairingd through the reflector, at
@@ -69,6 +121,8 @@ final class AppModel: ObservableObject {
 
     #if !NO_TUNNEL
     private var manager: NETunnelProviderManager?
+    /// Turn the VPN on again once it is off: the pairing changed.
+    private var reconnect = false
 
     private func loadManager() async {
         manager = try? await NETunnelProviderManager.loadAllFromPreferences().first
@@ -120,6 +174,10 @@ final class AppModel: ObservableObject {
         case .connected: .on
         case .connecting, .reasserting: .connecting
         default: .off
+        }
+        if vpn == .off && reconnect {
+            reconnect = false
+            Task { await connect() }
         }
         guard vpn == .on else { return }
         // The core in the extension that just started has not heard that
@@ -201,8 +259,7 @@ final class AppModel: ObservableObject {
         let was = state
         state = st
         self.reason = reason
-        let busy = (st.agent?.running ?? false) || !st.needs.isEmpty
-        keepAlive(busy)
+        keepAlive(isBusy)
         updateActivity(st)
         if was?.agent?.running == true && st.agent?.running != true { Task { await loadHistory() } }
         #if DEBUG
@@ -228,8 +285,21 @@ final class AppModel: ObservableObject {
     /// Background audio keeps the app running while a task runs or waits,
     /// so the Live Activity follows it to the end. A build without the
     /// tunnel needs it for the core itself.
+    /// Pairing from the phone keeps it running too, from the start, since
+    /// the person goes to Settings for it.
     private func keepAlive(_ busy: Bool) {
-        audio.set(busy && !active)
+        audio.set((busy && !active) || pairing)
+    }
+
+    private var isBusy: Bool {
+        state.map { ($0.agent?.running ?? false) || !$0.needs.isEmpty } ?? false
+    }
+
+    private var pairing: Bool {
+        switch pairStep {
+        case .waiting, .code, .wrongCode, .retry: true
+        case .idle, .failed, .paired: false
+        }
     }
 
     // MARK: Foreground and background
@@ -240,7 +310,7 @@ final class AppModel: ObservableObject {
         active = p != .background
         DarwinNote.post(active ? Pinky.uiOnNote : Pinky.uiOffNote)
         if inApp && PinkyCore.isStarted { PinkyUIActive(active ? 1 : 0) }
-        keepAlive(state.map { ($0.agent?.running ?? false) || !$0.needs.isEmpty } ?? false)
+        keepAlive(isBusy)
         if p == .active {
             #if !NO_TUNNEL
             vpnChanged()
