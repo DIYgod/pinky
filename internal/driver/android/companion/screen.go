@@ -116,6 +116,30 @@ func (w Window) covers() []screen.Rect {
 	return nil
 }
 
+// OverlaysOf returns what the accessibility overlays of the app pkg cover:
+// Pinky's own pill and approval card while Pinky on a computer holds the
+// phone in on-phone mode. A tap there lands on them, not on the app below.
+// They send no nodes (accessibilityDataSensitive) and often no package, so
+// they are known by their title, the app's package.
+func (t *Tree) OverlaysOf(pkg string) []screen.Rect {
+	full := screen.Rect{W: t.Display.Width, H: t.Display.Height}
+	var out []screen.Rect
+	for _, w := range t.Windows {
+		if w.Type != WindowAccessibilityOverlay || (w.Package != pkg && w.Title != pkg) {
+			continue
+		}
+		for _, r := range w.covers() {
+			if !full.Empty() {
+				r = clipTo(r, full)
+			}
+			if !r.Empty() {
+				out = append(out, r)
+			}
+		}
+	}
+	return out
+}
+
 // foreground picks the app the person is looking at: the top-most focused
 // or active application window, or a focused full-screen system window
 // such as the notification shade, else the top-most application window.

@@ -415,7 +415,9 @@ func (b *Background) ReadsText() bool { return ocrSupported() == nil }
 // observeTree reads the display's tree through the companion. The tree is
 // nil for a display that shows nothing yet.
 func (b *Background) observeTree(ctx context.Context) (*screen.Screen, *companion.Tree, error) {
-	b.d.used()
+	if err := b.d.acting(ctx); err != nil {
+		return nil, nil, err
+	}
 	if err := b.ready(ctx); err != nil {
 		return nil, nil, err
 	}
@@ -484,7 +486,9 @@ func (b *Background) Screenshot(ctx context.Context) (image.Image, error) {
 
 // Tap implements driver.Device.
 func (b *Background) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
-	b.d.used()
+	if err := b.d.acting(ctx); err != nil {
+		return err
+	}
 	if err := b.ready(ctx); err != nil {
 		return err
 	}
@@ -521,7 +525,9 @@ func (b *Background) recentTap() (screen.Point, bool) {
 
 // Swipe implements driver.Device.
 func (b *Background) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
-	b.d.used()
+	if err := b.d.acting(ctx); err != nil {
+		return err
+	}
 	if err := b.ready(ctx); err != nil {
 		return err
 	}
@@ -560,7 +566,9 @@ func (b *Background) Touch(ctx context.Context, a driver.TouchAction, p screen.P
 // on this display, as on the main one, and is read back; otherwise as key
 // events or a paste (Device.Type).
 func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
-	b.d.used()
+	if err := b.d.acting(ctx); err != nil {
+		return err
+	}
 	b.d.setInputNote("")
 	if err := b.ready(ctx); err != nil {
 		return err

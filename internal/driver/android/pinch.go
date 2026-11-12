@@ -23,7 +23,9 @@ const (
 
 // Pinch implements driver.Pincher.
 func (d *Device) Pinch(ctx context.Context, g driver.Pinch) error {
-	d.used()
+	if err := d.acting(ctx); err != nil {
+		return err
+	}
 	err := d.withInput(ctx, true, func(l *live) error { return l.pinch(ctx, g) })
 	if err == nil {
 		d.markAwake()
@@ -34,13 +36,17 @@ func (d *Device) Pinch(ctx context.Context, g driver.Pinch) error {
 // Touch2 implements driver.MultiToucher, for the person's pinch on the
 // mirror.
 func (d *Device) Touch2(ctx context.Context, a driver.TouchAction, p, q screen.Point) error {
-	d.used()
+	if err := d.acting(ctx); err != nil {
+		return err
+	}
 	return d.withInput(ctx, a == driver.TouchDown, func(l *live) error { return l.touch2(ctx, a, p, q) })
 }
 
 // Pinch implements driver.Pincher.
 func (b *Background) Pinch(ctx context.Context, g driver.Pinch) error {
-	b.d.used()
+	if err := b.d.acting(ctx); err != nil {
+		return err
+	}
 	if err := b.ready(ctx); err != nil {
 		return err
 	}
