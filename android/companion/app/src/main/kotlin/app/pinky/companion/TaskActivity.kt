@@ -2,7 +2,6 @@ package app.pinky.companion
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -61,6 +60,8 @@ class TaskActivity : Activity() {
     private lateinit var updateTitle: TextView
     private lateinit var updateNotes: TextView
     private lateinit var offCard: View
+    private lateinit var noCoreCard: View
+    private var hasCore = true
     private lateinit var coreCard: View
     private lateinit var coreTitle: TextView
     private lateinit var coreDetail: TextView
@@ -100,10 +101,12 @@ class TaskActivity : Activity() {
         look = Look(this)
         settings = TaskSettings(this)
         secrets = Secrets(this)
+        hasCore = Core.available(this)
         val col = look.column()
         val header = look.header(getString(R.string.app_name))
         header.addView(look.button(getString(R.string.phone_settings), Look.Kind.PLAIN) { openSettings() })
         col.addView(header, look.matchWrap())
+        col.addView(noCoreCard(), look.below(12))
         col.addView(updateCard(), look.below(12))
         col.addView(offCard(), look.below(12))
         col.addView(coreCard(), look.below(12))
@@ -130,6 +133,8 @@ class TaskActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
+        // Without the core there is nothing to reach, and on-phone mode stays off.
+        if (!hasCore) return
         sub = CoreClient.subscribe({ st -> main.post { onState(st) } }, { why -> main.post { onDown(why) } })
     }
 
@@ -182,6 +187,16 @@ class TaskActivity : Activity() {
 
     private fun render() {
         main.removeCallbacks(rerender)
+        noCoreCard.shown(!hasCore)
+        if (!hasCore) {
+            // A phone the core does not run on: Pinky works there with a
+            // computer, and this screen says only that.
+            for (v in listOf(
+                updateCard, offCard, coreCard, setupCard, batteryCard, computerCard, runCard, endCard.view,
+                askBox, error, stepsHeading, steps.group, historyHeading, historyGroup,
+            )) v.shown(false)
+            return
+        }
         val st = state
         val device = st?.optJSONObject("device")
         val ready = serviceOn && device?.optBoolean("ready") == true
@@ -382,7 +397,7 @@ class TaskActivity : Activity() {
 
     private fun downloadUpdate() {
         val u = update ?: return
-        look.open(Intent(Intent.ACTION_VIEW, Uri.parse(u.url)))
+        UpdateInstall.startFrom(this, u)
     }
 
     // Activity: the latest tasks that ended, without the one the screen
@@ -449,6 +464,14 @@ class TaskActivity : Activity() {
             look.matchWrap(),
         )
         updateCard = c
+        return c
+    }
+
+    private fun noCoreCard(): View {
+        val c = look.card()
+        c.addView(look.text(getString(R.string.phone_no_core_title), Look.HEADLINE, look.ink, 600))
+        c.addView(look.text(getString(R.string.phone_no_core_body), Look.BODY, look.ink2).apply { setPadding(0, look.dp(6), 0, 0) })
+        noCoreCard = c
         return c
     }
 

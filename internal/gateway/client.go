@@ -61,6 +61,7 @@ func (g *Gateway) Devices() []DeviceView {
 		if d.lease != nil {
 			v.TaskID = d.lease.task.id
 		}
+		v.LeaseGen, v.LeaseEnded = d.leaseGen, d.leaseEnded
 		out = append(out, v)
 	}
 	return out
@@ -162,6 +163,9 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		}
 		return DeviceInControl, "You're in control"
 	}
+	if line := busyLineLocked(d); line != "" {
+		return DeviceWorking, line
+	}
 	if l != nil {
 		line := l.session.agent.Name + " · " + l.task.title
 		if l.bg != nil {
@@ -211,7 +215,7 @@ func (g *Gateway) Needs() []NeedView {
 		if info.Kind == approval.KindHandoff {
 			kind = NeedHandoff
 		}
-		out = append(out, NeedView{ID: info.ID, Kind: kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
+		out = append(out, NeedView{ID: info.ID, Kind: kind, Approval: info.Kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
 			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
 			Point: info.Point, To: info.To, Point2: info.Point2, To2: info.To2, Path: info.Path, AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info),

@@ -96,7 +96,7 @@ Each feature is tagged with the milestone that first ships it (see Roadmap). A b
 | Safety | Typing into password and code fields refused; one-time codes masked on the screen and in notifications, and covered in screenshots; notifications from blocked apps hidden | M1 |
 | Safety | Rules editor, per-app rules, "Allow for this task" and "Always allow this kind" | M2 |
 | Safety | Credentials filled from the OS keychain; wider redaction | M2 |
-| Safety | Approve from a notification, a phone push or a chat app | M4 |
+| Safety | Approve from a notification, a phone push or a chat app (first: a page on the tailnet, [notes/remote-approvals.md](notes/remote-approvals.md)) | M4 |
 | History | Task timeline: each step in plain language, with before and after screenshots, approvals and, in Developer mode, the tool call; wipe | M1 |
 | History | Continuous recording with step markers; search; HTML report and JSON export; retention limits | M2 |
 | History | Turn a successful task into a flow that replays without a model and hands back to the agent on a mismatch | M4 |
@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 19 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 20 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`. A list read keeps its per-screen changes inside the gateway and sends back one compact transcript.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -180,6 +180,7 @@ Agents see one MCP server, `pinky`, with 19 tools. Every action waits for the sc
 | `phone_launch` | `app`: name, bundle id or package; `language?`, `region?` | Result and new screen |
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
+| `phone_read_list` | `ref?`, `scroll_area?`, `direction?`, `max_screens?` (up to 30), `max_ms?`, `ocr?`, `scroll_percent?`, `continuation?` | One compact, ordered transcript from a vertical list, with overlap removed; a partial result says why it stopped and carries a continuation |
 | `phone_wait_for` | `text` or `any[]` (up to 10 texts), `gone?`, `area?`, `timeout_ms?` (up to 45000) | The screen once one of the texts appears, or once all have disappeared; `area` counts only the text in one part of the screen |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
 | `phone_app` | `action` (install, uninstall, stop); `paths` or `app` | Installs or updates an app from that local folder (an APK, an IPA or a `.app`), uninstalls an app, or force-quits it |
@@ -188,7 +189,7 @@ Agents see one MCP server, `pinky`, with 19 tools. Every action waits for the sc
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 
-Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history), `approval_id?` (to keep waiting on a pending approval) and `settle_ms?` (0 to 3000: the most to wait for the screen to settle, for screens that never stop moving; see the action pipeline's Settle step).
+Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history), `approval_id?` (to keep waiting on a pending approval) and `settle_ms?` (0 to 3000: the most to wait for the screen to settle, for screens that never stop moving; see the action pipeline's Settle step). `phone_read_list` takes `device?` and `intent?`; each of its swipes is a `phone_swipe` through the action pipeline and in history, it never opens an approval (a swipe that would ask stops it), and Stop, a pause or a takeover end it with nothing more, as they end `phone_batch`.
 
 ### Sessions and leases
 
@@ -232,7 +233,7 @@ ocr "Delivery in 25–35 min" @200,300
 | `device_locked` | The screen is locked; the person can unlock from the computer or the phone | Call `phone_handoff` |
 | `device_needs_setup` | The phone is connected but waits for a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode, the passcode iOS asks for before automation); the result names the step | Call `phone_handoff`; it ends once the phone is ready |
 
-Errors: `device_offline`, `device_paused` (the person paused Pinky's connection to the phone in Pinky), `lease_held`, `scope_denied` (an app outside the agent's scope or the task's allow-list), `not_found` (the ref is gone), `unsupported` (the backend cannot do this, such as `recents` on iPhone).
+Errors: `device_offline`, `device_paused` (the person paused Pinky's connection to the phone in Pinky), `device_busy` (Pinky for Android runs a task of its own on the phone), `lease_held`, `scope_denied` (an app outside the agent's scope or the task's allow-list), `not_found` (the ref is gone), `unsupported` (the backend cannot do this, such as `recents` on iPhone).
 
 Any call that could block longer than 45 s returns a pending status with an id instead, and the agent repeats the call with that id: Ask actions, `phone_request_approval`, `phone_handoff`, `phone_wait_for`, and long `phone_type` on iPhone. That stays under the 60 s request timeout common in MCP clients. Progress notifications are sent only when the request carries a `progressToken`.
 

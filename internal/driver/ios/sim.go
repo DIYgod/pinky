@@ -659,7 +659,7 @@ func (a *simApps) list(ctx context.Context) ([]driver.App, error) {
 	if err != nil {
 		return nil, err
 	}
-	apps, err := parseSimApps(b)
+	apps, err := parseSimApps(b, simLanguages(a.p.deviceSet(), a.udid))
 	if err != nil {
 		return nil, err
 	}
@@ -669,11 +669,14 @@ func (a *simApps) list(ctx context.Context) ([]driver.App, error) {
 
 // parseSimApps reads `simctl listapps`, a property list of apps by bundle
 // id. WebDriverAgent's runner is left out, as Pinky's helper, and so are
-// hidden apps.
-func parseSimApps(b []byte) ([]driver.App, error) {
+// hidden apps. Apps are named as the home screen names them in the first of
+// the Simulator's languages they have (langs, AppleLanguages), with their
+// Info.plist's names as aliases.
+func parseSimApps(b []byte, langs []string) ([]driver.App, error) {
 	var m map[string]struct {
 		DisplayName     string `plist:"CFBundleDisplayName"`
 		Name            string `plist:"CFBundleName"`
+		Path            string `plist:"Path"`
 		ApplicationType string `plist:"ApplicationType"`
 		IsHidden        any    `plist:"IsHidden"` // "1" in simctl's text, else a number or boolean
 	}
@@ -688,11 +691,9 @@ func parseSimApps(b []byte) ([]driver.App, error) {
 		if h := fmt.Sprint(a.IsHidden); h == "1" || h == "true" {
 			continue // not on the home screen, as CarPlay
 		}
-		name := a.DisplayName
-		if name == "" {
-			name = a.Name
-		}
-		apps = append(apps, driver.App{ID: id, Name: name, System: a.ApplicationType == "System"})
+		app := driver.App{ID: id, System: a.ApplicationType == "System"}
+		app.Name, app.Aliases = appNames(localizedAppName(a.Path, langs), a.DisplayName, a.Name)
+		apps = append(apps, app)
 	}
 	sort.Slice(apps, func(i, j int) bool { return apps[i].ID < apps[j].ID })
 	return apps, nil

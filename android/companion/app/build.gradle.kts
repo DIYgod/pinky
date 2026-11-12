@@ -215,3 +215,8 @@ androidComponents {
         variant.sources.assets?.addGeneratedSourceDirectory(asset, CompanionVersionAsset::outputDir)
     }
 }
+
+dependencies {
+    // Unit tests of the plain Kotlin rules (app/src/test): no phone needed.
+    testImplementation("junit:junit:4.13.2")
+}

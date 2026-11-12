@@ -12585,6 +12585,44 @@ func (msgs Messages) GwStatusBackground(work string) string {
 	return Catalog.Format(msgs.locale, "gwStatusBackground", map[string]any{"work": work})
 }
 
+// GwStatusBusyComputer says "Busy · Pinky on another computer is using it"
+// in the language the app shows.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky on another computer holds the phone. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStatusBusyComputer() string { return In(i18n.Locale()).GwStatusBusyComputer() }
+
+// GwStatusBusyComputer says "Busy · Pinky on another computer is using it"
+// in the language of msgs.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky on another computer holds the phone. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusBusyComputer() string {
+	return Catalog.Format(msgs.locale, "gwStatusBusyComputer", nil)
+}
+
+// GwStatusBusyPhone says "Busy · Pinky on the phone is running a task"
+// in the language the app shows.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky for Android runs a task of its own on the phone (on-phone
+// mode), and only one of them uses the phone at a time. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStatusBusyPhone() string { return In(i18n.Locale()).GwStatusBusyPhone() }
+
+// GwStatusBusyPhone says "Busy · Pinky on the phone is running a task"
+// in the language of msgs.
+//
+// A phone's status line in the sidebar and tiles: an agent's task waits
+// because Pinky for Android runs a task of its own on the phone (on-phone
+// mode), and only one of them uses the phone at a time. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusBusyPhone() string {
+	return Catalog.Format(msgs.locale, "gwStatusBusyPhone", nil)
+}
+
 // GwStatusConnecting says "Connecting"
 // in the language the app shows.
 //
@@ -25083,6 +25121,22 @@ func (msgs Messages) StepNotDoneTookOver() string {
 	return Catalog.Format(msgs.locale, "stepNotDoneTookOver", nil)
 }
 
+// StepPhoneBusy says "Pinky on the phone was running a task"
+// in the language the app shows.
+//
+// The second line of a step that was not done because Pinky for Android ran
+// a task of its own on the phone, or Pinky on another computer used it.
+func StepPhoneBusy() string { return In(i18n.Locale()).StepPhoneBusy() }
+
+// StepPhoneBusy says "Pinky on the phone was running a task"
+// in the language of msgs.
+//
+// The second line of a step that was not done because Pinky for Android ran
+// a task of its own on the phone, or Pinky on another computer used it.
+func (msgs Messages) StepPhoneBusy() string {
+	return Catalog.Format(msgs.locale, "stepPhoneBusy", nil)
+}
+
 // StepPhoneLocked says "The phone was locked"
 // in the language the app shows.
 //
@@ -28523,6 +28577,914 @@ func UpdateWhereUnsigned() string { return In(i18n.Locale()).UpdateWhereUnsigned
 // other languages; in English internal/update's own words show.
 func (msgs Messages) UpdateWhereUnsigned() string {
 	return Catalog.Format(msgs.locale, "updateWhereUnsigned", nil)
+}
+
+// WebApprovalsTooMany says "At most {count} phones can answer approvals. Remove one first."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a toast when the person allows
+// another phone while the most are added.
+func WebApprovalsTooMany(count int) string { return In(i18n.Locale()).WebApprovalsTooMany(count) }
+
+// WebApprovalsTooMany says "At most {count} phones can answer approvals. Remove one first."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a toast when the person allows
+// another phone while the most are added.
+func (msgs Messages) WebApprovalsTooMany(count int) string {
+	return Catalog.Format(msgs.locale, "webApprovalsTooMany", map[string]any{"count": count})
+}
+
+// WebApprovalsToggle says "Answer approvals in the browser"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the switch that lets the person allow
+// or deny a held step from a browser on their phone, through Tailscale.
+func WebApprovalsToggle() string { return In(i18n.Locale()).WebApprovalsToggle() }
+
+// WebApprovalsToggle says "Answer approvals in the browser"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the switch that lets the person allow
+// or deny a held step from a browser on their phone, through Tailscale.
+func (msgs Messages) WebApprovalsToggle() string {
+	return Catalog.Format(msgs.locale, "webApprovalsToggle", nil)
+}
+
+// WebApprovalsDesc says "Allow or deny a held step from your phone, through Tailscale. Each answer asks for Face ID, a fingerprint or the phon…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the line under the switch Answer
+// approvals in the browser.
+func WebApprovalsDesc() string { return In(i18n.Locale()).WebApprovalsDesc() }
+
+// WebApprovalsDesc says "Allow or deny a held step from your phone, through Tailscale. Each answer asks for Face ID, a fingerprint or the phon…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the line under the switch Answer
+// approvals in the browser.
+func (msgs Messages) WebApprovalsDesc() string {
+	return Catalog.Format(msgs.locale, "webApprovalsDesc", nil)
+}
+
+// WebApprovalsNeedsTailnet says "Works only through the tailnet link: run the tailscale serve command above first."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: shown under Answer approvals in the
+// browser while Tailscale does not serve the web mirror yet.
+func WebApprovalsNeedsTailnet() string { return In(i18n.Locale()).WebApprovalsNeedsTailnet() }
+
+// WebApprovalsNeedsTailnet says "Works only through the tailnet link: run the tailscale serve command above first."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: shown under Answer approvals in the
+// browser while Tailscale does not serve the web mirror yet.
+func (msgs Messages) WebApprovalsNeedsTailnet() string {
+	return Catalog.Format(msgs.locale, "webApprovalsNeedsTailnet", nil)
+}
+
+// WebApprovalsAdd says "Add a phone"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the row that makes a link to open on
+// the phone that should answer approvals.
+func WebApprovalsAdd() string { return In(i18n.Locale()).WebApprovalsAdd() }
+
+// WebApprovalsAdd says "Add a phone"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the row that makes a link to open on
+// the phone that should answer approvals.
+func (msgs Messages) WebApprovalsAdd() string {
+	return Catalog.Format(msgs.locale, "webApprovalsAdd", nil)
+}
+
+// WebApprovalsAddDesc says "Makes a link to open on your phone. It works once, for 5 minutes."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the line under Add a phone.
+func WebApprovalsAddDesc() string { return In(i18n.Locale()).WebApprovalsAddDesc() }
+
+// WebApprovalsAddDesc says "Makes a link to open on your phone. It works once, for 5 minutes."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the line under Add a phone.
+func (msgs Messages) WebApprovalsAddDesc() string {
+	return Catalog.Format(msgs.locale, "webApprovalsAddDesc", nil)
+}
+
+// WebApprovalsAddButton says "Make a link"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the button of the row Add a phone,
+// which makes the link.
+func WebApprovalsAddButton() string { return In(i18n.Locale()).WebApprovalsAddButton() }
+
+// WebApprovalsAddButton says "Make a link"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the button of the row Add a phone,
+// which makes the link.
+func (msgs Messages) WebApprovalsAddButton() string {
+	return Catalog.Format(msgs.locale, "webApprovalsAddButton", nil)
+}
+
+// WebApprovalsLink says "Link for your phone"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the row with the link that adds a
+// phone, once made.
+func WebApprovalsLink() string { return In(i18n.Locale()).WebApprovalsLink() }
+
+// WebApprovalsLink says "Link for your phone"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the row with the link that adds a
+// phone, once made.
+func (msgs Messages) WebApprovalsLink() string {
+	return Catalog.Format(msgs.locale, "webApprovalsLink", nil)
+}
+
+// WebApprovalsLinkDesc says "Open it on your phone, then come back here to allow it."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the line under Link for your phone.
+func WebApprovalsLinkDesc() string { return In(i18n.Locale()).WebApprovalsLinkDesc() }
+
+// WebApprovalsLinkDesc says "Open it on your phone, then come back here to allow it."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the line under Link for your phone.
+func (msgs Messages) WebApprovalsLinkDesc() string {
+	return Catalog.Format(msgs.locale, "webApprovalsLinkDesc", nil)
+}
+
+// WebApprovalsRequest says "A browser asks to answer approvals"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the title of a request from a browser
+// that opened the link and made a passkey, waiting for the person to allow
+// it.
+func WebApprovalsRequest() string { return In(i18n.Locale()).WebApprovalsRequest() }
+
+// WebApprovalsRequest says "A browser asks to answer approvals"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the title of a request from a browser
+// that opened the link and made a passkey, waiting for the person to allow
+// it.
+func (msgs Messages) WebApprovalsRequest() string {
+	return Catalog.Format(msgs.locale, "webApprovalsRequest", nil)
+}
+
+// WebApprovalsRequestDesc says "{browser} · {login}. Allow it only if your phone shows this code:"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the line under A browser asks to
+// answer approvals, followed by the six-digit code in large type. browser
+// is as "iPhone · Safari", login the Tailscale login.
+func WebApprovalsRequestDesc(browser string, login string) string {
+	return In(i18n.Locale()).WebApprovalsRequestDesc(browser, login)
+}
+
+// WebApprovalsRequestDesc says "{browser} · {login}. Allow it only if your phone shows this code:"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the line under A browser asks to
+// answer approvals, followed by the six-digit code in large type. browser
+// is as "iPhone · Safari", login the Tailscale login.
+func (msgs Messages) WebApprovalsRequestDesc(browser string, login string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsRequestDesc", map[string]any{"browser": browser, "login": login})
+}
+
+// WebApprovalsUnknownBrowser says "A browser"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: stands for the browser's name in a
+// request to answer approvals when Pinky can't tell which browser it is.
+func WebApprovalsUnknownBrowser() string { return In(i18n.Locale()).WebApprovalsUnknownBrowser() }
+
+// WebApprovalsUnknownBrowser says "A browser"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: stands for the browser's name in a
+// request to answer approvals when Pinky can't tell which browser it is.
+func (msgs Messages) WebApprovalsUnknownBrowser() string {
+	return Catalog.Format(msgs.locale, "webApprovalsUnknownBrowser", nil)
+}
+
+// WebApprovalsWhich says "Which phone is this browser on?"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: in a request to answer approvals, the
+// label of a menu of the phones connected to Pinky, and Another device. The
+// person picks one before Allow.
+func WebApprovalsWhich() string { return In(i18n.Locale()).WebApprovalsWhich() }
+
+// WebApprovalsWhich says "Which phone is this browser on?"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: in a request to answer approvals, the
+// label of a menu of the phones connected to Pinky, and Another device. The
+// person picks one before Allow.
+func (msgs Messages) WebApprovalsWhich() string {
+	return Catalog.Format(msgs.locale, "webApprovalsWhich", nil)
+}
+
+// WebApprovalsWhichDesc says "While an agent uses that phone, and for 30 seconds after, Pinky refuses answers from it: whoever drives the phone cou…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky
+// asks.
+func WebApprovalsWhichDesc() string { return In(i18n.Locale()).WebApprovalsWhichDesc() }
+
+// WebApprovalsWhichDesc says "While an agent uses that phone, and for 30 seconds after, Pinky refuses answers from it: whoever drives the phone cou…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky
+// asks.
+func (msgs Messages) WebApprovalsWhichDesc() string {
+	return Catalog.Format(msgs.locale, "webApprovalsWhichDesc", nil)
+}
+
+// WebApprovalsChoose says "Choose…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the menu of webApprovalsWhich before
+// the person picks a phone.
+func WebApprovalsChoose() string { return In(i18n.Locale()).WebApprovalsChoose() }
+
+// WebApprovalsChoose says "Choose…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the menu of webApprovalsWhich before
+// the person picks a phone.
+func (msgs Messages) WebApprovalsChoose() string {
+	return Catalog.Format(msgs.locale, "webApprovalsChoose", nil)
+}
+
+// WebApprovalsOther says "Another device"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: in the menu of webApprovalsWhich, a
+// device that is not a phone connected to Pinky.
+func WebApprovalsOther() string { return In(i18n.Locale()).WebApprovalsOther() }
+
+// WebApprovalsOther says "Another device"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: in the menu of webApprovalsWhich, a
+// device that is not a phone connected to Pinky.
+func (msgs Messages) WebApprovalsOther() string {
+	return Catalog.Format(msgs.locale, "webApprovalsOther", nil)
+}
+
+// WebApprovalsOtherIPhone says "This browser says it runs on an iPhone, and an iPhone is connected to Pinky. If it is that phone, choose it: otherwis…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a warning under webApprovalsWhich
+// when the person picks webApprovalsOther for a browser that says it runs
+// on an iPhone while an iPhone is connected.
+func WebApprovalsOtherIPhone() string { return In(i18n.Locale()).WebApprovalsOtherIPhone() }
+
+// WebApprovalsOtherIPhone says "This browser says it runs on an iPhone, and an iPhone is connected to Pinky. If it is that phone, choose it: otherwis…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a warning under webApprovalsWhich
+// when the person picks webApprovalsOther for a browser that says it runs
+// on an iPhone while an iPhone is connected.
+func (msgs Messages) WebApprovalsOtherIPhone() string {
+	return Catalog.Format(msgs.locale, "webApprovalsOtherIPhone", nil)
+}
+
+// WebApprovalsOtherAndroid says "This browser says it runs on an Android phone, and an Android phone is connected to Pinky. If it is that phone, choos…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: as webApprovalsOtherIPhone, for
+// Android.
+func WebApprovalsOtherAndroid() string { return In(i18n.Locale()).WebApprovalsOtherAndroid() }
+
+// WebApprovalsOtherAndroid says "This browser says it runs on an Android phone, and an Android phone is connected to Pinky. If it is that phone, choos…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: as webApprovalsOtherIPhone, for
+// Android.
+func (msgs Messages) WebApprovalsOtherAndroid() string {
+	return Catalog.Format(msgs.locale, "webApprovalsOtherAndroid", nil)
+}
+
+// WebApprovalsNoDevice says "That phone is no longer connected to Pinky. Choose again."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a toast when the phone chosen in
+// webApprovalsWhich went away before Allow.
+func WebApprovalsNoDevice() string { return In(i18n.Locale()).WebApprovalsNoDevice() }
+
+// WebApprovalsNoDevice says "That phone is no longer connected to Pinky. Choose again."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a toast when the phone chosen in
+// webApprovalsWhich went away before Allow.
+func (msgs Messages) WebApprovalsNoDevice() string {
+	return Catalog.Format(msgs.locale, "webApprovalsNoDevice", nil)
+}
+
+// WebApprovalsAllow says "Allow"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the button that adds the browser of a
+// request.
+func WebApprovalsAllow() string { return In(i18n.Locale()).WebApprovalsAllow() }
+
+// WebApprovalsAllow says "Allow"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the button that adds the browser of a
+// request.
+func (msgs Messages) WebApprovalsAllow() string {
+	return Catalog.Format(msgs.locale, "webApprovalsAllow", nil)
+}
+
+// WebApprovalsCopyLink says "Copy the link for your phone"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the accessible name of the copy
+// button on the row Link for your phone.
+func WebApprovalsCopyLink() string { return In(i18n.Locale()).WebApprovalsCopyLink() }
+
+// WebApprovalsCopyLink says "Copy the link for your phone"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the accessible name of the copy
+// button on the row Link for your phone.
+func (msgs Messages) WebApprovalsCopyLink() string {
+	return Catalog.Format(msgs.locale, "webApprovalsCopyLink", nil)
+}
+
+// WebApprovalsDeny says "Deny"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the button that turns a request down.
+func WebApprovalsDeny() string { return In(i18n.Locale()).WebApprovalsDeny() }
+
+// WebApprovalsDeny says "Deny"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the button that turns a request down.
+func (msgs Messages) WebApprovalsDeny() string {
+	return Catalog.Format(msgs.locale, "webApprovalsDeny", nil)
+}
+
+// WebApprovalsPhones says "Phones that answer approvals"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the title of the list of browsers
+// added to answer approvals.
+func WebApprovalsPhones() string { return In(i18n.Locale()).WebApprovalsPhones() }
+
+// WebApprovalsPhones says "Phones that answer approvals"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the title of the list of browsers
+// added to answer approvals.
+func (msgs Messages) WebApprovalsPhones() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPhones", nil)
+}
+
+// WebApprovalsNoPhones says "None yet."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under Phones that answer approvals
+// when there are none.
+func WebApprovalsNoPhones() string { return In(i18n.Locale()).WebApprovalsNoPhones() }
+
+// WebApprovalsNoPhones says "None yet."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under Phones that answer approvals
+// when there are none.
+func (msgs Messages) WebApprovalsNoPhones() string {
+	return Catalog.Format(msgs.locale, "webApprovalsNoPhones", nil)
+}
+
+// WebApprovalsPhone says "{browser} · {login}"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a browser added to answer approvals.
+// browser is as "iPhone · Safari", login the Tailscale login.
+func WebApprovalsPhone(browser string, login string) string {
+	return In(i18n.Locale()).WebApprovalsPhone(browser, login)
+}
+
+// WebApprovalsPhone says "{browser} · {login}"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a browser added to answer approvals.
+// browser is as "iPhone · Safari", login the Tailscale login.
+func (msgs Messages) WebApprovalsPhone(browser string, login string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsPhone", map[string]any{"browser": browser, "login": login})
+}
+
+// WebApprovalsPhoneOn says "{browser} · {login} · on {phone}"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a browser added to answer approvals
+// that runs on a phone connected to Pinky. browser is as "iPhone ·
+// Safari", login the Tailscale login, phone the phone's name.
+func WebApprovalsPhoneOn(browser string, login string, phone string) string {
+	return In(i18n.Locale()).WebApprovalsPhoneOn(browser, login, phone)
+}
+
+// WebApprovalsPhoneOn says "{browser} · {login} · on {phone}"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a browser added to answer approvals
+// that runs on a phone connected to Pinky. browser is as "iPhone ·
+// Safari", login the Tailscale login, phone the phone's name.
+func (msgs Messages) WebApprovalsPhoneOn(browser string, login string, phone string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsPhoneOn", map[string]any{"browser": browser, "login": login, "phone": phone})
+}
+
+// WebApprovalsRemove says "Remove"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the button that takes a phone's right
+// to answer approvals away.
+func WebApprovalsRemove() string { return In(i18n.Locale()).WebApprovalsRemove() }
+
+// WebApprovalsRemove says "Remove"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the button that takes a phone's right
+// to answer approvals away.
+func (msgs Messages) WebApprovalsRemove() string {
+	return Catalog.Format(msgs.locale, "webApprovalsRemove", nil)
+}
+
+// WebApprovalsRemoved says "The phone can no longer answer approvals"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a toast after Remove.
+func WebApprovalsRemoved() string { return In(i18n.Locale()).WebApprovalsRemoved() }
+
+// WebApprovalsRemoved says "The phone can no longer answer approvals"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a toast after Remove.
+func (msgs Messages) WebApprovalsRemoved() string {
+	return Catalog.Format(msgs.locale, "webApprovalsRemoved", nil)
+}
+
+// WebApprovalsPageTitle says "Pinky approvals"
+// in the language the app shows.
+//
+// The approvals page in the browser: its title.
+func WebApprovalsPageTitle() string { return In(i18n.Locale()).WebApprovalsPageTitle() }
+
+// WebApprovalsPageTitle says "Pinky approvals"
+// in the language of msgs.
+//
+// The approvals page in the browser: its title.
+func (msgs Messages) WebApprovalsPageTitle() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageTitle", nil)
+}
+
+// WebApprovalsPageTailnet says "Open this page through Tailscale, on a device signed in as the owner of the computer running Pinky."
+// in the language the app shows.
+//
+// The approvals page: the request did not come through Tailscale from the
+// owner of the computer.
+func WebApprovalsPageTailnet() string { return In(i18n.Locale()).WebApprovalsPageTailnet() }
+
+// WebApprovalsPageTailnet says "Open this page through Tailscale, on a device signed in as the owner of the computer running Pinky."
+// in the language of msgs.
+//
+// The approvals page: the request did not come through Tailscale from the
+// owner of the computer.
+func (msgs Messages) WebApprovalsPageTailnet() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageTailnet", nil)
+}
+
+// WebApprovalsPageNotAdded says "This browser can't answer approvals yet. In Pinky on your computer, open Settings › Phones › Web mirror and click…"
+// in the language the app shows.
+//
+// The approvals page in a browser that was not added.
+func WebApprovalsPageNotAdded() string { return In(i18n.Locale()).WebApprovalsPageNotAdded() }
+
+// WebApprovalsPageNotAdded says "This browser can't answer approvals yet. In Pinky on your computer, open Settings › Phones › Web mirror and click…"
+// in the language of msgs.
+//
+// The approvals page in a browser that was not added.
+func (msgs Messages) WebApprovalsPageNotAdded() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageNotAdded", nil)
+}
+
+// WebApprovalsPageNoPasskeys says "This browser can't use passkeys. Use Safari on iPhone or iPad, or Chrome on Android."
+// in the language the app shows.
+//
+// The approvals page in a browser without passkeys (WebAuthn).
+func WebApprovalsPageNoPasskeys() string { return In(i18n.Locale()).WebApprovalsPageNoPasskeys() }
+
+// WebApprovalsPageNoPasskeys says "This browser can't use passkeys. Use Safari on iPhone or iPad, or Chrome on Android."
+// in the language of msgs.
+//
+// The approvals page in a browser without passkeys (WebAuthn).
+func (msgs Messages) WebApprovalsPageNoPasskeys() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageNoPasskeys", nil)
+}
+
+// WebApprovalsPageAddTitle says "Answer Pinky's approvals on this phone"
+// in the language the app shows.
+//
+// The approvals page opened with the link that adds a phone: its title.
+func WebApprovalsPageAddTitle() string { return In(i18n.Locale()).WebApprovalsPageAddTitle() }
+
+// WebApprovalsPageAddTitle says "Answer Pinky's approvals on this phone"
+// in the language of msgs.
+//
+// The approvals page opened with the link that adds a phone: its title.
+func (msgs Messages) WebApprovalsPageAddTitle() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageAddTitle", nil)
+}
+
+// WebApprovalsPageAddBody says "The phone keeps a passkey for your computer, and asks for Face ID, a fingerprint or its passcode each time you answer."
+// in the language the app shows.
+//
+// The approvals page opened with the link that adds a phone: the text under
+// its title.
+func WebApprovalsPageAddBody() string { return In(i18n.Locale()).WebApprovalsPageAddBody() }
+
+// WebApprovalsPageAddBody says "The phone keeps a passkey for your computer, and asks for Face ID, a fingerprint or its passcode each time you answer."
+// in the language of msgs.
+//
+// The approvals page opened with the link that adds a phone: the text under
+// its title.
+func (msgs Messages) WebApprovalsPageAddBody() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageAddBody", nil)
+}
+
+// WebApprovalsPageAddButton says "Add this phone"
+// in the language the app shows.
+//
+// The approvals page: the button that makes the passkey.
+func WebApprovalsPageAddButton() string { return In(i18n.Locale()).WebApprovalsPageAddButton() }
+
+// WebApprovalsPageAddButton says "Add this phone"
+// in the language of msgs.
+//
+// The approvals page: the button that makes the passkey.
+func (msgs Messages) WebApprovalsPageAddButton() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageAddButton", nil)
+}
+
+// WebApprovalsPageLinkUsed says "This link was already used, or is more than 5 minutes old. Make a new one in Pinky's Settings."
+// in the language the app shows.
+//
+// The approvals page: the link that adds a phone does not work.
+func WebApprovalsPageLinkUsed() string { return In(i18n.Locale()).WebApprovalsPageLinkUsed() }
+
+// WebApprovalsPageLinkUsed says "This link was already used, or is more than 5 minutes old. Make a new one in Pinky's Settings."
+// in the language of msgs.
+//
+// The approvals page: the link that adds a phone does not work.
+func (msgs Messages) WebApprovalsPageLinkUsed() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageLinkUsed", nil)
+}
+
+// WebApprovalsPagePasskeyFailed says "No passkey was made: {detail}"
+// in the language the app shows.
+//
+// The approvals page: making the passkey failed or was cancelled. detail is
+// the browser's own message, in English.
+func WebApprovalsPagePasskeyFailed(detail string) string {
+	return In(i18n.Locale()).WebApprovalsPagePasskeyFailed(detail)
+}
+
+// WebApprovalsPagePasskeyFailed says "No passkey was made: {detail}"
+// in the language of msgs.
+//
+// The approvals page: making the passkey failed or was cancelled. detail is
+// the browser's own message, in English.
+func (msgs Messages) WebApprovalsPagePasskeyFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsPagePasskeyFailed", map[string]any{"detail": detail})
+}
+
+// WebApprovalsPageCompareTitle says "Check the code on your computer"
+// in the language the app shows.
+//
+// The approvals page after the passkey was made: its title.
+func WebApprovalsPageCompareTitle() string { return In(i18n.Locale()).WebApprovalsPageCompareTitle() }
+
+// WebApprovalsPageCompareTitle says "Check the code on your computer"
+// in the language of msgs.
+//
+// The approvals page after the passkey was made: its title.
+func (msgs Messages) WebApprovalsPageCompareTitle() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageCompareTitle", nil)
+}
+
+// WebApprovalsPageCompare says "Click Allow in Pinky's Settings only if it shows this code."
+// in the language the app shows.
+//
+// The approvals page after the passkey was made: under the code.
+func WebApprovalsPageCompare() string { return In(i18n.Locale()).WebApprovalsPageCompare() }
+
+// WebApprovalsPageCompare says "Click Allow in Pinky's Settings only if it shows this code."
+// in the language of msgs.
+//
+// The approvals page after the passkey was made: under the code.
+func (msgs Messages) WebApprovalsPageCompare() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageCompare", nil)
+}
+
+// WebApprovalsPageTurnedDown says "Pinky on your computer turned this browser down."
+// in the language the app shows.
+//
+// The approvals page: the person clicked Deny on the request in Pinky's
+// Settings.
+func WebApprovalsPageTurnedDown() string { return In(i18n.Locale()).WebApprovalsPageTurnedDown() }
+
+// WebApprovalsPageTurnedDown says "Pinky on your computer turned this browser down."
+// in the language of msgs.
+//
+// The approvals page: the person clicked Deny on the request in Pinky's
+// Settings.
+func (msgs Messages) WebApprovalsPageTurnedDown() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageTurnedDown", nil)
+}
+
+// WebApprovalsPageAdded says "This phone can answer approvals now. Keep this page open: approvals show here as they come."
+// in the language the app shows.
+//
+// The approvals page right after the person allowed the phone.
+func WebApprovalsPageAdded() string { return In(i18n.Locale()).WebApprovalsPageAdded() }
+
+// WebApprovalsPageAdded says "This phone can answer approvals now. Keep this page open: approvals show here as they come."
+// in the language of msgs.
+//
+// The approvals page right after the person allowed the phone.
+func (msgs Messages) WebApprovalsPageAdded() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageAdded", nil)
+}
+
+// WebApprovalsPageNone says "Nothing waits for you."
+// in the language the app shows.
+//
+// The approvals page when no approval is open.
+func WebApprovalsPageNone() string { return In(i18n.Locale()).WebApprovalsPageNone() }
+
+// WebApprovalsPageNone says "Nothing waits for you."
+// in the language of msgs.
+//
+// The approvals page when no approval is open.
+func (msgs Messages) WebApprovalsPageNone() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageNone", nil)
+}
+
+// WebApprovalsPageRemoved says "This browser can no longer answer approvals: it was removed in Pinky, or Pinky quit. Add it again from Settings › P…"
+// in the language the app shows.
+//
+// The approvals page when its session no longer works.
+func WebApprovalsPageRemoved() string { return In(i18n.Locale()).WebApprovalsPageRemoved() }
+
+// WebApprovalsPageRemoved says "This browser can no longer answer approvals: it was removed in Pinky, or Pinky quit. Add it again from Settings › P…"
+// in the language of msgs.
+//
+// The approvals page when its session no longer works.
+func (msgs Messages) WebApprovalsPageRemoved() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageRemoved", nil)
+}
+
+// WebApprovalsPageAllow says "Allow"
+// in the language the app shows.
+//
+// The approvals page: the button that allows the step once.
+func WebApprovalsPageAllow() string { return In(i18n.Locale()).WebApprovalsPageAllow() }
+
+// WebApprovalsPageAllow says "Allow"
+// in the language of msgs.
+//
+// The approvals page: the button that allows the step once.
+func (msgs Messages) WebApprovalsPageAllow() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageAllow", nil)
+}
+
+// WebApprovalsPageDeny says "Deny"
+// in the language the app shows.
+//
+// The approvals page: the button that denies the step.
+func WebApprovalsPageDeny() string { return In(i18n.Locale()).WebApprovalsPageDeny() }
+
+// WebApprovalsPageDeny says "Deny"
+// in the language of msgs.
+//
+// The approvals page: the button that denies the step.
+func (msgs Messages) WebApprovalsPageDeny() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageDeny", nil)
+}
+
+// WebApprovalsPageConfirmAllow says "Tap again to allow"
+// in the language the app shows.
+//
+// The approvals page: the Allow button after the first tap; the second tap
+// opens the passkey sheet.
+func WebApprovalsPageConfirmAllow() string { return In(i18n.Locale()).WebApprovalsPageConfirmAllow() }
+
+// WebApprovalsPageConfirmAllow says "Tap again to allow"
+// in the language of msgs.
+//
+// The approvals page: the Allow button after the first tap; the second tap
+// opens the passkey sheet.
+func (msgs Messages) WebApprovalsPageConfirmAllow() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageConfirmAllow", nil)
+}
+
+// WebApprovalsPageConfirmDeny says "Tap again to deny"
+// in the language the app shows.
+//
+// The approvals page: as webApprovalsPageConfirmAllow, for Deny.
+func WebApprovalsPageConfirmDeny() string { return In(i18n.Locale()).WebApprovalsPageConfirmDeny() }
+
+// WebApprovalsPageConfirmDeny says "Tap again to deny"
+// in the language of msgs.
+//
+// The approvals page: as webApprovalsPageConfirmAllow, for Deny.
+func (msgs Messages) WebApprovalsPageConfirmDeny() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageConfirmDeny", nil)
+}
+
+// WebApprovalsPageOnComputer says "Answer this one in Pinky on your computer."
+// in the language the app shows.
+//
+// The approvals page: on a card it cannot answer (an agent's first
+// connection, opening a blocked app).
+func WebApprovalsPageOnComputer() string { return In(i18n.Locale()).WebApprovalsPageOnComputer() }
+
+// WebApprovalsPageOnComputer says "Answer this one in Pinky on your computer."
+// in the language of msgs.
+//
+// The approvals page: on a card it cannot answer (an agent's first
+// connection, opening a blocked app).
+func (msgs Messages) WebApprovalsPageOnComputer() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageOnComputer", nil)
+}
+
+// WebApprovalsPageLeft says "{seconds} s left"
+// in the language the app shows.
+//
+// The approvals page: the time left to answer a card.
+func WebApprovalsPageLeft(seconds string) string {
+	return In(i18n.Locale()).WebApprovalsPageLeft(seconds)
+}
+
+// WebApprovalsPageLeft says "{seconds} s left"
+// in the language of msgs.
+//
+// The approvals page: the time left to answer a card.
+func (msgs Messages) WebApprovalsPageLeft(seconds string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageLeft", map[string]any{"seconds": seconds})
+}
+
+// WebApprovalsPageTimedOut says "No answer in time: it counted as Deny."
+// in the language the app shows.
+//
+// The approvals page: a card's time ran out.
+func WebApprovalsPageTimedOut() string { return In(i18n.Locale()).WebApprovalsPageTimedOut() }
+
+// WebApprovalsPageTimedOut says "No answer in time: it counted as Deny."
+// in the language of msgs.
+//
+// The approvals page: a card's time ran out.
+func (msgs Messages) WebApprovalsPageTimedOut() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageTimedOut", nil)
+}
+
+// WebApprovalsPageAlready says "Already answered, on the computer or another device."
+// in the language the app shows.
+//
+// The approvals page: someone answered the card elsewhere first.
+func WebApprovalsPageAlready() string { return In(i18n.Locale()).WebApprovalsPageAlready() }
+
+// WebApprovalsPageAlready says "Already answered, on the computer or another device."
+// in the language of msgs.
+//
+// The approvals page: someone answered the card elsewhere first.
+func (msgs Messages) WebApprovalsPageAlready() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageAlready", nil)
+}
+
+// WebApprovalsPageLate says "Too late: the time ran out, and it counted as Deny."
+// in the language the app shows.
+//
+// The approvals page: the answer came after the card's time ran out.
+func WebApprovalsPageLate() string { return In(i18n.Locale()).WebApprovalsPageLate() }
+
+// WebApprovalsPageLate says "Too late: the time ran out, and it counted as Deny."
+// in the language of msgs.
+//
+// The approvals page: the answer came after the card's time ran out.
+func (msgs Messages) WebApprovalsPageLate() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageLate", nil)
+}
+
+// WebApprovalsPageVerifyFailed says "Pinky couldn't check the passkey. Try again."
+// in the language the app shows.
+//
+// The approvals page: the answer's passkey check failed.
+func WebApprovalsPageVerifyFailed() string { return In(i18n.Locale()).WebApprovalsPageVerifyFailed() }
+
+// WebApprovalsPageVerifyFailed says "Pinky couldn't check the passkey. Try again."
+// in the language of msgs.
+//
+// The approvals page: the answer's passkey check failed.
+func (msgs Messages) WebApprovalsPageVerifyFailed() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageVerifyFailed", nil)
+}
+
+// WebApprovalsPageNotAnswered says "Not answered."
+// in the language the app shows.
+//
+// The approvals page: the person cancelled the passkey sheet.
+func WebApprovalsPageNotAnswered() string { return In(i18n.Locale()).WebApprovalsPageNotAnswered() }
+
+// WebApprovalsPageNotAnswered says "Not answered."
+// in the language of msgs.
+//
+// The approvals page: the person cancelled the passkey sheet.
+func (msgs Messages) WebApprovalsPageNotAnswered() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageNotAnswered", nil)
+}
+
+// WebApprovalsPageAllowed says "Allowed."
+// in the language the app shows.
+//
+// The approvals page: the card was allowed from this phone.
+func WebApprovalsPageAllowed() string { return In(i18n.Locale()).WebApprovalsPageAllowed() }
+
+// WebApprovalsPageAllowed says "Allowed."
+// in the language of msgs.
+//
+// The approvals page: the card was allowed from this phone.
+func (msgs Messages) WebApprovalsPageAllowed() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageAllowed", nil)
+}
+
+// WebApprovalsPageDenied says "Denied."
+// in the language the app shows.
+//
+// The approvals page: the card was denied from this phone.
+func WebApprovalsPageDenied() string { return In(i18n.Locale()).WebApprovalsPageDenied() }
+
+// WebApprovalsPageDenied says "Denied."
+// in the language of msgs.
+//
+// The approvals page: the card was denied from this phone.
+func (msgs Messages) WebApprovalsPageDenied() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageDenied", nil)
+}
+
+// WebApprovalsPageRule says "Rule: {rule}"
+// in the language the app shows.
+//
+// The approvals page: the rule that asked, on a card.
+func WebApprovalsPageRule(rule string) string { return In(i18n.Locale()).WebApprovalsPageRule(rule) }
+
+// WebApprovalsPageRule says "Rule: {rule}"
+// in the language of msgs.
+//
+// The approvals page: the rule that asked, on a card.
+func (msgs Messages) WebApprovalsPageRule(rule string) string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageRule", map[string]any{"rule": rule})
+}
+
+// WebApprovalsPageBusy says "An agent is using this phone, or just did, so it can't answer approvals now. Answer on the computer or on another phone."
+// in the language the app shows.
+//
+// The approvals page, on a phone Pinky drives, while an agent uses it.
+func WebApprovalsPageBusy() string { return In(i18n.Locale()).WebApprovalsPageBusy() }
+
+// WebApprovalsPageBusy says "An agent is using this phone, or just did, so it can't answer approvals now. Answer on the computer or on another phone."
+// in the language of msgs.
+//
+// The approvals page, on a phone Pinky drives, while an agent uses it.
+func (msgs Messages) WebApprovalsPageBusy() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageBusy", nil)
+}
+
+// WebApprovalsPageSlowDown says "Too many tries. Wait a minute, then make a new link in Pinky."
+// in the language the app shows.
+//
+// The approvals page: adding a phone was refused because of too many tries
+// in a minute.
+func WebApprovalsPageSlowDown() string { return In(i18n.Locale()).WebApprovalsPageSlowDown() }
+
+// WebApprovalsPageSlowDown says "Too many tries. Wait a minute, then make a new link in Pinky."
+// in the language of msgs.
+//
+// The approvals page: adding a phone was refused because of too many tries
+// in a minute.
+func (msgs Messages) WebApprovalsPageSlowDown() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageSlowDown", nil)
 }
 
 // WebMirrorControlDesc says "Taps, swipes, Back and Home from the page, as on Pinky's own mirror: they pause an agent's task."

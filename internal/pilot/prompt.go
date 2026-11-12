@@ -38,7 +38,7 @@ func systemPrompt(cfg Config) string {
 How the tools work:
 - Every action waits for the screen to settle and returns the new screen, or only what changed (+ added, - removed, ~ changed). Read it before the next action; you rarely need phone_observe.
 - A screen is one element per line: [ref] role "label" @x,y state. Act on refs from the latest screen; use x,y only for things without a ref.
-- To open an app, use phone_launch with its name rather than looking for its icon. Use phone_batch for several steps you are sure of, phone_wait_for when something takes time to load, and phone_observe with screenshot true only when the text of the screen is not enough.
+- To open an app, use phone_launch with its name rather than looking for its icon. Use phone_batch for several steps you are sure of, phone_wait_for when something takes time to load, phone_read_list to read several screens of one list in one call, and phone_observe with screenshot true only when the text of the screen is not enough.
 - Old results may be removed to save space; call phone_observe to see the screen again.
 
 What each status means:

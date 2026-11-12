@@ -83,7 +83,15 @@ type Options struct {
 	// Text returns the page's words, by key, in the language that best
 	// suits the browser's Accept-Language, and that language's tag.
 	Text func(acceptLanguage string) (lang string, text map[string]string)
+	// Approvals, when set, is served under ApprovalsPath behind the
+	// mirror's own checks (Funnel, this computer's names): the page that
+	// answers approvals in the browser (internal/webapproval), which does
+	// its own checks besides. The mirror itself never reaches approvals.
+	Approvals http.Handler
 }
+
+// ApprovalsPath is where Options.Approvals is served.
+const ApprovalsPath = "/approvals"
 
 // Server is the web mirror.
 type Server struct {
@@ -293,6 +301,10 @@ func (s *Server) Handler() http.Handler {
 		defer s.leave()
 		ws.ServeHTTP(w, r)
 	})
+	if s.opt.Approvals != nil {
+		mux.Handle(ApprovalsPath, s.opt.Approvals)
+		mux.Handle(ApprovalsPath+"/", s.opt.Approvals)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Tailscale-Funnel-Request") != "" {
 			// Tailscale Funnel: anyone on the internet.
@@ -336,7 +348,11 @@ func (s *Server) ownHost(r *http.Request) bool {
 // this computer's loopback, or carries a header a proxy adds. A request
 // with a Host of the client's choosing still shows the headers `tailscale
 // serve` adds (X-Forwarded-*, Tailscale-*).
-func proxied(r *http.Request) bool {
+func proxied(r *http.Request) bool { return Proxied(r) }
+
+// Proxied reports whether r came through a proxy such as `tailscale
+// serve` (proxied). A process on this computer can fake it.
+func Proxied(r *http.Request) bool {
 	if !loopbackName(hostName(r.Host)) {
 		return true
 	}

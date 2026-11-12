@@ -62,6 +62,18 @@ type Action struct {
 	// it (prep.settleFull), waits the whole limit anyway, and the next
 	// action waits out the rest of a wait this cut short (settleOwed).
 	Settle *time.Duration
+	// list shapes a swipe by direction that phone_read_list sends
+	// (read_list.go); nil for every other swipe.
+	list *listSwipe
+}
+
+// listSwipe shapes a phone_read_list swipe: area, when set, takes the
+// place of a ref (a scroll_area on a web page); travel is how much of the
+// area the finger crosses, in percent; lane is where across the area it
+// runs, in percent of its width from the left.
+type listSwipe struct {
+	area         *screen.Rect
+	travel, lane int
 }
 
 // Keys agents may press.
@@ -507,6 +519,12 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		g.recordRefusal(l, c, a, p, res)
 		return res
 	case policy.Ask:
+		if !g.granted(l, v, p) && c.noAsk {
+			d.act.Unlock()
+			res := &Result{Status: StatusBlocked, Rule: v.Rule, Message: noAskMessage(v)}
+			g.recordRefusal(l, c, a, p, res)
+			return res
+		}
 		if !g.granted(l, v, p) {
 			info, res := g.ask(ctx, l, c, a, p, v, cur)
 			d.act.Unlock()
@@ -766,6 +784,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	seen := l.baseline
 	readOnly := l.readOnly
 	fgAllowed := allowsLocked(l, fg)
+	prov := d.provider // discovery sets it again under g.mu
 	g.mu.Unlock()
 	p.input = policy.Input{Device: d.id, App: fg, Screen: cur, TaskApps: apps, LongPress: a.LongPress,
 		ReadOnly: scope.Mode == ScopeReadOnly || readOnly, AllowBlocked: fgAllowed}
@@ -810,7 +829,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			if res != nil {
 				return p, res
 			}
-			p.target, p.point = e, tapPoint(cur, t, d.provider.Platform())
+			p.target, p.point = e, tapPoint(cur, t, prov.Platform())
 		} else {
 			if !inBounds(*a.Point) {
 				return p, errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
@@ -869,12 +888,18 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 					return p, res
 				}
 				p.target = e
+			} else if a.list != nil && a.list.area != nil {
+				e = &screen.Element{Bounds: *a.list.area}
 			}
 			area, res := swipeArea(cur, e, a.Direction)
 			if res != nil {
 				return p, res
 			}
-			p.from, p.to = swipeLine(area, a.Direction)
+			if a.list != nil {
+				p.from, p.to = listSwipeLine(area, a.Direction, a.list.travel, a.list.lane)
+			} else {
+				p.from, p.to = swipeLine(area, a.Direction)
+			}
 		}
 	case "pinch":
 		p.input.Op = policy.OpSwipe
@@ -893,7 +918,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 				return p, errResult(ErrUnsupported, "This phone cannot drag. Nothing was done.")
 			}
 		}
-		if res := p.prepareDrag(a, cur, d.provider.Platform(), byRef, inBounds); res != nil {
+		if res := p.prepareDrag(a, cur, prov.Platform(), byRef, inBounds); res != nil {
 			return p, res
 		}
 	case "key":
@@ -967,6 +992,25 @@ func credentialOnScreen(s *screen.Screen) bool {
 		}
 	}
 	return false
+}
+
+// listSwipeLine is swipeLine for a phone_read_list swipe: the finger
+// crosses travel percent of area's height, centred, at lane percent of its
+// width (0 for the middle).
+func listSwipeLine(area screen.Rect, dir string, travel, lane int) (from, to screen.Point) {
+	if travel <= 0 {
+		return swipeLine(area, dir)
+	}
+	c := area.Center()
+	if lane > 0 {
+		c.X = area.X + area.W*lane/100
+	}
+	c.X = max(area.X+1, min(c.X, area.X+area.W-2))
+	dy := area.H * travel / 200
+	if dir == "down" {
+		return screen.Point{X: c.X, Y: c.Y - dy}, screen.Point{X: c.X, Y: c.Y + dy}
+	}
+	return screen.Point{X: c.X, Y: c.Y + dy}, screen.Point{X: c.X, Y: c.Y - dy}
 }
 
 // swipeLine returns a swipe across the middle of area, where direction is
@@ -2052,6 +2096,9 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 // actionError maps a driver error from an input to a result. Only errors
 // that prove nothing happened become errors; the rest are uncertain.
 func (g *Gateway) actionError(l *lease, err error) *Result {
+	if res := g.onPhoneResult(l, err); res != nil {
+		return res
+	}
 	switch {
 	case errors.Is(err, driver.ErrUnsupported):
 		return errResult(ErrUnsupported, "This phone cannot do that: %v. Nothing was done.", err)
@@ -2071,6 +2118,9 @@ func (g *Gateway) actionError(l *lease, err error) *Result {
 
 // readError maps an error from reading the screen.
 func (g *Gateway) readError(l *lease, err error) *Result {
+	if res := g.onPhoneResult(l, err); res != nil {
+		return res
+	}
 	switch {
 	case errors.Is(err, driver.ErrOffline):
 		g.setOffline(l.dev, "")
@@ -2203,6 +2253,7 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 		}
 		return nil, errors.New("the driver returned no screen")
 	}
+	g.setBusy(d, nil)
 	// One-time codes are masked before anything else sees the read: the
 	// agent, history, approvals and refs (policy.MaskScreen).
 	g.policy.MaskScreen(s)

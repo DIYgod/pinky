@@ -19,6 +19,8 @@
     <string name="phone_app_info">App info</string>
     <string name="phone_core_starting">Starting Pinky…</string>
     <string name="phone_core_failed">Pinky couldn\'t start on this phone.</string>
+    <string name="phone_no_core_title">This phone can\'t run tasks by itself</string>
+    <string name="phone_no_core_body">Pinky runs tasks on the phone only on phones with a 64-bit ARM processor. Here Pinky works with a computer: connect this phone to a computer that runs Pinky, and agents there can use it.</string>
     <string name="phone_core_failed_hint">Restart the phone and open Pinky again. If that doesn\'t help, reinstall Pinky.</string>
     <string name="phone_setup">Pinky can do simple tasks on your phone by itself, with an AI model you choose.</string>
     <string name="phone_setup_key">Add an API key</string>
@@ -192,6 +194,10 @@
     <string name="phone_update_failed">Couldn\'t check for updates. Try again later.</string>
     <string name="phone_update_offline">Couldn\'t check for updates. Check the internet connection and try again.</string>
     <string name="phone_update_dev">Development builds don\'t update.</string>
+    <string name="phone_update_downloading">Downloading the update…</string>
+    <string name="phone_update_download_offline">Couldn\'t download the update. Check the internet connection and try again.</string>
+    <string name="phone_update_mismatch">The download isn\'t Pinky\'s release, so Pinky didn\'t install it. Try again later.</string>
+    <string name="phone_update_install_failed">Couldn\'t install the update. Try again later.</string>
 
     <!-- A task's steps in Activity, worded as desktop Pinky words them
          (ui/extras.go, stepDisplay). %1$s is what a step asked for, in the

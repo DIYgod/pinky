@@ -111,6 +111,10 @@ type Options struct {
 	// WebMirror shows the phones in a web browser (Settings › Phones ›
 	// Web mirror); nil leaves it out.
 	WebMirror WebMirror
+	// WebApprovals answers approvals in a browser on the person's phone,
+	// through the web mirror (Settings › Phones › Web mirror); nil leaves
+	// it out.
+	WebApprovals WebApprovals
 	// Log writes what the client does to the app's log: the log the
 	// person's feedback carries, and the one whoever fixes a broken live
 	// picture goes on. nil writes nothing, as before.
@@ -152,6 +156,10 @@ type Settings struct {
 	// WebMirrorControl lets pages opened with the mirror's control token
 	// use the phone: taps, drags, Back and Home, as on the window mirror.
 	WebMirrorControl bool
+	// WebApprovals lets phones the person added answer approvals in a
+	// browser, through the web mirror and Tailscale, each answer confirmed
+	// with the phone's passkey (internal/webapproval). Off by default.
+	WebApprovals bool
 	// UsageStats shares anonymous usage statistics and crash reports
 	// (docs/TELEMETRY.md).
 	UsageStats bool

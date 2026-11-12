@@ -72,7 +72,11 @@ const (
 	ErrDeviceOffline ErrorCode = "device_offline"
 	// ErrDevicePaused: the person paused Pinky's connection to the phone
 	// in Pinky (pause.go); it is unusable until they resume it.
-	ErrDevicePaused    ErrorCode = "device_paused"
+	ErrDevicePaused ErrorCode = "device_paused"
+	// ErrDeviceBusy: Pinky on the phone (Pinky for Android's on-phone
+	// mode), or Pinky on another computer, holds the phone for a task of
+	// its own (onphone.go); nothing was done.
+	ErrDeviceBusy      ErrorCode = "device_busy"
 	ErrLeaseHeld       ErrorCode = "lease_held"
 	ErrScopeDenied     ErrorCode = "scope_denied"
 	ErrNotFound        ErrorCode = "not_found"
@@ -107,6 +111,7 @@ type Result struct {
 	Apps       []driver.App
 	Screenshot image.Image
 	Steps      []*Result // phone_batch, one per step that ran
+	Scan       *ScanView // phone_read_list
 	Task       string    // phone_connect: the task id
 	Folder     string    // phone_files: the folder on the computer
 	Files      []FileView
@@ -139,6 +144,9 @@ type Call struct {
 
 	// reuse lets a batch step start from the previous step's read.
 	reuse bool
+	// noAsk refuses an action the rules would ask the person about,
+	// instead of asking: phone_read_list never opens an approval.
+	noAsk bool
 }
 
 // reuseAge is how old the previous step's read may be for the next batch
@@ -230,14 +238,51 @@ type BatchRequest struct {
 	Steps []Action
 }
 
+// ReadListRequest is phone_read_list.
+type ReadListRequest struct {
+	Call
+	Ref           int
+	Area          *screen.Rect
+	Direction     string
+	MaxScreens    int
+	MaxMS         int
+	OCR           string // auto, all or off
+	ScrollPercent int
+	Continuation  string
+}
+
+// ScanPage is the newly exposed content from one physical screen.
+type ScanPage struct {
+	Number int
+	Lines  []string
+}
+
+// ScanView is a compact, ordered account of a list scan. The model gets
+// text rather than one screenshot or complete tree per screen.
+type ScanView struct {
+	Pages        int
+	StartScreen  int
+	Swipes       int
+	Lines        int
+	Overlap      int
+	Stop         string
+	Complete     bool
+	Truncated    bool
+	OutputBytes  int
+	Sections     []ScanPage
+	Continuation string
+}
+
 // Limits from DESIGN.md's tool table.
 const (
 	MaxTextLen     = 16384
 	MaxObserveWait = 30 * time.Second
 	MaxWaitFor     = 45 * time.Second
 	// MaxWaitTexts is the most texts one phone_wait_for takes (text and any).
-	MaxWaitTexts  = 10
-	MaxBatchSteps = 50
+	MaxWaitTexts   = 10
+	MaxBatchSteps  = 50
+	MaxReadScreens = 30
+	MaxReadTime    = 45 * time.Second
 	// MaxSettle is the most an action's settle_ms may ask for: the
 	// default limit, SettleMax, is never raised.
 	MaxSettle = 3 * time.Second
@@ -426,7 +471,7 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 			r.Message += " The last action may have happened before the pause."
 		}
 	}
-	if ended && by == OutcomeStopped {
+	if ended && by == OutcomeStopped && r.Status != StatusStopped {
 		ran := r.Status == StatusSettled || r.Status == StatusUncertain
 		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
 		if ran {
@@ -734,6 +779,7 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 	}
 	l.bgWanted = g.backgroundLocked(d) && scope.Mode != ScopeWatchOnly
 	d.lease = l
+	d.leaseGen++
 	if d.person {
 		// The person is still in control from before: the task starts paused.
 		t.state = TaskPaused
@@ -1587,7 +1633,7 @@ func (s *Session) Apps(ctx context.Context, req AppsRequest) *Result {
 		if scope.Mode == ScopeApps && !g.policy.IsSystem(app) && !appListed(app, scope.Apps) {
 			continue
 		}
-		if q != "" && !strings.Contains(strings.ToLower(a.Name), q) && !strings.Contains(strings.ToLower(a.ID), q) {
+		if q != "" && !appNamed(a, q, func(n string) bool { return strings.Contains(n, q) }) && !strings.Contains(strings.ToLower(a.ID), q) {
 			continue
 		}
 		out = append(out, a)

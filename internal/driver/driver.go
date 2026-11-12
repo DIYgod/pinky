@@ -345,9 +345,10 @@ type App struct {
 	ID     string // package name or bundle id
 	Name   string
 	System bool
-	// Aliases are other names the person knows the app by: on an iPhone,
-	// the name its home screen shows when that differs from the app's own
-	// ("微信" for WeChat, whose bundle is named WeChat in every language).
+	// Aliases are other names the person or an agent may know the app by.
+	// On an iPhone or a Simulator, Name is the name the home screen shows,
+	// in the phone's language ("微信"), and the alias is the bundle's own
+	// name when that differs ("WeChat", the same in every language).
 	Aliases []string
 	// CloneOf is set on an app clone (Android's 应用分身, Dual apps, App
 	// Twin): a second copy of an installed app that the phone keeps in
