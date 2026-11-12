@@ -76,16 +76,43 @@ type wdaRunner struct {
 // findRunnerApp finds the WebDriverAgent runner installed on the phone;
 // its BundleID is "" when there is none.
 func findRunnerApp(e goios.DeviceEntry) (wdaRunner, error) {
+	apps, err := userApps(e)
+	if err != nil {
+		return wdaRunner{}, err
+	}
+	return pickRunnerApp(apps), nil
+}
+
+// userApps lists the apps the person installed on the phone.
+func userApps(e goios.DeviceEntry) ([]installationproxy.AppInfo, error) {
 	conn, err := installationproxy.New(e)
 	if err != nil {
-		return wdaRunner{}, fmt.Errorf("installation proxy: %w", err)
+		return nil, fmt.Errorf("installation proxy: %w", err)
 	}
 	defer conn.Close()
 	apps, err := conn.BrowseUserApps()
 	if err != nil {
-		return wdaRunner{}, fmt.Errorf("list apps: %w", err)
+		return nil, fmt.Errorf("list apps: %w", err)
 	}
-	return pickRunnerApp(apps), nil
+	return apps, nil
+}
+
+// pickHelperApp is the helper among the installed apps, which an install
+// replaces: a runner as pickRunnerApp chooses one, but never Pinky's app
+// hosting WebDriverAgent, whose id a helper must not take. With only that app
+// there, the result names no bundle id but keeps the app's team, the one
+// to sign with.
+func pickHelperApp(apps []installationproxy.AppInfo) wdaRunner {
+	var helpers []installationproxy.AppInfo
+	for _, a := range apps {
+		if !wdaHost(a) {
+			helpers = append(helpers, a)
+		}
+	}
+	if h := pickRunnerApp(helpers); h.BundleID != "" {
+		return h
+	}
+	return wdaRunner{AppID: pickRunnerApp(apps).AppID}
 }
 
 // pickWDARunner chooses the runner among the installed apps: Pinky's

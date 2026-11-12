@@ -239,6 +239,29 @@ func TestPickWDARunner(t *testing.T) {
 	}
 }
 
+// TestPickHelperApp: an install replaces the helper, never Pinky's app
+// hosting WDA, which pickRunnerApp prefers; with only the app there it
+// keeps the app's team.
+func TestPickHelperApp(t *testing.T) {
+	host := installationproxy.AppInfo{"CFBundleIdentifier": "pinky.abcde12345.lite", "CFBundleName": "Pinky",
+		"CFBundleExecutable": "Pinky", wdaHostKey: true,
+		"Entitlements": map[string]any{"application-identifier": "ABCDE12345.pinky.abcde12345.lite"}}
+	helper := installationproxy.AppInfo{"CFBundleIdentifier": "com.example.wda.xctrunner",
+		"CFBundleName": "WebDriverAgentRunner-Runner", "CFBundleExecutable": "WebDriverAgentRunner-Runner"}
+	for _, apps := range [][]installationproxy.AppInfo{{host, helper}, {helper, host}} {
+		if got := pickHelperApp(apps); got.BundleID != "com.example.wda.xctrunner" {
+			t.Errorf("picked %q, want the helper", got.BundleID)
+		}
+	}
+	got := pickHelperApp([]installationproxy.AppInfo{host})
+	if got.BundleID != "" || appIDTeam(got.AppID) != "ABCDE12345" {
+		t.Errorf("only the app: got %+v, want no bundle id and the app's team", got)
+	}
+	if got := pickHelperApp(nil); got != (wdaRunner{}) {
+		t.Errorf("no apps: got %+v", got)
+	}
+}
+
 func TestTouchRecorder(t *testing.T) {
 	var r touchRecorder
 	t0 := time.Unix(100, 0)

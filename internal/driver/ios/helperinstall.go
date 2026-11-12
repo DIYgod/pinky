@@ -23,6 +23,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/danielpaulus/go-ios/ios/installationproxy"
+
 	"github.com/DIYgod/pinky/internal/driver"
 )
 
@@ -388,7 +390,10 @@ func helperBundleID(want, team string, r wdaRunner) string {
 func phoneRunner(ctx context.Context, x xcode, udid string) (wdaRunner, error) {
 	e, err := findEntry(udid, false)
 	if err == nil {
-		return findRunnerApp(e)
+		var apps []installationproxy.AppInfo
+		if apps, err = userApps(e); err == nil {
+			return pickHelperApp(apps), nil
+		}
 	}
 	r, derr := devicectlRunner(ctx, x, udid)
 	if derr != nil {
