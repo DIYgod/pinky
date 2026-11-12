@@ -78,6 +78,7 @@ class RequestHandler(
                     Reply(ok(id, service.setOnPhone(req.getBoolean("enabled"))))
                 }
                 "claim" -> Reply(ok(id, claim(req, conn)))
+                "debug_model" -> Reply(ok(id, debugModel(req, conn)))
                 else -> service.actionCommand(cmd, req)?.let { Reply(ok(id, it)) }
                     ?: throw RequestError("unknown_command", "unknown command: $cmd")
             }
@@ -118,6 +119,36 @@ class RequestHandler(
             h.write(j)
             j.endObject()
         }
+        j.endObject()
+        return j.toString()
+    }
+
+    /**
+     * debug_model sets the model's service, address and model and saves its
+     * key, as Settings does, for tests with a real model (corectl model,
+     * which reads the key from its standard input so that it never appears
+     * on a command line). Only debug builds have it, and only for this
+     * app's own uid (run-as); release builds answer unknown_command.
+     * Neither the key nor its length is logged or sent back.
+     */
+    private fun debugModel(req: JSONObject, conn: Connection): String {
+        if (!BuildConfig.DEBUG) throw RequestError("unknown_command", "unknown command: debug_model")
+        if (!conn.own) throw RequestError("forbidden", "only this app's own uid may set the model")
+        val settings = TaskSettings(service)
+        val p = if (req.optString("provider") == TaskSettings.OPENAI) TaskSettings.OPENAI else TaskSettings.ANTHROPIC
+        settings.provider = p
+        if (req.has("base_url")) {
+            val u = req.getString("base_url")
+            if (!TaskSettings.urlOK(u)) throw RequestError("bad_request", "base_url must be http or https")
+            settings.setBaseUrl(p, u)
+        }
+        if (req.has("model")) settings.setModel(p, req.getString("model"))
+        val key = req.optString("key")
+        if (key.isNotEmpty()) Secrets(service).save(p, key)
+        val j = Json()
+        j.beginObject()
+        j.field("provider", p)
+        j.field("key_saved", Secrets(service).has(p))
         j.endObject()
         return j.toString()
     }

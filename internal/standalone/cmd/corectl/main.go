@@ -20,6 +20,10 @@
 //	decide NEED DECISION
 //	history [-before MS] [-limit N]   list the tasks that ended, newest first
 //	history ID                 print one task with its steps
+//	model -provider P [-base-url U] [-model M]   set the model as Settings
+//	                           does and save the key read from standard
+//	                           input (one line), so that it never appears
+//	                           on a command line (debug builds only)
 package main
 
 import (
@@ -37,6 +41,10 @@ import (
 // socket is the development build's core socket (CORE_SOCKET in
 // android/companion/app/build.gradle.kts).
 const socket = "@pinky_core_dev"
+
+// serviceSocket is the development build's accessibility service socket
+// (SOCKET_NAME in android/companion/app/build.gradle.kts).
+const serviceSocket = "@pinky_companion_dev"
 
 // The parts of standalone.State it reads. It does not import the core, so
 // it builds as a static binary for the phone's shell.
@@ -146,6 +154,13 @@ func main() {
 			b, _ := json.MarshalIndent(map[string]any{"history": v, "more": r.More}, "", "  ")
 			fmt.Println(string(b))
 		}
+	case "model":
+		fs := flag.NewFlagSet("model", flag.ExitOnError)
+		provider := fs.String("provider", "anthropic", "anthropic or openai")
+		base := fs.String("base-url", "", "the API's address (empty: the service's default)")
+		model := fs.String("model", "", "the model")
+		_ = fs.Parse(args)
+		err = setModel(*provider, *base, *model)
 	default:
 		err = fmt.Errorf("unknown command %q", cmd)
 	}
@@ -172,6 +187,44 @@ func call(req map[string]any) (reply, error) {
 		return r, fmt.Errorf("%s", r.Error)
 	}
 	return r, nil
+}
+
+// setModel sends debug_model to the service with the key read from
+// standard input. It prints only whether a key is saved, never the key.
+func setModel(provider, base, model string) error {
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil && line == "" {
+		return fmt.Errorf("no key on standard input")
+	}
+	key := strings.TrimSpace(line)
+	if key == "" {
+		return fmt.Errorf("no key on standard input")
+	}
+	conn, err := net.Dial("unix", serviceSocket)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	if err := json.NewEncoder(conn).Encode(map[string]any{"id": 1, "cmd": "debug_model", "provider": provider,
+		"base_url": base, "model": model, "key": key}); err != nil {
+		return err
+	}
+	var r struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			Provider string `json:"provider"`
+			KeySaved bool   `json:"key_saved"`
+		} `json:"result"`
+		Error any `json:"error"`
+	}
+	if err := json.NewDecoder(conn).Decode(&r); err != nil {
+		return err
+	}
+	if !r.OK {
+		return fmt.Errorf("%v", r.Error)
+	}
+	fmt.Printf("provider %s, key saved: %v\n", r.Result.Provider, r.Result.KeySaved)
+	return nil
 }
 
 func watch(decide string, after, stopAfter time.Duration) error {
