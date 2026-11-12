@@ -63,21 +63,13 @@ func (f *fakeInstaller) swapped() []update.StartOptions {
 const (
 	testNotes   = "- Faster mirroring\n- Pinky updates itself"
 	testNotesZh = "- 镜像更快了\n- Pinky 会自己更新"
-	// feedDate is when the feed's release came out.
-	feedDate = "2026-11-07T10:00:00Z"
+	// feedDate is when the feed's release came out: 7:30 on 7 November in
+	// Asia/Shanghai, which is still 6 November by UTC and west of it.
+	feedDate = "2026-11-06T23:30:00Z"
+	// feedDay is the day its release notes give it, by every clock: its
+	// version's, 2026.1107.2, as What's new gives the changelog's.
+	feedDay = "November 7, 2026"
 )
-
-// feedDay is the day the feed's release came out as the views write it: by
-// the clocks where the test runs, which show the day before or after in
-// time zones far from UTC.
-func feedDay(t *testing.T) string {
-	t.Helper()
-	when, err := time.Parse(time.RFC3339, feedDate)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return locales.DayOtherYear(when.Local())
-}
 
 // feed serves latest.json for version and its zip.
 func feed(t *testing.T, version string) (*httptest.Server, []byte) {
@@ -147,8 +139,8 @@ func TestUpdateCardThenUpdateNow(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	if !hasText(tt, "Faster mirroring") || !hasText(tt, feedDay(t)) {
-		t.Errorf("the release notes: %q", tt.Texts())
+	if !hasText(tt, "Faster mirroring") || !hasText(tt, feedDay) {
+		t.Errorf("the release notes: %q, want the day %q", tt.Texts(), feedDay)
 	}
 	if err := tt.Click("Close"); err != nil {
 		t.Fatal(err)
@@ -168,6 +160,40 @@ func TestUpdateCardThenUpdateNow(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "Restarting Pinky") {
 		t.Errorf("the card while restarting: %q", tt.Texts())
+	}
+}
+
+// TestUpdateReleaseDay: the release notes give a release the day its
+// version says, at midnight UTC as the changelog's days are, whatever the
+// clock says of the feed's time; a version that says no day keeps the
+// feed's time by the local clock.
+func TestUpdateReleaseDay(t *testing.T) {
+	morning := time.Date(2026, 11, 6, 23, 30, 0, 0, time.UTC) // 7:30 on 7 November in Shanghai
+	day := func(y int, m time.Month, d int) time.Time { return time.Date(y, m, d, 0, 0, 0, 0, time.UTC) }
+	for _, c := range []struct {
+		version string
+		want    time.Time
+	}{
+		{"2026.1107.2", day(2026, 11, 7)},
+		{"v2026.1107.2", day(2026, 11, 7)},
+		{"2027.105.1", day(2027, 1, 5)},
+		{"2026.1231.12", day(2026, 12, 31)},
+		{"2028.229.1", day(2028, 2, 29)},
+		// No day in them: the feed's time.
+		{"2027.229.1", morning.Local()},
+		{"2026.1301.1", morning.Local()},
+		{"2026.1100.1", morning.Local()},
+		{"2026.7.1", morning.Local()},
+		{"2026.1107", morning.Local()},
+		{"0.1.0", morning.Local()},
+		{update.DevVersion, morning.Local()},
+	} {
+		if got := releaseDay(c.version, morning); !got.Equal(c.want) || got.Location() != c.want.Location() {
+			t.Errorf("releaseDay(%q) = %v, want %v", c.version, got, c.want)
+		}
+	}
+	if got := releaseDay(update.DevVersion, time.Time{}); !got.IsZero() {
+		t.Errorf("releaseDay with neither a day nor a time = %v, want none", got)
 	}
 }
 

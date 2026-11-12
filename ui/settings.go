@@ -705,8 +705,16 @@ func (a *app) settingsAgents(c *mg.Context) {
 	if !canList {
 		mg.Text(c, locales.SettingsAgentsUnlisted()).FontSize(fsCaption).TextColor(p.ink3)
 	}
-	a.askSettings(c)
-	a.connectAgents(c)
+	// Until an agent has connected, the list says to connect one below,
+	// and Connect an agent comes right there, before Ask Pinky, which
+	// would fill the window and leave it out of sight.
+	if len(rows) == 0 {
+		a.connectAgents(c)
+		a.askSettings(c)
+	} else {
+		a.askSettings(c)
+		a.connectAgents(c)
+	}
 	a.remoteAgents(c)
 }
 

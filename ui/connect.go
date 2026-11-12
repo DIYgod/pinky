@@ -209,7 +209,9 @@ func (a *app) connectAgents(c *mg.Context) {
 	if a.opt.AgentSetup != nil {
 		c.After(10 * time.Second)
 	}
-	mg.Column(c).Gap(10).Label(locales.ConnectTitle()).Children(func() {
+	// Keyed, as Ask Pinky is: the two change places when the first agent
+	// connects (settingsAgents).
+	mg.Column(c.Key("connect-agents")).Gap(10).Label(locales.ConnectTitle()).Children(func() {
 		intro := locales.ConnectIntro()
 		if a.opt.AgentSetup == nil {
 			intro = locales.ConnectIntroByHand()

@@ -162,6 +162,10 @@ type btnOpt struct {
 	// its label takes: the label then keeps its start and its end, around
 	// an ellipsis.
 	maxW float32
+	// shrink keeps a button of words no wider than the row or column it is
+	// in, its label cut as with maxW where that has less room, and then
+	// whole in a tooltip.
+	shrink bool
 }
 
 // A button's sizes: its height and the padding beside its label, for a
@@ -245,7 +249,7 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 		}
 		if text != "" {
 			t := mg.Text(c, text).FontSize(fs).FontWeight(fwMedium)
-			if o.maxW > 0 {
+			if o.maxW > 0 || o.shrink {
 				t.SingleLine().TruncateMiddle().MinWidth(0)
 			} else {
 				t.NoWrap()
@@ -254,6 +258,14 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 	})
 	if o.maxW > 0 {
 		b.MaxWidth(o.maxW)
+	}
+	if o.shrink {
+		b.MaxWidthPercent(100)
+		// Narrower than its label in the last frame, which a tooltip does
+		// not change: the label whole.
+		if lb := b.LayoutBounds(); lb.W > 0 && lb.W < buttonWidth(c, text, o.small)-0.01 {
+			b.Tooltip(text)
+		}
 	}
 	return b
 }
@@ -281,6 +293,13 @@ func linkButton(c *mg.Context, text string) mg.Element {
 		}
 	})
 	return b
+}
+
+// quietButtonWidth returns how wide quietButton draws text, for what lays
+// it out beside other buttons.
+func quietButtonWidth(c *mg.Context, text string) float32 {
+	w, _ := c.MeasureText(0, mg.Span{Text: text, Size: fsSmall, Weight: fwMedium})
+	return w
 }
 
 // quietButton is a text button in the secondary ink.
