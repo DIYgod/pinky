@@ -436,7 +436,12 @@ func write(t *testing.T, path, text string) {
 
 func TestTag(t *testing.T) {
 	clone, remote := gitRepo(t)
-	want, err := Next(time.Now(), nil)
+	// The release is dated by a fixed clock: by the computer's, a run across
+	// midnight in Asia/Shanghai would tag another day than want's.
+	at := time.Date(2026, 11, 12, 10, 0, 0, 0, shanghai)
+	timeNow = func() time.Time { return at }
+	t.Cleanup(func() { timeNow = time.Now })
+	want, err := Next(at, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
