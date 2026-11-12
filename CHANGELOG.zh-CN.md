@@ -2,6 +2,14 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- Pinky Helper 更名为 Pinky for iPhone，支持英文、简体中文和日文。
+- iOS 27 上可以直接在手机上配对 Pinky for iPhone：在「设置 › 隐私与安全性 › 开发者模式」里选 Pinky，再输入它显示的配对码。还没在真机上试过。
+- 从电脑安装时，现在装的是 Pinky for iPhone，它的测试服务也会替你保持运行。
+- iOS 关掉 Pinky for iPhone 的 VPN 后，它会自动重新打开；签名到期前两天会提醒你。
+- 任务开始时第一次读取手机屏幕失败，不会再直接放弃。
+
 ## 2026.1112.15 (2026-11-12)
 
 - Pinky 更新或重启后，通过 Wi-Fi 连接的 Android 手机即使熄屏，也会按上次连接的地址自动连回来，不用再等你点亮屏幕。有些手机（比如 HyperOS）熄屏后不会在网络上广播自己。感谢 @vinsew 的反馈。
