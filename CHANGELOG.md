@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1112.16 (2026-11-12)
 
 - Pinky Helper is now called Pinky for iPhone, and it speaks English, Simplified Chinese and Japanese.
 - On iOS 27, you can pair Pinky for iPhone with your phone from the phone itself: pick Pinky in Settings › Privacy & Security › Developer Mode and type the code it shows. Not yet tried on a real phone.
