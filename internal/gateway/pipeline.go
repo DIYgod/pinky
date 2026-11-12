@@ -1340,7 +1340,10 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 	case label != "" && a.Tool != "pinch":
 		return fmt.Sprintf("%s “%s”?", capitalize(verbFor(a)), label)
 	}
-	return capitalize(p.desc) + "?"
+	// History's p.desc says it in the past tense ("Tapped at 540,1200").
+	// Earlier gateways asked that ("Tapped at 540,1200?"), and the client
+	// still reads it from them and from the approvals they stored.
+	return capitalize(question(a, p)) + "?"
 }
 
 func verbFor(a Action) string {
@@ -2696,17 +2699,33 @@ func ocrInStatusBar(s *screen.Screen, e screen.Element) bool {
 	return e.Bounds.Center().Y < s.Height*6/100
 }
 
-// describe says what an action does, in plain words for history.
-func describe(a Action, p *prep) string {
+// describe says what an action did, in plain words for history: "Tapped
+// at 540,1200".
+func describe(a Action, p *prep) string { return sayAction(a, p, false) }
+
+// question says what an action would do, in the imperative, for an
+// approval's title that has nothing more particular to ask: "Tap at
+// 540,1200", as the other titles ask "Pay: …?" and "Open …?".
+func question(a Action, p *prep) string { return sayAction(a, p, true) }
+
+// sayAction says an action in describe's past tense or, when ask is set,
+// in question's imperative.
+func sayAction(a Action, p *prep, ask bool) string {
 	label := ""
 	if p != nil && p.target != nil && p.target.Label != "" {
 		label = "“" + clip(p.target.Label, 60) + "”"
 	}
+	tense := func(past, imperative string) string {
+		if ask {
+			return imperative
+		}
+		return past
+	}
 	switch a.Tool {
 	case "tap":
-		verb := "Tapped"
+		verb := tense("Tapped", "Tap")
 		if a.LongPress {
-			verb = "Long-pressed"
+			verb = tense("Long-pressed", "Long-press")
 		}
 		if label != "" {
 			return verb + " " + label
@@ -2716,40 +2735,42 @@ func describe(a Action, p *prep) string {
 		}
 		return verb
 	case "type":
-		s := fmt.Sprintf("Typed “%s”", clip(a.Text, 60))
+		s := fmt.Sprintf("%s “%s”", tense("Typed", "Type"), clip(a.Text, 60))
 		if label != "" {
 			s += " into " + label
 		}
 		if a.Submit {
-			s += " and submitted"
+			s += tense(" and submitted", " and submit")
 		}
 		return s
 	case "swipe":
+		verb := tense("Swiped", "Swipe")
 		if a.Direction != "" {
 			if label != "" {
-				return fmt.Sprintf("Swiped %s in %s", a.Direction, label)
+				return fmt.Sprintf("%s %s in %s", verb, a.Direction, label)
 			}
-			return "Swiped " + a.Direction
+			return verb + " " + a.Direction
 		}
-		return fmt.Sprintf("Swiped from %d,%d to %d,%d", a.From.X, a.From.Y, a.To.X, a.To.Y)
+		return fmt.Sprintf("%s from %d,%d to %d,%d", verb, a.From.X, a.From.Y, a.To.X, a.To.Y)
 	case "pinch":
-		return describePinch(a, label)
+		return describePinch(a, label, ask)
 	case "drag":
-		return describeDrag(a, p, label)
+		return describeDrag(a, p, label, ask)
 	case "key":
-		return "Pressed " + strings.ReplaceAll(a.Key, "_", " ")
+		return tense("Pressed ", "Press ") + strings.ReplaceAll(a.Key, "_", " ")
 	case "launch":
+		verb := tense("Opened", "Open")
 		name := a.App
 		if p != nil && p.launch.Name != "" {
 			name = p.launch.Name
 		}
 		if p != nil && p.url {
 			if p.launch.Name == "" && p.launch.ID == "" {
-				return fmt.Sprintf("Opened “%s”", clip(p.link, maxLinkText))
+				return fmt.Sprintf("%s “%s”", verb, clip(p.link, maxLinkText))
 			}
-			return fmt.Sprintf("Opened “%s” in %s", clip(p.link, maxLinkText), appLabel(screen.App{ID: p.launch.ID, Name: p.launch.Name}))
+			return fmt.Sprintf("%s “%s” in %s", verb, clip(p.link, maxLinkText), appLabel(screen.App{ID: p.launch.ID, Name: p.launch.Name}))
 		}
-		return "Opened " + name + localeWords(a)
+		return verb + " " + name + localeWords(a)
 	}
 	return a.Tool
 }
