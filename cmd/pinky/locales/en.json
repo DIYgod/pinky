@@ -10634,7 +10634,7 @@
   "@webApprovalsWhich": {
     "description": "Settings › Phones › Web mirror: in a request to answer approvals, the label of a menu of the phones connected to Pinky, and Another device. The person picks one before Allow."
   },
-  "webApprovalsWhichDesc": "While an agent uses that phone, Pinky refuses answers from it: whoever drives the phone could tap Allow.",
+  "webApprovalsWhichDesc": "While an agent uses that phone, and for 30 seconds after, Pinky refuses answers from it: whoever drives the phone could tap Allow.",
   "@webApprovalsWhichDesc": {
     "description": "Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky asks."
   },
@@ -10645,6 +10645,18 @@
   "webApprovalsOther": "Another device",
   "@webApprovalsOther": {
     "description": "Settings › Phones › Web mirror: in the menu of webApprovalsWhich, a device that is not a phone connected to Pinky."
+  },
+  "webApprovalsOtherIPhone": "This browser says it runs on an iPhone, and an iPhone is connected to Pinky. If it is that phone, choose it: otherwise an agent using it could answer.",
+  "@webApprovalsOtherIPhone": {
+    "description": "Settings › Phones › Web mirror: a warning under webApprovalsWhich when the person picks webApprovalsOther for a browser that says it runs on an iPhone while an iPhone is connected."
+  },
+  "webApprovalsOtherAndroid": "This browser says it runs on an Android phone, and an Android phone is connected to Pinky. If it is that phone, choose it: otherwise an agent using it could answer.",
+  "@webApprovalsOtherAndroid": {
+    "description": "Settings › Phones › Web mirror: as webApprovalsOtherIPhone, for Android."
+  },
+  "webApprovalsNoDevice": "That phone is no longer connected to Pinky. Choose again.",
+  "@webApprovalsNoDevice": {
+    "description": "Settings › Phones › Web mirror: a toast when the phone chosen in webApprovalsWhich went away before Allow."
   },
   "webApprovalsAllow": "Allow",
   "@webApprovalsAllow": {
@@ -10780,6 +10792,14 @@
   "@webApprovalsPageDeny": {
     "description": "The approvals page: the button that denies the step."
   },
+  "webApprovalsPageConfirmAllow": "Tap again to allow",
+  "@webApprovalsPageConfirmAllow": {
+    "description": "The approvals page: the Allow button after the first tap; the second tap opens the passkey sheet."
+  },
+  "webApprovalsPageConfirmDeny": "Tap again to deny",
+  "@webApprovalsPageConfirmDeny": {
+    "description": "The approvals page: as webApprovalsPageConfirmAllow, for Deny."
+  },
   "webApprovalsPageOnComputer": "Answer this one in Pinky on your computer.",
   "@webApprovalsPageOnComputer": {
     "description": "The approvals page: on a card it cannot answer (an agent's first connection, opening a blocked app)."
@@ -10832,7 +10852,7 @@
       }
     }
   },
-  "webApprovalsPageBusy": "An agent is using this phone, so it can't answer approvals now. Answer on the computer or on another phone.",
+  "webApprovalsPageBusy": "An agent is using this phone, or just did, so it can't answer approvals now. Answer on the computer or on another phone.",
   "@webApprovalsPageBusy": {
     "description": "The approvals page, on a phone Pinky drives, while an agent uses it."
   },

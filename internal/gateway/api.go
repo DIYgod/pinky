@@ -73,6 +73,11 @@ type DeviceView struct {
 	Status     DeviceStatus
 	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Needs setup", "Camera or microphone in use", "Offline"
 	TaskID     string // the running task, if any
+	// LeaseGen changes whenever an agent's task starts or ends on the
+	// phone, and LeaseEnded is when the last one ended (zero when none
+	// has).
+	LeaseGen   uint64
+	LeaseEnded time.Time
 	// Features says what the phone's driver offers, so the client shows
 	// only the controls that work. All false while the phone is offline.
 	Features Features

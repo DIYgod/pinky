@@ -28713,14 +28713,14 @@ func (msgs Messages) WebApprovalsWhich() string {
 	return Catalog.Format(msgs.locale, "webApprovalsWhich", nil)
 }
 
-// WebApprovalsWhichDesc says "While an agent uses that phone, Pinky refuses answers from it: whoever drives the phone could tap Allow."
+// WebApprovalsWhichDesc says "While an agent uses that phone, and for 30 seconds after, Pinky refuses answers from it: whoever drives the phone cou…"
 // in the language the app shows.
 //
 // Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky
 // asks.
 func WebApprovalsWhichDesc() string { return In(i18n.Locale()).WebApprovalsWhichDesc() }
 
-// WebApprovalsWhichDesc says "While an agent uses that phone, Pinky refuses answers from it: whoever drives the phone could tap Allow."
+// WebApprovalsWhichDesc says "While an agent uses that phone, and for 30 seconds after, Pinky refuses answers from it: whoever drives the phone cou…"
 // in the language of msgs.
 //
 // Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky
@@ -28759,6 +28759,56 @@ func WebApprovalsOther() string { return In(i18n.Locale()).WebApprovalsOther() }
 // device that is not a phone connected to Pinky.
 func (msgs Messages) WebApprovalsOther() string {
 	return Catalog.Format(msgs.locale, "webApprovalsOther", nil)
+}
+
+// WebApprovalsOtherIPhone says "This browser says it runs on an iPhone, and an iPhone is connected to Pinky. If it is that phone, choose it: otherwis…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a warning under webApprovalsWhich
+// when the person picks webApprovalsOther for a browser that says it runs
+// on an iPhone while an iPhone is connected.
+func WebApprovalsOtherIPhone() string { return In(i18n.Locale()).WebApprovalsOtherIPhone() }
+
+// WebApprovalsOtherIPhone says "This browser says it runs on an iPhone, and an iPhone is connected to Pinky. If it is that phone, choose it: otherwis…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a warning under webApprovalsWhich
+// when the person picks webApprovalsOther for a browser that says it runs
+// on an iPhone while an iPhone is connected.
+func (msgs Messages) WebApprovalsOtherIPhone() string {
+	return Catalog.Format(msgs.locale, "webApprovalsOtherIPhone", nil)
+}
+
+// WebApprovalsOtherAndroid says "This browser says it runs on an Android phone, and an Android phone is connected to Pinky. If it is that phone, choos…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: as webApprovalsOtherIPhone, for
+// Android.
+func WebApprovalsOtherAndroid() string { return In(i18n.Locale()).WebApprovalsOtherAndroid() }
+
+// WebApprovalsOtherAndroid says "This browser says it runs on an Android phone, and an Android phone is connected to Pinky. If it is that phone, choos…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: as webApprovalsOtherIPhone, for
+// Android.
+func (msgs Messages) WebApprovalsOtherAndroid() string {
+	return Catalog.Format(msgs.locale, "webApprovalsOtherAndroid", nil)
+}
+
+// WebApprovalsNoDevice says "That phone is no longer connected to Pinky. Choose again."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: a toast when the phone chosen in
+// webApprovalsWhich went away before Allow.
+func WebApprovalsNoDevice() string { return In(i18n.Locale()).WebApprovalsNoDevice() }
+
+// WebApprovalsNoDevice says "That phone is no longer connected to Pinky. Choose again."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: a toast when the phone chosen in
+// webApprovalsWhich went away before Allow.
+func (msgs Messages) WebApprovalsNoDevice() string {
+	return Catalog.Format(msgs.locale, "webApprovalsNoDevice", nil)
 }
 
 // WebApprovalsAllow says "Allow"
@@ -29155,6 +29205,36 @@ func (msgs Messages) WebApprovalsPageDeny() string {
 	return Catalog.Format(msgs.locale, "webApprovalsPageDeny", nil)
 }
 
+// WebApprovalsPageConfirmAllow says "Tap again to allow"
+// in the language the app shows.
+//
+// The approvals page: the Allow button after the first tap; the second tap
+// opens the passkey sheet.
+func WebApprovalsPageConfirmAllow() string { return In(i18n.Locale()).WebApprovalsPageConfirmAllow() }
+
+// WebApprovalsPageConfirmAllow says "Tap again to allow"
+// in the language of msgs.
+//
+// The approvals page: the Allow button after the first tap; the second tap
+// opens the passkey sheet.
+func (msgs Messages) WebApprovalsPageConfirmAllow() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageConfirmAllow", nil)
+}
+
+// WebApprovalsPageConfirmDeny says "Tap again to deny"
+// in the language the app shows.
+//
+// The approvals page: as webApprovalsPageConfirmAllow, for Deny.
+func WebApprovalsPageConfirmDeny() string { return In(i18n.Locale()).WebApprovalsPageConfirmDeny() }
+
+// WebApprovalsPageConfirmDeny says "Tap again to deny"
+// in the language of msgs.
+//
+// The approvals page: as webApprovalsPageConfirmAllow, for Deny.
+func (msgs Messages) WebApprovalsPageConfirmDeny() string {
+	return Catalog.Format(msgs.locale, "webApprovalsPageConfirmDeny", nil)
+}
+
 // WebApprovalsPageOnComputer says "Answer this one in Pinky on your computer."
 // in the language the app shows.
 //
@@ -29299,13 +29379,13 @@ func (msgs Messages) WebApprovalsPageRule(rule string) string {
 	return Catalog.Format(msgs.locale, "webApprovalsPageRule", map[string]any{"rule": rule})
 }
 
-// WebApprovalsPageBusy says "An agent is using this phone, so it can't answer approvals now. Answer on the computer or on another phone."
+// WebApprovalsPageBusy says "An agent is using this phone, or just did, so it can't answer approvals now. Answer on the computer or on another phone."
 // in the language the app shows.
 //
 // The approvals page, on a phone Pinky drives, while an agent uses it.
 func WebApprovalsPageBusy() string { return In(i18n.Locale()).WebApprovalsPageBusy() }
 
-// WebApprovalsPageBusy says "An agent is using this phone, so it can't answer approvals now. Answer on the computer or on another phone."
+// WebApprovalsPageBusy says "An agent is using this phone, or just did, so it can't answer approvals now. Answer on the computer or on another phone."
 // in the language of msgs.
 //
 // The approvals page, on a phone Pinky drives, while an agent uses it.

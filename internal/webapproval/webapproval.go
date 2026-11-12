@@ -98,7 +98,8 @@ const (
 	sessionIdle   = 12 * time.Hour     // a phone not seen for this long is forgotten
 	sessionLife   = 7 * 24 * time.Hour // and any phone after this long
 	ownerLife     = 5 * time.Second    // how long the owner's login is kept
-	pairRate      = 30                 // pair/* requests a minute, from anyone
+	pairRate      = 30                 // failed pair/begin calls a minute, and pair/* calls a minute per pairing
+	leaseCooldown = 30 * time.Second   // after an agent's task on a browser's phone ends, its answers are still refused
 	maxChallenges = 32                 // challenges open per phone
 	maxBody       = 64 << 10           // a request's body
 )
@@ -107,6 +108,8 @@ const (
 var (
 	ErrGone    = errors.New("this request is gone")
 	ErrTooMany = fmt.Errorf("at most %d phones can answer approvals; remove one first", MaxPhones)
+	// ErrNoDevice is a phone Pinky does not know.
+	ErrNoDevice = errors.New("no such phone")
 )
 
 // Request is a browser that asks to answer approvals, waiting for the
@@ -143,7 +146,7 @@ type Server struct {
 	ownerMu  sync.Mutex
 	owner    string
 	ownerAt  time.Time
-	pairHits []time.Time
+	pairHits map[string][]time.Time // by pairing, "begin" for failed begins, "unknown" for unknown pairings
 
 	mu         sync.Mutex
 	on         bool
@@ -191,6 +194,7 @@ type challenge struct {
 	phone    [32]byte
 	need     string
 	decision gateway.Decision
+	lease    uint64 // the browser's phone's LeaseGen when the challenge was issued
 	value    []byte
 	expires  time.Time
 	deadline time.Time // the approval's
@@ -290,8 +294,12 @@ func (s *Server) pairByIDLocked(id string) *pairing {
 
 // Allow adds the browser of a request; Pinky's window calls it when the
 // person clicks Allow, with the phone connected to Pinky the browser runs
-// on ("" for another device). It is the only way a phone is added.
+// on ("" for another device; ErrNoDevice for a phone Pinky does not know).
+// It is the only way a phone is added.
 func (s *Server) Allow(id, device string) error {
+	if device != "" && !s.knownDevice(device) {
+		return ErrNoDevice
+	}
 	s.mu.Lock()
 	now := time.Now()
 	s.sweepLocked(now)
@@ -308,7 +316,9 @@ func (s *Server) Allow(id, device string) error {
 	ph := &phone{Phone: Phone{ID: p.ID, Login: p.Login, Browser: p.Browser, Device: device, Added: now, LastSeen: now},
 		key: p.key, credID: p.credID, origin: p.origin, rpID: p.rpID, counter: p.counter}
 	s.phones[sha256.Sum256([]byte(tok))] = ph
-	p.state, p.session = pairAllowed, tok
+	// The page picks its session up within a few seconds; the request's
+	// own time may be nearly over.
+	p.state, p.session, p.expires = pairAllowed, tok, now.Add(linkLife)
 	s.mu.Unlock()
 	s.log.Info("approvals in the browser: phone added", "login", p.Login, "browser", p.Browser, "device", device)
 	s.changed()
@@ -408,19 +418,37 @@ func Answerable(n gateway.NeedView) bool {
 		n.DeviceID != "" && !n.Unblock
 }
 
-// busy reports whether an agent uses the phone the browser runs on: then
-// whoever drives it could open the page and tap Allow, and a glance at
-// the phone could pass Face ID, so its answers are refused.
-func (s *Server) busy(p *phone) bool {
-	if p.Device == "" {
-		return false
-	}
+// knownDevice reports whether a phone is connected to Pinky, or was.
+func (s *Server) knownDevice(id string) bool {
 	for _, d := range s.opt.Source.Devices() {
-		if d.Info.ID == p.Device {
-			return d.TaskID != ""
+		if d.Info.ID == id {
+			return true
 		}
 	}
 	return false
+}
+
+// lease says whether an agent uses the phone the browser runs on, or did
+// within leaseCooldown, and the phone's LeaseGen. Then whoever drives it
+// could open the page and tap Allow, and a glance at the phone could pass
+// Face ID, so its answers are refused. A phone Pinky no longer knows is
+// busy too.
+func (s *Server) lease(p *phone) (gen uint64, busy bool) {
+	if p.Device == "" {
+		return 0, false
+	}
+	for _, d := range s.opt.Source.Devices() {
+		if d.Info.ID == p.Device {
+			ended := !d.LeaseEnded.IsZero() && time.Since(d.LeaseEnded) < leaseCooldown
+			return d.LeaseGen, d.TaskID != "" || ended
+		}
+	}
+	return 0, true
+}
+
+func (s *Server) busy(p *phone) bool {
+	_, b := s.lease(p)
+	return b
 }
 
 // Handler serves the page and its API under Path. The web mirror serves
@@ -428,9 +456,9 @@ func (s *Server) busy(p *phone) bool {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+Path, s.servePage)
-	mux.HandleFunc("POST "+Path+"/api/pair/begin", s.limited(s.pairBegin))
-	mux.HandleFunc("POST "+Path+"/api/pair/finish", s.limited(s.pairFinish))
-	mux.HandleFunc("POST "+Path+"/api/pair/status", s.limited(s.pairStatus))
+	mux.HandleFunc("POST "+Path+"/api/pair/begin", s.pairBegin)
+	mux.HandleFunc("POST "+Path+"/api/pair/finish", s.pairFinish)
+	mux.HandleFunc("POST "+Path+"/api/pair/status", s.pairStatus)
 	mux.HandleFunc("POST "+Path+"/api/needs", s.authed(s.needs))
 	mux.HandleFunc("POST "+Path+"/api/shot", s.authed(s.shot))
 	mux.HandleFunc("POST "+Path+"/api/challenge", s.authed(s.challenge))
@@ -481,29 +509,45 @@ func (s *Server) ownerLogin(r *http.Request) bool {
 	return owner != "" && strings.EqualFold(owner, login)
 }
 
-// limited refuses pair/* past pairRate requests a minute, from anyone.
-func (s *Server) limited(h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		now := time.Now()
-		s.ownerMu.Lock()
-		keep := s.pairHits[:0]
-		for _, t := range s.pairHits {
+// limit counts a pair/* call under key and reports whether it may go
+// on: at most pairRate a minute per key. pair/finish and pair/status count
+// per pairing, so calls with made-up ids cannot starve the real page;
+// pair/begin counts only calls without the right link.
+func (s *Server) limit(key string) bool {
+	now := time.Now()
+	s.ownerMu.Lock()
+	defer s.ownerMu.Unlock()
+	if s.pairHits == nil {
+		s.pairHits = map[string][]time.Time{}
+	}
+	for k, hits := range s.pairHits {
+		keep := hits[:0]
+		for _, t := range hits {
 			if now.Sub(t) < time.Minute {
 				keep = append(keep, t)
 			}
 		}
-		s.pairHits = keep
-		ok := len(keep) < pairRate
-		if ok {
-			s.pairHits = append(s.pairHits, now)
+		if len(keep) == 0 {
+			delete(s.pairHits, k)
+		} else {
+			s.pairHits[k] = keep
 		}
-		s.ownerMu.Unlock()
-		if !ok {
-			apiError(w, http.StatusTooManyRequests, "slow_down")
-			return
-		}
-		h(w, r)
 	}
+	if len(s.pairHits[key]) >= pairRate {
+		return false
+	}
+	s.pairHits[key] = append(s.pairHits[key], now)
+	return true
+}
+
+// pairKey is the key pair/finish and pair/status count under.
+func (s *Server) pairKey(id string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.pairs[id]; ok && id != "" {
+		return "pair:" + id
+	}
+	return "unknown"
 }
 
 // tailnetOrigin is the origin `tailscale serve` gives the page under, and
@@ -603,6 +647,10 @@ func (s *Server) pairBegin(w http.ResponseWriter, r *http.Request) {
 	s.sweepLocked(now)
 	if s.link == "" || req.Link == "" || !constEq(req.Link, s.link) {
 		s.mu.Unlock()
+		if !s.limit("begin") {
+			apiError(w, http.StatusTooManyRequests, "slow_down")
+			return
+		}
 		apiError(w, http.StatusForbidden, "link")
 		return
 	}
@@ -636,6 +684,10 @@ func (s *Server) pairFinish(w http.ResponseWriter, r *http.Request) {
 	var req pairFinishReq
 	if readJSON(r, &req) != nil {
 		apiError(w, http.StatusBadRequest, "bad_request")
+		return
+	}
+	if !s.limit(s.pairKey(req.ID)) {
+		apiError(w, http.StatusTooManyRequests, "slow_down")
 		return
 	}
 	cred, e1 := b64.DecodeString(req.CredentialID)
@@ -706,6 +758,10 @@ func (s *Server) pairStatus(w http.ResponseWriter, r *http.Request) {
 	var req pairStatusReq
 	if readJSON(r, &req) != nil {
 		apiError(w, http.StatusBadRequest, "bad_request")
+		return
+	}
+	if !s.limit(s.pairKey(req.ID)) {
+		apiError(w, http.StatusTooManyRequests, "slow_down")
 		return
 	}
 	s.mu.Lock()
@@ -788,12 +844,17 @@ type needsResp struct {
 
 func (s *Server) needs(w http.ResponseWriter, r *http.Request, _ [32]byte, p *phone) {
 	out := needsResp{Now: time.Now().UnixMilli(), Busy: s.busy(p), Needs: []needView{}}
+	if out.Busy {
+		// Nothing at all: whoever drives the phone would see it.
+		writeJSON(w, http.StatusOK, out)
+		return
+	}
 	for _, n := range s.opt.Source.Needs() {
 		if n.Kind != gateway.NeedApproval {
 			continue
 		}
 		v := needView{ID: n.ID, Phone: n.DeviceName, Agent: n.Agent, Title: n.Title, Detail: n.Detail, Rule: n.Rule, App: n.App,
-			Created: n.Created.UnixMilli(), Deadline: n.Deadline.UnixMilli(), Answerable: Answerable(n) && !out.Busy}
+			Created: n.Created.UnixMilli(), Deadline: n.Deadline.UnixMilli(), Answerable: Answerable(n)}
 		// The screenshot only of what the page may answer.
 		if n.Screenshot != nil && Answerable(n) {
 			b := n.Screenshot.Bounds()
@@ -830,10 +891,14 @@ type idReq struct {
 }
 
 // shot sends the screenshot of an approval the page may answer, as JPEG.
-func (s *Server) shot(w http.ResponseWriter, r *http.Request, _ [32]byte, _ *phone) {
+func (s *Server) shot(w http.ResponseWriter, r *http.Request, _ [32]byte, p *phone) {
 	var req idReq
 	if readJSON(r, &req) != nil {
 		apiError(w, http.StatusBadRequest, "bad_request")
+		return
+	}
+	if s.busy(p) {
+		apiError(w, http.StatusForbidden, "busy")
 		return
 	}
 	n, ok := s.need(req.ID)
@@ -904,7 +969,8 @@ func (s *Server) challenge(w http.ResponseWriter, r *http.Request, hash [32]byte
 		apiError(w, http.StatusForbidden, "computer")
 		return
 	}
-	if s.busy(p) {
+	gen, busy := s.lease(p)
+	if busy {
 		apiError(w, http.StatusForbidden, "busy")
 		return
 	}
@@ -935,7 +1001,7 @@ func (s *Server) challenge(w http.ResponseWriter, r *http.Request, hash [32]byte
 	if mine >= maxChallenges {
 		delete(s.challenges, oldest)
 	}
-	s.challenges[k] = &challenge{phone: hash, need: n.ID, decision: d, value: v, expires: exp, deadline: n.Deadline}
+	s.challenges[k] = &challenge{phone: hash, need: n.ID, decision: d, lease: gen, value: v, expires: exp, deadline: n.Deadline}
 	s.mu.Unlock()
 	writeJSON(w, http.StatusOK, challengeResp{Challenge: k, CredentialID: b64.EncodeToString(p.credID), RPID: p.rpID,
 		Expires: exp.UnixMilli()})
@@ -1015,7 +1081,11 @@ func (s *Server) decide(w http.ResponseWriter, r *http.Request, hash [32]byte, p
 	}
 	p.counter = n
 	s.mu.Unlock()
-	if s.busy(p) {
+	// No agent on the browser's phone now, within leaseCooldown, or at any
+	// time since the challenge (a task that started and ended between the
+	// tap and now changed LeaseGen). This is read just before Decide, not
+	// under one lock with it: a task that starts in between did not tap.
+	if gen, busy := s.lease(p); busy || gen != c.lease {
 		apiError(w, http.StatusForbidden, "busy")
 		return
 	}

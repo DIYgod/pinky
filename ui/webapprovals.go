@@ -3,11 +3,14 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/webapproval"
 )
 
@@ -106,9 +109,14 @@ func (a *app) webApprovalsSettings(c *mg.Context, tn RemoteTailnet) {
 
 // webApprovalsPick is a choice in the menu of the phone a browser runs on.
 type webApprovalsPick struct {
-	label  string
-	device string // "" for another device
+	label    string
+	device   string // "" for another device
+	platform driver.Platform
 }
+
+// webApprovalsOther is what Settings keeps when the person says a browser
+// runs on another device; a device id is never empty.
+const webApprovalsOther = "\x00other"
 
 // webApprovalsPicks are the phones connected to Pinky, then Another
 // device; labels are told apart when two phones share a name.
@@ -123,7 +131,7 @@ func (a *app) webApprovalsPicks() []webApprovalsPick {
 		if seen[label]++; seen[label] > 1 {
 			label = fmt.Sprintf("%s (%d)", label, seen[label])
 		}
-		out = append(out, webApprovalsPick{label: label, device: d.Info.ID})
+		out = append(out, webApprovalsPick{label: label, device: d.Info.ID, platform: d.Info.Platform})
 	}
 	return append(out, webApprovalsPick{label: locales.WebApprovalsOther()})
 }
@@ -135,9 +143,31 @@ func webApprovalsBrowser(b string) string {
 	return b
 }
 
+// webApprovalsOtherWarning is the warning when the person says a browser
+// runs on another device but it says it runs on an iPhone or an Android
+// phone and one is connected: it may be that phone after all.
+func webApprovalsOtherWarning(browser string, picks []webApprovalsPick) string {
+	has := func(pl driver.Platform) bool {
+		for _, pk := range picks {
+			if pk.device != "" && pk.platform == pl {
+				return true
+			}
+		}
+		return false
+	}
+	switch {
+	case strings.HasPrefix(browser, "iPhone") && has(driver.IOS):
+		return locales.WebApprovalsOtherIPhone()
+	case strings.HasPrefix(browser, "Android") && has(driver.Android):
+		return locales.WebApprovalsOtherAndroid()
+	}
+	return ""
+}
+
 // webApprovalsRequest is a browser asking to answer approvals: the code
 // to compare, large, which phone the browser runs on, and Deny and Allow.
-// Allow shows once the person says which phone.
+// Allow shows once the person says which phone. The choice is kept by
+// device id, never by its label.
 func (a *app) webApprovalsRequest(c *mg.Context, wa WebApprovals, q webapproval.Request, picks []webApprovalsPick) {
 	p := pal(c)
 	r := &a.webMirror
@@ -147,6 +177,18 @@ func (a *app) webApprovalsRequest(c *mg.Context, wa WebApprovals, q webapproval.
 	code := q.Code
 	if len(code) == 6 {
 		code = code[:3] + " " + code[3:]
+	}
+	// The kept choice, if that phone is still connected.
+	chosen, picked := r.approvalPick[q.ID]
+	var pick *webApprovalsPick
+	for i := range picks {
+		if picked && (picks[i].device == chosen || picks[i].device == "" && chosen == webApprovalsOther) {
+			pick = &picks[i]
+		}
+	}
+	if picked && pick == nil {
+		// That phone went away: ask again.
+		delete(r.approvalPick, q.ID)
 	}
 	kc := c.Key("wa-req-" + q.ID)
 	mg.Row(kc).Gap(sp2).AlignItems(mg.Start).Padding(12, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).
@@ -162,44 +204,43 @@ func (a *app) webApprovalsRequest(c *mg.Context, wa WebApprovals, q webapproval.
 				for _, pk := range picks {
 					labels = append(labels, pk.label)
 				}
-				sel := r.approvalPick[q.ID]
-				if sel == "" {
-					sel = labels[0]
+				sel := labels[0]
+				if pick != nil {
+					sel = pick.label
 				}
 				if mg.Select(kc.Key("which"), &sel, labels).Label(locales.WebApprovalsWhich()).Changed() {
-					if sel == labels[0] {
-						delete(r.approvalPick, q.ID)
-					} else {
-						r.approvalPick[q.ID] = sel
+					delete(r.approvalPick, q.ID)
+					if i := slices.Index(labels, sel); i > 0 {
+						dev := picks[i-1].device
+						if dev == "" {
+							dev = webApprovalsOther
+						}
+						r.approvalPick[q.ID] = dev
 					}
 				}
 			})
 			mg.Text(kc, locales.WebApprovalsWhichDesc()).FontSize(fsCaption).TextColor(p.ink2).LineHeight(1.4)
+			if pick != nil && pick.device == "" {
+				if warn := webApprovalsOtherWarning(q.Browser, picks); warn != "" {
+					mg.Text(kc, warn).FontSize(fsSmall).TextColor(p.amber).LineHeight(1.4)
+				}
+			}
 			mg.Row(kc).Gap(8).Justify(mg.End).Children(func() {
 				if button(kc.Key("deny"), locales.WebApprovalsDeny(), btnOpt{small: true}).Clicked() {
 					wa.Deny(q.ID)
 					delete(r.approvalPick, q.ID)
 				}
-				pick, picked := r.approvalPick[q.ID]
-				if !picked {
-					return
-				}
-				device, found := "", false
-				for _, pk := range picks {
-					if pk.label == pick {
-						device, found = pk.device, true
-					}
-				}
-				if !found {
-					// That phone went away: ask again.
-					delete(r.approvalPick, q.ID)
+				if pick == nil {
 					return
 				}
 				if button(kc.Key("allow"), locales.WebApprovalsAllow(), btnOpt{small: true, kind: btnPrimary}).Clicked() {
-					err := wa.Allow(q.ID, device)
+					err := wa.Allow(q.ID, pick.device)
 					delete(r.approvalPick, q.ID)
-					if errors.Is(err, webapproval.ErrTooMany) {
+					switch {
+					case errors.Is(err, webapproval.ErrTooMany):
 						c.Toast(locales.WebApprovalsTooMany(webapproval.MaxPhones))
+					case errors.Is(err, webapproval.ErrNoDevice):
+						c.Toast(locales.WebApprovalsNoDevice())
 					}
 				}
 			})

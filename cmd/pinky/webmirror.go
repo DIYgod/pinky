@@ -156,6 +156,8 @@ func webApprovalsText(acceptLanguage string) (string, map[string]string) {
 		"removed":       m.WebApprovalsPageRemoved(),
 		"allow":         m.WebApprovalsPageAllow(),
 		"deny":          m.WebApprovalsPageDeny(),
+		"confirmAllow":  m.WebApprovalsPageConfirmAllow(),
+		"confirmDeny":   m.WebApprovalsPageConfirmDeny(),
 		"onComputer":    m.WebApprovalsPageOnComputer(),
 		"left":          m.WebApprovalsPageLeft("{seconds}"),
 		"timedOut":      m.WebApprovalsPageTimedOut(),

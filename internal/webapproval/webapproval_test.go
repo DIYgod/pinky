@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"io"
@@ -524,7 +525,25 @@ func (f *fakeSource) setTask(device, task string) {
 	defer f.mu.Unlock()
 	for i := range f.devices {
 		if f.devices[i].Info.ID == device {
+			// As the gateway: a task starting or ending changes LeaseGen.
+			if was := f.devices[i].TaskID; was != task {
+				f.devices[i].LeaseGen++
+				if task == "" {
+					f.devices[i].LeaseEnded = time.Now()
+				}
+			}
 			f.devices[i].TaskID = task
+		}
+	}
+}
+
+// endedAgo moves the end of a phone's last task back.
+func (f *fakeSource) endedAgo(device string, d time.Duration) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i := range f.devices {
+		if f.devices[i].Info.ID == device {
+			f.devices[i].LeaseEnded = time.Now().Add(-d)
 		}
 	}
 }
@@ -590,9 +609,9 @@ func TestCardsAndComputerOnly(t *testing.T) {
 	}
 }
 
-// A browser on a phone an agent uses answers nothing while the agent uses
-// it: whoever drives the phone could tap Allow while the person glances at
-// it.
+// A browser on a phone an agent uses answers nothing, and sees nothing,
+// while the agent uses it and for leaseCooldown after: whoever drives the
+// phone could tap Allow while the person glances at it, then let go.
 func TestBusyPhone(t *testing.T) {
 	t.Run("gateway", func(t *testing.T) {
 		g := newGateway(t, 30*time.Second)
@@ -601,7 +620,7 @@ func TestBusyPhone(t *testing.T) {
 		h.pair()
 		id, _ := ask(t, g) // the agent holds the Pixel
 		var needs needsResp
-		if h.post("needs", nil, &needs); !needs.Busy || len(needs.Needs) != 1 || needs.Needs[0].Answerable {
+		if h.post("needs", nil, &needs); !needs.Busy || len(needs.Needs) != 0 {
 			t.Fatalf("needs %+v", needs)
 		}
 		var e apiErr
@@ -613,30 +632,129 @@ func TestBusyPhone(t *testing.T) {
 		other.s, other.srv, other.credID = h.s, h.srv, []byte("cred-2")
 		other.key, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		other.pair()
+		needs = needsResp{}
+		if other.post("needs", nil, &needs); needs.Busy || len(needs.Needs) != 1 || !needs.Needs[0].Answerable {
+			t.Fatalf("other device's needs %+v", needs)
+		}
 		var res decideResp
 		if c := other.post("decide", other.sign(other.challenge(id, "deny")), &res); c != 200 || res.Result != "done" {
 			t.Fatalf("other device: %d %+v", c, res)
 		}
 	})
-	t.Run("an agent starts after the challenge", func(t *testing.T) {
-		src := &fakeSource{needs: []gateway.NeedView{payment("ap_1")},
-			devices: []gateway.DeviceView{{Info: driver.Info{ID: "pixel"}}, {Info: driver.Info{ID: "iphone"}}}}
-		h := newHarness(t, src)
-		h.device = "iphone"
+	t.Run("the gateway counts leases", func(t *testing.T) {
+		g := newGateway(t, 30*time.Second)
+		pixel := func() gateway.DeviceView {
+			for _, d := range g.Devices() {
+				if d.Info.ID == "pixel" {
+					return d
+				}
+			}
+			t.Fatal("no pixel")
+			return gateway.DeviceView{}
+		}
+		deadline := time.Now().Add(5 * time.Second)
+		for pixel().Info.State != driver.StateOnline && time.Now().Before(deadline) {
+			time.Sleep(10 * time.Millisecond)
+		}
+		before := pixel()
+		s := g.OpenSession(gateway.AgentInfo{Name: "Claude Code", Client: "test"})
+		if res := s.Connect(context.Background(), gateway.ConnectRequest{Task: "Lunch"}); res.IsError() {
+			t.Fatalf("connect: %+v", res)
+		}
+		during := pixel()
+		s.Close()
+		after := pixel()
+		if during.TaskID == "" || during.LeaseGen == before.LeaseGen || after.TaskID != "" || after.LeaseGen == during.LeaseGen ||
+			after.LeaseEnded.IsZero() || time.Since(after.LeaseEnded) > time.Minute {
+			t.Fatalf("before %+v, during %+v, after %+v", before, during, after)
+		}
+		// A browser on the Pixel answers nothing right after.
+		h := newHarness(t, g)
+		h.device = "pixel"
 		h.pair()
-		if ph := h.s.Phones(); len(ph) != 1 || ph[0].Device != "iphone" {
+		var needs needsResp
+		if h.post("needs", nil, &needs); !needs.Busy {
+			t.Fatalf("needs right after the task %+v", needs)
+		}
+	})
+
+	phones := func() *fakeSource {
+		return &fakeSource{needs: []gateway.NeedView{payment("ap_1")},
+			devices: []gateway.DeviceView{{Info: driver.Info{ID: "pixel"}}, {Info: driver.Info{ID: "iphone"}}}}
+	}
+	pairOn := func(t *testing.T, src *fakeSource, device string) *harness {
+		h := newHarness(t, src)
+		h.device = device
+		h.pair()
+		if ph := h.s.Phones(); len(ph) != 1 || ph[0].Device != device {
 			t.Fatalf("phones %+v", ph)
 		}
-		ch := h.challenge("ap_1", "allow")
-		src.setTask("iphone", "task-1")
+		return h
+	}
+	refused := func(t *testing.T, h *harness, src *fakeSource, ch challengeResp) {
+		t.Helper()
 		var e apiErr
 		if c := h.post("decide", h.sign(ch), &e); c != http.StatusForbidden || e.Error != "busy" || len(src.answers) != 0 {
 			t.Fatalf("decide: %d %+v, answers %v", c, e, src.answers)
 		}
+	}
+	t.Run("an agent starts after the tap", func(t *testing.T) {
+		src := phones()
+		h := pairOn(t, src, "iphone")
+		ch := h.challenge("ap_1", "allow")
+		src.setTask("iphone", "task-1")
+		refused(t, h, src, ch)
+		var needs needsResp
+		if h.post("needs", nil, &needs); !needs.Busy || len(needs.Needs) != 0 {
+			t.Fatalf("needs %+v", needs)
+		}
+		if c := h.shot("ap_1"); c != http.StatusForbidden {
+			t.Fatalf("shot while busy: %d", c)
+		}
+	})
+	t.Run("the task ends between the tap and the answer", func(t *testing.T) {
+		// The agent taps Allow, the passkey sheet passes Face ID while the
+		// person looks, and the agent lets go of the phone at once.
+		src := phones()
+		h := pairOn(t, src, "iphone")
+		ch := h.challenge("ap_1", "allow")
+		src.setTask("iphone", "task-1")
 		src.setTask("iphone", "")
+		src.endedAgo("iphone", 2*leaseCooldown) // even long ago: a lease came and went since the tap
+		refused(t, h, src, ch)
+	})
+	t.Run("cooldown", func(t *testing.T) {
+		src := phones()
+		h := pairOn(t, src, "iphone")
+		src.setTask("iphone", "task-1")
+		src.setTask("iphone", "")
+		var e apiErr
+		if c := h.post("challenge", challengeReq{ID: "ap_1", Decision: "allow"}, &e); c != http.StatusForbidden || e.Error != "busy" {
+			t.Fatalf("challenge right after the task: %d %+v", c, e)
+		}
+		src.endedAgo("iphone", leaseCooldown+time.Second)
 		var res decideResp
 		if c := h.post("decide", h.sign(h.challenge("ap_1", "allow")), &res); c != 200 || res.Result != "done" || len(src.answers) != 1 {
-			t.Fatalf("after the task: %d %+v %v", c, res, src.answers)
+			t.Fatalf("after the cooldown: %d %+v %v", c, res, src.answers)
+		}
+	})
+	t.Run("an unknown phone", func(t *testing.T) {
+		src := phones()
+		h := newHarness(t, src)
+		var begun pairBeginResp
+		h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &begun)
+		h.post("pair/finish", h.finishReq(begun), nil)
+		if err := h.s.Allow(h.s.Requests()[0].ID, "made-up"); !errors.Is(err, ErrNoDevice) || len(h.s.Phones()) != 0 {
+			t.Fatalf("allowed on a made-up phone: %v", err)
+		}
+		// A phone Pinky forgets afterwards is busy, not free.
+		h = pairOn(t, src, "iphone")
+		src.mu.Lock()
+		src.devices = src.devices[:1]
+		src.mu.Unlock()
+		var e apiErr
+		if c := h.post("challenge", challengeReq{ID: "ap_1", Decision: "allow"}, &e); c != http.StatusForbidden || e.Error != "busy" {
+			t.Fatalf("challenge on a forgotten phone: %d %+v", c, e)
 		}
 	})
 }
@@ -763,6 +881,8 @@ func TestSessionExpiry(t *testing.T) {
 	}
 }
 
+// Calls without the link are limited, and pair/status per pairing, so a
+// flood of made-up calls cannot keep the real page out.
 func TestPairRateLimit(t *testing.T) {
 	h := newHarness(t, &fakeSource{})
 	for i := range pairRate {
@@ -771,8 +891,51 @@ func TestPairRateLimit(t *testing.T) {
 		}
 	}
 	var e apiErr
-	if c := h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &e); c != http.StatusTooManyRequests || e.Error != "slow_down" {
+	if c := h.post("pair/begin", pairBeginReq{Link: "made-up"}, &e); c != http.StatusTooManyRequests || e.Error != "slow_down" {
 		t.Fatalf("got %d %+v", c, e)
+	}
+	for range 2 * pairRate {
+		h.post("pair/status", pairStatusReq{ID: "made-up", Poll: "x"}, nil)
+	}
+	if c := h.post("pair/status", pairStatusReq{ID: "made-up", Poll: "x"}, &e); c != http.StatusTooManyRequests {
+		t.Fatalf("made-up status: %d", c)
+	}
+	// The real page still gets through.
+	var begun pairBeginResp
+	if c := h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &begun); c != 200 {
+		t.Fatalf("begin: %d", c)
+	}
+	var fin pairFinishResp
+	if c := h.post("pair/finish", h.finishReq(begun), &fin); c != 200 {
+		t.Fatalf("finish: %d", c)
+	}
+	if err := h.s.Allow(h.s.Requests()[0].ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	var st pairStatusResp
+	if c := h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); c != 200 || st.State != "allowed" {
+		t.Fatalf("status: %d %+v", c, st)
+	}
+}
+
+// Allowed near the end of the request's time, the page still picks its
+// session up: no phone is left added that no page holds.
+func TestAllowLate(t *testing.T) {
+	h := newHarness(t, &fakeSource{})
+	var begun pairBeginResp
+	h.post("pair/begin", pairBeginReq{Link: h.s.NewLink()}, &begun)
+	var fin pairFinishResp
+	h.post("pair/finish", h.finishReq(begun), &fin)
+	h.s.mu.Lock()
+	h.s.pairs[begun.ID].expires = time.Now().Add(20 * time.Millisecond)
+	h.s.mu.Unlock()
+	if err := h.s.Allow(h.s.Requests()[0].ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(50 * time.Millisecond)
+	var st pairStatusResp
+	if h.post("pair/status", pairStatusReq{ID: begun.ID, Poll: fin.Poll}, &st); st.State != "allowed" || st.Session == "" {
+		t.Fatalf("status %+v", st)
 	}
 }
 

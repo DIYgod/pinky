@@ -87,10 +87,12 @@ func (f *fakeApprovals) Remove(id string) {
 	f.phones = nil
 }
 
-func (f *fakeApprovals) request() {
+func (f *fakeApprovals) request() { f.requestFrom("iPhone · Safari") }
+
+func (f *fakeApprovals) requestFrom(browser string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.reqs = append(f.reqs, webapproval.Request{ID: "req1", Login: "alex@example.com", Browser: "iPhone · Safari", Code: "482913", Created: time.Now()})
+	f.reqs = append(f.reqs, webapproval.Request{ID: "req1", Login: "alex@example.com", Browser: browser, Code: "482913", Created: time.Now()})
 }
 
 func webApprovalsApp(t *testing.T) (*testApp, *fakeApprovals) {
@@ -152,6 +154,13 @@ func TestWebApprovalsSettings(t *testing.T) {
 	if len(fa.allowed) != 0 {
 		t.Fatal("allowed by itself")
 	}
+	// Kept by the phone's id, not its label in the menu.
+	if got := ta.webMirror.approvalPick["req1"]; got != ta.devices[0].Info.ID {
+		t.Fatalf("kept %q", got)
+	}
+	if hasText(tt, "This browser says it runs on") {
+		t.Fatal("a warning for a phone connected to Pinky")
+	}
 	if err := tt.Click("Allow"); err != nil {
 		t.Fatal(err)
 	}
@@ -166,6 +175,39 @@ func TestWebApprovalsSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "no phone", func() bool { tt.Frame(); return hasText(tt, "None yet.") })
+}
+
+// A browser that says it runs on an Android phone, said to be on another
+// device while an Android phone is connected: Settings warns that it may
+// be that phone, whose agent could then answer.
+func TestWebApprovalsOtherDevice(t *testing.T) {
+	ta, fa := webApprovalsApp(t)
+	ta.settings.WebApprovals = true
+	fa.requestFrom("Android · Chrome")
+	tt := mg.NewTester(ta.view, 1280, 2600)
+	ta.waitFor(t, "the request", func() bool { tt.Frame(); return hasText(tt, "Which phone is this browser on?") })
+	if err := tt.Click("Choose…"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	// Choose…, Pixel 9, Another device.
+	tt.Key(0, mg.KeyDown)
+	tt.Key(0, mg.KeyDown)
+	tt.Key(0, mg.KeyEnter)
+	ta.waitFor(t, "the warning", func() bool {
+		tt.Frame()
+		return hasText(tt, "This browser says it runs on an Android phone, and an Android phone is connected to Pinky.")
+	})
+	if got := ta.webMirror.approvalPick["req1"]; got != webApprovalsOther {
+		t.Fatalf("kept %q", got)
+	}
+	if err := tt.Click("Allow"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the phone", func() bool { tt.Frame(); return len(fa.Phones()) == 1 })
+	if fa.devices[0] != "" {
+		t.Fatalf("allowed on %q", fa.devices[0])
+	}
 }
 
 // TestWebApprovalsScreenshots writes Settings › Phones › Web mirror with a

@@ -734,6 +734,7 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 	}
 	l.bgWanted = g.backgroundLocked(d) && scope.Mode != ScopeWatchOnly
 	d.lease = l
+	d.leaseGen++
 	if d.person {
 		// The person is still in control from before: the task starts paused.
 		t.state = TaskPaused
