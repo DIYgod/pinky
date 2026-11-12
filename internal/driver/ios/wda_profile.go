@@ -515,8 +515,8 @@ func (d *WDADevice) helperExpires(ctx context.Context) (time.Time, error) {
 
 // helperExpired says that the helper's profile ran out.
 func helperExpired(exp time.Time) string {
-	return "The WebDriverAgent helper's provisioning profile ran out on " + helperDate(exp) +
-		", so iOS no longer starts it. Install it again on a Mac with Xcode, with Install again in Pinky's window or pinkyctl helper install (docs/notes/ios.md, \"Installing the WebDriverAgent helper\"); with a free Apple ID it lasts 7 days."
+	return "Pinky for iPhone's provisioning profile ran out on " + helperDate(exp) +
+		", so iOS no longer starts it. Install it again on a Mac with Xcode, with Install again in Pinky's window or pinkyctl helper install (docs/notes/ios.md, \"Installing Pinky for iPhone\"); with a free Apple ID it lasts 7 days."
 }
 
 // helperDate writes when a profile runs out, in the computer's time zone.

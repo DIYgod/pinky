@@ -255,7 +255,7 @@ func setupNeedLocked(d *device) (NeedView, bool) {
 	}
 	return NeedView{ID: setupNeedPrefix + d.id, Kind: NeedSetup, DeviceID: d.id, DeviceName: d.name(),
 		Agent: l.session.agent.Name, TaskID: l.task.id, Title: "Enter the passcode on " + d.name(),
-		Detail: fmt.Sprintf("iOS asks for it on the phone before the WebDriverAgent helper can control it, and stops asking after a while. %s is waiting · %s",
+		Detail: fmt.Sprintf("iOS asks for it on the phone before Pinky for iPhone can control it, and stops asking after a while. %s is waiting · %s",
 			l.session.agent.Name, l.task.title),
 		Created: time.Now()}, true
 }

@@ -335,7 +335,7 @@ func (a *app) connectingPage(c *mg.Context, d gateway.DeviceView) {
 		title = locales.PhoneMovingWiFiTitle(d.Info.Name)
 	case "Moving to the cable":
 		title = locales.PhoneMovingCableTitle(d.Info.Name)
-	case "Switching to the helper":
+	case "Switching to Pinky for iPhone", "Switching to the helper":
 		title = locales.PhoneSwitchHelperTitle(d.Info.Name)
 	case "Switching to CoreDevice":
 		title = locales.PhoneSwitchCoreDeviceTitle(d.Info.Name)

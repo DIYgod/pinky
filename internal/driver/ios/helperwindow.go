@@ -24,7 +24,7 @@ import (
 
 // helperInstallingDetail is what List says about a phone while Pinky
 // installs its helper.
-const helperInstallingDetail = "Pinky is installing its helper on this iPhone; keep the phone unlocked until it is done."
+const helperInstallingDetail = "Pinky is installing Pinky for iPhone on this iPhone; keep the phone unlocked until it is done."
 
 // xcodeRecheck is how long CanInstallHelper trusts its last look for Xcode.
 const xcodeRecheck = time.Minute
@@ -65,12 +65,12 @@ func (p *Provider) CanInstallHelper() bool {
 
 // errHelperBusy is a second install while one runs: Xcode installs on one
 // phone at a time here.
-var errHelperBusy = errors.New("Pinky is already installing its helper on a phone")
+var errHelperBusy = errors.New("Pinky is already installing Pinky for iPhone on a phone")
 
 // InstallHelper implements driver.HelperInstaller.
 func (p *Provider) InstallHelper(ctx context.Context, id, team string, progress func(driver.HelperStep)) error {
 	if !p.CanInstallHelper() {
-		return &driver.HelperInstallError{Fix: driver.HelperFixXcode, Err: errors.New("installing the iPhone helper needs a Mac with Xcode")}
+		return &driver.HelperInstallError{Fix: driver.HelperFixXcode, Err: errors.New("installing Pinky for iPhone needs a Mac with Xcode")}
 	}
 	if id != "" && p.Only != nil && !p.Only[id] {
 		return &driver.HelperInstallError{Fix: driver.HelperFixPhone, Err: errors.New(id + " is not among the phones this provider may use")}

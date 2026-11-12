@@ -540,11 +540,11 @@
   },
   "addPhoneIPhoneStepPasscode": "Enter the passcode",
   "@addPhoneIPhoneStepPasscode": {
-    "description": "Add phone › iPhone, the phone's page and the checkup: the title of the step where the iPhone asks for its passcode before the WebDriverAgent helper may control it, as iOS does now and then."
+    "description": "Add phone › iPhone, the phone's page and the checkup: the title of the step where the iPhone asks for its passcode before Pinky for iPhone may control it, as iOS does now and then."
   },
-  "addPhoneIPhoneStepPasscodeDetail": "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone. If the iPhone no longer asks, Pinky tries again in a few minutes, or at once when you plug it in again.",
+  "addPhoneIPhoneStepPasscodeDetail": "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky for iPhone can control the phone. If the iPhone no longer asks, Pinky tries again in a few minutes, or at once when you plug it in again.",
   "@addPhoneIPhoneStepPasscodeDetail": {
-    "description": "Add phone › iPhone, the phone's page and the checkup: what to do while the iPhone asks for its passcode before the WebDriverAgent helper may control it. WebDriverAgent is a name. Pinky starts the helper again later when nobody entered the passcode."
+    "description": "Add phone › iPhone, the phone's page and the checkup: what to do while the iPhone asks for its passcode before Pinky for iPhone may control it. WebDriverAgent is a name. Pinky starts Pinky for iPhone again later when nobody entered the passcode."
   },
   "addPhoneIPhoneStepPlug": "Plug in the iPhone",
   "@addPhoneIPhoneStepPlug": {
@@ -694,23 +694,23 @@
   "@addPhoneOlderDetail": {
     "description": "Add phone › older iPhone: the line under the heading \"Pair your iPhone\", above two ways to connect."
   },
-  "addPhoneOlderHelper": "Install the Pinky helper",
+  "addPhoneOlderHelper": "Use Pinky for iPhone",
   "@addPhoneOlderHelper": {
-    "description": "Add phone › older iPhone: the first way to connect, by installing a helper app (WebDriverAgent) on the iPhone. Also its accessibility label."
+    "description": "Add phone › older iPhone: the first way to connect, by installing Pinky's iPhone app, which hosts WebDriverAgent, on the iPhone. Also its accessibility label. Pinky for iPhone is the name of Pinky's iPhone app (as Pinky for Android is the Android app's); older installs are the app Pinky Helper, which works the same."
   },
-  "addPhoneOlderHelperDetail": "WebDriverAgent, signed with your Apple ID; on the iPhone it shows as Pinky Helper. With a free Apple ID it needs re-signing every 7 days; a paid developer account lasts a year.",
+  "addPhoneOlderHelperDetail": "Pinky's app for the iPhone, signed with your Apple ID, through which Pinky controls the phone (WebDriverAgent). With a free Apple ID it needs re-signing every 7 days; a paid developer account lasts a year. Pinky Helper, installed before, keeps working.",
   "@addPhoneOlderHelperDetail": {
-    "description": "Add phone › older iPhone: under \"Install the Pinky helper\", what the helper is, its name on the iPhone's home screen, and how long its signature lasts. WebDriverAgent is a name. The home screen name is the one Pinky gives the helper in the iPhone's language: Pinky Helper, 「Pinky 助手」 in Chinese, 「Pinky ヘルパー」 in Japanese."
+    "description": "Add phone › older iPhone: under \"Install Pinky for iPhone\", what Pinky for iPhone is, that Pinky Helper installed before keeps working, and how long its signature lasts. WebDriverAgent is a name. Pinky Helper is the name an older install has on the iPhone's home screen in the iPhone's language: Pinky Helper, 「Pinky 助手」 in Chinese, 「Pinky ヘルパー」 in Japanese."
   },
   "addPhoneOlderHelperHow": "Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal, with the iPhone connected and unlocked. Pinky finds the iPhone after that.",
   "@addPhoneOlderHelperHow": {
-    "description": "Add phone › older iPhone, Install the Pinky helper chosen, where Pinky cannot install it from its window (no Mac, or no Xcode): how to install it. pinkyctl helper install is a command typed in Terminal (macOS's app, named as Apple names it in the language) and stays as it is."
+    "description": "Add phone › older iPhone, Install Pinky for iPhone chosen, where Pinky cannot install it from its window (no Mac, or no Xcode): how to install it. pinkyctl helper install is a command typed in Terminal (macOS's app, named as Apple names it in the language) and stays as it is."
   },
   "addPhoneOlderIPhone": "Try an older iPhone",
   "@addPhoneOlderIPhone": {
     "description": "Add phone › iPhone: the quiet button to the right of Pair that switches to the ways of connecting an older iPhone."
   },
-  "addPhoneOlderMirrorNotYet": "Pinky can't connect through iPhone Mirroring yet. Install the Pinky helper instead, or update to iOS 27.",
+  "addPhoneOlderMirrorNotYet": "Pinky can't connect through iPhone Mirroring yet. Install Pinky for iPhone instead, or update to iOS 27.",
   "@addPhoneOlderMirrorNotYet": {
     "description": "Add phone › older iPhone, Use iPhone Mirroring chosen: Pinky has no way in through iPhone Mirroring yet. iPhone Mirroring is Apple's name for the feature in the language."
   },
@@ -1692,9 +1692,9 @@
   "@checkDiskImageTitle": {
     "description": "Checkup, an iPhone's item: the title of the item about Apple's developer disk image, the add-on that gives the iPhone its developer services."
   },
-  "checkHelperExpired": "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again with pinkyctl helper install on a Mac with Xcode; signed with a free Apple ID, it lasts 7 days.",
+  "checkHelperExpired": "Pinky for iPhone on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again with pinkyctl helper install on a Mac with Xcode; signed with a free Apple ID, it lasts 7 days.",
   "@checkHelperExpired": {
-    "description": "Checkup and the Phone screen, an iPhone's helper (WebDriverAgent): the signature (provisioning profile) made with the person's Apple ID ran out, so the iPhone no longer starts the helper; pinkyctl helper install is a command that stays as it is; the button below opens how to install it. phone is the iPhone's name; when is when it ran out, with the time.",
+    "description": "Checkup and the Phone screen, Pinky for iPhone (WebDriverAgent): the signature (provisioning profile) made with the person's Apple ID ran out, so the iPhone no longer starts Pinky for iPhone; pinkyctl helper install is a command that stays as it is; the button below opens how to install it. phone is the iPhone's name; when is when it ran out, with the time.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -1706,9 +1706,9 @@
       }
     }
   },
-  "checkHelperExpiredHere": "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again; signed with a free Apple ID, it lasts 7 days.",
+  "checkHelperExpiredHere": "Pinky for iPhone on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again; signed with a free Apple ID, it lasts 7 days.",
   "@checkHelperExpiredHere": {
-    "description": "Checkup and the Phone screen, on a Mac with Xcode, an iPhone's helper (WebDriverAgent): the signature (provisioning profile) made with the person's Apple ID ran out, so the iPhone no longer starts the helper; the button below, Install again, installs it. phone is the iPhone's name; when is when it ran out, with the time.",
+    "description": "Checkup and the Phone screen, on a Mac with Xcode, Pinky for iPhone (WebDriverAgent): the signature (provisioning profile) made with the person's Apple ID ran out, so the iPhone no longer starts Pinky for iPhone; the button below, Install again, installs it. phone is the iPhone's name; when is when it ran out, with the time.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -1722,19 +1722,19 @@
   },
   "checkHelperHow": "How to install it",
   "@checkHelperHow": {
-    "description": "Checkup, an iPhone's item: the button that opens the instructions for installing the helper."
+    "description": "Checkup, an iPhone's item: the button that opens the instructions for installing Pinky for iPhone."
   },
   "checkHelperMissing": "WebDriverAgent isn't installed or doesn't answer. Below iOS 27 an iPhone takes taps and typing only through it; without it Pinky can only read the screen and open apps.",
   "@checkHelperMissing": {
-    "description": "Checkup, an iPhone's item: the helper is missing or does not answer."
+    "description": "Checkup, an iPhone's item: Pinky for iPhone is missing or does not answer."
   },
   "checkHelperPass": "WebDriverAgent is installed and answers.",
   "@checkHelperPass": {
-    "description": "Checkup, an iPhone's item: the helper answers."
+    "description": "Checkup, an iPhone's item: Pinky for iPhone answers."
   },
-  "checkHelperSoon": "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper install on a Mac with Xcode.",
+  "checkHelperSoon": "Pinky for iPhone on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper install on a Mac with Xcode.",
   "@checkHelperSoon": {
-    "description": "Checkup and a reminder on the Phone screen, an iPhone's helper (WebDriverAgent): its signature (provisioning profile) runs out within two days, after which the iPhone no longer starts the helper; pinkyctl helper install is a command that stays as it is; the button beside it opens how to install it. phone is the iPhone's name; when is when it runs out, with the time.",
+    "description": "Checkup and a reminder on the Phone screen, Pinky for iPhone (WebDriverAgent): its signature (provisioning profile) runs out within two days, after which the iPhone no longer starts Pinky for iPhone; pinkyctl helper install is a command that stays as it is; the button beside it opens how to install it. phone is the iPhone's name; when is when it runs out, with the time.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -1746,9 +1746,9 @@
       }
     }
   },
-  "checkHelperSoonHere": "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then.",
+  "checkHelperSoonHere": "Pinky for iPhone on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then.",
   "@checkHelperSoonHere": {
-    "description": "Checkup and a reminder on the Phone screen, on a Mac with Xcode, an iPhone's helper (WebDriverAgent): its signature (provisioning profile) runs out within two days, after which the iPhone no longer starts the helper; the button beside it, Install again, installs it. phone is the iPhone's name; when is when it runs out, with the time.",
+    "description": "Checkup and a reminder on the Phone screen, on a Mac with Xcode, Pinky for iPhone (WebDriverAgent): its signature (provisioning profile) runs out within two days, after which the iPhone no longer starts Pinky for iPhone; the button beside it, Install again, installs it. phone is the iPhone's name; when is when it runs out, with the time.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -1760,13 +1760,13 @@
       }
     }
   },
-  "checkHelperTitle": "Pinky helper",
+  "checkHelperTitle": "Pinky for iPhone",
   "@checkHelperTitle": {
-    "description": "Checkup, an iPhone's item: the title of the item about the WebDriverAgent helper, the app Pinky drives iPhones below iOS 27 through."
+    "description": "Checkup, an iPhone's item: the title of the item about Pinky for iPhone, the app Pinky drives iPhones below iOS 27 through. Pinky for iPhone is the name of Pinky's iPhone app (as Pinky for Android is the Android app's), which hosts WebDriverAgent; older installs are the app Pinky Helper, which works the same."
   },
   "checkHelperUntil": "Its signature lasts until {when, date, ::yMMMMd}. Pinky reminds you two days before.",
   "@checkHelperUntil": {
-    "description": "Checkup, an iPhone's helper (WebDriverAgent) that works: a note on when its signature (provisioning profile) runs out. when is that day, with the year.",
+    "description": "Checkup, Pinky for iPhone (WebDriverAgent) that works: a note on when its signature (provisioning profile) runs out. when is that day, with the year.",
     "placeholders": {
       "when": {
         "type": "DateTime",
@@ -1812,9 +1812,9 @@
   "@checkInputFail": {
     "description": "The checkup, tapping and typing: failed for another reason; the system's words follow."
   },
-  "checkInputIPhoneNoHelper": "No taps or typing without the Pinky helper.",
+  "checkInputIPhoneNoHelper": "No taps or typing without Pinky for iPhone.",
   "@checkInputIPhoneNoHelper": {
-    "description": "Checkup, an iPhone's item: the input item of an iPhone below iOS 27 without the helper."
+    "description": "Checkup, an iPhone's item: the input item of an iPhone below iOS 27 without Pinky for iPhone."
   },
   "checkInputIPhonePass": "The iPhone's touch and key service answers.",
   "@checkInputIPhonePass": {
@@ -2748,7 +2748,7 @@
   "@connectionAuto": {
     "description": "Settings › Phones, an iPhone's connection choice: the first choice, which goes by the iOS version."
   },
-  "connectionAutoDesc": "Without the helper on iOS 27 and later. If the WebDriverAgent helper is installed, a task moves to it for apps that refuse screen sharing (DBS digibank, China Merchants Bank) and comes back afterwards. Older iPhones use the helper when they have it.",
+  "connectionAutoDesc": "On iOS 27 and later, without Pinky for iPhone. If Pinky for iPhone is installed, a task moves to it for apps that refuse screen sharing (DBS digibank, China Merchants Bank) and comes back afterwards. Older iPhones use it when they have it.",
   "@connectionAutoDesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what Automatic does."
   },
@@ -2780,9 +2780,9 @@
   "@connectionChoose": {
     "description": "A link or button for an iPhone whose chosen connection does not work with it: opens Settings › Phones, where the connection is chosen."
   },
-  "connectionChosenNeedsIOS27": "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automatic or the WebDriverAgent helper in Settings › Phones.",
+  "connectionChosenNeedsIOS27": "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automatic or Pinky for iPhone in Settings › Phones.",
   "@connectionChosenNeedsIOS27": {
-    "description": "The phone's page, its checkup and Add phone › iPhone, for an iPhone below iOS 27 whose connection in Settings › Phones was set to CoreDevice (connectionCoreDevice), which it cannot use. Automatic and the WebDriverAgent helper are the other choices there (connectionAuto, connectionWDA). CoreDevice and WebDriverAgent are names.",
+    "description": "The phone's page, its checkup and Add phone › iPhone, for an iPhone below iOS 27 whose connection in Settings › Phones was set to CoreDevice (connectionCoreDevice), which it cannot use. Automatic and Pinky for iPhone are the other choices there (connectionAuto, connectionWDA). CoreDevice and WebDriverAgent are names.",
     "placeholders": {
       "version": {
         "type": "String",
@@ -2822,9 +2822,9 @@
   "@connectionNoAnswer": {
     "description": "Settings › Phones, an iPhone's connection choice: why a way cannot be checked."
   },
-  "connectionNotInstalled": "The helper isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal. Pinky starts it after that.",
+  "connectionNotInstalled": "Pinky for iPhone isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal. Pinky starts it after that.",
   "@connectionNotInstalled": {
-    "description": "Settings › Phones, an iPhone's connection choice: why the WebDriverAgent helper cannot be used yet, and how to install it. pinkyctl helper install is a command typed in Terminal (macOS's app, named as Apple names it in the language) and stays as it is."
+    "description": "Settings › Phones, an iPhone's connection choice: why Pinky for iPhone cannot be used yet, and how to install it. pinkyctl helper install is a command typed in Terminal (macOS's app, named as Apple names it in the language) and stays as it is."
   },
   "connectionOffline": "{platform} · offline",
   "@connectionOffline": {
@@ -2836,9 +2836,9 @@
       }
     }
   },
-  "connectionReadOnly": "read-only, no helper",
+  "connectionReadOnly": "read-only, without Pinky for iPhone",
   "@connectionReadOnly": {
-    "description": "Settings › Phones, an iPhone's connection choice: what Automatic picked on an iPhone below iOS 27 without the WebDriverAgent helper, where Pinky can read the screen but not act. Shown inside connectionAutoNow, so lower case."
+    "description": "Settings › Phones, an iPhone's connection choice: what Automatic picked on an iPhone below iOS 27 without Pinky for iPhone, where Pinky can read the screen but not act. Shown inside connectionAutoNow, so lower case."
   },
   "connectionReconnecting": "Reconnecting {phone} the way you chose…",
   "@connectionReconnecting": {
@@ -2854,13 +2854,13 @@
   "@connectionTitle": {
     "description": "Settings › Phones: the heading of an iPhone's choice of how Pinky connects to it."
   },
-  "connectionWDA": "WebDriverAgent helper",
+  "connectionWDA": "Pinky for iPhone (WebDriverAgent)",
   "@connectionWDA": {
-    "description": "Settings › Phones, an iPhone's connection choice: the way through the WebDriverAgent helper app. WebDriverAgent is a name."
+    "description": "Settings › Phones, an iPhone's connection choice: the way through Pinky for iPhone. WebDriverAgent is a name. Pinky for iPhone is the name of Pinky's iPhone app (as Pinky for Android is the Android app's), which hosts WebDriverAgent; older installs are the app Pinky Helper, which works the same."
   },
-  "connectionWDADesc": "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs the helper installed once from a Mac with Xcode, and now and then iOS asks on the iPhone for its passcode before the helper starts. The live picture and reading the screen are slower.",
+  "connectionWDADesc": "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky for iPhone installed once from a Mac with Xcode, and now and then iOS asks on the iPhone for its passcode before it starts. The live picture and reading the screen are slower.",
   "@connectionWDADesc": {
-    "description": "Settings › Phones, an iPhone's connection choice: what the WebDriverAgent helper gives and costs."
+    "description": "Settings › Phones, an iPhone's connection choice: what Pinky for iPhone gives and costs."
   },
   "dayOtherYear": "{day, date, ::yMMMMd}",
   "@dayOtherYear": {
@@ -3092,7 +3092,7 @@
   },
   "flyoutPasscode": "Enter the passcode on the phone",
   "@flyoutPasscode": {
-    "description": "Menu bar flyout: what the Needs you row of an iPhone says after the phone's name when iOS asks on the phone for its passcode before the WebDriverAgent helper may control it."
+    "description": "Menu bar flyout: what the Needs you row of an iPhone says after the phone's name when iOS asks on the phone for its passcode before Pinky for iPhone may control it."
   },
   "flyoutReview": "Review",
   "@flyoutReview": {
@@ -4754,11 +4754,11 @@
   },
   "gwStatusSwitchCoreDevice": "Switching to CoreDevice",
   "@gwStatusSwitchCoreDevice": {
-    "description": "An iPhone's status line while Pinky moves it back from the WebDriverAgent helper to CoreDevice after a task that needed the helper. Shown only in other languages."
+    "description": "An iPhone's status line while Pinky moves it back from Pinky for iPhone to CoreDevice after a task that needed it. Shown only in other languages."
   },
-  "gwStatusSwitchHelper": "Switching to the helper",
+  "gwStatusSwitchHelper": "Switching to Pinky for iPhone",
   "@gwStatusSwitchHelper": {
-    "description": "An iPhone's status line while Pinky moves an agent's task to the WebDriverAgent helper, for an app that refuses screen sharing. Shown only in other languages."
+    "description": "An iPhone's status line while Pinky moves an agent's task to Pinky for iPhone, for an app that refuses screen sharing. Shown only in other languages."
   },
   "gwStatusWaiting": "Waiting for you · {title}",
   "@gwStatusWaiting": {
@@ -5216,9 +5216,9 @@
   "@gwSwitchRotation": {
     "description": "Names a phone setting inside a step, such as “Set the screen's rotation to landscape”. Shown only in other languages; in English the gateway's own words show."
   },
-  "gwSetupPasscodeDetail": "iOS asks for it on the phone before the WebDriverAgent helper can control it, and stops asking after a while. {agent} is waiting · {task}",
+  "gwSetupPasscodeDetail": "iOS asks for it on the phone before Pinky for iPhone can control it, and stops asking after a while. {agent} is waiting · {task}",
   "@gwSetupPasscodeDetail": {
-    "description": "The second line of the card that asks the person to enter the iPhone's passcode on the phone itself, so that the WebDriverAgent helper can start for an agent's task. Shown only in other languages; in English the gateway's own words show.",
+    "description": "The second line of the card that asks the person to enter the iPhone's passcode on the phone itself, so that Pinky for iPhone can start for an agent's task. Shown only in other languages; in English the gateway's own words show.",
     "placeholders": {
       "agent": {
         "type": "String",
@@ -5232,7 +5232,7 @@
   },
   "gwSetupPasscodeTitle": "Enter the passcode on {phone}",
   "@gwSetupPasscodeTitle": {
-    "description": "The title of the card that asks the person to enter the iPhone's passcode on the phone itself, where iOS asks for it before the WebDriverAgent helper may control the phone. Shown only in other languages; in English the gateway's own words show.",
+    "description": "The title of the card that asks the person to enter the iPhone's passcode on the phone itself, where iOS asks for it before Pinky for iPhone may control the phone. Shown only in other languages; in English the gateway's own words show.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5316,19 +5316,19 @@
   },
   "helperCancel": "Cancel",
   "@helperCancel": {
-    "description": "Button that stops installing the iPhone helper while Xcode builds or installs it."
+    "description": "Button that stops installing Pinky for iPhone while Xcode builds or installs it."
   },
-  "helperChooseTeam": "This Mac can sign the helper for more than one team. Which one should sign it?",
+  "helperChooseTeam": "This Mac can sign Pinky for iPhone for more than one team. Which one should sign it?",
   "@helperChooseTeam": {
-    "description": "Installing the iPhone helper: the Mac has signing certificates of several Apple developer teams, and the person picks one with the buttons below."
+    "description": "Installing Pinky for iPhone: the Mac has signing certificates of several Apple developer teams, and the person picks one with the buttons below."
   },
-  "helperErrAppleID": "Xcode has no Apple ID to sign the helper with. Add yours in Xcode › Settings › Accounts (a free one works), then try again.",
+  "helperErrAppleID": "Xcode has no Apple ID to sign Pinky for iPhone with. Add yours in Xcode › Settings › Accounts (a free one works), then try again.",
   "@helperErrAppleID": {
-    "description": "Installing the iPhone helper failed: Xcode has no Apple account or team to sign with. Xcode › Settings › Accounts stays in English: Xcode has no other language."
+    "description": "Installing Pinky for iPhone failed: Xcode has no Apple account or team to sign with. Xcode › Settings › Accounts stays in English: Xcode has no other language."
   },
   "helperErrDeveloperMode": "Developer Mode is off on {phone}. Turn it on in Settings › Privacy & Security › Developer Mode (the phone restarts), then try again.",
   "@helperErrDeveloperMode": {
-    "description": "Installing the iPhone helper failed: Developer Mode is off; the path is the iPhone's Settings, named as Apple names them in the language. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed: Developer Mode is off; the path is the iPhone's Settings, named as Apple names them in the language. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5336,13 +5336,13 @@
       }
     }
   },
-  "helperErrDownload": "Pinky couldn't download the helper. Check this Mac's internet connection, then try again.",
+  "helperErrDownload": "Pinky couldn't download Pinky for iPhone. Check this Mac's internet connection, then try again.",
   "@helperErrDownload": {
-    "description": "Installing the iPhone helper failed: downloading its source failed."
+    "description": "Installing Pinky for iPhone failed: downloading what Pinky builds it from failed."
   },
   "helperErrInUse": "An agent is working on {phone}. Try again once its task ends.",
   "@helperErrInUse": {
-    "description": "Installing the iPhone helper refused: an agent's task holds the phone. phone is the iPhone's name.",
+    "description": "Installing Pinky for iPhone refused: an agent's task holds the phone. phone is the iPhone's name.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5350,9 +5350,9 @@
       }
     }
   },
-  "helperErrOther": "Installing the helper on {phone} failed.",
+  "helperErrOther": "Installing Pinky for iPhone on {phone} failed.",
   "@helperErrOther": {
-    "description": "Installing the iPhone helper failed for a reason Pinky has no words for; Xcode's own words follow in small print. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed for a reason Pinky has no words for; Xcode's own words follow in small print. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5360,9 +5360,9 @@
       }
     }
   },
-  "helperErrOtherTeam": "Another team signed the helper already on {phone}, and iOS replaces it only with one of that team. Delete Pinky Helper (or WebDriverAgentRunner) from the phone, then try again.",
+  "helperErrOtherTeam": "Another team signed Pinky Helper, already on {phone}, and iOS replaces it only with one of that team. Delete Pinky Helper (or WebDriverAgentRunner) from the phone, then try again.",
   "@helperErrOtherTeam": {
-    "description": "Installing the iPhone helper failed: the helper on the phone was signed by a team this Mac cannot sign for. Pinky Helper is the helper's name on the iPhone's home screen in the language (Pinky 助手, Pinky ヘルパー); WebDriverAgentRunner, an older one's, stays as it is. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed: Pinky Helper, the older app Pinky installed on the phone, was signed by a team this Mac cannot sign for. Pinky Helper is its name on the iPhone's home screen in the language (Pinky 助手, Pinky ヘルパー); WebDriverAgentRunner, an older one's, stays as it is. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5372,7 +5372,7 @@
   },
   "helperErrPasscode": "Nobody entered the passcode in time when {phone} asked for it to allow automation. Try again, and enter it on the phone when it asks.",
   "@helperErrPasscode": {
-    "description": "Installing the iPhone helper failed: iOS asked for the phone's passcode before it lets the helper control the phone, and it was not entered in time. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed: iOS asked for the phone's passcode before it lets Pinky for iPhone control the phone, and it was not entered in time. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5382,7 +5382,7 @@
   },
   "helperErrPhone": "Xcode can't reach {phone}. Connect it with a cable, or keep it unlocked on the same Wi-Fi as this Mac, then try again.",
   "@helperErrPhone": {
-    "description": "Installing the iPhone helper failed: Xcode does not see the phone. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed: Xcode does not see the phone. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5390,9 +5390,9 @@
       }
     }
   },
-  "helperErrSigning": "Xcode found no way to sign the helper for {phone}. Check your team in Xcode › Settings › Accounts, then try again.",
+  "helperErrSigning": "Xcode found no way to sign Pinky for iPhone for {phone}. Check your team in Xcode › Settings › Accounts, then try again.",
   "@helperErrSigning": {
-    "description": "Installing the iPhone helper failed: Xcode found no signing certificate or provisioning profile that covers the phone. Xcode › Settings › Accounts stays in English. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed: Xcode found no signing certificate or provisioning profile that covers the phone. Xcode › Settings › Accounts stays in English. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5402,7 +5402,7 @@
   },
   "helperErrTrust": "Your developer certificate isn't trusted on {phone} yet. On the phone, trust it in Settings › General › VPN & Device Management, then try again.",
   "@helperErrTrust": {
-    "description": "Installing the iPhone helper failed: the phone does not trust the developer who signed the helper yet; the path is the iPhone's Settings, named as Apple names them in the language. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed: the phone does not trust the developer who signed Pinky for iPhone yet; the path is the iPhone's Settings, named as Apple names them in the language. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5410,9 +5410,9 @@
       }
     }
   },
-  "helperErrUnlock": "Xcode couldn't install the helper while {phone} was locked. Unlock it, keep it unlocked, then try again.",
+  "helperErrUnlock": "Xcode couldn't install Pinky for iPhone while {phone} was locked. Unlock it, keep it unlocked, then try again.",
   "@helperErrUnlock": {
-    "description": "Installing the iPhone helper failed: the phone stayed locked while Xcode waited for it. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone failed: the phone stayed locked while Xcode waited for it. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5420,25 +5420,25 @@
       }
     }
   },
-  "helperErrXcode": "Installing the helper needs Xcode. Install it from the App Store, open it once, then try again.",
+  "helperErrXcode": "Installing Pinky for iPhone needs Xcode. Install it from the App Store, open it once, then try again.",
   "@helperErrXcode": {
-    "description": "Installing the iPhone helper failed: this Mac has no Xcode."
+    "description": "Installing Pinky for iPhone failed: this Mac has no Xcode."
   },
-  "helperInstall": "Install the helper",
+  "helperInstall": "Install Pinky for iPhone",
   "@helperInstall": {
-    "description": "Button on a Mac with Xcode, in the checkup, on the Phone screen and in Add phone: Pinky builds the Pinky helper (WebDriverAgent) with Xcode and installs it on the iPhone."
+    "description": "Button on a Mac with Xcode, in the checkup, on the Phone screen and in Add phone: Pinky builds Pinky for iPhone (WebDriverAgent) with Xcode and installs it on the iPhone. Pinky for iPhone is the name of Pinky's iPhone app (as Pinky for Android is the Android app's), which hosts WebDriverAgent; older installs are the app Pinky Helper, which works the same."
   },
   "helperInstallAgain": "Install again",
   "@helperInstallAgain": {
-    "description": "Button on a Mac with Xcode: installs an iPhone's helper (WebDriverAgent) again, as its signature runs out soon or ran out."
+    "description": "Button on a Mac with Xcode: installs Pinky for iPhone (WebDriverAgent) again, as its signature runs out soon or ran out."
   },
-  "helperInstallNote": "Pinky builds the helper with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done.",
+  "helperInstallNote": "Pinky builds Pinky for iPhone with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done.",
   "@helperInstallNote": {
-    "description": "Under the button that installs the iPhone helper from Pinky's window: what it does, and what the person keeps in mind meanwhile."
+    "description": "Under the button that installs Pinky for iPhone from Pinky's window: what it does, and what the person keeps in mind meanwhile."
   },
-  "helperInstalledToast": "The Pinky helper is installed on {phone}.",
+  "helperInstalledToast": "Pinky for iPhone is installed on {phone}.",
   "@helperInstalledToast": {
-    "description": "Toast once the iPhone helper is installed from Pinky's window. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Toast once Pinky for iPhone is installed from Pinky's window. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5448,15 +5448,15 @@
   },
   "helperShowLog": "Show the log",
   "@helperShowLog": {
-    "description": "Link after installing the iPhone helper failed: shows Xcode's log of the install in Finder."
+    "description": "Link after installing Pinky for iPhone failed: shows Xcode's log of the install in Finder."
   },
-  "helperStepBuilding": "Building the helper with Xcode. This takes a minute or two.",
+  "helperStepBuilding": "Building Pinky for iPhone with Xcode. This takes a few minutes.",
   "@helperStepBuilding": {
-    "description": "Installing the iPhone helper from Pinky's window: Xcode builds it on this Mac."
+    "description": "Installing Pinky for iPhone from Pinky's window: Xcode builds it on this Mac."
   },
-  "helperStepInstalling": "Installing the helper on {phone}. If the phone asks for its passcode, enter it there.",
+  "helperStepInstalling": "Installing Pinky for iPhone on {phone}. If the phone asks for its passcode, enter it there.",
   "@helperStepInstalling": {
-    "description": "Installing the iPhone helper from Pinky's window: Xcode installs it on the phone and starts it; iOS may ask for the phone's passcode to allow automation, which the person enters on the phone. phone is the iPhone's name, or \"the iPhone\" when Pinky does not know it yet.",
+    "description": "Installing Pinky for iPhone from Pinky's window: Xcode installs it on the phone and starts it; iOS may ask for the phone's passcode to allow automation, which the person enters on the phone. phone is the iPhone's name, or \"the iPhone\" when Pinky does not know it yet.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5466,11 +5466,11 @@
   },
   "helperStepPreparing": "Getting ready…",
   "@helperStepPreparing": {
-    "description": "Installing the iPhone helper from Pinky's window, first step: Pinky finds the iPhone and the team that signs, and downloads the helper the first time."
+    "description": "Installing Pinky for iPhone from Pinky's window, first step: Pinky finds the iPhone and the team that signs, and downloads Pinky for iPhone the first time."
   },
   "helperStepUnlock": "Unlock {phone} and keep it unlocked: Xcode is waiting for it.",
   "@helperStepUnlock": {
-    "description": "Installing the iPhone helper from Pinky's window, shown in bold: the phone is locked and Xcode waits for the person to unlock it. phone is the iPhone's name, or \"the iPhone\".",
+    "description": "Installing Pinky for iPhone from Pinky's window, shown in bold: the phone is locked and Xcode waits for the person to unlock it. phone is the iPhone's name, or \"the iPhone\".",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5480,7 +5480,7 @@
   },
   "helperTeam": "{name} ({id})",
   "@helperTeam": {
-    "description": "Button choosing the Apple developer team that signs the iPhone helper: the team's name and ID, as Xcode lists them.",
+    "description": "Button choosing the Apple developer team that signs Pinky for iPhone: the team's name and ID, as Xcode lists them.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -5494,7 +5494,7 @@
   },
   "helperThisIPhone": "the iPhone",
   "@helperThisIPhone": {
-    "description": "Stands for the phone's name in the messages about installing the iPhone helper, when Pinky does not know the phone yet (Add phone); written to read well in their middle."
+    "description": "Stands for the phone's name in the messages about installing Pinky for iPhone, when Pinky does not know the phone yet (Add phone); written to read well in their middle."
   },
   "listMany": "{rest} and {last}",
   "@listMany": {
@@ -6726,9 +6726,9 @@
   "@phoneHandBack": {
     "description": "Button that gives the phone back to the agents after the person took over: on the banner above the mirror and on All phones tiles."
   },
-  "phoneHelperPasscode": "Enter the passcode on {phone}: iOS asks for it before the WebDriverAgent helper can work. Then try again.",
+  "phoneHelperPasscode": "Enter the passcode on {phone}: iOS asks for it before Pinky for iPhone can work. Then try again.",
   "@phoneHelperPasscode": {
-    "description": "A toast after the person turned the screen (Rotate in ⋯ under the mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to the WebDriverAgent helper to turn it, and iOS asks on the phone for its passcode before the helper starts. phone is the phone's name. WebDriverAgent is a name."
+    "description": "A toast after the person turned the screen (Rotate in ⋯ under the mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to Pinky for iPhone to turn it, and iOS asks on the phone for its passcode before Pinky for iPhone starts. phone is the phone's name. WebDriverAgent is a name."
   },
   "phoneKeyBack": "Back",
   "@phoneKeyBack": {
@@ -6928,7 +6928,7 @@
   },
   "phoneRotate": "Rotate",
   "@phoneRotate": {
-    "description": "A row of ⋯ under the mirror: the buttons beside it turn the phone's screen to portrait, landscape and the like. Also shown disabled, with phoneRotateTooltip, on an iPhone or iPad without the WebDriverAgent helper."
+    "description": "A row of ⋯ under the mirror: the buttons beside it turn the phone's screen to portrait, landscape and the like. Also shown disabled, with phoneRotateTooltip, on an iPhone or iPad without Pinky for iPhone."
   },
   "phoneRotateAuto": "Auto-rotate",
   "@phoneRotateAuto": {
@@ -6954,9 +6954,9 @@
   "@phoneRotateReverseLandscape": {
     "description": "A button of the Rotate row, as its tooltip: the phone turned a quarter clockwise, its top on the right."
   },
-  "phoneRotateTooltip": "Turning the screen needs the WebDriverAgent helper. Settings › Phones says how to install it, or lets you choose it for this phone.",
+  "phoneRotateTooltip": "Turning the screen needs Pinky for iPhone. Settings › Phones says how to install it, or lets you choose it for this phone.",
   "@phoneRotateTooltip": {
-    "description": "The tooltip of the disabled Rotate item on an iPhone or iPad that cannot use the WebDriverAgent helper: it is not installed, or the person chose CoreDevice for it in Settings › Phones. The app calls both phones. Settings › Phones says how to install the helper and offers it as connectionWDA. WebDriverAgent is a name."
+    "description": "The tooltip of the disabled Rotate item on an iPhone or iPad that cannot use Pinky for iPhone: it is not installed, or the person chose CoreDevice for it in Settings › Phones. The app calls both phones. Settings › Phones says how to install Pinky for iPhone and offers it as connectionWDA. WebDriverAgent is a name."
   },
   "phoneRotateUpsideDown": "Upside down",
   "@phoneRotateUpsideDown": {
@@ -7034,7 +7034,7 @@
   },
   "phoneSwitchCoreDeviceTitle": "Moving {phone} back to CoreDevice…",
   "@phoneSwitchCoreDeviceTitle": {
-    "description": "The page of an iPhone while Pinky moves it back from the WebDriverAgent helper to CoreDevice after a task. phone is its name.",
+    "description": "The page of an iPhone while Pinky moves it back from Pinky for iPhone to CoreDevice after a task. phone is its name.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -7042,9 +7042,9 @@
       }
     }
   },
-  "phoneSwitchHelperTitle": "Moving {phone} to the helper…",
+  "phoneSwitchHelperTitle": "Moving {phone} to Pinky for iPhone…",
   "@phoneSwitchHelperTitle": {
-    "description": "The page of an iPhone while Pinky moves an agent's task to the WebDriverAgent helper, which shares no screen, for an app that refuses screen sharing. phone is its name.",
+    "description": "The page of an iPhone while Pinky moves an agent's task to Pinky for iPhone, which shares no screen, for an app that refuses screen sharing. phone is its name.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -9668,7 +9668,7 @@
   "@telWhatsSharedDesc": {
     "description": "Under telWhatsShared."
   },
-  "timeHours": "{hours}\u00a0h\u00a0{minutes}\u00a0min",
+  "timeHours": "{hours} h {minutes} min",
   "@timeHours": {
     "description": "A duration of an hour or more. minutes has two digits. Joined with no-break spaces.",
     "placeholders": {
@@ -9682,7 +9682,7 @@
       }
     }
   },
-  "timeMinutes": "{minutes}\u00a0min\u00a0{seconds}\u00a0s",
+  "timeMinutes": "{minutes} min {seconds} s",
   "@timeMinutes": {
     "description": "A duration under an hour. seconds has two digits. Joined with no-break spaces.",
     "placeholders": {
@@ -9696,7 +9696,7 @@
       }
     }
   },
-  "timeSeconds": "{seconds}\u00a0s",
+  "timeSeconds": "{seconds} s",
   "@timeSeconds": {
     "description": "A duration under a minute, as task cards and Activity show it. Joined with a no-break space so it never wraps.",
     "placeholders": {

@@ -239,10 +239,10 @@ func TestConnectingPage(t *testing.T) {
 	tt.Frame()
 	mustHave(t, tt, "Connecting to Sam's iPad…")
 	// A task moves the phone to the helper, and back.
-	ta.api.SetConnecting(id, "Switching to the helper")
-	ta.waitFor(t, "the iPad switching", func() bool { d := ta.device(id); return d != nil && d.StatusLine == "Switching to the helper" })
+	ta.api.SetConnecting(id, "Switching to Pinky for iPhone")
+	ta.waitFor(t, "the iPad switching", func() bool { d := ta.device(id); return d != nil && d.StatusLine == "Switching to Pinky for iPhone" })
 	tt.Frame()
-	mustHave(t, tt, "Moving Sam's iPad to the helper…")
+	mustHave(t, tt, "Moving Sam's iPad to Pinky for iPhone…")
 	ta.api.SetConnecting(id, "Switching to CoreDevice")
 	ta.waitFor(t, "the iPad switching back", func() bool { d := ta.device(id); return d != nil && d.StatusLine == "Switching to CoreDevice" })
 	tt.Frame()

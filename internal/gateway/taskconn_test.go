@@ -192,7 +192,7 @@ func TestConnectAsksForTheHelper(t *testing.T) {
 	defer s.Close()
 	res := s.Connect(context.Background(), ConnectRequest{Task: "Balances", Connection: "helper"})
 	mustStatus(t, res, StatusSettled)
-	if !strings.Contains(res.Message, "WebDriverAgent helper") || res.Screen == nil {
+	if !strings.Contains(res.Message, "Pinky for iPhone") || res.Screen == nil {
 		t.Fatalf("connect: %q, screen %v", res.Message, res.Screen != nil)
 	}
 	if b := backendOf(g); b != wayHelper {
@@ -288,7 +288,7 @@ func TestRefusedLaunchKeepsConnection(t *testing.T) {
 
 	s, _ = connect(t, g, "Bookkeeping again")
 	res := launchAllowed(g, s, "cmb.pb")
-	if res.Error != "" || !strings.Contains(res.Message, "WebDriverAgent helper") {
+	if res.Error != "" || !strings.Contains(res.Message, "Pinky for iPhone") {
 		t.Fatalf("allowed launch: %+v", res)
 	}
 	if b := backendOf(g); b != wayHelper {

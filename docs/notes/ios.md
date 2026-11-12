@@ -465,15 +465,15 @@ PINKY_SIM_UDID=<sim> PINKY_WDA_URL=http://127.0.0.1:18100 PINKY_MJPEG_URL=http:/
 
 WDA on a simulator listens on every interface of the computer while it runs; stop it when done. `iosctl` opens a phone below iOS 27 the way Pinky would and runs the commands every path has (observe, tap, swipe, key, type, screenshot, stream, launch, apps, locked).
 
-### Installing the WebDriverAgent helper
+### Installing Pinky for iPhone
 
-Once per phone, on a Mac with Xcode, with the iPhone plugged in (or paired over Wi-Fi): **Install the helper** in Pinky's window (below, "From Pinky's window"), or in Terminal:
+(Called "Installing the WebDriverAgent helper" before 2026-11-12, when Pinky for iPhone, Pinky's iPhone app, took the place of Pinky Helper as WebDriverAgent's host; "the helper" below is either.) Once per phone, on a Mac with Xcode, with the iPhone plugged in (or paired over Wi-Fi): **Install Pinky for iPhone** in Pinky's window (below, "From Pinky's window"), or in Terminal:
 
 ```sh
 pinkyctl helper install
 ```
 
-Without Homebrew's `pinkyctl`: `/Applications/Pinky.app/Contents/MacOS/Pinky helper install`. With several phones, name one by name or UDID (`pinkyctl helper install "Ann's iPhone"`); flags go before it: `--team <team ID>`, `--bundle-id <id>`, `--local-signing`, `--helper-only`. With a free Apple ID the phone first asks you to trust the developer: Settings › General › VPN & Device Management, then run the command again. On the phone the helper shows as Pinky Helper with Pinky's icon ("The helper's name and icon").
+Without Homebrew's `pinkyctl`: `/Applications/Pinky.app/Contents/MacOS/Pinky helper install`. With several phones, name one by name or UDID (`pinkyctl helper install "Ann's iPhone"`); flags go before it: `--team <team ID>`, `--bundle-id <id>`, `--local-signing`, `--helper-only`. With a free Apple ID the phone first asks you to trust the developer: Settings › General › VPN & Device Management, then run the command again. On the phone it shows as Pinky, or, where Pinky Helper is installed instead (step 7), as Pinky Helper with Pinky's icon ("The helper's name and icon").
 
 What it does (`internal/driver/ios/helperinstall.go`, `cmd/pinky/helper.go`):
 
@@ -489,11 +489,11 @@ Xcode's output goes to `<data>/WebDriverAgent/helper-install.log`; a failure nam
 
 #### From Pinky's window
 
-(2026-11-11) On a Mac with Xcode, Pinky's window runs the same install (`driver.HelperInstaller`, `Gateway.InstallHelper`, `ui/helper.go`). It offers **Install the helper** (**Install again** once the helper has a signature that runs out):
+(2026-11-11) On a Mac with Xcode, Pinky's window runs the same install (`driver.HelperInstaller`, `Gateway.InstallHelper`, `ui/helper.go`). It offers **Install Pinky for iPhone** (**Install again** once the helper has a signature that runs out):
 
 - on the Phone screen of an iPhone that needs its helper installed, in place of See what's wrong (the checkup becomes a link under it), with a note that Xcode builds it and that the phone must stay unlocked;
 - in the reminder on the phone's page two days before the signature runs out, and in the checkup's helper item (soon or ran out) and its install-helper step;
-- in Add phone › Try an older iPhone › Install the Pinky helper, for the phone Add phone found, or, with none listed yet, the only one Xcode reaches.
+- in Add phone › Try an older iPhone › Install Pinky for iPhone, for the phone Add phone found, or, with none listed yet, the only one Xcode reaches.
 
 While it runs, the button gives way to the step (getting ready, building with Xcode, installing on the phone) and Cancel; when Xcode waits for a locked phone, the step asks in bold to unlock it and keep it unlocked. Where the Mac can sign for several teams and the phone's helper names none, it asks which team, a button each. A failure says why in the person's words, by the fix the driver recognized (Xcode missing, phone out of reach, Developer Mode, no Apple ID in Xcode, another team's helper, no way to sign, the developer not trusted, the passcode for automation, a locked phone, the download), with Xcode's words in small print (the first 400 characters) and **Show the log**, which reveals `helper-install.log`. Done, a toast says so and the phone comes back on the helper.
 
@@ -510,7 +510,7 @@ From Xcode, as before (the helper then keeps WDA's name, WebDriverAgentRunner-Ru
 2. Open `WebDriverAgent.xcodeproj`. For the WebDriverAgentRunner target, under Signing & Capabilities, pick your team (a free Apple ID works). If Xcode says the bundle identifier is taken, change its prefix (`com.<you>.WebDriverAgentRunner`), keeping WebDriverAgentRunner in it so Pinky finds it.
 3. Pick the iPhone as the destination and run Product › Test once. Xcode installs WebDriverAgentRunner and starts it; with a free Apple ID the phone first asks you to trust the developer in Settings › General › VPN & Device Management. Stop the test once Xcode's log shows `ServerURLHere`.
 
-From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, click Install again in Pinky's window, run `pinkyctl helper install` again or repeat step 3 (see "When the helper's signature runs out"). The same from a terminal:
+From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, click Install again in Pinky's window, run `pinkyctl helper install` again or repeat step 3 (see "When Pinky for iPhone's signature runs out"). The same from a terminal:
 
 ```sh
 xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
@@ -541,11 +541,13 @@ What ran where:
 | Branding with the Mac's actool, the brand mark, finding the branded runner, the phone and team choice, devicectl's list, certificates, hints | Unit tests (`helperbrand_test.go`, `helperinstall_test.go`) | Pass |
 | `pinkyctl helper install` on a phone, replacing the helper another tool had installed | The owner's iPhone 13 mini, iOS 27.0.1, on Wi-Fi only (no cable), Xcode 27.2, `--team 492J8Q67PF --local-signing`, 2026-11-11 | usbmuxd did not list the phone, so the helper on it came from devicectl's list (team unknown); built with the local wildcard profile, branded, signed again, installed in place over the old one with the same bundle id; WDA printed `ServerURLHere` and was stopped; the phone then listed it as Pinky Helper. The first try waited on a locked phone until it was unlocked, hence the notice above |
 
-### When the helper's signature runs out
+### When Pinky for iPhone's signature runs out
+
+(Called "When the helper's signature runs out" before 2026-11-12.) The same holds for Pinky Helper and for Pinky for iPhone hosting WDA: both are signed with the person's Apple ID.
 
 Built on 2026-11-08 after a user's report. The helper is signed with the person's Apple ID, and the provisioning profile it is signed with runs out: 7 days after Xcode installed it with a free Apple ID, a year with a paid developer account. iOS then no longer starts it, and Pinky used to say only that the helper did not start.
 
-To install it again, on a Mac with Xcode click **Install again** in the reminder on the phone's page or in its checkup, or run `pinkyctl helper install` again (see "Installing the WebDriverAgent helper"): it keeps the helper's team and bundle id, signs it anew and installs it over the old one. From Xcode, plug the iPhone in and repeat step 3 (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
+To install it again, on a Mac with Xcode click **Install again** in the reminder on the phone's page or in its checkup, or run `pinkyctl helper install` again (see "Installing Pinky for iPhone"): it keeps the helper's team and bundle id, signs it anew and installs it over the old one. From Xcode, plug the iPhone in and repeat step 3 (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
 
 What Pinky does (`wda_profile.go`):
 

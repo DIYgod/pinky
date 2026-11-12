@@ -100,11 +100,11 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	}
 	progress(driver.HelperPreparing)
 	if runtime.GOOS != "darwin" {
-		return helperErr(driver.HelperFixXcode, errors.New("installing the iPhone helper needs a Mac with Xcode"), "")
+		return helperErr(driver.HelperFixXcode, errors.New("installing Pinky for iPhone needs a Mac with Xcode"), "")
 	}
 	x, err := findXcode()
 	if err != nil {
-		return helperErr(driver.HelperFixXcode, fmt.Errorf("installing the iPhone helper needs Xcode: %w", err), "")
+		return helperErr(driver.HelperFixXcode, fmt.Errorf("installing Pinky for iPhone needs Xcode: %w", err), "")
 	}
 	team := strings.ToUpper(strings.TrimSpace(o.Team))
 	if team != "" && !teamID.MatchString(team) {
@@ -278,7 +278,7 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	if err != nil {
 		if errors.Is(err, errHelperUp) {
 			fmt.Fprintf(out, "Installed %q on %s; WebDriverAgent answered and was stopped again.\n", helperDisplayName, ph.Name)
-			fmt.Fprintf(out, "Its signature lasts until %s. Pinky starts the helper whenever it opens the phone.\n", helperDate(profile.Expires))
+			fmt.Fprintf(out, "Its signature lasts until %s. Pinky starts it whenever it opens the phone.\n", helperDate(profile.Expires))
 			installs.note(ph.UDID, helperRecord{Team: team, BundleID: bid, Expires: profile.Expires})
 			return nil
 		}
@@ -816,20 +816,20 @@ func helperHintFor(fix string, local bool) string {
 	case driver.HelperFixDeveloperMode:
 		return "Turn on Developer Mode in Settings › Privacy & Security › Developer Mode (the phone restarts), then run this again."
 	case driver.HelperFixOtherTeam:
-		return "Another team signed the helper on the phone, and iOS replaces an app only with one of its team. Name that team with --team, or a new --bundle-id to install beside it."
+		return "Another team signed Pinky Helper on the phone, and iOS replaces an app only with one of its team. Name that team with --team, or a new --bundle-id to install beside it."
 	case driver.HelperFixTrust:
 		return "On the phone, trust your developer certificate in Settings › General › VPN & Device Management, then run this again."
 	case driver.HelperFixPasscode:
 		return "Enter the phone's passcode on the phone when it asks to allow automation, then run this again."
 	case driver.HelperFixUnlock:
-		return "Unlock the phone and keep it unlocked until the helper starts, then run this again."
+		return "Unlock the phone and keep it unlocked until WebDriverAgent starts, then run this again."
 	case driver.HelperFixAppleID:
 		return "Add your Apple ID in Xcode › Settings › Accounts, or name another team with --team."
 	case driver.HelperFixSigning:
 		if local {
-			return "Xcode found no way to sign the helper for this phone. Run this without --local-signing to let Xcode get a profile, or check your team in Xcode › Settings › Accounts."
+			return "Xcode found no way to sign Pinky for iPhone for this phone. Run this without --local-signing to let Xcode get a profile, or check your team in Xcode › Settings › Accounts."
 		}
-		return "Xcode found no way to sign the helper for this phone. Check your team in Xcode › Settings › Accounts, and that the phone is added to it."
+		return "Xcode found no way to sign Pinky for iPhone for this phone. Check your team in Xcode › Settings › Accounts, and that the phone is added to it."
 	case driver.HelperFixDownload:
 		return "Check the internet connection, then run this again."
 	}

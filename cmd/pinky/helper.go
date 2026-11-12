@@ -29,9 +29,9 @@ func runHelper(args []string) error {
 		return errors.New(helperUsage)
 	}
 	fs := flag.NewFlagSet("pinky helper install", flag.ContinueOnError)
-	team := fs.String("team", "", "Apple developer `team ID` to sign with (default: the team of the helper on the phone, or the only one on this Mac)")
-	bundleID := fs.String("bundle-id", "", "the helper's `bundle id` (default: the one on the phone)")
-	helperOnly := fs.Bool("helper-only", false, "install Pinky Helper, not Pinky's iPhone app, to host WebDriverAgent")
+	team := fs.String("team", "", "Apple developer `team ID` to sign with (default: the team of Pinky Helper on the phone, or the only one on this Mac)")
+	bundleID := fs.String("bundle-id", "", "Pinky Helper's `bundle id` (default: the one on the phone)")
+	helperOnly := fs.Bool("helper-only", false, "install the older Pinky Helper, not Pinky for iPhone, to host WebDriverAgent")
 	local := fs.Bool("local-signing", false, "sign only with the profiles on this Mac; never let Xcode register the phone or make a profile")
 	if err := fs.Parse(args[1:]); err != nil {
 		return err

@@ -73,11 +73,11 @@ func (a *AXDevice) Checkup(ctx context.Context) (driver.Checkup, error) {
 		func(ctx context.Context) driver.Check { return checkScreenshot(ctx, a.Screenshot) },
 		func(context.Context) driver.Check {
 			return driver.Check{ID: driver.CheckHelper, Status: driver.CheckFail, Fix: driver.FixInstallHelper,
-				Detail: "below iOS 27 an iPhone takes taps and typing only through the WebDriverAgent helper, which is not installed"}
+				Detail: "below iOS 27 an iPhone takes taps and typing only through Pinky for iPhone, which is not installed"}
 		},
 		func(context.Context) driver.Check {
 			return driver.Check{ID: driver.CheckInput, Status: driver.CheckFail, Fix: driver.FixInstallHelper,
-				Detail: "without the WebDriverAgent helper this iPhone takes no taps, swipes or typing"}
+				Detail: "without Pinky for iPhone this iPhone takes no taps, swipes or typing"}
 		},
 	)
 }

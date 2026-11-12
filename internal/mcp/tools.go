@@ -61,7 +61,7 @@ type connectIn struct {
 	// ReadOnly lets an agent ask for less than the person gave it.
 	ReadOnly   bool   `json:"read_only,omitempty" jsonschema:"Run this task read-only, for tasks that only look: you may open apps, read and search, but anything the person's rules would ask about is refused, and typing works only in search fields. A new agent's approval card then offers read-only access."`
 	OwnScreen  bool   `json:"own_screen,omitempty" jsonschema:"Work on the phone's own screen even when the person has Pinky work on a background display, which has no home screen. Only for work on the home screen itself: moving app icons, making folders, widgets. If the person used the phone in the last minute, the task starts paused until they hand it over; if it is locked, they unlock it."`
-	Connection string `json:"connection,omitempty" jsonschema:"iPhone only: how Pinky connects to the phone for this task. auto (default): Pinky chooses, and moves the task to the WebDriverAgent helper when phone_launch opens an app known to refuse screen sharing (DBS digibank, China Merchants Bank), once the launch may run. helper: the WebDriverAgent helper, which shares no screen, for apps that refuse screen sharing; slower. coredevice: back to the faster CoreDevice. The phone returns to the person's choice after the task; a connection the person fixed in Settings is kept, and nothing moves while the person is in control, the phone is locked or an approval is open."`
+	Connection string `json:"connection,omitempty" jsonschema:"iPhone only: how Pinky connects to the phone for this task. auto (default): Pinky chooses, and moves the task to Pinky for iPhone when phone_launch opens an app known to refuse screen sharing (DBS digibank, China Merchants Bank), once the launch may run. helper: Pinky for iPhone (WebDriverAgent), which shares no screen, for apps that refuse screen sharing; slower. coredevice: back to the faster CoreDevice. The phone returns to the person's choice after the task; a connection the person fixed in Settings is kept, and nothing moves while the person is in control, the phone is locked or an approval is open."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with the same arguments and this id to keep waiting for the person's answer."`
 }
 
@@ -448,7 +448,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_pinch", Title: "Pinch",
 		Description: "Pinch with two fingers to zoom a map, photo or page in or out (scale), or turn it (rotation), around an element (ref), a point (x and y) or the middle of the screen. " +
 			"The fingers stay inside the element and clear of the screen's edges. The app decides how far the content follows the fingers: observe the result and pinch again if it is not enough. The person's rules judge a pinch like a swipe. " +
-			"An iPhone or iPad on CoreDevice first moves the task to the WebDriverAgent helper, when it is installed, and returns stale with the screen read there: pinch again by it.",
+			"An iPhone or iPad on CoreDevice first moves the task to Pinky for iPhone, when it is installed, and returns stale with the screen read there: pinch again by it.",
 		InputSchema: schema[pinchIn](func(p map[string]*jsonschema.Schema) {
 			nonNull(p, "x", "y")
 			patchPinch(p)
@@ -607,8 +607,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		Description: "Turn the screen, switch light or dark appearance, or simulate a location, as developers do to test an app; without arguments, read them, with the phone's model, system, battery and storage. " +
 			"Pinky puts back everything a task changed when it ends, and reset puts it back sooner. These change the phone's settings: on a real phone they always ask the person " +
 			"(rule Phone settings; up to 45 s, then approval_pending with an approval_id to repeat the call with), on emulators and Simulators only when the person chose to approve more. " +
-			"Read-only and watch-only agents may only read. What a phone cannot do returns unsupported with why: location works on Android emulators, iOS Simulators and iPhones with the WebDriverAgent helper, not on Android phones. " +
-			"An iPhone or iPad on CoreDevice moves the task to the helper for a change, when it is installed.",
+			"Read-only and watch-only agents may only read. What a phone cannot do returns unsupported with why: location works on Android emulators, iOS Simulators and iPhones with Pinky for iPhone, not on Android phones. " +
+			"An iPhone or iPad on CoreDevice moves the task to Pinky for iPhone for a change, when it is installed.",
 		InputSchema: schema[deviceIn](func(p map[string]*jsonschema.Schema) {
 			enum(p["rotation"], "portrait", "landscape", "upside_down", "reverse_landscape", "auto")
 			enum(p["appearance"], "light", "dark")
