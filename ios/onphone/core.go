@@ -15,7 +15,8 @@
 //	{"cmd":"decide","need":"...","decision":"allow_once"} → {"ok":true}; back to the task's app first
 //	{"cmd":"preset","preset":1} / {"cmd":"stop"} / {"cmd":"dismiss"} → {"ok":true}
 //	{"cmd":"ui","on":true}                  → {"ok":true}  (Pinky's app came to the front or left)
-//	{"cmd":"history","search":"","before_ms":0,"limit":50} → {"ok":true,"history":[...]}
+//	{"cmd":"history","before_ms":0,"limit":20} → {"ok":true,"history":[...],"more":true}  (standalone.PastTask, newest first)
+//	{"cmd":"history","id":"..."}             → {"ok":true,"history":[{...,"steps":[...]}]}, or the code gone
 //	{"cmd":"info"}                          → {"ok":true,"info":{...}}
 //
 // reason, when the phone is not ready, says why in a word Pinky's screens
@@ -203,32 +204,22 @@ type request struct {
 	Decision  string `json:"decision"`
 	Note      string `json:"note"`
 	Preset    int    `json:"preset"`
-	Search    string `json:"search"`
+	ID        string `json:"id"`
 	BeforeMS  int64  `json:"before_ms"`
 	Limit     int    `json:"limit"`
 	standalone.StartRequest
 }
 
 type reply struct {
-	OK      bool            `json:"ok"`
-	Error   string          `json:"error,omitempty"`
-	Code    string          `json:"code,omitempty"`
-	Rev     uint64          `json:"rev,omitempty"`
-	State   json.RawMessage `json:"state,omitempty"`
-	Reason  string          `json:"reason,omitempty"`
-	History []HistoryTask   `json:"history,omitempty"`
-	Info    *Info           `json:"info,omitempty"`
-}
-
-// HistoryTask is a task in history.
-type HistoryTask struct {
-	ID        string            `json:"id"`
-	Title     string            `json:"title"`
-	Agent     string            `json:"agent"`
-	State     string            `json:"state"`
-	StartedMS int64             `json:"started_ms"`
-	EndedMS   int64             `json:"ended_ms,omitempty"`
-	Steps     []standalone.Step `json:"steps"`
+	OK      bool                  `json:"ok"`
+	Error   string                `json:"error,omitempty"`
+	Code    string                `json:"code,omitempty"`
+	Rev     uint64                `json:"rev,omitempty"`
+	State   json.RawMessage       `json:"state,omitempty"`
+	Reason  string                `json:"reason,omitempty"`
+	History []standalone.PastTask `json:"history,omitempty"`
+	More    bool                  `json:"more,omitempty"`
+	Info    *Info                 `json:"info,omitempty"`
 }
 
 // Info is the connection as the core sees it, for diagnostics.
@@ -422,32 +413,34 @@ func (c *Core) leftAfter(ctx context.Context) {
 	}
 }
 
+// history answers Activity as Android's app gets it (standalone's history
+// command): the tasks that ended, a page at a time, or one with its steps.
 func (c *Core) history(ctx context.Context, r request) reply {
-	q := gateway.HistoryQuery{Search: r.Search, Limit: r.Limit}
+	ctx, cancel := context.WithTimeout(ctx, historyWait)
+	defer cancel()
+	if r.ID != "" {
+		t, err := c.sc.PastTask(ctx, r.ID)
+		if errors.Is(err, standalone.ErrGone) {
+			return fail(standalone.CodeGone, err)
+		}
+		if err != nil {
+			return fail("", err)
+		}
+		return reply{OK: true, History: []standalone.PastTask{t}}
+	}
+	var before time.Time
 	if r.BeforeMS > 0 {
-		q.Before = time.UnixMilli(r.BeforeMS)
+		before = time.UnixMilli(r.BeforeMS)
 	}
-	if q.Limit <= 0 || q.Limit > 200 {
-		q.Limit = 50
-	}
-	tasks, err := c.sc.G.History(ctx, q)
+	list, more, err := c.sc.History(ctx, before, r.Limit)
 	if err != nil {
 		return fail("", err)
 	}
-	out := make([]HistoryTask, 0, len(tasks))
-	for _, t := range tasks {
-		h := HistoryTask{ID: t.ID, Title: t.Title, Agent: t.Agent, State: string(t.State),
-			StartedMS: t.Started.UnixMilli(), Steps: []standalone.Step{}}
-		if !t.Ended.IsZero() {
-			h.EndedMS = t.Ended.UnixMilli()
-		}
-		for _, s := range t.Steps {
-			h.Steps = append(h.Steps, standalone.Step{Text: s.Text, Status: s.Status, MS: s.Elapsed.Milliseconds()})
-		}
-		out = append(out, h)
-	}
-	return reply{OK: true, History: out}
+	return reply{OK: true, History: list, More: more}
 }
+
+// historyWait bounds a read of Activity.
+const historyWait = 10 * time.Second
 
 func (c *Core) info() *Info {
 	in := &Info{UI: c.gate.uiActive()}

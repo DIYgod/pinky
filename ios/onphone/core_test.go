@@ -244,14 +244,15 @@ func newHarnessLog(t *testing.T, log *slog.Logger) *harness {
 }
 
 type out struct {
-	OK      bool              `json:"ok"`
-	Error   string            `json:"error"`
-	Code    string            `json:"code"`
-	Rev     uint64            `json:"rev"`
-	State   *standalone.State `json:"state"`
-	Reason  string            `json:"reason"`
-	History []HistoryTask     `json:"history"`
-	Info    *Info             `json:"info"`
+	OK      bool                  `json:"ok"`
+	Error   string                `json:"error"`
+	Code    string                `json:"code"`
+	Rev     uint64                `json:"rev"`
+	State   *standalone.State     `json:"state"`
+	Reason  string                `json:"reason"`
+	History []standalone.PastTask `json:"history"`
+	More    bool                  `json:"more"`
+	Info    *Info                 `json:"info"`
 }
 
 func (h *harness) do(t *testing.T, req map[string]any) out {
@@ -360,8 +361,16 @@ func TestApprovalInPinkysApp(t *testing.T) {
 	}
 
 	o := h.do(t, map[string]any{"cmd": "history"})
-	if !o.OK || len(o.History) != 1 || o.History[0].Title != "Order lunch" || len(o.History[0].Steps) == 0 {
+	if !o.OK || len(o.History) != 1 || o.History[0].Title != "Order lunch" || o.History[0].Outcome != "done" ||
+		o.History[0].Agent == nil || o.History[0].Agent.Summary != "Ordered." || o.More {
 		t.Fatalf("history: %+v", o)
+	}
+	o = h.do(t, map[string]any{"cmd": "history", "id": o.History[0].ID})
+	if !o.OK || len(o.History) != 1 || len(o.History[0].Steps) == 0 {
+		t.Fatalf("a task of the history: %+v", o)
+	}
+	if o := h.do(t, map[string]any{"cmd": "history", "id": "nope"}); o.OK || o.Code != "gone" {
+		t.Fatalf("a task the history does not have: %+v", o)
 	}
 	if o := h.do(t, map[string]any{"cmd": "info"}); !o.OK || o.Info == nil || !o.Info.Connected {
 		t.Fatalf("info: %+v", o)
