@@ -2,6 +2,15 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- Android 手机上的 Pinky 现在能自己做任务了：在手机上的 Pinky 里写下要做的事，用你自己的模型 key，就能看着它做完。手机上只需要装一个 Pinky 应用。
+- 两部手机上的应用现在都叫 Pinky。
+- iPhone 上的 Pinky 换了新界面，和 Android 上的一致：设置、模型和 key、运行任务、审批和「活动」。
+- 在手机上做完任务后，总结会用任务本身的语言来写。
+- Android 重启 Pinky 的无障碍服务后，在手机上开始任务不会再失败一次。
+- 电脑上的 Pinky 会告诉你手机上的 Pinky 能自己做任务，以及怎么设置，在手机卡片和「设置 › 手机」里都能看到。
+
 ## 2026.1112.16 (2026-11-12)
 
 - Pinky Helper 更名为 Pinky for iPhone，支持英文、简体中文和日文。
