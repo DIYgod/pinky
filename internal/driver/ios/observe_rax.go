@@ -87,19 +87,20 @@ func (d *Device) walkLimits() walkLimits {
 // Observe on it does not pay for a failed connection, except on the phone
 // itself (tunnelOnly), where nothing else can read the screen: there every
 // call asks again, and waits longer for the first answer.
+//
+// The dial holds raxDialMu, not svcMu: on the phone it may wait 15 s, and
+// the other services (screenshots, app lists, the lock) should not wait
+// behind it.
 func (d *Device) raxReady(ctx context.Context) (*raxSession, error) {
-	d.svcMu.Lock()
-	defer d.svcMu.Unlock()
-	if d.rax != nil {
-		if d.rax.alive() {
-			return d.rax, nil
-		}
-		d.rax.Close()
-		d.rax = nil
-	}
 	onPhone := d.tunnelOnly()
-	if d.raxErr != nil && !onPhone && time.Since(d.raxFailedAt) < raxRecheckFailures {
-		return nil, d.raxErr
+	if s, err, ok := d.raxHeld(onPhone); ok {
+		return s, err
+	}
+	d.raxDialMu.Lock()
+	defer d.raxDialMu.Unlock()
+	// Another call may have dialed meanwhile.
+	if s, err, ok := d.raxHeld(onPhone); ok {
+		return s, err
 	}
 	d.mu.Lock()
 	closed := d.closed
@@ -113,6 +114,8 @@ func (d *Device) raxReady(ctx context.Context) (*raxSession, error) {
 	}
 	start := time.Now()
 	s, err := dialRAX(ctx, d.link().entry, wait)
+	d.svcMu.Lock()
+	defer d.svcMu.Unlock()
 	if err != nil {
 		if ctx.Err() == nil {
 			d.raxErr, d.raxFailedAt = err, time.Now()
@@ -123,11 +126,37 @@ func (d *Device) raxReady(ctx context.Context) (*raxSession, error) {
 		}
 		return nil, err
 	}
+	d.mu.Lock()
+	closed = d.closed
+	d.mu.Unlock()
+	if closed {
+		// Closed during the dial: Close did not see this session.
+		s.Close()
+		return nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
+	}
 	if onPhone {
 		d.log.Info("iphone: remoteAXService connected", "device", d.info.ID, "in", time.Since(start).Round(time.Millisecond))
 	}
 	d.rax, d.raxErr = s, nil
 	return s, nil
+}
+
+// raxHeld is the session raxReady has, or the recent failure it repeats
+// without dialing; ok is false when it should dial.
+func (d *Device) raxHeld(onPhone bool) (s *raxSession, err error, ok bool) {
+	d.svcMu.Lock()
+	defer d.svcMu.Unlock()
+	if d.rax != nil {
+		if d.rax.alive() {
+			return d.rax, nil, true
+		}
+		d.rax.Close()
+		d.rax = nil
+	}
+	if d.raxErr != nil && !onPhone && time.Since(d.raxFailedAt) < raxRecheckFailures {
+		return nil, d.raxErr, true
+	}
+	return nil, nil, false
 }
 
 // observeRAX reads the screen through remoteAXService: every element with

@@ -92,6 +92,7 @@ type Device struct {
 	restartFailedAt time.Time
 	restartErr      error
 
+	raxDialMu   sync.Mutex // one remoteAXService dial at a time (raxReady)
 	svcMu       sync.Mutex
 	info2       *cdService // deviceinfo
 	shot        *cdService // screencapture
