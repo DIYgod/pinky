@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- New in Settings › Phones › Web mirror: **Answer approvals in the browser** lets you allow or deny a held step from your own phone through Tailscale. Each answer asks for Face ID, a fingerprint or the phone's passcode, and while an agent uses the phone the browser is on (and for 30 seconds after), the page there answers nothing. Payments, sends and agents' questions can be answered there; new agents, blocked apps and handoffs stay in Pinky's window. Off by default, and not yet tried with a real passkey in Safari or Chrome.
+
 ## 2026.1112.11 (2026-11-12)
 
 - On macOS, the menu bar panel now has rounded corners, a translucent background and a shadow that follows its edge, like other menu bar apps. Thanks to @egoist for the report.
