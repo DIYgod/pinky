@@ -11,6 +11,7 @@ import (
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/tailnet"
+	"github.com/DIYgod/pinky/internal/webapproval"
 	"github.com/DIYgod/pinky/internal/webmirror"
 	"github.com/DIYgod/pinky/ui"
 )
@@ -19,14 +20,27 @@ import (
 // Settings › Phones › Web mirror turns it on. Its tokens are its own, in
 // memory only: one can only watch, the other can also use the phone while
 // the person allows control.
+//
+// It also serves the page that answers approvals in the browser
+// (internal/webapproval), off until Settings turns it on; that page
+// reaches the gateway's Needs and Decide, never the mirror's Source.
 func newWebMirror(g *gateway.Gateway, log *slog.Logger) *webMirror {
-	return &webMirror{webmirror.New(webmirror.Options{
-		Source:   g,
-		Log:      log,
-		OwnNames: tailnetNames,
-		Owner:    tailnetOwner,
-		Text:     webMirrorText,
-	})}
+	approvals := webapproval.New(webapproval.Options{
+		Source:  g,
+		Log:     log,
+		Owner:   tailnetOwner,
+		Origin:  tailnetMirrorOrigin,
+		Proxied: webmirror.Proxied,
+		Text:    webApprovalsText,
+	})
+	return &webMirror{Server: webmirror.New(webmirror.Options{
+		Source:    g,
+		Log:       log,
+		OwnNames:  tailnetNames,
+		Owner:     tailnetOwner,
+		Text:      webMirrorText,
+		Approvals: approvals.Handler(),
+	}), Approvals: approvals}
 }
 
 // tailnetOwner is the tailnet login of the person this computer is signed
@@ -41,8 +55,25 @@ func tailnetOwner(ctx context.Context) string {
 	return st.Owner
 }
 
+// tailnetMirrorOrigin is the origin `tailscale serve` gives the web mirror
+// to the tailnet under, as "https://mac.tail1234.ts.net:8443", "" when it
+// gives none. Passkeys that answer approvals are bound to it.
+func tailnetMirrorOrigin(ctx context.Context) string {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	s, err := tailnet.ReadServe(ctx)
+	if err != nil {
+		return ""
+	}
+	return s.Forwarding(webmirror.Addr)
+}
+
 // webMirror is the web mirror as Settings sees it (ui.WebMirror).
-type webMirror struct{ *webmirror.Server }
+type webMirror struct {
+	*webmirror.Server
+	// Approvals answers approvals in the browser (ui.WebApprovals).
+	Approvals *webapproval.Server
+}
 
 // Tailnet says where `tailscale serve` gives the web mirror to the tailnet.
 // It only reads Tailscale's state.
@@ -93,6 +124,52 @@ func webMirrorText(acceptLanguage string) (string, map[string]string) {
 		"inControl":    m.WebMirrorPageInControl(),
 		"controlOff":   m.WebMirrorPageControlOff(),
 		"tailnetUser":  m.WebMirrorPageTailnetUser(),
+	}
+}
+
+// webApprovalsText is the approvals page's words, as webMirrorText.
+func webApprovalsText(acceptLanguage string) (string, map[string]string) {
+	want := ""
+	if first, _, _ := strings.Cut(acceptLanguage, ","); first != "" {
+		want, _, _ = strings.Cut(strings.TrimSpace(first), ";")
+	}
+	m := locales.In(want)
+	_, lang, ok := locales.Catalog.Message(want, "webApprovalsPageTitle")
+	if !ok || lang == "" {
+		lang = "en"
+	}
+	return lang, map[string]string{
+		"title":         m.WebApprovalsPageTitle(),
+		"tailnet":       m.WebApprovalsPageTailnet(),
+		"notAdded":      m.WebApprovalsPageNotAdded(),
+		"noPasskeys":    m.WebApprovalsPageNoPasskeys(),
+		"addTitle":      m.WebApprovalsPageAddTitle(),
+		"addBody":       m.WebApprovalsPageAddBody(),
+		"addButton":     m.WebApprovalsPageAddButton(),
+		"linkUsed":      m.WebApprovalsPageLinkUsed(),
+		"passkeyFailed": m.WebApprovalsPagePasskeyFailed("{detail}"),
+		"compareTitle":  m.WebApprovalsPageCompareTitle(),
+		"compare":       m.WebApprovalsPageCompare(),
+		"turnedDown":    m.WebApprovalsPageTurnedDown(),
+		"added":         m.WebApprovalsPageAdded(),
+		"none":          m.WebApprovalsPageNone(),
+		"removed":       m.WebApprovalsPageRemoved(),
+		"allow":         m.WebApprovalsPageAllow(),
+		"deny":          m.WebApprovalsPageDeny(),
+		"confirmAllow":  m.WebApprovalsPageConfirmAllow(),
+		"confirmDeny":   m.WebApprovalsPageConfirmDeny(),
+		"onComputer":    m.WebApprovalsPageOnComputer(),
+		"left":          m.WebApprovalsPageLeft("{seconds}"),
+		"timedOut":      m.WebApprovalsPageTimedOut(),
+		"already":       m.WebApprovalsPageAlready(),
+		"late":          m.WebApprovalsPageLate(),
+		"verifyFailed":  m.WebApprovalsPageVerifyFailed(),
+		"notAnswered":   m.WebApprovalsPageNotAnswered(),
+		"allowed":       m.WebApprovalsPageAllowed(),
+		"denied":        m.WebApprovalsPageDenied(),
+		"rule":          m.WebApprovalsPageRule("{rule}"),
+		"busy":          m.WebApprovalsPageBusy(),
+		"slowDown":      m.WebApprovalsPageSlowDown(),
 	}
 }
 

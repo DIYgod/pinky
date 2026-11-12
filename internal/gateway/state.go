@@ -61,6 +61,11 @@ type device struct {
 	// that moved the phone tells the agent the real reason (taskconn.go).
 	openErr error
 	lease   *lease
+	// leaseGen counts leases started and ended on the device, and
+	// leaseEnded is when the last one ended: the approvals page refuses an
+	// answer from this phone's browser across any lease (webapproval).
+	leaseGen   uint64
+	leaseEnded time.Time
 	// person is true while the person is in control (took over). It belongs
 	// to the device, not the lease: only HandBack clears it, so an agent
 	// cannot get control back by starting another task.

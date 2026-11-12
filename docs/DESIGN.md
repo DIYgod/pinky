@@ -96,7 +96,7 @@ Each feature is tagged with the milestone that first ships it (see Roadmap). A b
 | Safety | Typing into password and code fields refused; one-time codes masked on the screen and in notifications, and covered in screenshots; notifications from blocked apps hidden | M1 |
 | Safety | Rules editor, per-app rules, "Allow for this task" and "Always allow this kind" | M2 |
 | Safety | Credentials filled from the OS keychain; wider redaction | M2 |
-| Safety | Approve from a notification, a phone push or a chat app | M4 |
+| Safety | Approve from a notification, a phone push or a chat app (first: a page on the tailnet, [notes/remote-approvals.md](notes/remote-approvals.md)) | M4 |
 | History | Task timeline: each step in plain language, with before and after screenshots, approvals and, in Developer mode, the tool call; wipe | M1 |
 | History | Continuous recording with step markers; search; HTML report and JSON export; retention limits | M2 |
 | History | Turn a successful task into a flow that replays without a model and hands back to the agent on a mismatch | M4 |

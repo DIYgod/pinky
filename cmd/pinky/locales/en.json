@@ -10578,6 +10578,300 @@
   "@updateWhereUnsigned": {
     "description": "Why this Pinky cannot update itself: it is a local build. Shown only in other languages; in English internal/update's own words show."
   },
+  "webApprovalsTooMany": "At most {count} phones can answer approvals. Remove one first.",
+  "@webApprovalsTooMany": {
+    "description": "Settings › Phones › Web mirror: a toast when the person allows another phone while the most are added.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "8"
+      }
+    }
+  },
+  "webApprovalsToggle": "Answer approvals in the browser",
+  "@webApprovalsToggle": {
+    "description": "Settings › Phones › Web mirror: the switch that lets the person allow or deny a held step from a browser on their phone, through Tailscale."
+  },
+  "webApprovalsDesc": "Allow or deny a held step from your phone, through Tailscale. Each answer asks for Face ID, a fingerprint or the phone's passcode. Pinky forgets the phones you add when it quits.",
+  "@webApprovalsDesc": {
+    "description": "Settings › Phones › Web mirror: the line under the switch Answer approvals in the browser."
+  },
+  "webApprovalsNeedsTailnet": "Works only through the tailnet link: run the tailscale serve command above first.",
+  "@webApprovalsNeedsTailnet": {
+    "description": "Settings › Phones › Web mirror: shown under Answer approvals in the browser while Tailscale does not serve the web mirror yet."
+  },
+  "webApprovalsAdd": "Add a phone",
+  "@webApprovalsAdd": {
+    "description": "Settings › Phones › Web mirror: the row that makes a link to open on the phone that should answer approvals."
+  },
+  "webApprovalsAddDesc": "Makes a link to open on your phone. It works once, for 5 minutes.",
+  "@webApprovalsAddDesc": {
+    "description": "Settings › Phones › Web mirror: the line under Add a phone."
+  },
+  "webApprovalsAddButton": "Make a link",
+  "@webApprovalsAddButton": {
+    "description": "Settings › Phones › Web mirror: the button of the row Add a phone, which makes the link."
+  },
+  "webApprovalsLink": "Link for your phone",
+  "@webApprovalsLink": {
+    "description": "Settings › Phones › Web mirror: the row with the link that adds a phone, once made."
+  },
+  "webApprovalsLinkDesc": "Open it on your phone, then come back here to allow it.",
+  "@webApprovalsLinkDesc": {
+    "description": "Settings › Phones › Web mirror: the line under Link for your phone."
+  },
+  "webApprovalsRequest": "A browser asks to answer approvals",
+  "@webApprovalsRequest": {
+    "description": "Settings › Phones › Web mirror: the title of a request from a browser that opened the link and made a passkey, waiting for the person to allow it."
+  },
+  "webApprovalsRequestDesc": "{browser} · {login}. Allow it only if your phone shows this code:",
+  "@webApprovalsRequestDesc": {
+    "description": "Settings › Phones › Web mirror: the line under A browser asks to answer approvals, followed by the six-digit code in large type. browser is as \"iPhone · Safari\", login the Tailscale login.",
+    "placeholders": {
+      "browser": {
+        "type": "String",
+        "example": "iPhone · Safari"
+      },
+      "login": {
+        "type": "String",
+        "example": "alex@example.com"
+      }
+    }
+  },
+  "webApprovalsUnknownBrowser": "A browser",
+  "@webApprovalsUnknownBrowser": {
+    "description": "Settings › Phones › Web mirror: stands for the browser's name in a request to answer approvals when Pinky can't tell which browser it is."
+  },
+  "webApprovalsWhich": "Which phone is this browser on?",
+  "@webApprovalsWhich": {
+    "description": "Settings › Phones › Web mirror: in a request to answer approvals, the label of a menu of the phones connected to Pinky, and Another device. The person picks one before Allow."
+  },
+  "webApprovalsWhichDesc": "While an agent uses that phone, and for 30 seconds after, Pinky refuses answers from it: whoever drives the phone could tap Allow.",
+  "@webApprovalsWhichDesc": {
+    "description": "Settings › Phones › Web mirror: under webApprovalsWhich, why Pinky asks."
+  },
+  "webApprovalsChoose": "Choose…",
+  "@webApprovalsChoose": {
+    "description": "Settings › Phones › Web mirror: the menu of webApprovalsWhich before the person picks a phone."
+  },
+  "webApprovalsOther": "Another device",
+  "@webApprovalsOther": {
+    "description": "Settings › Phones › Web mirror: in the menu of webApprovalsWhich, a device that is not a phone connected to Pinky."
+  },
+  "webApprovalsOtherIPhone": "This browser says it runs on an iPhone, and an iPhone is connected to Pinky. If it is that phone, choose it: otherwise an agent using it could answer.",
+  "@webApprovalsOtherIPhone": {
+    "description": "Settings › Phones › Web mirror: a warning under webApprovalsWhich when the person picks webApprovalsOther for a browser that says it runs on an iPhone while an iPhone is connected."
+  },
+  "webApprovalsOtherAndroid": "This browser says it runs on an Android phone, and an Android phone is connected to Pinky. If it is that phone, choose it: otherwise an agent using it could answer.",
+  "@webApprovalsOtherAndroid": {
+    "description": "Settings › Phones › Web mirror: as webApprovalsOtherIPhone, for Android."
+  },
+  "webApprovalsNoDevice": "That phone is no longer connected to Pinky. Choose again.",
+  "@webApprovalsNoDevice": {
+    "description": "Settings › Phones › Web mirror: a toast when the phone chosen in webApprovalsWhich went away before Allow."
+  },
+  "webApprovalsAllow": "Allow",
+  "@webApprovalsAllow": {
+    "description": "Settings › Phones › Web mirror: the button that adds the browser of a request."
+  },
+  "webApprovalsCopyLink": "Copy the link for your phone",
+  "@webApprovalsCopyLink": {
+    "description": "Settings › Phones › Web mirror: the accessible name of the copy button on the row Link for your phone."
+  },
+  "webApprovalsDeny": "Deny",
+  "@webApprovalsDeny": {
+    "description": "Settings › Phones › Web mirror: the button that turns a request down."
+  },
+  "webApprovalsPhones": "Phones that answer approvals",
+  "@webApprovalsPhones": {
+    "description": "Settings › Phones › Web mirror: the title of the list of browsers added to answer approvals."
+  },
+  "webApprovalsNoPhones": "None yet.",
+  "@webApprovalsNoPhones": {
+    "description": "Settings › Phones › Web mirror: under Phones that answer approvals when there are none."
+  },
+  "webApprovalsPhone": "{browser} · {login}",
+  "@webApprovalsPhone": {
+    "description": "Settings › Phones › Web mirror: a browser added to answer approvals. browser is as \"iPhone · Safari\", login the Tailscale login.",
+    "placeholders": {
+      "browser": {
+        "type": "String",
+        "example": "iPhone · Safari"
+      },
+      "login": {
+        "type": "String",
+        "example": "alex@example.com"
+      }
+    }
+  },
+  "webApprovalsPhoneOn": "{browser} · {login} · on {phone}",
+  "@webApprovalsPhoneOn": {
+    "description": "Settings › Phones › Web mirror: a browser added to answer approvals that runs on a phone connected to Pinky. browser is as \"iPhone · Safari\", login the Tailscale login, phone the phone's name.",
+    "placeholders": {
+      "browser": {
+        "type": "String",
+        "example": "iPhone · Safari"
+      },
+      "login": {
+        "type": "String",
+        "example": "alex@example.com"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Alex's iPhone"
+      }
+    }
+  },
+  "webApprovalsRemove": "Remove",
+  "@webApprovalsRemove": {
+    "description": "Settings › Phones › Web mirror: the button that takes a phone's right to answer approvals away."
+  },
+  "webApprovalsRemoved": "The phone can no longer answer approvals",
+  "@webApprovalsRemoved": {
+    "description": "Settings › Phones › Web mirror: a toast after Remove."
+  },
+  "webApprovalsPageTitle": "Pinky approvals",
+  "@webApprovalsPageTitle": {
+    "description": "The approvals page in the browser: its title."
+  },
+  "webApprovalsPageTailnet": "Open this page through Tailscale, on a device signed in as the owner of the computer running Pinky.",
+  "@webApprovalsPageTailnet": {
+    "description": "The approvals page: the request did not come through Tailscale from the owner of the computer."
+  },
+  "webApprovalsPageNotAdded": "This browser can't answer approvals yet. In Pinky on your computer, open Settings › Phones › Web mirror and click Make a link next to Add a phone.",
+  "@webApprovalsPageNotAdded": {
+    "description": "The approvals page in a browser that was not added."
+  },
+  "webApprovalsPageNoPasskeys": "This browser can't use passkeys. Use Safari on iPhone or iPad, or Chrome on Android.",
+  "@webApprovalsPageNoPasskeys": {
+    "description": "The approvals page in a browser without passkeys (WebAuthn)."
+  },
+  "webApprovalsPageAddTitle": "Answer Pinky's approvals on this phone",
+  "@webApprovalsPageAddTitle": {
+    "description": "The approvals page opened with the link that adds a phone: its title."
+  },
+  "webApprovalsPageAddBody": "The phone keeps a passkey for your computer, and asks for Face ID, a fingerprint or its passcode each time you answer.",
+  "@webApprovalsPageAddBody": {
+    "description": "The approvals page opened with the link that adds a phone: the text under its title."
+  },
+  "webApprovalsPageAddButton": "Add this phone",
+  "@webApprovalsPageAddButton": {
+    "description": "The approvals page: the button that makes the passkey."
+  },
+  "webApprovalsPageLinkUsed": "This link was already used, or is more than 5 minutes old. Make a new one in Pinky's Settings.",
+  "@webApprovalsPageLinkUsed": {
+    "description": "The approvals page: the link that adds a phone does not work."
+  },
+  "webApprovalsPagePasskeyFailed": "No passkey was made: {detail}",
+  "@webApprovalsPagePasskeyFailed": {
+    "description": "The approvals page: making the passkey failed or was cancelled. detail is the browser's own message, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "The operation either timed out or was not allowed."
+      }
+    }
+  },
+  "webApprovalsPageCompareTitle": "Check the code on your computer",
+  "@webApprovalsPageCompareTitle": {
+    "description": "The approvals page after the passkey was made: its title."
+  },
+  "webApprovalsPageCompare": "Click Allow in Pinky's Settings only if it shows this code.",
+  "@webApprovalsPageCompare": {
+    "description": "The approvals page after the passkey was made: under the code."
+  },
+  "webApprovalsPageTurnedDown": "Pinky on your computer turned this browser down.",
+  "@webApprovalsPageTurnedDown": {
+    "description": "The approvals page: the person clicked Deny on the request in Pinky's Settings."
+  },
+  "webApprovalsPageAdded": "This phone can answer approvals now. Keep this page open: approvals show here as they come.",
+  "@webApprovalsPageAdded": {
+    "description": "The approvals page right after the person allowed the phone."
+  },
+  "webApprovalsPageNone": "Nothing waits for you.",
+  "@webApprovalsPageNone": {
+    "description": "The approvals page when no approval is open."
+  },
+  "webApprovalsPageRemoved": "This browser can no longer answer approvals: it was removed in Pinky, or Pinky quit. Add it again from Settings › Phones › Web mirror.",
+  "@webApprovalsPageRemoved": {
+    "description": "The approvals page when its session no longer works."
+  },
+  "webApprovalsPageAllow": "Allow",
+  "@webApprovalsPageAllow": {
+    "description": "The approvals page: the button that allows the step once."
+  },
+  "webApprovalsPageDeny": "Deny",
+  "@webApprovalsPageDeny": {
+    "description": "The approvals page: the button that denies the step."
+  },
+  "webApprovalsPageConfirmAllow": "Tap again to allow",
+  "@webApprovalsPageConfirmAllow": {
+    "description": "The approvals page: the Allow button after the first tap; the second tap opens the passkey sheet."
+  },
+  "webApprovalsPageConfirmDeny": "Tap again to deny",
+  "@webApprovalsPageConfirmDeny": {
+    "description": "The approvals page: as webApprovalsPageConfirmAllow, for Deny."
+  },
+  "webApprovalsPageOnComputer": "Answer this one in Pinky on your computer.",
+  "@webApprovalsPageOnComputer": {
+    "description": "The approvals page: on a card it cannot answer (an agent's first connection, opening a blocked app)."
+  },
+  "webApprovalsPageLeft": "{seconds} s left",
+  "@webApprovalsPageLeft": {
+    "description": "The approvals page: the time left to answer a card.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "42"
+      }
+    }
+  },
+  "webApprovalsPageTimedOut": "No answer in time: it counted as Deny.",
+  "@webApprovalsPageTimedOut": {
+    "description": "The approvals page: a card's time ran out."
+  },
+  "webApprovalsPageAlready": "Already answered, on the computer or another device.",
+  "@webApprovalsPageAlready": {
+    "description": "The approvals page: someone answered the card elsewhere first."
+  },
+  "webApprovalsPageLate": "Too late: the time ran out, and it counted as Deny.",
+  "@webApprovalsPageLate": {
+    "description": "The approvals page: the answer came after the card's time ran out."
+  },
+  "webApprovalsPageVerifyFailed": "Pinky couldn't check the passkey. Try again.",
+  "@webApprovalsPageVerifyFailed": {
+    "description": "The approvals page: the answer's passkey check failed."
+  },
+  "webApprovalsPageNotAnswered": "Not answered.",
+  "@webApprovalsPageNotAnswered": {
+    "description": "The approvals page: the person cancelled the passkey sheet."
+  },
+  "webApprovalsPageAllowed": "Allowed.",
+  "@webApprovalsPageAllowed": {
+    "description": "The approvals page: the card was allowed from this phone."
+  },
+  "webApprovalsPageDenied": "Denied.",
+  "@webApprovalsPageDenied": {
+    "description": "The approvals page: the card was denied from this phone."
+  },
+  "webApprovalsPageRule": "Rule: {rule}",
+  "@webApprovalsPageRule": {
+    "description": "The approvals page: the rule that asked, on a card.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Payments"
+      }
+    }
+  },
+  "webApprovalsPageBusy": "An agent is using this phone, or just did, so it can't answer approvals now. Answer on the computer or on another phone.",
+  "@webApprovalsPageBusy": {
+    "description": "The approvals page, on a phone Pinky drives, while an agent uses it."
+  },
+  "webApprovalsPageSlowDown": "Too many tries. Wait a minute, then make a new link in Pinky.",
+  "@webApprovalsPageSlowDown": {
+    "description": "The approvals page: adding a phone was refused because of too many tries in a minute."
+  },
   "webMirrorControlDesc": "Taps, swipes, Back and Home from the page, as on Pinky's own mirror: they pause an agent's task.",
   "@webMirrorControlDesc": {
     "description": "Settings › Phones › Web mirror: under webMirrorControlToggle, what control from the browser does."
