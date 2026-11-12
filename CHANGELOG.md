@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On Android phones where only you can turn on Pinky for Android's accessibility service (such as vivo with OriginOS 6), Pinky now leaves it on after a task, after an update and after Pinky restarts, until you turn it off on the phone, so you no longer turn it on before every task. Settings › Phones and the checkup say that it stays on and that apps on the phone, banking apps among them, can see it.
+
 ## 2026.1112.4 (2026-11-12)
 
 - While no agent has connected yet, Settings › Agents shows Connect an agent first, without scrolling.
