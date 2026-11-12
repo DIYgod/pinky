@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // finishName is the tool that ends a task: the model's own phone_release.
@@ -19,7 +20,7 @@ var finishTool = tool{
 			"outcome": map[string]any{"type": "string", "enum": []any{"done", "failed"},
 				"description": "done when the task is done; failed when you could not do it, or stopped for a reason the person should know."},
 			"summary": map[string]any{"type": "string",
-				"description": "One or two plain sentences in the language of the task: what you did and what came of it, or why you could not do it."},
+				"description": "One or two plain sentences in the language the person wrote the task in (not the language of the phone's screen): what you did and what came of it, or why you could not do it."},
 		},
 		"required": []any{"outcome", "summary"},
 	},
@@ -55,7 +56,7 @@ Rules:
 - Do only what the task asks. Before anything that cannot be undone that the task did not clearly ask for (sending, posting, buying, paying, deleting, calling), ask with phone_request_approval. Do not change the phone's settings unless the task asks you to.
 - The person cannot reply to your text: when you need to ask them something, use phone_request_approval (a yes-or-no question) or phone_handoff (something they do on the phone).
 - Stay within %d steps (each tool call is one). Be direct; do not explore.
-- End with finish: done when the task is done, failed when you cannot or should not do it. Write its summary in the language of the task.`, cfg.MaxSteps)
+- End with finish: done when the task is done, failed when you cannot or should not do it. Write its summary in the language the person wrote the task in, even when the phone's screen is in another language.`, cfg.MaxSteps)
 }
 
 // firstMessage is the person's task, the time, and the phone's first
@@ -65,5 +66,50 @@ func firstMessage(task, device, connected string, now time.Time) string {
 	fmt.Fprintf(&b, "The person's task, in their words:\n<task>\n%s\n</task>\n\n", strings.TrimSpace(task))
 	fmt.Fprintf(&b, "It is %s on their computer.\n\n", now.Format("Monday 2 January 2006, 15:04 (MST)"))
 	fmt.Fprintf(&b, "The phone (device %q) is connected:\n%s", device, strings.TrimSpace(connected))
+	b.WriteString("\n\n" + summaryLanguage(task))
 	return b.String()
+}
+
+// summaryLanguage reminds the model, after the phone's first screen, to
+// write its summary in the task's language: a model that read a screen in
+// another language for a whole task tends to answer in that one. The
+// writing systems the task uses name the language where they can.
+func summaryLanguage(task string) string {
+	if lang := scriptLanguage(task); lang != "" {
+		return "The person wrote the task in " + lang + ": write finish's summary in " + lang + ", whatever language the phone's screen is in."
+	}
+	return "Write finish's summary in the language the person wrote the task in, whatever language the phone's screen is in."
+}
+
+// scriptLanguage names the language a task is written in when its letters
+// tell: Japanese once it has kana, Chinese for Han alone, Korean for
+// Hangul, English for Latin letters alone with no accents. Anything else,
+// or a mix it cannot tell, is "", and the model works it out.
+func scriptLanguage(task string) string {
+	var han, kana, hangul, ascii, other int
+	for _, r := range task {
+		switch {
+		case r >= 0x3040 && r <= 0x30ff:
+			kana++
+		case unicode.Is(unicode.Han, r):
+			han++
+		case unicode.Is(unicode.Hangul, r):
+			hangul++
+		case r < 0x80 && unicode.IsLetter(r):
+			ascii++
+		case unicode.IsLetter(r):
+			other++
+		}
+	}
+	switch {
+	case kana > 0:
+		return "Japanese"
+	case han > 0 && hangul == 0:
+		return "Chinese"
+	case hangul > 0 && han == 0:
+		return "Korean"
+	case ascii > 0 && han+hangul+other == 0:
+		return "English"
+	}
+	return ""
 }
