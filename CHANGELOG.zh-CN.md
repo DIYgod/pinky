@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- Agent 调用 `phone_read_list` 时如果给 continuation 配了不对的方向或滚动区域，Pinky 仍会告诉它该怎么传；现在改对之后再调用，能从列表停下的地方接着读，不会再发现 continuation 已经失效。感谢 @pseudoyu。
+
 ## 2026.1112.13 (2026-11-12)
 
 - 在 Android 15 及更早、没装 Android 版 Pinky 的手机上，Pinky 重新会拒绝往空的验证码输入框里输入。从 2026.1112.10 起，它可能把输入框的提示文字当成已输入的内容，从而让 agent 在那里输入。感谢 @pseudoyu。
