@@ -631,9 +631,6 @@ func (d *Device) logPhone() logPhone {
 
 // AppLogs implements driver.AppLogger. A Simulator's logs are not read.
 func (d *WDADevice) AppLogs(ctx context.Context, q driver.LogQuery) (driver.LogResult, error) {
-	if err := d.awake(ctx); err != nil {
-		return driver.LogResult{}, err
-	}
 	p, err := d.logPhone()
 	if err != nil {
 		return driver.LogResult{}, err
@@ -643,9 +640,6 @@ func (d *WDADevice) AppLogs(ctx context.Context, q driver.LogQuery) (driver.LogR
 
 // AppCrashes implements driver.AppLogger.
 func (d *WDADevice) AppCrashes(ctx context.Context, q driver.LogQuery) ([]driver.CrashReport, error) {
-	if err := d.awake(ctx); err != nil {
-		return nil, err
-	}
 	p, err := d.logPhone()
 	if err != nil {
 		return nil, err
@@ -655,9 +649,6 @@ func (d *WDADevice) AppCrashes(ctx context.Context, q driver.LogQuery) ([]driver
 
 // DevBuild implements driver.AppLogger.
 func (d *WDADevice) DevBuild(ctx context.Context, app driver.App) (bool, error) {
-	if err := d.awake(ctx); err != nil {
-		return false, err
-	}
 	p, err := d.logPhone()
 	if err != nil {
 		return false, err
@@ -681,8 +672,8 @@ func (d *WDADevice) logPhone() (logPhone, error) {
 		return logPhone{}, fmt.Errorf("app logs on a Simulator: %w", driver.ErrUnsupported)
 	}
 	p := logPhone{entry: d.entry, logs: &d.logs, procs: d.processPaths}
-	if l := d.tunnelLink(); l != nil {
-		p.rsd = l.entry
+	if d.l != nil {
+		p.rsd = d.l.entry
 	}
 	return p, nil
 }
@@ -694,8 +685,8 @@ func (d *WDADevice) processPaths(ctx context.Context) (map[int]string, error) {
 	defer d.procMu.Unlock()
 	if d.procSvc == nil {
 		e := d.entry
-		if l := d.tunnelLink(); l != nil {
-			e = l.entry
+		if d.l != nil {
+			e = d.l.entry
 		}
 		var svc *instruments.DeviceInfoService
 		err := within(ctx, func() (err error) {

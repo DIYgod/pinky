@@ -45,15 +45,10 @@ type wdaClient struct {
 	// gone, once the phone is open, maps a request that failed to reach WDA
 	// (WDADevice.gone).
 	gone func(error) error
-	// enter, once the phone is open, runs before each request: it wakes a
-	// resting phone and counts the request (WDADevice.enter, rest_wda.go).
-	enter func(context.Context) (func(), error)
 
-	// dmu guards dial, how the client reaches the phone's ports; a wake
-	// gives it the new runner's (useRoute). nil for a client at a URL.
-	dmu  sync.Mutex
-	dial func(ctx context.Context, port int) (net.Conn, error)
-	tr   *http.Transport
+	// enter, once the phone is open, runs before each request and the
+	// returned func after it: it counts the phone as used (rest_wda.go).
+	enter func() func()
 
 	mu  sync.Mutex
 	sid string // the WebDriver session
@@ -89,16 +84,12 @@ func newWDATunnel(t *Tunnel) *wdaClient {
 // newWDADial returns a client that opens its connections to the phone's
 // ports with dial.
 func newWDADial(dial func(ctx context.Context, port int) (net.Conn, error)) *wdaClient {
-	wc := &wdaClient{dial: dial}
 	tr := &http.Transport{
 		DialContext: func(ctx context.Context, _, addr string) (net.Conn, error) {
 			port := wdaPort
 			if strings.HasPrefix(addr, "mjpeg:") {
 				port = mjpegPort
 			}
-			wc.dmu.Lock()
-			dial := wc.dial
-			wc.dmu.Unlock()
 			c, err := dial(ctx, port)
 			if err != nil && ctx.Err() == nil {
 				return nil, &wdaDialError{err}
@@ -110,41 +101,11 @@ func newWDADial(dial func(ctx context.Context, port int) (net.Conn, error)) *wda
 		DisableCompression:  true,
 		TLSHandshakeTimeout: time.Second,
 	}
-	wc.base, wc.mjpeg, wc.tr = "http://wda", "http://mjpeg/", tr
-	wc.hc = &http.Client{Transport: tr, Timeout: 30 * time.Second}
-	wc.long = &http.Client{Transport: tr}
-	return wc
-}
-
-// routed reports whether the client dials the phone itself, so a wake can
-// give it another way there (useRoute).
-func (c *wdaClient) routed() bool {
-	c.dmu.Lock()
-	defer c.dmu.Unlock()
-	return c.dial != nil
-}
-
-// useRoute has the client reach the phone the way o does, from the next
-// connection on, and forgets the WebDriver session: o reaches a runner
-// that started anew. Connections to the old runner are closed.
-func (c *wdaClient) useRoute(o *wdaClient) {
-	o.dmu.Lock()
-	dial := o.dial
-	o.dmu.Unlock()
-	c.dmu.Lock()
-	c.dial = dial
-	c.dmu.Unlock()
-	c.forget()
-}
-
-// forget drops the WebDriver session and the idle connections, without a
-// request: the runner is gone or going.
-func (c *wdaClient) forget() {
-	c.mu.Lock()
-	c.sid = ""
-	c.mu.Unlock()
-	if c.tr != nil {
-		c.tr.CloseIdleConnections()
+	return &wdaClient{
+		base:  "http://wda",
+		mjpeg: "http://mjpeg/",
+		hc:    &http.Client{Transport: tr, Timeout: 30 * time.Second},
+		long:  &http.Client{Transport: tr},
 	}
 }
 
@@ -220,16 +181,12 @@ func isSessionError(err error) bool {
 // receives the answer's "value".
 func (c *wdaClient) call(ctx context.Context, hc *http.Client, method, path string, body, out any) error {
 	if c.enter != nil {
-		leave, err := c.enter(ctx)
-		if err != nil {
-			return err
-		}
-		defer leave()
+		defer c.enter()()
 	}
 	return c.send(ctx, hc, method, path, body, out)
 }
 
-// send is call without enter, for requests that must not wake the phone.
+// send is call without counting a use, for ending the session when idle.
 func (c *wdaClient) send(ctx context.Context, hc *http.Client, method, path string, body, out any) error {
 	var rd io.Reader
 	if body != nil {
@@ -353,14 +310,6 @@ var wdaSettings = map[string]any{
 
 // session returns the WebDriver session, creating it once.
 func (c *wdaClient) session(ctx context.Context) (string, error) {
-	if c.enter != nil {
-		// Before mu: a wake forgets the session under it (forget).
-		leave, err := c.enter(ctx)
-		if err != nil {
-			return "", err
-		}
-		defer leave()
-	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.sid != "" {
@@ -373,14 +322,14 @@ func (c *wdaClient) session(ctx context.Context) (string, error) {
 		// Never relaunch or kill the app in front.
 		"shouldWaitForQuiescence": false,
 	}}}
-	if err := c.send(ctx, c.hc, http.MethodPost, "/session", body, &out); err != nil {
+	if err := c.call(ctx, c.hc, http.MethodPost, "/session", body, &out); err != nil {
 		return "", err
 	}
 	if out.SessionID == "" {
 		return "", errors.New("WebDriverAgent: no session id")
 	}
 	c.sid = out.SessionID
-	if err := c.send(ctx, c.hc, http.MethodPost, "/session/"+c.sid+"/appium/settings", map[string]any{"settings": wdaSettings}, nil); err != nil {
+	if err := c.call(ctx, c.hc, http.MethodPost, "/session/"+c.sid+"/appium/settings", map[string]any{"settings": wdaSettings}, nil); err != nil {
 		return "", err
 	}
 	return c.sid, nil
@@ -625,6 +574,6 @@ func (c *wdaClient) deleteSession(ctx context.Context) {
 	c.sid = ""
 	c.mu.Unlock()
 	if sid != "" {
-		c.send(ctx, c.hc, http.MethodDelete, "/session/"+sid, nil, nil) // never wakes a resting phone
+		c.send(ctx, c.hc, http.MethodDelete, "/session/"+sid, nil, nil)
 	}
 }

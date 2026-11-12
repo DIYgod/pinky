@@ -16,23 +16,22 @@ import (
 // 27; while a client is connected the phone keeps its accessibility
 // machinery up for it, and serves no other client, such as the iPhone
 // app's own tasks), the inspector's session (axAuditDaemon, which follows
-// apps coming to the front), the pasteboard and screenshot services, and
-// through the helper the WebDriverAgent runner, an XCTest UI test that
-// keeps automation on. A person reported an iPhone 16 Pro on Wi-Fi that
-// stuttered while scrolling until they paused Pinky's connection to it.
+// apps coming to the front), and the pasteboard and screenshot services.
+// A person reported an iPhone 16 Pro on iOS 27 over Wi-Fi that stuttered
+// while scrolling until they paused Pinky's connection to it.
 //
 // So once a phone has had no task (driver.WorkWatcher), no view of its
 // screen (the mirror, a recording) and no call from Pinky for restIdle,
 // the device closes all of that and rests; the device itself stays open,
 // and the gateway goes on showing the phone online. The next call that
 // needs the phone (an agent's connect and first read, the mirror opening,
-// the checkup, the app list) wakes it first: a new tunnel, and on the
-// helper a new runner, as when the phone is opened. Lockdown reads (the
-// lock state, battery and storage) go through usbmuxd and do not wake it.
+// the checkup, the app list) wakes it first with a new tunnel, as when the
+// phone is opened; nothing of it asks the person for anything. Lockdown
+// reads (the lock state, battery and storage) go through usbmuxd and do
+// not wake it. The helper's runner is not stopped (rest_wda.go).
 //
 // A wake that fails reports driver.ErrOffline, so the gateway drops the
-// phone and opens it again the usual way, which also shows a step the
-// phone waits for (the passcode before the helper starts).
+// phone and opens it again the usual way.
 
 // restIdle is how long a phone goes unused before it rests. It is longer
 // than streamIdle, so the stream has stopped by then, and than
@@ -40,8 +39,7 @@ import (
 // an agent that releases the phone and connects again within a minute or
 // so, as agents often do between steps of one job, find it awake. Waking
 // costs what opening the phone costs: a tunnel (about a second on a
-// cable, one to three over Wi-Fi), and through the helper a runner start
-// (about 5 s over Wi-Fi).
+// cable, one to three over Wi-Fi).
 const restIdle = 90 * time.Second
 
 // wakeTimeout bounds a wake: the gateway's connectWait.

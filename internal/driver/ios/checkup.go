@@ -53,15 +53,12 @@ func (d *Device) checkScreen(ctx context.Context) driver.Check {
 
 // Checkup implements driver.Checker through the WebDriverAgent helper.
 func (d *WDADevice) Checkup(ctx context.Context) (driver.Checkup, error) {
-	if err := d.awake(ctx); err != nil {
-		return driver.Checkup{}, err
-	}
 	checks := []func(context.Context) driver.Check{d.checkHelper,
 		func(ctx context.Context) driver.Check { return checkScreenshot(ctx, d.Screenshot) }}
 	if d.entry.Properties.SerialNumber != "" { // not a simulator
 		checks = append(checks,
 			func(context.Context) driver.Check { return checkDevMode(d.entry) },
-			func(ctx context.Context) driver.Check { return checkImage(ctx, d.tunnelLink(), d.imageDir, false) })
+			func(ctx context.Context) driver.Check { return checkImage(ctx, d.l, d.imageDir, false) })
 	}
 	return runChecks(ctx, d.info, checks...)
 }

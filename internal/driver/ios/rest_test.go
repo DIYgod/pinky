@@ -3,7 +3,6 @@ package ios
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http/httptest"
 	"strings"
 	"sync"
@@ -124,7 +123,7 @@ func TestDeviceWakeFails(t *testing.T) {
 	}
 }
 
-// fakeRun is a runner Pinky started, which stop ends at once.
+// fakeRun is a runner Pinky started; stopped reports whether stop ran.
 func fakeRun() (*wdaRun, *atomic.Bool) {
 	stopped := new(atomic.Bool)
 	done := make(chan struct{})
@@ -135,34 +134,25 @@ func fakeRun() (*wdaRun, *atomic.Bool) {
 	}}, stopped
 }
 
-// dialTo routes a WDA client to a test server.
-func dialTo(srv *httptest.Server) *wdaClient {
-	addr := srv.Listener.Addr().String()
-	return newWDADial(func(ctx context.Context, _ int) (net.Conn, error) {
-		var d net.Dialer
-		return d.DialContext(ctx, "tcp", addr)
-	})
+// idleWDA is a WDADevice on a phone, reached at a test server.
+func idleWDA(t *testing.T, f *fakeWDA, run *wdaRun) *WDADevice {
+	t.Helper()
+	s := httptest.NewServer(f)
+	t.Cleanup(s.Close)
+	d := &WDADevice{info: driver.Info{ID: "phone"}, c: newWDAURL(s.URL, ""), run: run}
+	d.entry.Properties.SerialNumber = "phone"
+	d.c.enter = d.idle.enter
+	d.idle.init()
+	t.Cleanup(d.idle.close)
+	return d
 }
 
-func TestWDADeviceRestsAndWakes(t *testing.T) {
-	f1, f2 := &fakeWDA{}, &fakeWDA{}
-	s1, s2 := httptest.NewServer(f1), httptest.NewServer(f2)
-	defer s1.Close()
-	defer s2.Close()
+// Through the helper an idle phone keeps its runner (starting it again may
+// ask for the passcode) and only ends its WebDriver session.
+func TestWDADeviceIdleKeepsRunner(t *testing.T) {
+	f := &fakeWDA{}
 	run, stopped := fakeRun()
-	d := &WDADevice{info: driver.Info{ID: "phone"}, c: dialTo(s1), run: run, done: make(chan struct{}), openedAt: time.Now()}
-	defer close(d.done)
-	d.c.enter = d.enter
-	var reopens atomic.Int32
-	var reopenErr error
-	run2, stopped2 := fakeRun()
-	d.reopen = func(context.Context) (*WDADevice, error) {
-		reopens.Add(1)
-		if reopenErr != nil {
-			return nil, reopenErr
-		}
-		return &WDADevice{c: dialTo(s2), run: run2}, nil
-	}
+	d := idleWDA(t, f, run)
 	ctx := context.Background()
 	later := func() time.Time { return time.Now().Add(2 * restIdle) }
 
@@ -170,23 +160,23 @@ func TestWDADeviceRestsAndWakes(t *testing.T) {
 		t.Fatal(err)
 	}
 	if d.restIfIdle(time.Now()) {
-		t.Fatal("rested right after a request")
+		t.Fatal("idle right after a request")
 	}
 	d.AgentWorking(true)
 	if d.restIfIdle(later()) {
-		t.Fatal("rested while an agent works")
+		t.Fatal("idle while an agent works")
 	}
 	d.AgentWorking(false)
 	streamDone := make(chan struct{})
-	d.watchStream(streamDone)
+	d.idle.watch(streamDone)
 	if d.restIfIdle(later()) {
-		t.Fatal("rested while the picture is watched")
+		t.Fatal("idle while the picture is watched")
 	}
 	close(streamDone)
 	for deadline := time.Now().Add(time.Second); ; time.Sleep(time.Millisecond) {
-		d.rmu.Lock()
-		w := d.watchers
-		d.rmu.Unlock()
+		d.idle.mu.Lock()
+		w := d.idle.watchers
+		d.idle.mu.Unlock()
 		if w == 0 {
 			break
 		}
@@ -195,52 +185,42 @@ func TestWDADeviceRestsAndWakes(t *testing.T) {
 		}
 	}
 
-	if !d.restIfIdle(later()) || !d.Resting() || !stopped.Load() {
-		t.Fatalf("resting %v, runner stopped %v", d.Resting(), stopped.Load())
+	if !d.restIfIdle(later()) {
+		t.Fatal("an idle phone kept its session")
 	}
-	if d.ended() {
-		t.Fatal("a resting helper counts as ended")
+	if stopped.Load() || d.ended() {
+		t.Fatal("going idle stopped the runner")
 	}
-	if reopens.Load() != 0 {
-		t.Fatal("resting started the runner")
+	f.mu.Lock()
+	deletes := len(f.bodies["DELETE /session/s1"])
+	f.mu.Unlock()
+	if deletes != 1 {
+		t.Fatalf("%d session deletes", deletes)
+	}
+	if d.restIfIdle(later()) {
+		t.Fatal("ended the session twice")
 	}
 
-	// The next request starts the runner again and goes to it.
+	// The next request makes a new session on the same runner.
 	if err := d.c.keys(ctx, "b"); err != nil {
 		t.Fatal(err)
 	}
-	if d.Resting() || reopens.Load() != 1 {
-		t.Fatalf("resting %v after %d reopens", d.Resting(), reopens.Load())
-	}
-	f2.mu.Lock()
-	keys := f2.bodies["POST /wda/keys"]
-	f2.mu.Unlock()
-	if len(keys) != 1 || !strings.Contains(keys[0], `"b"`) {
-		t.Fatalf("the new runner got %v", keys)
-	}
-
-	// A wake that fails reports the phone offline.
-	if !d.restIfIdle(later()) || !stopped2.Load() {
-		t.Fatal("did not rest again")
-	}
-	reopenErr = errors.New("passcode needed")
-	if err := d.c.keys(ctx, "c"); !errors.Is(err, driver.ErrOffline) {
-		t.Fatalf("a failed wake: %v", err)
-	}
-	if !d.ended() {
-		t.Fatal("a failed wake does not end the device")
+	f.mu.Lock()
+	sessions, keys := f.sessions, f.bodies["POST /wda/keys"]
+	f.mu.Unlock()
+	if sessions != 2 || len(keys) != 2 {
+		t.Fatalf("%d sessions, keys %v", sessions, keys)
 	}
 }
 
-// A runner Pinky did not start (Xcode's) never rests.
+// A runner Pinky did not start (Xcode's) is never touched.
 func TestWDADeviceTheirsNeverRests(t *testing.T) {
 	f := &fakeWDA{}
-	s := httptest.NewServer(f)
-	defer s.Close()
-	d := &WDADevice{info: driver.Info{ID: "phone"}, c: dialTo(s), done: make(chan struct{})}
-	defer close(d.done)
-	d.reopen = func(context.Context) (*WDADevice, error) { t.Fatal("reopened"); return nil, nil }
+	d := idleWDA(t, f, nil)
+	if err := d.c.keys(context.Background(), "a"); err != nil {
+		t.Fatal(err)
+	}
 	if d.restIfIdle(time.Now().Add(2 * restIdle)) {
-		t.Fatal("rested a runner that is not Pinky's")
+		t.Fatal("ended the session on a runner that is not Pinky's")
 	}
 }
