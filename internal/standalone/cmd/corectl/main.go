@@ -18,6 +18,8 @@
 //	                           computer, as Stop on the pill does
 //	dismiss
 //	decide NEED DECISION
+//	history [-before MS] [-limit N]   list the tasks that ended, newest first
+//	history ID                 print one task with its steps
 package main
 
 import (
@@ -64,14 +66,16 @@ type state struct {
 }
 
 type reply struct {
-	OK    bool            `json:"ok"`
-	Error string          `json:"error"`
-	State json.RawMessage `json:"state"`
+	OK      bool            `json:"ok"`
+	Error   string          `json:"error"`
+	State   json.RawMessage `json:"state"`
+	History json.RawMessage `json:"history"`
+	More    bool            `json:"more"`
 }
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: corectl state|start|watch|stop|dismiss|decide|preset")
+		fmt.Fprintln(os.Stderr, "usage: corectl state|start|watch|stop|dismiss|decide|preset|history")
 		os.Exit(2)
 	}
 	cmd, args := os.Args[1], os.Args[2:]
@@ -126,6 +130,22 @@ func main() {
 		stopAfter := fs.Duration("stop-after", 0, "press Stop after this long (0: never)")
 		_ = fs.Parse(args)
 		err = watch(*decide, *after, *stopAfter)
+	case "history":
+		fs := flag.NewFlagSet("history", flag.ExitOnError)
+		before := fs.Int64("before", 0, "tasks that started before this, in Unix milliseconds (0: now)")
+		limit := fs.Int("limit", 0, "how many tasks (0: 20)")
+		_ = fs.Parse(args)
+		req := map[string]any{"cmd": "history", "before": *before, "limit": *limit}
+		if fs.NArg() == 1 {
+			req = map[string]any{"cmd": "history", "id": fs.Arg(0)}
+		}
+		var r reply
+		if r, err = call(req); err == nil {
+			var v any
+			_ = json.Unmarshal(r.History, &v)
+			b, _ := json.MarshalIndent(map[string]any{"history": v, "more": r.More}, "", "  ")
+			fmt.Println(string(b))
+		}
 	default:
 		err = fmt.Errorf("unknown command %q", cmd)
 	}

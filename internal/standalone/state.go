@@ -59,8 +59,10 @@ type AgentState struct {
 	TokenLimit int64   `json:"token_limit"`
 }
 
-// TaskState is the gateway's task: its steps in plain words.
+// TaskState is the gateway's task: its steps in plain words. ID is the
+// task's in the history (PastTask.ID).
 type TaskState struct {
+	ID    string `json:"id,omitempty"`
 	Title string `json:"title"`
 	State string `json:"state"`
 	Steps []Step `json:"steps"`
@@ -98,19 +100,12 @@ func (c *Core) State() State {
 			st.Computer = &ComputerState{Task: task, Stoppable: stoppable}
 		}
 	}
-	// Only the agent starts tasks here: its task is the newest one of the
-	// phone that started with it, never an earlier one or a dismissed one.
+	// The agent's task, never an earlier one or a dismissed one.
 	var task *gateway.TaskView
 	if ok {
 		if s, has := c.pilot.Status(d.Info.ID); has {
 			st.Agent = agentState(s)
-			since := s.Started.Add(-time.Second)
-			for _, t := range c.G.Tasks() {
-				if t.DeviceID == d.Info.ID && !t.Started.Before(since) {
-					task = &t
-					break
-				}
-			}
+			task = c.taskOf(d.Info.ID, s)
 		}
 	}
 	c.mu.Lock()
@@ -121,11 +116,7 @@ func (c *Core) State() State {
 	}
 	c.mu.Unlock()
 	if task != nil {
-		ts := &TaskState{Title: task.Title, State: string(task.State)}
-		for _, s := range task.Steps {
-			ts.Steps = append(ts.Steps, Step{Text: s.Text, Status: s.Status, MS: s.Elapsed.Milliseconds()})
-		}
-		st.Task = ts
+		st.Task = &TaskState{ID: task.ID, Title: task.Title, State: string(task.State), Steps: stepsOf(*task)}
 	}
 	st.Needs = []Need{}
 	for _, n := range c.G.Needs() {

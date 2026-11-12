@@ -57,13 +57,15 @@ func start(dataDir, pkg, companionSocket, coreSocket, version string, logw io.Wr
 		Providers: []driver.Provider{local.NewProvider(app)},
 		Device:    local.ID,
 		DataDir:   dataDir,
-		Version:   version,
+		// Desktop Pinky's default (Settings › Privacy).
+		KeepDays: 30,
+		Version:  version,
 		// On the phone it drives, ask before commits, messages and
 		// settings changes too, not only payments.
 		Preset: policy.PresetCommits,
 		Gateway: gateway.Options{
-			// The prototype has no Activity to show the steps'
-			// pictures in, and each costs a capture on the phone.
+			// Activity on the phone shows the steps' words only, and
+			// each picture would cost a capture on the phone.
 			NoScreenshots: true,
 		},
 		// The task claims the phone, so that Pinky on a computer and Pinky

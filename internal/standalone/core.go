@@ -43,6 +43,9 @@ type Options struct {
 	// DataDir holds the history database and the rules; empty keeps
 	// history in memory and uses the bundled rules.
 	DataDir string
+	// KeepDays is how many days the history keeps a task that ended
+	// (gateway.SetRetention); 0 keeps every task.
+	KeepDays int
 	// Preset is when agents ask the person (policy.Preset) on a first run,
 	// before there is a rules file; zero keeps the bundled default.
 	Preset policy.Preset
@@ -78,6 +81,9 @@ type Core struct {
 	run  int    // counts the tasks started, so that an earlier one's end leaves a later one alone
 	last *gateway.TaskView
 	subs map[chan struct{}]struct{}
+
+	runMu sync.Mutex
+	runs  []runRecord // how the agent ended each task, oldest first (history.go)
 }
 
 // Errors of the control commands.
@@ -119,9 +125,13 @@ func New(o Options) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
+	if o.KeepDays > 0 {
+		g.SetRetention(o.KeepDays)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &Core{opt: o, log: o.Log, G: g, MCP: mcp.New(g, o.Version), ctx: ctx, cancel: cancel,
 		subs: map[chan struct{}]struct{}{}}
+	c.loadRuns()
 	popt := o.Pilot
 	popt.Server, popt.Version, popt.Notify = c.MCP, o.Version, c.changed
 	popt.Key = func(context.Context, string) (string, error) {
@@ -254,13 +264,19 @@ func (c *Core) Start(r StartRequest) error {
 	return nil
 }
 
-// endTask waits for run's task to end, then ends it.
+// endTask waits for run's task to end, keeps how it ended for the history,
+// then ends it.
 func (c *Core) endTask(device string, run int) {
 	defer c.ended(run)
 	ch, done := c.subscribe()
 	defer done()
 	for {
-		if s, ok := c.pilot.Status(device); !ok || !s.Running() {
+		s, ok := c.pilot.Status(device)
+		if !ok {
+			return
+		}
+		if !s.Running() {
+			c.record(device, s)
 			return
 		}
 		select {
