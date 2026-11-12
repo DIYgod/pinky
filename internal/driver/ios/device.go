@@ -73,7 +73,9 @@ type Device struct {
 	streamOn    int
 	streamShows string
 	good        map[string]int
-	noVideo     *noVideoError // why the last stream start got no picture; nil once one did
+	noVideo     *noVideoError         // why the last stream start got no picture; nil once one did
+	echo        map[string]*echoCount // what input did on each display, by key (multiinput.go)
+	hidProbed   bool                  // the HID services were asked for once (probeHIDServices)
 
 	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
 
@@ -317,12 +319,28 @@ func (d *Device) startStream(ctx context.Context) error {
 	d.inputAt = m.started.Add(inputSettle)
 	d.streamedLocked(want, m.display, pw, ph)
 	m.setTurn(d.scr.turn())
+	shows := d.streamShows
+	probe := multi && !d.hidProbed
+	d.hidProbed = d.hidProbed || multi
 	d.mu.Unlock()
 	if multi {
 		d.log.Info("iphone: streaming display", "device", d.info.ID, "display", m.display, "tried", ids,
-			"wanted", want, "picture", fmt.Sprintf("%dx%d", pw, ph), "displays", describeDisplays(ds))
+			"wanted", want, "shows", shows, "picture", fmt.Sprintf("%dx%d", pw, ph), "displays", describeDisplays(ds),
+			"touch_service", surfaceTouchscreen)
+	}
+	if probe {
+		go d.logHIDServices()
 	}
 	return nil
+}
+
+// logHIDServices logs which HID services the phone lists, once a session
+// on a phone with several displays (probeHIDServices).
+func (d *Device) logHIDServices() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	reply, err := probeHIDServices(ctx, d.l.entry)
+	d.log.Info("iphone: the phone's HID services", "device", d.info.ID, "reply", reply, "err", errString(err))
 }
 
 // streamPlanLocked returns what a stream start is for (the key of the
@@ -896,11 +914,16 @@ func (d *Device) gestureSteps(ctx context.Context, steps []driver.DragStep, onDo
 	if err := h.liftHeld(); err != nil {
 		return err
 	}
+	// On a phone with several displays: whether the touches before this
+	// one showed on the display in use (multiinput.go).
+	unseen := d.inputUnseen()
 	si := d.freshDisplay(ctx)
 	x, y := panelPoint(steps[0].P, si)
+	sent := time.Now()
 	if err := h.touchAt(true, x, y); err != nil {
 		return err
 	}
+	defer d.watchEcho("touch", sent, x, y)
 	if onDown != nil {
 		onDown()
 	}
@@ -920,6 +943,9 @@ func (d *Device) gestureSteps(ctx context.Context, steps []driver.DragStep, onDo
 	}
 	if err := h.touchAt(false, x, y); err != nil {
 		return errors.Join(gerr, err)
+	}
+	if gerr == nil {
+		return unseen
 	}
 	return gerr
 }
@@ -986,7 +1012,12 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 		}
 		return h.touchAt(true, x, y)
 	case driver.TouchUp:
-		return h.touchAt(false, x, y)
+		up := time.Now()
+		err := h.touchAt(false, x, y)
+		if err == nil {
+			d.watchEcho("mirror touch", up, x, y)
+		}
+		return err
 	}
 	return fmt.Errorf("touch action %q: %w", a, driver.ErrUnsupported)
 }
