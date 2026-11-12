@@ -27,7 +27,7 @@ type Info struct {
 	// Features lists additions to protocol 1 this app has on this phone,
 	// such as FeatureDisplays. Apps built before round 3 send none.
 	Features            []string `json:"features,omitempty"`
-	Connections         int      `json:"connections"` // open connections, this one included
+	Connections         int      `json:"connections"` // open connections, this one included; the app's own only in on-phone mode
 	IncludeNotImportant bool     `json:"include_not_important"`
 	IdleDisableMS       int64    `json:"idle_disable_ms"`
 }

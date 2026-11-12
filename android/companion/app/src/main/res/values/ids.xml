@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The task screen's input keeps what the person typed when the
+         screen is made again (rotation, dark mode). -->
+    <item name="task_input" type="id" />
+</resources>

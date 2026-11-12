@@ -60,7 +60,7 @@ Every command that reads or writes the screen takes `display`, an Android displa
 | `manufacturer`, `model` | `Build.MANUFACTURER`, `Build.MODEL` |
 | `time`, `uptime_ms` | Phone wall clock (Unix ms) and uptime |
 | `displays` | Ids of displays that have accessibility windows (always `[0]` before Android 11) |
-| `connections` | Open connections, including this one |
+| `connections` | Open connections, including this one: those over adb, and the app's own (its core and screens) only while on-phone mode is on. Pinky on a computer leaves the service on after a task when this is more than 1. Until 2026-11-12 the app's own always counted, so a core that had run once kept the service on after every task from a computer. |
 | `include_not_important`, `idle_disable_ms` | Current `config` values |
 | `on_phone` | Whether on-phone mode is on: Pinky runs tasks on this phone by itself and keeps the service on ([android-app.md](android-app.md#on-phone-mode)). Absent in apps built before 2026-11-11. |
 

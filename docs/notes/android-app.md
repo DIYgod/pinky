@@ -83,12 +83,46 @@ Never two agents at once, and the person always sees who is acting. Milestone 1 
 - **Desktop Pinky leaves the service on** when `ping` says `on_phone`: the person turned it on for Pinky on the phone, and turning it off would also turn on-phone mode off. `Enable` already leaves a service that is on alone, but two backstops in `internal/driver/android/companion.go` force it off: `quietLocked`, for a service an older Pinky left on for good, and `disableLocked` when the service was on before the agent started. Today they spare it only because the core's connection counts as another client (`companionPeers`); Milestone 2 makes both check `on_phone`. Desktop Pinky still turns the service off when it turned it on itself and on-phone mode is off.
 - **Who is acting.** On-phone mode's pill shows while either side works: "Pinky on your computer is working" with Stop for a computer's agent (Stop releases the claim and the computer's agent gets `stopped`), and the task's own line for a task on the phone. In desktop mode alone nothing changes on the phone: Pinky on the computer shows the person what happens.
 
+## Milestone 2 so far
+
+On-phone mode is still in debug builds only (`on_phone_ui`), and everything below is in them.
+
+### Pinky's screens on the phone
+
+Both run in the `:ui` process, are closed to agents as the debug page is (`policy.IsPinkyScreen`, `OwnUI`, sensitive content), and speak English, Simplified Chinese and Japanese (`res/values*/phone_strings.xml`).
+
+- **The task screen** (`TaskActivity`) takes the person through setup first: turning the service on, with the hint for Android 13+'s restricted settings and a link to App info, then a key and a model. If the core cannot start, it says why (`core_error` in the service's reply to `on_phone`). Then it takes a task, shows it while it runs (its steps, cost and time, what it waits for, Stop) and how it ended, and lists its steps under Activity. Start's errors are named by the core's codes (`no_device`, `no_key`, `no_model`, `no_task`, `busy`). When the feed offers an update, a card offers it (Download, Later).
+- **Settings** (`SettingsActivity`), as desktop Pinky has them in Settings › Ask Pinky and Approvals: the service (Anthropic by default, or OpenAI-compatible), its key, model and address, each kept per service (`TaskSettings`); a task's limits on steps, time and cost (tokens for a model without prices); when Pinky asks (the core's `policy.Preset`, so it changes only while the core runs); the service and App info in Android's settings; the version and Check for updates.
+- **Keys** (`Secrets`) are encrypted with an AES key that lives in the Android Keystore and never leaves it. Only the ciphertext is in the app's files, which are not backed up, and nothing logs a key or its length.
+- **The look** (`Look`) is desktop Pinky's palette and type, light and dark (`res/values/colors.xml`, `res/values-night`), built in code.
+- **Words** (`Words`) puts amounts, times, a task's end and its steps as desktop Pinky words them (`ui/format.go`, `ui/extras.go`): "You denied: open Settings" with the person's mark, "Waiting for you: tap “Pay”", a step stopped while it waited as "Not done: stopped". The gateway's own words (steps, card titles, rule names) stay English: desktop Pinky translates them (`ui/gwtext.go`), the phone does not yet.
+- **The pill** reads the task's last step as Activity does, so an answered approval reads "You answered: …", not "Waiting for you". Its line gives way to its button: a long line no longer pushes Stop or Close onto a second line.
+- **Updates** (`UpdateCheck`): the task screen checks the feed at most every 12 hours and offers a higher `version_code`; Download opens the APK's address in the browser. The check is off in debug builds and in builds without a version, and the feed does not publish the Android asset yet (below).
+
+### Checked
+
+On 2026-11-12, on the Android 17 emulator with the debug build and `fakemodel -script loop`:
+
+| What | Result |
+| --- | --- |
+| `make check`, `go vet` for Windows and Linux, `CGO_ENABLED=0 go build`, `lintVitalRelease` | pass |
+| Settings: an address without `http://` or `https://` | the error shows under the field and the dialog stays; typing clears it |
+| Settings: Remove the API key, and an empty address | "API key removed", and the row offers Add; the address reads Default |
+| A task with rules on commits | 27 steps, done; the pill read "Working · " and the last step, then "Done. …" with Close on the same line; Activity marked each step ✓ |
+| Rules on every action: Deny on the card | "You denied: open Settings", with the person's mark |
+| Allow on the card | the pill read "Working · You answered: press back"; the step settled as "Pressed back" ✓ |
+| Stop on the pill while a step waited | the step read "Press back" and "Not done: stopped", marked –; the pill read "Stopped" with Close |
+| Stop on the task screen; tapping the pill | stops the task; opens Pinky |
+| Simplified Chinese and Japanese (`cmd locale set-app-locales`) | the task screen, Settings, the card, the pill and the steps' wording; the gateway's words stay English |
+
+Not checked: the new screens on the Pixel and the Mi 10 Pro, the dark theme (switching it is a phone setting), an update from the feed, and a real model.
+
 ## Next
 
 ### Milestone 2: tasks on the phone, complete
 
 - **The core in release builds.** On-phone mode needs `INTERNET`, gestures, screenshots and the core in the release build, and `on_phone_ui` turns true. The core is arm64 only. Android refuses to install an APK whose native code does not match the phone (`INSTALL_FAILED_NO_MATCHING_ABIS`) only when the APK has no code for the phone's ABI at all, so an arm64-only APK does not install on 32-bit-only phones (some Android Go phones) or x86 emulators. Two APKs then: `pinky-android.apk` with the core, and a small one without it for phones that cannot run it, which desktop Pinky picks by `ro.product.cpu.abilist`. To decide by measuring: the library is stored uncompressed today (21.1 MB; Android maps it straight from the APK), and compressed it is 7.8 MB (`gzip -9`). `useLegacyPackaging = true` would make the download about 13 MB smaller, but Android then extracts the library on install, so it takes space twice on the phone.
-- **Setup screens in Pinky's words and look:** provider (Anthropic by default, or OpenAI-compatible with a base URL), the key in the Android Keystore, "Ask before" rules, history, and onboarding: turning the service on, Android 13+'s restricted settings for sideloaded apps, vendor battery settings, staying alive.
+- **Setup screens in Pinky's words and look:** the task screen and Settings are in (above). Still to come: a history of past tasks, and the rest of onboarding: vendor battery settings and staying alive.
 - **Updates without a computer:** the app checks Pinky's release feed, `latest.json` ([updates.md](updates.md#the-feed)), and offers the new APK; desktop Pinky keeps updating it as today where there is a computer. The feed gains an asset `android-arm64` for `pinky-android.apk` with the usual `url`, `sha256` and `size`, plus `version_code`: the APK changes only when `android/companion` does, so the app offers an update only for a higher `version_code`. Desktop Pinky ignores the new key, as it reads only its own `GOOS-GOARCH`.
 - **Distribution:** `pinky-android.apk` as a release asset of its own and a download link in the README.
 - **Two modes on one phone,** as above.
@@ -108,3 +142,4 @@ Never two agents at once, and the person always sees who is acting. Milestone 1 
 - `scripts/androidcore.sh` builds the core for arm64 with the NDK and then the debug APK; `scripts/androidcore.sh core` builds only the core.
 - `cmd/corectl` drives the core's control socket from adb as the app's uid (`run-as app.pinky.companion.dev`); `cmd/fakemodel` stands in for the model (`-pinky "Pinky (dev)"` for the debug build's label); `cmd/localbench -dev` times the debug build's commands.
 - Device tests: `scripts/devlock.sh <id> env PINKY_DEVICE=<serial> go test -tags device …`, following the phone rules in [WORKING.md](../WORKING.md).
+- `adb shell cmd locale set-app-locales app.pinky.companion.dev --locales zh-Hans` (or `ja`) shows Pinky's screens in another language without changing the phone's; the same command without `--locales` goes back.
