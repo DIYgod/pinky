@@ -789,13 +789,15 @@ func (g *Gateway) keepCursor(l *lease, st *readState) string {
 }
 
 // takeCursor finds the continuation on the lease and uses it up. One from
-// another task or phone is on another lease, so it is not found.
+// another task or phone is on another lease, so it is not found. A call
+// whose direction, area or ref does not go with it leaves it there: the
+// error says what to pass, and the agent's next call still finds it.
 func (g *Gateway) takeCursor(l *lease, req ReadListRequest) (*readCursor, *Result) {
 	g.mu.Lock()
+	defer g.mu.Unlock()
 	c, ok := l.readLists[req.Continuation]
-	delete(l.readLists, req.Continuation)
-	g.mu.Unlock()
 	if !ok || time.Now().After(c.expires) {
+		delete(l.readLists, req.Continuation)
 		return nil, errResult(ErrInvalidArgument,
 			"continuation is unknown or has expired: it holds for 15 minutes, on the task and phone it came from. Read the list again without it.")
 	}
@@ -808,6 +810,7 @@ func (g *Gateway) takeCursor(l *lease, req ReadListRequest) (*readCursor, *Resul
 	if req.Ref > 0 && c.area != nil {
 		return nil, errResult(ErrInvalidArgument, "continuation belongs to a scroll_area; leave ref out.")
 	}
+	delete(l.readLists, req.Continuation)
 	return c, nil
 }
 
