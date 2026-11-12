@@ -8,7 +8,8 @@ struct CoreReply: Decodable {
     var rev: Int?
     var state: CoreState?
     var reason: String?
-    var history: [HistoryTask]?
+    var history: [PastTask]?
+    var more: Bool?
 }
 
 /// What Pinky's screens show (internal/standalone.State).
@@ -46,6 +47,14 @@ struct AgentState: Decodable, Equatable {
     var cost: Double
     var tokens: Int
     var seconds: Int
+    /// Cost is in US dollars; without it the model's prices are unknown
+    /// and the cost limit is token_limit tokens.
+    var priced: Bool?
+    /// The task's limits, so that the screens can say which one ended it.
+    var max_steps: Int?
+    var max_minutes: Int?
+    var max_cost: Double?
+    var token_limit: Int?
 }
 
 struct TaskState: Decodable, Equatable {
@@ -74,14 +83,19 @@ struct Need: Decodable, Equatable, Identifiable {
     var deadline: Date? { deadline_ms.map { Date(timeIntervalSince1970: Double($0) / 1000) } }
 }
 
-struct HistoryTask: Decodable, Equatable, Identifiable {
+/// A task that ended, as Activity shows it (standalone.PastTask).
+struct PastTask: Decodable, Equatable, Identifiable {
     var id: String
     var title: String
-    var agent: String
     var state: String
+    /// done, stopped, failed or not_started.
+    var outcome: String
     var started_ms: Int64
     var ended_ms: Int64?
-    var steps: [Step]
+    /// How the agent ended it, when the core kept a record.
+    var agent: AgentState?
+    /// Only in the answer for one task.
+    var steps: [Step]?
 
     var started: Date { Date(timeIntervalSince1970: Double(started_ms) / 1000) }
 }

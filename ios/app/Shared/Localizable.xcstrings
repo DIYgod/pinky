@@ -1,24 +1,152 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ · %lld s · %@" : {
+    "%@ tokens" : {
+      "comment" : "A number of tokens a model read and wrote",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$lld s · %3$@"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · %2$lld 秒 · %3$@"
+            "value" : "%@ トークン"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · %2$lld 秒 · %3$@"
+            "value" : "%@ 个 token"
+          }
+        }
+      }
+    },
+    "%@. %@" : {
+      "comment" : "How a task ended, then why",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@"
+          }
+        }
+      }
+    },
+    "%lld h %@ min" : {
+      "comment" : "A duration in hours and minutes",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld h %2$@ min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 時間 %2$@ 分"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 小时 %2$@ 分"
+          }
+        }
+      }
+    },
+    "%lld min %@ s" : {
+      "comment" : "A duration in minutes and seconds",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld min %2$@ s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 分 %2$@ 秒"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 分 %2$@ 秒"
+          }
+        }
+      }
+    },
+    "%lld minutes" : {
+      "comment" : "A number of minutes, as a limit",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minute"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld minutes"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 分"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 分钟"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld s" : {
+      "comment" : "A duration in seconds",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 秒"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 秒"
           }
         }
       }
@@ -118,6 +246,38 @@
         }
       }
     },
+    "AI model" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI モデル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 模型"
+          }
+        }
+      }
+    },
+    "API address" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API アドレス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 地址"
+          }
+        }
+      }
+    },
     "API key" : {
       "localizations" : {
         "ja" : {
@@ -134,18 +294,50 @@
         }
       }
     },
-    "API key saved; type to replace it" : {
+    "About" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "API キーは保存済み。入力すると置き換えます"
+            "value" : "情報"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "API 密钥已保存；输入新的即可替换"
+            "value" : "关于"
+          }
+        }
+      }
+    },
+    "Activity" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクティビティ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动"
+          }
+        }
+      }
+    },
+    "Add an API key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API キーを追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加 API 密钥"
           }
         }
       }
@@ -167,23 +359,23 @@
         }
       }
     },
-    "Address (empty: the provider's own)" : {
+    "Allow" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アドレス（空欄ならサービス既定）"
+            "value" : "許可"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "地址（留空则用服务商自己的）"
+            "value" : "允许"
           }
         }
       }
     },
-    "Allow for task" : {
+    "Allow for this task" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -199,34 +391,98 @@
         }
       }
     },
-    "Allow once" : {
+    "Also asks before calls, account changes and installing apps." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今回だけ許可"
+            "value" : "支払いのほか、送信・注文・削除・通話・インストールなどの確認も行います。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "允许一次"
+            "value" : "在打电话、更改账户和安装应用前也会询问。"
           }
         }
       }
     },
-    "Ask me before" : {
+    "Anthropic-compatible API" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "確認してから行う操作"
+            "value" : "Anthropic 互換 API"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这些操作前先问我"
+            "value" : "Anthropic 兼容 API"
+          }
+        }
+      }
+    },
+    "Ask before every action" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての操作を確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在每个操作前都询问"
+          }
+        }
+      }
+    },
+    "Ask before payments only" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支払いのみ確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅在付款前询问"
+          }
+        }
+      }
+    },
+    "Ask before payments, messages and deletions" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信・削除なども確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在付款、发送消息和删除前询问"
+          }
+        }
+      }
+    },
+    "Before iOS 27, Pinky pairs with this iPhone from a Mac with Pinky, once." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 27 より前は、Pinky を入れた Mac からこの iPhone と一度ペアリングします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 27 之前，需要在装有 Pinky 的 Mac 上与这台 iPhone 配对一次。"
           }
         }
       }
@@ -243,6 +499,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取消"
+          }
+        }
+      }
+    },
+    "Change the API key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API キーを変更"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改 API 密钥"
+          }
+        }
+      }
+    },
+    "Choose a model" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルを選ぶ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择模型"
           }
         }
       }
@@ -264,18 +552,34 @@
         }
       }
     },
-    "Choose the model and key" : {
+    "Choose the AI model and add its API key" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "モデルとキーを設定"
+            "value" : "AI モデルを選んで API キーを追加する"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择模型并填写密钥"
+            "value" : "选择 AI 模型并添加 API 密钥"
+          }
+        }
+      }
+    },
+    "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anthropic の API で Claude を使うか、OpenAI 互換のサービスでほかのモデルを使います。キーはそれぞれ別です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 Anthropic 的 API 使用 Claude，或通过兼容 OpenAI 的服务使用其他模型。两者各用各的密钥。"
           }
         }
       }
@@ -297,18 +601,84 @@
         }
       }
     },
-    "Connection" : {
+    "Cost is counted from what the service reports, at Anthropic's prices." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "接続"
+            "value" : "費用は、サービスが報告する使用量と Anthropic の料金から計算します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "连接"
+            "value" : "费用按服务报告的用量和 Anthropic 的价格计算。"
+          }
+        }
+      }
+    },
+    "Cost per task" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 タスクの最大費用"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个任务的费用上限"
+          }
+        }
+      }
+    },
+    "Couldn't finish" : {
+      "comment" : "A task ended: failed or declined",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了できませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能完成"
+          }
+        }
+      }
+    },
+    "Couldn't read Activity." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アクティビティを読み込めませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法载入活动。"
+          }
+        }
+      }
+    },
+    "Couldn't start" : {
+      "comment" : "A task ended: it never started (the API key)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始できませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能开始"
           }
         }
       }
@@ -329,18 +699,18 @@
         }
       }
     },
-    "Delete the key" : {
+    "Default" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キーを削除"
+            "value" : "既定"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除密钥"
+            "value" : "默认"
           }
         }
       }
@@ -357,6 +727,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "拒绝"
+          }
+        }
+      }
+    },
+    "Dismiss" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "閉じる"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
           }
         }
       }
@@ -393,66 +779,66 @@
         }
       }
     },
-    "Done, hand back" : {
+    "Each action on the phone is a step. Time spent waiting for you doesn't count." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "完了して返す"
+            "value" : "スマホでの操作 1 回が 1 ステップです。あなたの操作や承認を待つ時間は含みません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "完成，交还"
+            "value" : "Pinky 在手机上的每个操作算一步。等你操作或审批的时间不计算在内。"
           }
         }
       }
     },
-    "Every action" : {
+    "Enter an address that starts with https:// or http://." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべての操作"
+            "value" : "https:// または http:// で始まるアドレスを入力してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "所有操作"
+            "value" : "请输入以 https:// 或 http:// 开头的地址。"
           }
         }
       }
     },
-    "History" : {
+    "Limits" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "履歴"
+            "value" : "上限"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "历史记录"
+            "value" : "上限"
           }
         }
       }
     },
-    "Last step: choose the model Pinky thinks with and add its API key." : {
+    "Messages and deletions go through without asking." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最後のステップ：Pinky が使うモデルを選び、その API キーを入力します。"
+            "value" : "支払いや送金など、お金に関わる確定操作の際だけ確認を行います。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最后一步：选择 Pinky 使用的模型，并填写它的 API 密钥。"
+            "value" : "发送消息和删除会直接进行，不会询问。"
           }
         }
       }
@@ -473,34 +859,35 @@
         }
       }
     },
-    "Model (empty: claude-opus-5-5)" : {
+    "Model name" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "モデル（空欄なら claude-opus-5-5）"
+            "value" : "モデル名"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "模型（留空则用 claude-opus-5-5）"
+            "value" : "模型名称"
           }
         }
       }
     },
-    "New task" : {
+    "No API key is saved. Add one in Settings." : {
+      "comment" : "Why a task did not start",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しいタスク"
+            "value" : "API キーが保存されていません。「設定」で追加してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新任务"
+            "value" : "还没有保存 API 密钥。请在「设置」中添加。"
           }
         }
       }
@@ -521,18 +908,18 @@
         }
       }
     },
-    "No tasks yet" : {
+    "No finished tasks yet." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "タスクはまだありません"
+            "value" : "完了したタスクはまだありません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "还没有任务"
+            "value" : "还没有已结束的任务。"
           }
         }
       }
@@ -548,7 +935,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关"
+            "value" : "已关闭"
           }
         }
       }
@@ -564,7 +951,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开"
+            "value" : "已开启"
           }
         }
       }
@@ -586,18 +973,34 @@
         }
       }
     },
-    "OpenAI-compatible" : {
+    "OpenAI-compatible API" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "OpenAI 互換"
+            "value" : "OpenAI 互換 API"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "兼容 OpenAI"
+            "value" : "OpenAI 兼容 API"
+          }
+        }
+      }
+    },
+    "Opus is the most capable; Sonnet and Haiku cost less." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opus が最も高性能で、Sonnet と Haiku は費用が抑えられます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opus 能力最强，Sonnet 和 Haiku 更便宜。"
           }
         }
       }
@@ -618,18 +1021,18 @@
         }
       }
     },
-    "Pair it once from a Mac with Pinky (see ios/README.md)." : {
+    "Pair Pinky with this iPhone" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky のある Mac から一度ペアリングしてください（ios/README.md を参照）。"
+            "value" : "Pinky をこの iPhone とペアリングする"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请用装有 Pinky 的 Mac 配对一次（见 ios/README.md）。"
+            "value" : "让 Pinky 与这台 iPhone 配对"
           }
         }
       }
@@ -666,34 +1069,18 @@
         }
       }
     },
-    "Payments" : {
+    "Paste the API key" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "支払い"
+            "value" : "API キーを貼り付け"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "付款"
-          }
-        }
-      }
-    },
-    "Payments, messages and deletions" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "支払い・送信・削除など"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "付款、发送消息和删除"
+            "value" : "粘贴 API 密钥"
           }
         }
       }
@@ -710,7 +1097,39 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky 在询问"
+            "value" : "Pinky 想确认"
+          }
+        }
+      }
+    },
+    "Pinky can do simple tasks on your iPhone by itself, with an AI model you choose." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky は選んだ AI モデルを使って、iPhone での簡単なタスクを自分でこなせます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 可以借助你选择的 AI 模型，自己在 iPhone 上完成简单的任务。"
+          }
+        }
+      }
+    },
+    "Pinky can't reach this iPhone" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky がこの iPhone に接続できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 连不上这台 iPhone"
           }
         }
       }
@@ -732,23 +1151,6 @@
         }
       }
     },
-    "Pinky could not do it" : {
-      "comment" : "A task ended: failed or refused",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky はできませんでした"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky 没能完成"
-          }
-        }
-      }
-    },
     "Pinky could not start pairing. Check that Wi-Fi is on and Pinky may use the local network." : {
       "comment" : "Pairing on the phone could not start",
       "localizations" : {
@@ -766,19 +1168,18 @@
         }
       }
     },
-    "Pinky finished" : {
-      "comment" : "A task ended: done",
+    "Pinky doesn't know this model's prices, so it counts a million tokens as US$1." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky が完了しました"
+            "value" : "Pinky はこのモデルの料金を知らないため、100 万トークンを 1 ドルとして数えます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky 完成了"
+            "value" : "Pinky 不知道这个模型的价格，所以按每百万 token 1 美元计算。"
           }
         }
       }
@@ -834,7 +1235,7 @@
         }
       }
     },
-    "Pinky is working" : {
+    "Pinky is working on it" : {
       "comment" : "Live Activity: a task runs",
       "localizations" : {
         "ja" : {
@@ -851,18 +1252,18 @@
         }
       }
     },
-    "Pinky leaves this app and works in the others. You can watch, answer here when it asks, and stop it from the Live Activity." : {
+    "Pinky leaves this app and works in the other apps. You can watch it, answer when it asks, and stop it at any time." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky はこのアプリを離れ、ほかのアプリで作業します。様子を見守り、確認を求められたらここで答え、ライブアクティビティから停止できます。"
+            "value" : "Pinky はこのアプリを離れて、ほかのアプリで作業します。様子を見たり、確認されたときに答えたり、いつでも停止したりできます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky 会离开这个 App，到其他 App 里操作。你可以在旁边看着，它询问时回到这里回答，也可以在实时活动里停止它。"
+            "value" : "Pinky 会离开这个 App，到其他 App 里操作。你可以随时旁观、在它询问时回答，也可以随时停止它。"
           }
         }
       }
@@ -888,7 +1289,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "パソコンの Pinky がこの iPhone を使用中です"
+            "value" : "パソコンの Pinky がこの iPhone を操作中です"
           }
         },
         "zh-Hans" : {
@@ -916,23 +1317,6 @@
         }
       }
     },
-    "Pinky reached its limit" : {
-      "comment" : "A task ended: a step, time or cost limit",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky が上限に達しました"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky 达到了上限"
-          }
-        }
-      }
-    },
     "Pinky reaches this iPhone through a VPN that never leaves the phone." : {
       "localizations" : {
         "ja" : {
@@ -945,40 +1329,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 通过一个不离开手机的 VPN 连接这台 iPhone。"
-          }
-        }
-      }
-    },
-    "Pinky stopped" : {
-      "comment" : "A task ended: the person stopped it",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky を停止しました"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky 已停止"
-          }
-        }
-      }
-    },
-    "Pinky stopped with an error" : {
-      "comment" : "A task ended: an error",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky はエラーで停止しました"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pinky 因出错而停止"
           }
         }
       }
@@ -1017,19 +1367,18 @@
         }
       }
     },
-    "Pinky waits for you" : {
-      "comment" : "Live Activity: an approval or handoff waits",
+    "Pinky thinks with a model you choose and pays for: Claude through Anthropic's API, or another one through a service compatible with OpenAI's." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky が待っています"
+            "value" : "Pinky は、あなたが選んで料金を払うモデルで考えます。Anthropic の API の Claude か、OpenAI 互換のサービスのほかのモデルを使えます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pinky 在等你"
+            "value" : "Pinky 用你选择并付费的模型来思考：通过 Anthropic 的 API 使用 Claude，或通过兼容 OpenAI 的服务使用其他模型。"
           }
         }
       }
@@ -1118,18 +1467,129 @@
         }
       }
     },
-    "Provider" : {
+    "Reached the limit of %@." : {
+      "comment" : "Why a task stopped: the cost limit, in dollars or tokens",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サービス"
+            "value" : "上限の %@ に達しました。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "服务商"
+            "value" : "已达到 %@ 的上限。"
+          }
+        }
+      }
+    },
+    "Reached the limit of %lld minutes." : {
+      "comment" : "Why a task stopped",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Reached the limit of %lld minute."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Reached the limit of %lld minutes."
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "上限の %lld 分に達しました。"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "已达到 %lld 分钟的上限。"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Reached the limit of %lld steps." : {
+      "comment" : "Why a task stopped",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Reached the limit of %lld step."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Reached the limit of %lld steps."
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "上限の %lld ステップに達しました。"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "已达到 %lld 步的上限。"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Remove the API key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API キーを削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除 API 密钥"
           }
         }
       }
@@ -1150,18 +1610,50 @@
         }
       }
     },
-    "Set up" : {
+    "Saved" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "はじめに"
+            "value" : "保存済み"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开始使用"
+            "value" : "已保存"
+          }
+        }
+      }
+    },
+    "Service" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务"
+          }
+        }
+      }
+    },
+    "Set up Pinky" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky を設定する"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置 Pinky"
           }
         }
       }
@@ -1178,6 +1670,54 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
+          }
+        }
+      }
+    },
+    "Show all" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示全部"
+          }
+        }
+      }
+    },
+    "Show more" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "さらに表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示更多"
+          }
+        }
+      }
+    },
+    "Slower, but you see every tap first." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky の操作のたびに確認を行います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "速度较慢，但每次点按都会先让你过目。"
           }
         }
       }
@@ -1215,34 +1755,18 @@
         }
       }
     },
-    "Started" : {
+    "Starting Pinky…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開始時刻"
+            "value" : "Pinky を起動しています…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开始时间"
-          }
-        }
-      }
-    },
-    "State" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状態"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状态"
+            "value" : "正在启动 Pinky…"
           }
         }
       }
@@ -1259,6 +1783,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "步骤"
+          }
+        }
+      }
+    },
+    "Steps per task" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 タスクの最大ステップ数"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个任务的步数上限"
           }
         }
       }
@@ -1328,38 +1868,6 @@
         }
       }
     },
-    "Task" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タスク"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "任务"
-          }
-        }
-      }
-    },
-    "Tasks on this iPhone wait until the computer is done with it, or until you choose Pause connection for this iPhone there." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "パソコンが使い終わるか、パソコンでこの iPhone の「接続を一時停止」を選ぶまで、この iPhone でのタスクは待機します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "电脑用完之前，或者在电脑上为这台 iPhone 选择「暂停连接」之前，这台 iPhone 上的任务需要等待。"
-          }
-        }
-      }
-    },
     "The VPN" : {
       "localizations" : {
         "ja" : {
@@ -1372,6 +1880,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "VPN"
+          }
+        }
+      }
+    },
+    "The address of the service's OpenAI-compatible API, such as https://…/v1. OpenAI's own by default." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスの OpenAI 互換 API のアドレス（https://…/v1 など）。既定は OpenAI 公式です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务的 OpenAI 兼容 API 地址，例如 https://…/v1。默认是 OpenAI 官方地址。"
           }
         }
       }
@@ -1392,35 +1916,68 @@
         }
       }
     },
-    "The key stays in this iPhone's Keychain. Pinky sends it only to the model's address, with what the task needs." : {
+    "The key is kept in this iPhone's Keychain and sent only to the service." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キーはこの iPhone のキーチェーンに保存されます。Pinky はタスクに必要な内容とともに、モデルのアドレスにだけ送ります。"
+            "value" : "キーはこの iPhone のキーチェーンに保存され、サービスにだけ送られます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "密钥保存在这台 iPhone 的钥匙串里。Pinky 只会把它连同任务所需的内容发送到模型的地址。"
+            "value" : "密钥保存在这台 iPhone 的钥匙串中，只发送给该服务。"
           }
         }
       }
     },
-    "The model did not accept the key" : {
-      "comment" : "A task ended: no or bad API key",
+    "The model declined this task." : {
+      "comment" : "Why a task did not finish",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "モデルがキーを受け付けませんでした"
+            "value" : "モデルがこのタスクを断りました。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "模型没有接受这个密钥"
+            "value" : "模型拒绝了这个任务。"
+          }
+        }
+      }
+    },
+    "The model's name as the service gives it. It must read images and use tools." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスが示すモデル名。画像を読めて、ツールを使えるモデルが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "填写服务给出的模型名称。这个模型需要能看图并调用工具。"
+          }
+        }
+      }
+    },
+    "The service didn't accept the API key. Check it in Settings." : {
+      "comment" : "Why a task did not start",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスが API キーを受け付けませんでした。「設定」で確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务没有接受这个 API 密钥。请在「设置」中检查。"
           }
         }
       }
@@ -1475,6 +2032,22 @@
         }
       }
     },
+    "This task is no longer in Activity." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このタスクはもうアクティビティにありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动里已经没有这个任务了。"
+          }
+        }
+      }
+    },
     "This was already answered, or the time to answer ran out." : {
       "comment" : "Decide refused",
       "localizations" : {
@@ -1488,6 +2061,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这一项已经回答过了，或者回答时间已过。"
+          }
+        }
+      }
+    },
+    "Time per task" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 タスクの最大時間"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个任务的时长上限"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "comment" : "A day in Activity",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
           }
         }
       }
@@ -1556,6 +2162,38 @@
         }
       }
     },
+    "Turn on Pinky's VPN" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky の VPN をオンにする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 Pinky 的 VPN"
+          }
+        }
+      }
+    },
+    "Turn on Pinky's VPN to change this." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky の VPN をオンにすると変更できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 Pinky 的 VPN 后才能更改。"
+          }
+        }
+      }
+    },
     "Turning on…" : {
       "localizations" : {
         "ja" : {
@@ -1606,6 +2244,40 @@
         }
       }
     },
+    "US$%@" : {
+      "comment" : "An amount in US dollars; the number has two decimals",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ドル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 美元"
+          }
+        }
+      }
+    },
+    "Up to %@ a task" : {
+      "comment" : "Under the task box: the cost limit of a task",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 タスクあたり最大 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个任务最多 %@"
+          }
+        }
+      }
+    },
     "VPN" : {
       "localizations" : {
         "ja" : {
@@ -1618,6 +2290,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "VPN"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バージョン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本"
           }
         }
       }
@@ -1638,6 +2326,39 @@
         }
       }
     },
+    "Waiting for you" : {
+      "comment" : "Live Activity: an approval or handoff waits",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたの対応待ち"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等你处理"
+          }
+        }
+      }
+    },
+    "Waiting for you: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたの対応待ち：%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等你处理：%@"
+          }
+        }
+      }
+    },
     "What should Pinky do on this iPhone?" : {
       "localizations" : {
         "ja" : {
@@ -1654,24 +2375,51 @@
         }
       }
     },
-    "Working · %@ · %lld s · %@" : {
+    "When should Pinky ask you?" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Working · %1$@ · %2$lld s · %3$@"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "作業中 · %1$@ · %2$lld 秒 · %3$@"
+            "value" : "確認が必要な操作"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在处理 · %1$@ · %2$lld 秒 · %3$@"
+            "value" : "Pinky 应在何时询问你？"
+          }
+        }
+      }
+    },
+    "Yesterday" : {
+      "comment" : "A day in Activity",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨日"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "昨天"
+          }
+        }
+      }
+    },
+    "You can start a task here when it's done, or once you choose Pause connection for this iPhone there." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使い終わるか、パソコンでこの iPhone の「接続を一時停止」を選ぶと、ここでタスクを開始できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等它用完，或者在电脑上为这台 iPhone 选择「暂停连接」后，你就可以在这里开始任务。"
           }
         }
       }
@@ -1688,6 +2436,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你可以切换到其他 App，Pinky 会继续从电脑上操作。电脑用完之前，这台 iPhone 上的任务需要等待。"
+          }
+        }
+      }
+    },
+    "end.done" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成"
           }
         }
       }

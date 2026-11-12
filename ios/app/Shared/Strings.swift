@@ -45,17 +45,127 @@ enum L {
                       comment: "The app's provisioning profile runs out; the date and time")
     }
 
-    /// The title of a task that ended, by how it ended (pilot.End).
-    static func ended(_ end: String) -> String {
-        switch end {
-        case "done": String(localized: "Pinky finished", comment: "A task ended: done")
-        case "stopped": String(localized: "Pinky stopped", comment: "A task ended: the person stopped it")
-        case "failed", "refused": String(localized: "Pinky could not do it", comment: "A task ended: failed or refused")
-        case "steps", "time", "cost": String(localized: "Pinky reached its limit", comment: "A task ended: a step, time or cost limit")
-        case "no_key", "bad_key": String(localized: "The model did not accept the key", comment: "A task ended: no or bad API key")
-        default: String(localized: "Pinky stopped with an error", comment: "A task ended: an error")
+    // MARK: Amounts and times, as desktop Pinky and the Android app say them
+
+    /// An amount in US dollars: US$0.05.
+    static func dollars(_ v: Double) -> String {
+        let n = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), v)
+        return String(localized: "US$\(n)", comment: "An amount in US dollars; the number has two decimals")
+    }
+
+    /// A duration: 42 s, 3 min 05 s, 1 h 02 min.
+    static func elapsed(_ seconds: Int) -> String {
+        let s = max(0, seconds)
+        if s < 60 { return String(localized: "\(s) s", comment: "A duration in seconds") }
+        if s < 3600 {
+            return String(localized: "\(s / 60) min \(two(s % 60)) s", comment: "A duration in minutes and seconds")
+        }
+        return String(localized: "\(s / 3600) h \(two(s % 3600 / 60)) min", comment: "A duration in hours and minutes")
+    }
+
+    static func minutes(_ n: Int) -> String {
+        String(localized: "\(n) minutes", comment: "A number of minutes, as a limit")
+    }
+
+    static func tokens(_ n: Int) -> String {
+        String(localized: "\(n.formatted()) tokens", comment: "A number of tokens a model read and wrote")
+    }
+
+    /// A task's cost limit: in dollars for a model whose prices Pinky
+    /// knows, else in tokens.
+    static func costLimit(priced: Bool, maxCost: Double) -> String {
+        priced ? dollars(maxCost) : tokens(Int(maxCost * 1_000_000))
+    }
+
+    /// What a task used: 4 steps · US$0.05 · 9 s.
+    static func usage(_ a: AgentState) -> String {
+        var parts = [steps(a.steps)]
+        if a.priced == true {
+            parts.append(dollars(a.cost))
+        } else if a.tokens > 0 {
+            parts.append(tokens(a.tokens))
+        }
+        parts.append(elapsed(a.seconds))
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: How a task ended
+
+    /// How an ended task reads: green, grey or amber.
+    enum Tone { case done, stopped, failed }
+
+    /// How a task ended (pilot.End): a title, why (which may be empty), and
+    /// its tone.
+    static func end(_ a: AgentState) -> (title: String, reason: String, tone: Tone) {
+        let summary = a.summary ?? ""
+        switch a.end ?? "" {
+        case "done":
+            return (outcome("done"), summary, .done)
+        case "stopped":
+            return (outcome("stopped"), "", .stopped)
+        case "steps":
+            let n = a.max_steps ?? 0
+            return (outcome("stopped"), String(localized: "Reached the limit of \(n) steps.", comment: "Why a task stopped"), .stopped)
+        case "time":
+            let n = a.max_minutes ?? 0
+            return (outcome("stopped"), String(localized: "Reached the limit of \(n) minutes.", comment: "Why a task stopped"), .stopped)
+        case "cost":
+            let limit = costLimit(priced: a.priced == true, maxCost: a.max_cost ?? 0)
+            return (outcome("stopped"), String(localized: "Reached the limit of \(limit).", comment: "Why a task stopped: the cost limit, in dollars or tokens"), .stopped)
+        case "refused":
+            return (outcome("failed"), String(localized: "The model declined this task.", comment: "Why a task did not finish"), .failed)
+        case "no_key":
+            return (outcome("not_started"), String(localized: "No API key is saved. Add one in Settings.", comment: "Why a task did not start"), .failed)
+        case "bad_key":
+            return (outcome("not_started"), String(localized: "The service didn't accept the API key. Check it in Settings.", comment: "Why a task did not start"), .failed)
+        default:
+            return (outcome("failed"), summary, .failed)
         }
     }
+
+    /// How a task ended, in one line.
+    static func endLine(_ a: AgentState) -> String {
+        let e = end(a)
+        if e.reason.isEmpty { return e.title }
+        return String(localized: "\(e.title). \(e.reason)", comment: "How a task ended, then why")
+    }
+
+    /// How a task in Activity ended, in a word (standalone.PastTask's outcome).
+    static func outcome(_ o: String) -> String {
+        switch o {
+        // A key of its own: the button Done has other words in Chinese.
+        case "done": String(localized: "end.done", defaultValue: "Done", comment: "A task ended: done")
+        case "stopped": String(localized: "Stopped", comment: "A task ended: the person stopped it, or it reached a limit")
+        case "not_started": String(localized: "Couldn't start", comment: "A task ended: it never started (the API key)")
+        default: String(localized: "Couldn't finish", comment: "A task ended: failed or declined")
+        }
+    }
+
+    static func tone(outcome o: String) -> Tone {
+        switch o {
+        case "done": .done
+        case "stopped": .stopped
+        default: .failed
+        }
+    }
+
+    /// The day of a time, as Activity heads its days: Today, Yesterday,
+    /// else its date, with the weekday this year and with the year before.
+    /// short leaves the weekday out, for a row.
+    static func day(_ d: Date, short: Bool = false) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(d) { return String(localized: "Today", comment: "A day in Activity") }
+        if cal.isDateInYesterday(d) { return String(localized: "Yesterday", comment: "A day in Activity") }
+        let thisYear = cal.isDate(d, equalTo: .now, toGranularity: .year)
+        switch (short, thisYear) {
+        case (true, true): return d.formatted(.dateTime.month(.abbreviated).day())
+        case (true, false): return d.formatted(.dateTime.year().month(.abbreviated).day())
+        case (false, true): return d.formatted(.dateTime.weekday(.wide).month(.wide).day())
+        case (false, false): return d.formatted(.dateTime.year().month(.wide).day())
+        }
+    }
+
+    private static func two(_ n: Int) -> String { String(format: "%02d", n) }
 
     /// What the person must do while the phone is not ready, by the core's
     /// reason (onphone.Reason*).

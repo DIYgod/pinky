@@ -4,6 +4,8 @@ Started on 2026-11-11. Pinky's iPhone app, named **Pinky**, runs agent tasks on 
 
 This file holds what the build found, the decisions, what is left, and what the owner has to clean up on the test phone.
 
+The app's screens were redesigned on 2026-11-13 to match the Android app's: [phone-apps-ux.md](phone-apps-ux.md) has the design, and how to look at them in the Simulator (`-pinkyDemo`). Since then the app's own words say Activity, not History, and it has no search.
+
 ## Milestones
 
 | | What | State |

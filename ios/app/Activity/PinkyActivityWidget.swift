@@ -18,7 +18,7 @@ struct PinkyActivityWidget: Widget {
                     Text(headline(s)).font(.headline)
                     Text(context.attributes.task).font(.subheadline).lineLimit(1).foregroundStyle(.secondary)
                     if !s.line.isEmpty && s.ended.isEmpty {
-                        Text(s.line).font(.caption).lineLimit(1).foregroundStyle(s.waiting ? .orange : .secondary)
+                        Text(s.line).font(.caption).lineLimit(1).foregroundStyle(s.waiting ? Color.pinkyAmber : .secondary)
                     }
                     if s.ended.isEmpty {
                         Text(timerInterval: s.started...Date.distantFuture, countsDown: false)
@@ -42,7 +42,7 @@ struct PinkyActivityWidget: Widget {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(context.attributes.task).lineLimit(1).font(.caption)
                         if !s.line.isEmpty && s.ended.isEmpty {
-                            Text(s.line).lineLimit(1).font(.caption2).foregroundStyle(s.waiting ? .orange : .secondary)
+                            Text(s.line).lineLimit(1).font(.caption2).foregroundStyle(s.waiting ? Color.pinkyAmber : .secondary)
                         }
                     }
                 }
@@ -63,8 +63,8 @@ struct PinkyActivityWidget: Widget {
 
     private func headline(_ s: PinkyActivityAttributes.ContentState) -> String {
         if !s.ended.isEmpty { return s.ended }
-        if s.waiting { return String(localized: "Pinky waits for you", comment: "Live Activity: an approval or handoff waits") }
-        return String(localized: "Pinky is working", comment: "Live Activity: a task runs")
+        if s.waiting { return String(localized: "Waiting for you", comment: "Live Activity: an approval or handoff waits") }
+        return String(localized: "Pinky is working on it", comment: "Live Activity: a task runs")
     }
 }
 
@@ -73,9 +73,9 @@ struct Icon: View {
 
     var body: some View {
         if state.waiting {
-            Image(systemName: "hand.raised.fill").foregroundStyle(.orange)
+            Image(systemName: "hand.raised.fill").foregroundStyle(Color.pinkyAmber)
         } else {
-            Image(systemName: "hand.tap.fill").foregroundStyle(.pink)
+            Image(systemName: "hand.tap.fill").foregroundStyle(Color.pinkyAccent)
         }
     }
 }

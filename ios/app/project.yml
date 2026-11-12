@@ -53,6 +53,7 @@ targetTemplates:
       - path: Shared
         excludes: ["*.h"]
       - Activity/PinkyActivity.swift
+      - Activity/Palette.swift
       - path: build/Pairing.json
         buildPhase: resources
   ActivityBase:

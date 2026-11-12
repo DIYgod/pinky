@@ -122,7 +122,10 @@ final class Notifier: @unchecked Sendable {
         seen = open
         let now = st.agent?.running ?? false
         if running, !now, let a = st.agent {
-            post(id: "end-\(Int(Date.now.timeIntervalSince1970))", title: L.ended(a.end ?? ""), body: a.summary ?? "", urgent: false)
+            // How it ended as the title, the task and why as the body.
+            let e = L.end(a)
+            let body = e.reason.isEmpty ? a.task : a.task + "\n" + e.reason
+            post(id: "end-\(Int(Date.now.timeIntervalSince1970))", title: e.title, body: body, urgent: false)
         }
         running = now
     }

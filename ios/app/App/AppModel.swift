@@ -18,7 +18,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var vpn = VPN.off
     /// A refused start or decide, in words, until the next action.
     @Published var problem: String?
-    @Published private(set) var history: [HistoryTask] = []
+    /// The five latest tasks that ended, for the task screen's Activity.
+    @Published private(set) var recent: [PastTask] = []
     @Published private(set) var paired = Pairing.load() != nil
     /// Pairing from this iPhone itself (iOS 27), while it runs.
     @Published private(set) var pairStep = PhonePairing.Step.idle
@@ -43,7 +44,23 @@ final class AppModel: ObservableObject {
     let inApp = false
     #endif
 
+    /// A debug build's canned scenario (Demo): no core, no VPN.
+    #if DEBUG
+    let demo = Demo.scenario != nil
+    #else
+    let demo = false
+    #endif
+
     init() {
+        #if DEBUG
+        if demo {
+            paired = Demo.paired
+            vpn = Demo.paired ? .on : .off
+            state = Demo.state
+            Task { await loadRecent() }
+            return
+        }
+        #endif
         #if !NO_TUNNEL
         NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.vpnChanged() }
@@ -252,6 +269,9 @@ final class AppModel: ObservableObject {
 
     /// One request to the core, wherever it runs.
     func call(_ req: [String: Any]) async -> CoreReply {
+        #if DEBUG
+        if demo { return Demo.reply(req) }
+        #endif
         let data = try! JSONSerialization.data(withJSONObject: req)
         let out: Data
         if inApp {
@@ -301,7 +321,7 @@ final class AppModel: ObservableObject {
         self.reason = reason
         keepAlive(isBusy)
         updateActivity(st)
-        if was?.agent?.running == true && st.agent?.running != true { Task { await loadHistory() } }
+        if was == nil || (was?.agent?.running == true && st.agent?.running != true) { Task { await loadRecent() } }
         #if DEBUG
         debugRun(st)
         #endif
@@ -347,6 +367,7 @@ final class AppModel: ObservableObject {
     /// Tells the core whether Pinky's own app is in front: it refuses input
     /// while it is, so an agent cannot tap Approve or Stop.
     func phaseChanged(_ p: ScenePhase) {
+        if demo { return }
         active = p != .background
         DarwinNote.post(active ? Pinky.uiOnNote : Pinky.uiOffNote)
         if inApp && PinkyCore.isStarted { PinkyUIActive(active ? 1 : 0) }
@@ -364,15 +385,15 @@ final class AppModel: ObservableObject {
 
     func startTask(_ text: String, key: String? = nil) async {
         problem = nil
-        let d = UserDefaults.standard
-        let provider = d.string(forKey: "provider") ?? "anthropic"
+        let provider = TaskSettings.provider
         let key = key ?? Keychain.get(Keychain.keyAccount(provider)) ?? ""
         // iOS starts a Live Activity only for the app in front, and the core
         // takes Pinky off the screen before the agent's first step.
         startActivity(text)
         let r = await call([
             "cmd": "start", "task": text, "key": key, "provider": provider,
-            "model": d.string(forKey: "model") ?? "", "base_url": d.string(forKey: "baseURL") ?? "",
+            "model": TaskSettings.model, "base_url": TaskSettings.baseURL,
+            "max_steps": TaskSettings.maxSteps, "max_minutes": TaskSettings.maxMinutes, "max_cost": TaskSettings.maxCost,
         ])
         if !r.ok {
             endActivities(nil)
@@ -409,9 +430,29 @@ final class AppModel: ObservableObject {
         if !r.ok { problem = L.refused(r.code, r.error) }
     }
 
-    func loadHistory(search: String = "") async {
-        let r = await call(["cmd": "history", "search": search, "limit": 100])
-        if r.ok { history = r.history ?? [] }
+    // MARK: Activity
+
+    func loadRecent() async {
+        if let page = await history(before: nil, limit: 5) { recent = page.tasks }
+    }
+
+    /// A page of Activity, newest first: the tasks that ended before a
+    /// time (Unix ms), and whether there are more; nil when the core did
+    /// not answer.
+    func history(before: Int64?, limit: Int = 20) async -> (tasks: [PastTask], more: Bool)? {
+        let r = await call(["cmd": "history", "before_ms": before ?? 0, "limit": limit])
+        guard r.ok else { return nil }
+        return (r.history ?? [], r.more ?? false)
+    }
+
+    /// One task of Activity with its steps; gone when it is no longer
+    /// there.
+    enum PastResult { case task(PastTask), gone, failed }
+
+    func pastTask(_ id: String) async -> PastResult {
+        let r = await call(["cmd": "history", "id": id])
+        if r.ok, let t = r.history?.first { return .task(t) }
+        return r.code == "gone" ? .gone : .failed
     }
 
     // MARK: Live Activity
@@ -432,7 +473,7 @@ final class AppModel: ObservableObject {
         let acts = Activity<PinkyActivityAttributes>.activities
         guard !acts.isEmpty else { return }
         guard let a = st.agent, a.running else {
-            endActivities(st.agent.map { L.ended($0.end ?? "") })
+            endActivities(st.agent.map { L.end($0).title })
             return
         }
         let waiting = st.needs.first
