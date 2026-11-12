@@ -33,6 +33,9 @@ type fakeConn struct {
 	net.Conn
 	wmu sync.Mutex
 	sub bool // subscribed; guarded by fakeApp.mu
+	// dead: the service behind it stopped, but the client was not told; its
+	// next request ends it instead of an answer. Guarded by fakeApp.mu.
+	dead bool
 }
 
 func (c *fakeConn) send(v any) {
@@ -107,6 +110,10 @@ func (a *fakeApp) serve(c *fakeConn) {
 			a.mu.Unlock()
 		case "claim":
 			a.mu.Lock()
+			if c.dead {
+				a.mu.Unlock()
+				return
+			}
 			var result map[string]any
 			var perr *companion.Error
 			switch {
@@ -183,6 +190,16 @@ func (a *fakeApp) restart(computer *companion.Claim) {
 	}
 	for c := range a.conns {
 		c.Close()
+	}
+}
+
+// restartQuietly stops the service without telling its clients, as
+// Android's LocalSocket.close did: each learns it at its next request.
+func (a *fakeApp) restartQuietly() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for c := range a.conns {
+		c.dead = true
 	}
 }
 
@@ -294,5 +311,23 @@ func TestClaims(t *testing.T) {
 	}
 	if changes.Load() == 0 {
 		t.Error("changed was never called")
+	}
+
+	// A service that stopped without ending the core's connection: the
+	// claim goes through on the connection Watch opens next, and so does
+	// Stop on the pill.
+	app.computerClaims(nil)
+	eventually(t, "the phone is free", func() bool { _, _, ok := computer(); return !ok })
+	app.restartQuietly()
+	if busy, err := cl.Claim(ctx, "Feed the cat"); busy || err != nil {
+		t.Fatalf("Claim after a quiet restart = %v, %v", busy, err)
+	}
+	if task, held, _ := app.phone(); !held || task != "Feed the cat" {
+		t.Fatalf("the app's claim after a quiet restart: %q, %v", task, held)
+	}
+	cl.Release(ctx)
+	app.restartQuietly()
+	if err := cl.StopComputer(ctx); err != nil {
+		t.Fatalf("StopComputer after a quiet restart: %v", err)
 	}
 }
