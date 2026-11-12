@@ -101,7 +101,7 @@ func (a *app) addAndroid(c *mg.Context) {
 	a.brandPicker(c, d)
 	// adb that does not work keeps any phone from showing up: say so first.
 	if h := a.androidHost(c); h.Missing != "" {
-		if words := hostWords(h.Missing); words != "" {
+		if words := hostWords(h.Missing, h.Detail); words != "" {
 			guideProblem(c, words, h.Detail)
 		}
 	}

@@ -101,10 +101,12 @@ func defaultCheckup(info driver.Info) driver.Checkup {
 func companionCheck(cs driver.CompanionState) driver.Check {
 	c := driver.Check{ID: driver.CheckCompanion, Detail: "the companion app is " + string(cs)}
 	switch cs {
-	case "", driver.CompanionOn, driver.CompanionReady:
+	case "", driver.CompanionOn, driver.CompanionReady, driver.CompanionManualOn:
 		c.Status, c.Detail = driver.CheckPass, "the companion app is "+string(cs)
 	case driver.CompanionOff:
 		c.Status, c.Fix = driver.CheckFail, driver.FixTurnOnCompanion
+	case driver.CompanionManual:
+		c.Status, c.Fix = driver.CheckFail, driver.FixTurnOnCompanionByHand
 	case driver.CompanionMissing:
 		c.Status, c.Fix = driver.CheckFail, driver.FixInstallCompanion
 	case driver.CompanionOutdated, driver.CompanionPublicKey:

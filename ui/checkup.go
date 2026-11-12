@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"errors"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -346,7 +347,7 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		if android {
 			w.title = locales.CheckADBTitle()
 		}
-		w.text = hostWords(ck.Fix)
+		w.text = hostWords(ck.Fix, ck.Detail)
 		w.detail = true
 		if w.text == "" {
 			w.text, w.detail = ck.Detail, false
@@ -372,6 +373,11 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		case android:
 			w.text = locales.CheckConnectionAndroidFail(d.Info.Name)
 			w.steps = []string{locales.CheckConnectionAndroidStepCable(), locales.CheckConnectionAndroidStepDebugging()}
+			if port := heldPort(v.Checks); port != "" {
+				// Another adb server holds a phone on a cable, which may be
+				// this one: that first.
+				w.steps = append([]string{locales.CheckConnectionAndroidStepOtherServer(port)}, w.steps...)
+			}
 			w.path = b.dev()
 			w.note = locales.CheckConnectionAndroidNote()
 		default:
@@ -411,6 +417,11 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		case "":
 			if pass {
 				w.text, w.detail = locales.CheckCompanionPass(), false
+				if a.comp.state[d.Info.ID] == driver.CompanionManualOn {
+					// On a phone where only the person can turn it on,
+					// what they turned on stays on (issue #94).
+					w.text = locales.CheckCompanionManualOn()
+				}
 			} else {
 				w.text = locales.CheckCompanionNone()
 			}
@@ -435,8 +446,15 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 			if a.comp.state[d.Info.ID] == driver.CompanionPublicKey {
 				w.text = locales.CheckCompanionPublicKey()
 			}
+		case driver.FixTurnOnCompanionByHand:
+			// The phone ignores Pinky's change to its accessibility
+			// settings (vivo's OriginOS 6): the text says so and the note
+			// says where the switch is. An install's error would only say
+			// the same again, so it does not replace the note.
+			w.text, w.detail = locales.CheckCompanionManual(), false
+			w.note = companionManualWhere(b.id)
 		}
-		if msg := a.comp.err[d.Info.ID]; msg != "" && !pass {
+		if msg := a.comp.err[d.Info.ID]; msg != "" && !pass && ck.Fix != driver.FixTurnOnCompanionByHand {
 			w.note = msg
 		}
 	case driver.CheckInput:
@@ -526,9 +544,14 @@ func (a *app) setupStep(d gateway.DeviceView) checkWords {
 }
 
 // hostWords says what the computer lacks for Android phones, by the
-// Android driver's HostCheck codes; "" for codes of other platforms.
-func hostWords(missing string) string {
+// Android driver's HostCheck codes and, for some, its Detail; "" for
+// codes of other platforms.
+func hostWords(missing, detail string) string {
 	switch missing {
+	case "adb_other_server":
+		if port := otherServerPort(detail); port != "" {
+			return locales.CheckHostADBOtherServer(port)
+		}
 	case "adb":
 		return locales.CheckHostNoADB()
 	case "adb_server":
@@ -539,6 +562,29 @@ func hostWords(missing string) string {
 		return locales.CheckHostADBRestarts()
 	case "adb_no_network":
 		return locales.CheckHostADBNoNetwork()
+	}
+	return ""
+}
+
+// otherServerPort is the port of the other program's adb server in the
+// Detail of the Android driver's "adb_other_server", which begins
+// "Another program's adb server, on port <port>,"; "" when it has none.
+func otherServerPort(detail string) string {
+	if m := reOtherServerPort.FindStringSubmatch(detail); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+var reOtherServerPort = regexp.MustCompile(`^Another program's adb server, on port (\d+),`)
+
+// heldPort is the port of the other adb server that holds a phone on a
+// cable, from a checkup's host item; "" when there is none.
+func heldPort(checks []driver.Check) string {
+	for _, ck := range checks {
+		if ck.ID == driver.CheckHost && ck.Fix == "adb_other_server" {
+			return otherServerPort(ck.Detail)
+		}
 	}
 	return ""
 }

@@ -285,6 +285,59 @@ func TestGatewayWordsInChinese(t *testing.T) {
 	}
 }
 
+// TestApprovalTitlesInEitherTense: when nothing more particular fits, the
+// gateway asks for the action itself in the imperative ("Tap at
+// 540,1200?"); earlier gateways asked in history's past tense ("Tapped at
+// 540,1200?"), and the approvals they stored still do. In Chinese and
+// Japanese both read as the same question; in English the card shows the
+// gateway's words.
+func TestApprovalTitlesInEitherTense(t *testing.T) {
+	for _, lang := range testLanguages() {
+		inLanguage(t, lang)
+		l := locales.In(lang)
+		for _, c := range []struct{ now, before, want string }{
+			{"Tap at 540,1200?", "Tapped at 540,1200?", l.GwDoTapAt("540", "1200")},
+			{"Long-press at 540,1200?", "Long-pressed at 540,1200?", l.GwDoLongPressAt("540", "1200")},
+			{"Tap?", "Tapped?", l.GwDoTapBare()},
+			{"Long-press?", "Long-pressed?", l.GwDoLongPressBare()},
+			{"Type “no cilantro”?", "Typed “no cilantro”?", l.GwDoType("no cilantro")},
+			{"Type “chicken rice” and submit?", "Typed “chicken rice” and submitted?", l.GwDoTypeSubmit("chicken rice")},
+			{"Type “chicken rice” into “Search” and submit?", "Typed “chicken rice” into “Search” and submitted?", l.GwDoTypeIntoSubmit("chicken rice", "Search")},
+			{"Swipe up?", "Swiped up?", l.GwDoSwipe(l.GwDirUp())},
+			{"Swipe down in “Messages”?", "Swiped down in “Messages”?", l.GwDoSwipeIn(l.GwDirDown(), "Messages")},
+			{"Swipe from 540,1800 to 540,600?", "Swiped from 540,1800 to 540,600?", l.GwDoSwipeFromTo("540", "1800", "540", "600")},
+			{"Zoom in?", "Zoomed in?", l.GwDoZoomIn()},
+			{"Zoom out on “Map”?", "Zoomed out on “Map”?", l.GwDoZoomOutOn("Map")},
+			{"Turn “Photo” with two fingers?", "Turned “Photo” with two fingers?", l.GwDoTurnOn("Photo")},
+			{"Turn with two fingers?", "Turned with two fingers?", l.GwDoTurn()},
+			{"Drag?", "Dragged?", l.GwDoDragBare()},
+			{"Drag from 200,2000 to 1070,1200?", "Dragged from 200,2000 to 1070,1200?", l.GwDoDragFromTo("200", "2000", "1070", "1200")},
+			{"Press back?", "Pressed back?", l.GwDoPress(l.GwKeyBack())},
+			{"Press forward delete?", "Pressed forward delete?", l.GwDoPress(l.GwKeyForwardDelete())},
+		} {
+			for _, title := range []string{c.now, c.before} {
+				want := l.GwAskQuestion(c.want)
+				if lang == locales.Catalog.Source() {
+					want = title // the gateway's own words
+				}
+				n := gateway.NeedView{Kind: gateway.NeedApproval, Title: title, Rule: "Payments"}
+				if got := needTitle(n); got != want {
+					t.Errorf("%s: needTitle(%q) = %q, want %q", lang, title, got, want)
+				}
+			}
+		}
+		// A phone's status line carries the title too.
+		line := "Waiting for you · Press back?"
+		want := l.GwStatusWaiting(l.GwAskQuestion(l.GwDoPress(l.GwKeyBack())))
+		if lang == locales.Catalog.Source() {
+			want = line
+		}
+		if got := statusLine(gateway.DeviceView{StatusLine: line, Status: gateway.DeviceWorking}); got != want {
+			t.Errorf("%s: statusLine(%q) = %q, want %q", lang, line, got, want)
+		}
+	}
+}
+
 // TestPhoneSettingsWordsInChinese checks phone_device's steps and
 // approvals, and phone_launch's with a language (gateway/switches.go).
 func TestPhoneSettingsWordsInChinese(t *testing.T) {

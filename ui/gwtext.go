@@ -805,10 +805,11 @@ func approvalText(s string) string {
 		}
 		return locales.GwAskOpen(m[1])
 	}
-	// What describe says, capitalized, as a question: "Tapped at 540,1200?",
-	// and phone_device's "Set the appearance to dark; set …?".
+	// The action itself, when nothing more particular fits: "Tap at
+	// 540,1200?" (parseQuestion); and phone_device's "Set the appearance
+	// to dark; set …?".
 	if m := reQuestion.FindStringSubmatch(s); m != nil {
-		if a, ok := parseAction(m[1]); ok {
+		if a, ok := parseQuestion(m[1]); ok {
 			return locales.GwAskQuestion(a.ask())
 		}
 		if ask, ok := askSteps(m[1]); ok {
@@ -816,6 +817,29 @@ func approvalText(s string) string {
 		}
 	}
 	return s
+}
+
+// askedVerbs are the verbs of an approval title that asks for the action
+// itself ("Tap at 540,1200?", internal/gateway's question), each with
+// describe's past tense, which parseAction reads.
+var askedVerbs = map[string]string{
+	"Tap": "Tapped", "Long-press": "Long-pressed", "Type": "Typed", "Swipe": "Swiped",
+	"Zoom": "Zoomed", "Turn": "Turned", "Drag": "Dragged", "Press": "Pressed",
+}
+
+// parseQuestion reads an action as an approval's title asks for it,
+// without the question mark: in the imperative ("Tap at 540,1200", "Type
+// “hi” and submit"), or in describe's past tense ("Tapped at 540,1200"),
+// as earlier gateways asked and the approvals they stored still do.
+func parseQuestion(s string) (action, bool) {
+	verb, rest, _ := strings.Cut(s, " ")
+	if past, ok := askedVerbs[verb]; ok {
+		if typed, ok := strings.CutSuffix(rest, "” and submit"); ok && verb == "Type" {
+			rest = typed + "” and submitted"
+		}
+		s = strings.TrimSuffix(past+" "+rest, " ")
+	}
+	return parseAction(s)
 }
 
 // giveRecordings says the Recordings card's question, without its

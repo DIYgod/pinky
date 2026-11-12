@@ -203,6 +203,13 @@ type HostCheck struct {
 	// Apple's iPhone driver, from the Apple Devices app or iTunes),
 	// "usbmuxd" (Linux: the usbmuxd package), "usbmuxd_stopped" (Linux:
 	// installed, but not running; it starts when an iPhone is plugged in).
+	// Android's: "adb" (no adb to start a server with), "adb_server" (no
+	// server runs, and starting one failed), "adb_old" (the server is
+	// older than protocol 41), "adb_no_network" (the server cannot reach
+	// phones on the local network), "adb_restarts" (another program keeps
+	// replacing the server), "adb_other_server" (another program's adb
+	// server, on another port, holds a phone on a cable; Detail begins
+	// "Another program's adb server, on port <port>,").
 	Missing string
 	Detail  string // the same in a sentence
 }
@@ -928,6 +935,19 @@ const (
 	// Clients treat it as CompanionOutdated and say why.
 	CompanionPublicKey CompanionState = "public_key"
 	CompanionNoAPK     CompanionState = "no_apk" // Pinky has no APK to install (a build without it)
+	// CompanionManual: installed and current, its service is off, and the
+	// phone does not let Pinky turn it on over USB debugging: it took
+	// Pinky's change to its accessibility settings without an error and
+	// kept nothing of it (CompanionStartSettingIgnored; vivo's OriginOS 6).
+	// Only the person can turn it on, in the phone's accessibility
+	// settings. Clients that do not know it treat it as CompanionOff.
+	CompanionManual CompanionState = "manual"
+	// CompanionManualOn: installed and current, and its service is on on a
+	// phone where only the person can turn it on (CompanionManual): they
+	// did, and Pinky leaves it on after tasks, until they turn it off on
+	// the phone. The phone's apps, banking apps among them, can see it
+	// while it is on. Clients that do not know it treat it as CompanionOn.
+	CompanionManualOn CompanionState = "manual_on"
 )
 
 // CompanionInstaller installs or updates the phone's companion app from the
@@ -968,6 +988,12 @@ const (
 	// CompanionStartNotUnlocked: the phone has not been unlocked since it
 	// started, and Android starts the service only after that.
 	CompanionStartNotUnlocked = "not_unlocked"
+	// CompanionStartSettingIgnored: the phone took the change to
+	// enabled_accessibility_services without an error and kept nothing of
+	// it, so it does not let Pinky turn the service on over USB debugging
+	// (vivo's OriginOS 6); only the person can, in the phone's
+	// accessibility settings. CompanionState says CompanionManual then.
+	CompanionStartSettingIgnored = "setting_ignored"
 )
 
 // AppManager installs, updates, uninstalls and stops apps for agents
@@ -1545,6 +1571,11 @@ const (
 	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
 	FixSameNetwork      = "same_network"       // put the phone on the same Wi-Fi as this computer, one that lets devices reach each other
 	FixWiFiSetting      = "wifi_setting"       // turn on Use iPhones and iPads over Wi-Fi in Settings › Phones
+
+	// FixTurnOnCompanionByHand: turn Pinky for Android's accessibility
+	// service on in the phone's accessibility settings, by hand: the phone
+	// does not let Pinky do it over USB debugging (CompanionManual).
+	FixTurnOnCompanionByHand = "turn_on_companion_by_hand"
 )
 
 // Setup steps of Android phones, in Info.Setup with the Setup constants:

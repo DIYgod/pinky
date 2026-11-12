@@ -238,7 +238,7 @@ func TestEnableSaysWhyServiceDidNotStart(t *testing.T) {
 	startWait = 300 * time.Millisecond
 	p := newFakePhone(t)
 	p.mu.Lock()
-	p.rewrite = func(v string) string { return strings.ReplaceAll(v, Release.Component(), "") }
+	p.deaf = true // listed, and never answers
 	p.probe = probeOut(probeUIAutomation)
 	p.mu.Unlock()
 	c := New(p)

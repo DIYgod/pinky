@@ -66,6 +66,11 @@ type Config struct {
 	// network, with their addresses (network.go); "" keeps them in memory
 	// only.
 	NetworkFile string
+	// CompanionManualFile keeps the phones that ignore Pinky's change to
+	// their accessibility settings (vivo's OriginOS 6), on which a service
+	// the person turned on stays on (manual.go); "" keeps them in memory
+	// only.
+	CompanionManualFile string
 
 	// VerifyWiFi has the driver check that a phone it reaches over the
 	// network is the phone it set up, and refuse one that is not
@@ -92,6 +97,12 @@ type Config struct {
 	// driver stops and starts again (StartServer) a server of its own that
 	// cannot reach the local network (offnet.go).
 	StopServer func(ctx context.Context) error
+	// OtherServers, when set, lists the ports of the other adb servers on
+	// this computer (cmd/pinky passes adb.Client.OtherServers), which List
+	// asks every otherScanEvery for the phones on a cable they hold, which
+	// the server Pinky uses cannot reach (otherserver.go). Pinky never
+	// stops them.
+	OtherServers func() ([]int, error)
 
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
@@ -158,11 +169,16 @@ type Provider struct {
 	// debugging, and link reconnects them (network.go).
 	net  *netStore
 	link *netLink
+	// manual keeps the phones on which only the person can turn Pinky for
+	// Android's service on (manual.go).
+	manual *manualStore
 	// ids checks the phones reached over the network (identity.go); nil
 	// without Config.VerifyWiFi.
 	ids *identity
 
 	server serverWatch
+	// others keeps the phones other adb servers hold (otherserver.go).
+	others otherServers
 	// dial connects to an address on the network from Pinky's own
 	// process, to tell a server that cannot reach it (offnet.go).
 	dial func(ctx context.Context, addr string) error
@@ -188,6 +204,7 @@ func NewProvider(cfg Config) *Provider {
 	}
 	p.net = &netStore{path: cfg.NetworkFile, logf: cfg.logf}
 	p.link = newNetLink(p)
+	p.manual = &manualStore{path: cfg.CompanionManualFile, logf: cfg.logf}
 	if cfg.VerifyWiFi {
 		p.ids = newIdentity(p)
 	}
@@ -290,6 +307,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		p.ids.apply(ctx, entries, infos, props)
 	}
 	infos = mergeTransports(p.netInfos(infos))
+	p.kickOthers(entries, infos)
 	return append(infos, p.driverlessPhones(infos)...), nil
 }
 
@@ -301,8 +319,15 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 // phones on the local network and Pinky could not restart it (offnet.go),
 // and "adb_restarts" when the server went away three times or more within
 // ten minutes, as when another program keeps restarting it with an adb of
-// another version.
-func (p *Provider) CheckHost() driver.HostCheck { return p.server.check(time.Now()) }
+// another version. Without any of those, it is "adb_other_server" when
+// another program's adb server holds a phone on a cable that the server
+// Pinky uses cannot reach (otherserver.go).
+func (p *Provider) CheckHost() driver.HostCheck {
+	if c := p.server.check(time.Now()); c.Missing != "" {
+		return c
+	}
+	return p.checkOthers()
+}
 
 // phoneID is the id Pinky knows a phone by: the adb serial, except over
 // Wi-Fi, where it is the phone's hardware serial (the serial adb gives a
@@ -644,6 +669,7 @@ func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
 	}
 	d := newDevice(cfg, info, bestProps)
 	d.phoneID = id
+	d.useManuals(p.manual)
 	return d, nil
 }
 
