@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On iPhones with two screens (iPhone Duo), Home goes back to the home screen with a swipe when the button does nothing, and when taps don't reach the screen in use, Pinky tells the agent so instead of reporting success.
+
 ## 2026.1112.7 (2026-11-12)
 
 - An iPhone on iOS 27 left idle in Pinky for a minute and a half no longer keeps Pinky's connections to it open, so it stays smooth after an agent is done; Pinky reconnects by itself the next time it is needed.
