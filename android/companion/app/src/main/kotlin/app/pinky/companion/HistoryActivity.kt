@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -27,7 +28,7 @@ class HistoryActivity : Activity() {
     private val tasks = ArrayList<JSONObject>() // the tasks listed, newest first
     private var more = false // whether older tasks follow
     private var reading = false
-    private var failed = "" // why the last read failed
+    private var failed = false // the last read failed
     private var reads = 0 // counts reads, so that only the latest is shown
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,13 +75,14 @@ class HistoryActivity : Activity() {
                 if (n != reads || isDestroyed) return@post
                 reading = false
                 page.onSuccess {
-                    failed = ""
+                    failed = false
                     if (!next) tasks.clear()
                     tasks += it.tasks
                     more = it.more
                     renderList()
                 }.onFailure { e ->
-                    failed = getString(R.string.phone_history_failed, e.message ?: e.toString())
+                    Log.w(TAG, "could not read Activity", e)
+                    failed = true
                 }
                 renderStatus()
             }
@@ -110,7 +112,7 @@ class HistoryActivity : Activity() {
     private fun renderStatus() {
         note.say(
             when {
-                failed.isNotEmpty() -> failed
+                failed -> getString(R.string.phone_history_failed)
                 tasks.isEmpty() && !reading -> getString(R.string.phone_history_empty)
                 else -> ""
             },
@@ -120,6 +122,7 @@ class HistoryActivity : Activity() {
     }
 
     companion object {
+        private const val TAG = "PinkyScreens"
         private const val PAGE = 30
         private const val MAX = 100 // the most tasks the core sends at once
     }

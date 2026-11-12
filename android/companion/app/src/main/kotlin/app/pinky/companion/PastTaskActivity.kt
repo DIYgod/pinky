@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
@@ -90,16 +91,14 @@ class PastTaskActivity : Activity() {
     }
 
     private fun failed(e: Throwable) {
-        note.say(
-            if (e is CoreClient.Refused && e.code == PastTasks.GONE) {
-                getString(R.string.phone_history_gone)
-            } else {
-                getString(R.string.phone_history_failed, e.message ?: e.toString())
-            },
-        )
+        val gone = e is CoreClient.Refused && e.code == PastTasks.GONE
+        if (!gone) Log.w(TAG, "could not read a task of Activity", e)
+        note.say(getString(if (gone) R.string.phone_history_gone else R.string.phone_history_failed))
     }
 
     companion object {
+        private const val TAG = "PinkyScreens"
+
         /** The task's ID in the history (PastTask.ID). */
         const val EXTRA_ID = "app.pinky.companion.extra.TASK"
     }

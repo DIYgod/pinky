@@ -14,6 +14,7 @@
     <string name="phone_app_info">应用信息</string>
     <string name="phone_core_starting">正在启动 Pinky…</string>
     <string name="phone_core_failed">Pinky 无法在这台手机上启动。</string>
+    <string name="phone_core_failed_hint">请重启手机，然后再打开 Pinky。如果还是不行，请重新安装 Pinky。</string>
     <string name="phone_setup">Pinky 可以借助你选择的 AI 模型，自己在手机上完成简单的任务。</string>
     <string name="phone_setup_key">添加 API 密钥</string>
     <string name="phone_setup_model">选择模型</string>
@@ -35,7 +36,7 @@
     <string name="phone_history_all">显示全部</string>
     <string name="phone_history_more">显示更多</string>
     <string name="phone_history_empty">还没有已结束的任务。</string>
-    <string name="phone_history_failed">无法载入活动：%1$s</string>
+    <string name="phone_history_failed">无法载入活动。</string>
     <string name="phone_history_gone">活动里已经没有这个任务了。</string>
     <string name="phone_today">今天</string>
     <string name="phone_yesterday">昨天</string>
@@ -63,7 +64,7 @@
     <string name="phone_err_no_model">请先在“设置”中选择模型。</string>
     <string name="phone_err_busy">Pinky 已经在处理一个任务。</string>
     <string name="phone_err_computer">电脑上的 Pinky 正在使用这台手机。等它完成后再试。</string>
-    <string name="phone_err_start">无法开始：%1$s</string>
+    <string name="phone_err_start">无法开始任务，请再试一次。</string>
     <string name="phone_err_key_lost">已保存的 API 密钥无法读取了。请在“设置”中重新添加。</string>
 
     <plurals name="phone_steps">
@@ -93,7 +94,7 @@
     <string name="phone_allow_once">允许</string>
     <string name="phone_decline">拒绝</string>
     <string name="phone_hand_back">完成</string>
-    <string name="phone_err_answer">无法回答：%1$s</string>
+    <string name="phone_err_answer">无法发送你的回答，请再试一次。</string>
 
     <string name="phone_section_model">AI 模型</string>
     <string name="phone_service">服务</string>
@@ -109,7 +110,7 @@
     <string name="phone_key_hint">粘贴 API 密钥</string>
     <string name="phone_key_saved_toast">已保存 API 密钥</string>
     <string name="phone_key_removed_toast">已移除 API 密钥</string>
-    <string name="phone_key_err_save">无法保存密钥：%1$s</string>
+    <string name="phone_key_err_save">无法保存密钥，请再试一次。</string>
     <string name="phone_model">模型</string>
     <string name="phone_model_claude_desc">Opus 能力最强，Sonnet 和 Haiku 更便宜。</string>
     <string name="phone_model_desc">填写服务给出的模型名称。这个模型需要能看图并调用工具。</string>
@@ -153,7 +154,8 @@
     <string name="phone_update_available">新版本：Pinky %1$s</string>
     <string name="phone_update_download">下载</string>
     <string name="phone_update_later">稍后</string>
-    <string name="phone_update_failed">无法检查更新：%1$s</string>
+    <string name="phone_update_failed">无法检查更新，请稍后再试。</string>
+    <string name="phone_update_offline">无法检查更新。请检查网络连接，然后再试一次。</string>
     <string name="phone_update_dev">开发版不会更新。</string>
 
     <string name="phone_step_waiting">等你确认：%1$s</string>

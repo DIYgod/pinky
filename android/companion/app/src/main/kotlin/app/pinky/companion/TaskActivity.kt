@@ -12,6 +12,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
@@ -47,7 +48,7 @@ class TaskActivity : Activity() {
     private var sub: Closeable? = null
 
     private var state: JSONObject? = null // the core's latest; null while it cannot be reached
-    private var down = "" // why the core cannot be reached
+    private var down = "" // why the core cannot be reached, as logged
     private var notReadySince = 0L // uptime since when Pinky is on but not ready, or 0
     private var serviceOn = false
     private var hasKey = false
@@ -159,6 +160,8 @@ class TaskActivity : Activity() {
     }
 
     private fun onDown(why: String) {
+        // The core is tried again every second: each reason is logged once.
+        if (why != down) Log.w(TAG, "the core cannot be reached: $why")
         state = null
         down = why
         serviceOn = look.serviceOn()
@@ -244,7 +247,9 @@ class TaskActivity : Activity() {
     }
 
     private fun whyNotReady(device: JSONObject?): String {
-        if (state == null) return down
+        // Why the core cannot be reached is in the log (onDown), in a
+        // developer's words; the person gets what to do.
+        if (state == null) return getString(R.string.phone_core_failed_hint)
         return listOf(device?.optString("line").orEmpty(), device?.optString("detail").orEmpty())
             .filter { it.isNotEmpty() }.distinct().joinToString("\n")
     }
@@ -278,7 +283,8 @@ class TaskActivity : Activity() {
             } catch (e: CoreClient.Refused) {
                 startError(e)
             } catch (e: Exception) {
-                getString(R.string.phone_err_start, e.message ?: e.toString())
+                Log.w(TAG, "could not start the task", e)
+                getString(R.string.phone_err_start)
             }
             main.post { started(why) }
         }
@@ -304,7 +310,10 @@ class TaskActivity : Activity() {
         "busy" -> getString(R.string.phone_err_busy)
         "computer" -> getString(R.string.phone_err_computer)
         "no_task" -> "" // Start waits for a task; nothing to say.
-        else -> getString(R.string.phone_err_start, e.message ?: e.code)
+        else -> {
+            Log.w(TAG, "the core refused the task [${e.code}]: ${e.message}")
+            getString(R.string.phone_err_start)
+        }
     }
 
     private fun stop() {
@@ -570,6 +579,7 @@ class TaskActivity : Activity() {
     }
 
     companion object {
+        private const val TAG = "PinkyScreens"
         private const val CORE_GRACE_MS = 3_000L
         private const val RECENT = 5 // the tasks Activity lists
     }

@@ -252,8 +252,11 @@ class Overlays(private val service: PinkyAccessibilityService) {
                 hideCard()
                 whenGone(shown) {
                     CoreClient.send(CoreClient.cmd("decide", "need" to id, "decision" to decision)) { err ->
-                        val why = err?.let { service.getString(R.string.phone_err_answer, it.message ?: it.toString()) }
-                        main.post { if (why != null && !stopped) showCard(need, why) }
+                        if (err != null) {
+                            Log.w(TAG, "could not answer", err)
+                            val why = service.getString(R.string.phone_err_answer)
+                            main.post { if (!stopped) showCard(need, why) }
+                        }
                     }
                 }
                 Unit

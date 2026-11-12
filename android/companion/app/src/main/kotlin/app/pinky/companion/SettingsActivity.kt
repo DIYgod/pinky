@@ -6,12 +6,14 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import org.json.JSONObject
 import java.io.Closeable
+import java.io.IOException
 
 /**
  * Settings for Pinky on the phone, in the task screen's process (":ui"),
@@ -215,20 +217,16 @@ class SettingsActivity : Activity() {
             val key = v.trim()
             // The Keystore may take a moment, the first time above all.
             CoreClient.background {
-                val err = try {
+                val saved = try {
                     secrets.save(p, key)
-                    null
+                    true
                 } catch (e: Exception) {
-                    e
+                    // Only its class: its message could say how long the key is.
+                    Log.w(TAG, "could not save the key: ${e.javaClass.name}")
+                    false
                 }
                 main.post {
-                    toast(
-                        if (err == null) {
-                            getString(R.string.phone_key_saved_toast)
-                        } else {
-                            getString(R.string.phone_key_err_save, err.message ?: err.toString())
-                        },
-                    )
+                    toast(getString(if (saved) R.string.phone_key_saved_toast else R.string.phone_key_err_save))
                     render()
                 }
             }
@@ -331,7 +329,9 @@ class SettingsActivity : Activity() {
                 found = UpdateCheck.check(app)
                 found?.let { getString(R.string.phone_update_available, it.version) } ?: getString(R.string.phone_update_current)
             } catch (e: Exception) {
-                getString(R.string.phone_update_failed, e.message ?: e.toString())
+                Log.w(TAG, "could not check for updates", e)
+                // The feed's own failures are not IOExceptions (UpdateCheck).
+                getString(if (e is IOException) R.string.phone_update_offline else R.string.phone_update_failed)
             }
             main.post {
                 checking = false
@@ -357,6 +357,8 @@ class SettingsActivity : Activity() {
     }
 
     companion object {
+        private const val TAG = "PinkyScreens"
+
         // policy.Preset's values, as desktop Pinky lists them.
         private val PRESETS = listOf(
             Triple(1, R.string.phone_preset_commits, R.string.phone_preset_commits_desc), // PresetCommits
