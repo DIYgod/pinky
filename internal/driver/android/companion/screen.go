@@ -273,13 +273,14 @@ func (cv *converter) emit(n *Node, path, label string, check *Node) {
 	}
 	role := roleOf(n, check)
 	cv.out = append(cv.out, screen.Element{
-		Role:   role,
-		Label:  label,
-		Bounds: b,
-		States: states(n, role, check),
-		Source: screen.SourceTree,
-		Path:   path,
-		ID:     n.ID,
+		Role:    role,
+		Label:   label,
+		Bounds:  b,
+		States:  states(n, role, check),
+		Source:  screen.SourceTree,
+		Path:    path,
+		ID:      n.ID,
+		Content: inputContent(n),
 	})
 }
 
@@ -394,6 +395,16 @@ func inputLabel(n *Node) string {
 		return clean(firstNonEmpty(n.Hint, n.Desc))
 	}
 	return clean(firstNonEmpty(n.Text, n.Hint, n.Desc))
+}
+
+// inputContent is the text typed into an editable field, as inputLabel
+// shows it: "" while it shows its hint (the companion sends no text then)
+// and for passwords.
+func inputContent(n *Node) string {
+	if !n.Editable || n.Password || strings.TrimSpace(n.Text) == "" {
+		return ""
+	}
+	return clean(n.Text)
 }
 
 // roleOf maps a node onto the screen model's roles. check is the node whose

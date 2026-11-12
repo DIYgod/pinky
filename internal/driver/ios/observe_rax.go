@@ -626,7 +626,7 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, 
 		}
 		out = append(out, screen.Element{
 			Role: role, Label: label, Bounds: r, States: states,
-			Source: screen.SourceTree, Path: paths[i], ID: e.Ident,
+			Source: screen.SourceTree, Path: paths[i], ID: e.Ident, Content: raxContent(e, role),
 		})
 	}
 	var over []occluder
@@ -897,6 +897,24 @@ func raxRole(e raxElement, inTabBar bool) (string, []string) {
 		states = appendState(states, screen.StateDisabled)
 	}
 	return role, states
+}
+
+// raxContent is the text typed into a text field that raxLabel shows: its
+// value, unless that is its placeholder (an empty field on iOS 27 has its
+// placeholder as its value too), its label, or a password field's dots.
+func raxContent(e raxElement, role string) string {
+	if role != screen.RoleInput {
+		return ""
+	}
+	value := strings.TrimSpace(e.ValueText)
+	if value == "" {
+		value = strings.TrimSpace(e.Value)
+	}
+	if value == "" || value == strings.TrimSpace(e.Placeholder) || value == strings.TrimSpace(e.Label) ||
+		e.Type == xcSecureTextField || e.Traits&traitSecureText != 0 {
+		return ""
+	}
+	return value
 }
 
 func appendState(states []string, s string) []string {
