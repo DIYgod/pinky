@@ -53,6 +53,7 @@ class SettingsActivity : Activity() {
     private val presets = ArrayList<Pair<Int, Look.Choice>>()
     private lateinit var presetNote: TextView
     private lateinit var accessibilityRow: Look.Row
+    private lateinit var batteryRow: Look.Row
     private lateinit var updateRow: Look.Row
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +90,18 @@ class SettingsActivity : Activity() {
         val appInfo = look.row(getString(R.string.phone_app_info), desc = getString(R.string.phone_app_info_desc)) {
             look.openAppInfo()
         }
-        addGroup(col, R.string.phone_section_phone, accessibilityRow.view, appInfo.view)
+        batteryRow = look.row(getString(R.string.phone_battery), desc = getString(R.string.phone_battery_desc)) {
+            if (Battery.unrestricted(this)) Battery.openAppInfo(this) else Battery.askUnrestricted(this)
+        }
+        val phoneRows = mutableListOf(accessibilityRow.view, batteryRow.view)
+        // Only on phones whose vendor adds the switch; whether it is on cannot be read.
+        if (Battery.hasAutostart()) {
+            phoneRows += look.row(getString(R.string.phone_autostart), desc = getString(R.string.phone_autostart_desc)) {
+                Battery.openAutostart(this)
+            }.view
+        }
+        phoneRows += appInfo.view
+        addGroup(col, R.string.phone_section_phone, *phoneRows.toTypedArray())
 
         val version = look.row(getString(R.string.phone_version), "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         updateRow = look.row(getString(R.string.phone_update_check)) { onUpdateRow() }
@@ -194,6 +206,9 @@ class SettingsActivity : Activity() {
         presetNote.shown(known && !coreUp)
 
         accessibilityRow.value.say(getString(if (look.serviceOn()) R.string.phone_on else R.string.phone_off))
+        val unrestricted = Battery.unrestricted(this)
+        batteryRow.value.say(getString(if (unrestricted) R.string.phone_battery_unrestricted else R.string.phone_battery_optimized))
+        batteryRow.value.setTextColor(if (unrestricted) look.ink3 else look.accent)
 
         updateRow.desc.say(if (UpdateCheck.enabled) updateNote else getString(R.string.phone_update_dev))
         updateRow.value.say(if (updateFound != null) getString(R.string.phone_update_download) else "")

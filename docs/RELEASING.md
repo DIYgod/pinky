@@ -7,7 +7,7 @@ Pinky releases often, several times a day when there is something to ship, and n
 1. The notes wait in [CHANGELOG.md](../CHANGELOG.md) under `## Unreleased`, and the same notes in Simplified Chinese under `## Unreleased` in [CHANGELOG.zh-CN.md](../CHANGELOG.zh-CN.md).
 2. `scripts/release.sh tag -push` gives them the next version in both files, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together (`git push --atomic`).
 3. The tag starts [.github/workflows/release.yml](../.github/workflows/release.yml), which runs the scripts as they are at the tag, on GitHub's runners (free, macOS's too, as the repository is public):
-   - **Companion APK** (Ubuntu): checks the tag and its notes, then `scripts/dist.sh companion`, which builds the release build of Pinky for Android, the companion, signed with its release key ([below](#the-companions-signing-key)).
+   - **Companion APK** (Ubuntu): checks the tag and its notes, then `scripts/dist.sh companion`, which builds the release build of Pinky for Android, the companion, signed with its release key ([below](#the-companions-signing-key)). It is one APK for every phone: Pinky's core for arm64 and a tiny stand-in library for `armeabi-v7a` and `x86_64`, which `scripts/androidcore.sh` builds with the runner's Android NDK ([android-app.md](notes/android-app.md#one-apk-for-every-phone)).
    - **Linux and Windows** (Ubuntu): `scripts/dist.sh windows`, `scripts/dist.sh linux`, with their FFmpeg and adb (below), then decodes test streams with the FFmpeg that the `.tar.gz` carries and starts a server with its adb.
    - **Windows package** (GitHub's Windows runner): decodes test streams with the FFmpeg that the Windows zip carries and starts a server with its adb.
    - **macOS**: `scripts/dist.sh darwin` builds Pinky.app for Apple silicon and Intel, each with its own FFmpeg and adb, signs them with the Developer ID, notarizes both disk images at once and staples the tickets to the disk images and the apps, then starts a server with each app's adb (the Intel one's where the runner has Rosetta).
@@ -34,6 +34,7 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 | `pinky-<version>-windows-amd64.zip` | People who run Pinky without installing it: the app's files (`Pinky.exe`, FFmpeg's DLLs, adb and the companion APK) |
 | `pinky-<version>-linux-amd64.tar.gz` | The updater on Linux and `install.sh` of `mygo build`: `pinky`, FFmpeg's libraries, adb, its desktop entry and icon, the companion APK |
 | `pinky_<version>_amd64.deb` | People on Debian and Ubuntu: the same in `/opt/pinky` |
+| `pinky-android.apk` | Pinky for Android on its own, without the version in its name so that `releases/latest/download/pinky-android.apk` always has the newest: the feed's `android-arm64`, which the app updates itself from, and a download that needs no computer. Each desktop package carries the same APK |
 | `pinky-<version>.mcpb` | People with Claude Desktop: an [MCP bundle](https://github.com/modelcontextprotocol/mcpb) that a double-click installs as the extension Pinky, which starts the Pinky installed on the computer (`go run ./scripts/release mcpb`, see [mcp.md](mcp.md#claude-desktop-extension)) |
 | `latest.json` | The updater: the release's manifest, below |
 | `pinky.rb` | The Homebrew tap: the cask of this release |
@@ -102,6 +103,8 @@ Every build until 8 November 2026 was signed with a key committed in this reposi
 ```
 
 `https://github.com/DIYgod/pinky/releases/latest/download/latest.json` is always the newest release's: a release becomes the latest only when no newer one is out, and `latest.json` is uploaded after the files it names, before the release is published. `date` is when the release was assembled, in UTC. `notes` is the version's section of CHANGELOG.md without its heading, which `go run ./scripts/release notes <version>` prints. `localized_notes` has the version's section of each translation of the changelog, by the language tag of the app's catalogs (`zh-Hans`: CHANGELOG.zh-CN.md, which `go run ./scripts/release notes -lang zh-Hans <version>` prints); a translation without the version is left out, with a warning, and the app shows `notes` in its place. Versions of the app from before the field (8 November 2026) read only `notes`.
+
+`assets` also has `android-arm64`, `pinky-android.apk`, with its `version_code` (the APK's versionCode, read from its `assets/pinky-companion.json`): Pinky for Android offers an update only when it is higher than its own, since the APK changes only when the app does. Desktop Pinky reads only its own platform's asset and ignores this one.
 
 ### CHANGELOG.md
 

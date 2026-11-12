@@ -170,6 +170,17 @@
     <string name="phone_off">Off</string>
     <string name="phone_accessibility_desc">Pinky reads the screen and acts on it through this service.</string>
     <string name="phone_app_info_desc">Battery use and restricted settings for Pinky.</string>
+    <string name="phone_battery_title">Keep Pinky running</string>
+    <string name="phone_battery_body">Android may stop Pinky in the background during a long task. Let Pinky use the battery without restrictions.</string>
+    <string name="phone_battery_allow">Allow</string>
+    <string name="phone_autostart_body">This phone also stops apps that aren\'t allowed to start on their own. Turn on Autostart for Pinky.</string>
+    <string name="phone_autostart_open">Open Autostart</string>
+    <string name="phone_battery">Battery</string>
+    <string name="phone_battery_unrestricted">Unrestricted</string>
+    <string name="phone_battery_optimized">Optimized</string>
+    <string name="phone_battery_desc">Unrestricted keeps Pinky running through a long task.</string>
+    <string name="phone_autostart">Autostart</string>
+    <string name="phone_autostart_desc">Lets Pinky start again when this phone stops it.</string>
     <string name="phone_section_about">About</string>
     <string name="phone_version">Version</string>
     <string name="phone_update_check">Check for updates</string>

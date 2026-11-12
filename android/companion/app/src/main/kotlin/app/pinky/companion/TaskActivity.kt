@@ -52,6 +52,7 @@ class TaskActivity : Activity() {
     private var notReadySince = 0L // uptime since when Pinky is on but not ready, or 0
     private var serviceOn = false
     private var hasKey = false
+    private var unrestricted = true // Android lets Pinky use the battery without limits (Battery)
     private var starting = false
     private var checkingUpdate = false
     private var update: UpdateCheck.Update? = null
@@ -65,6 +66,9 @@ class TaskActivity : Activity() {
     private lateinit var coreDetail: TextView
     private lateinit var setupCard: View
     private lateinit var setupButton: TextView
+    private lateinit var batteryCard: View
+    private lateinit var batteryBody: TextView
+    private lateinit var batteryAllow: TextView
     private lateinit var computerCard: View
     private lateinit var computerTask: TextView
     private lateinit var computerStop: TextView
@@ -104,6 +108,7 @@ class TaskActivity : Activity() {
         col.addView(offCard(), look.below(12))
         col.addView(coreCard(), look.below(12))
         col.addView(setupCard(), look.below(12))
+        col.addView(batteryCard(), look.below(12))
         col.addView(computerCard(), look.below(12))
         col.addView(runCard(), look.below(12))
         endCard = EndCard(this, look) { dismiss() }
@@ -132,6 +137,8 @@ class TaskActivity : Activity() {
         super.onResume()
         serviceOn = look.serviceOn()
         hasKey = secrets.has(settings.provider)
+        // The person may come back from Android's battery settings.
+        unrestricted = Battery.unrestricted(this)
         update = UpdateCheck.offered(this)
         if (UpdateCheck.due(this)) checkUpdate()
         historyFor = null // Activity is read again.
@@ -206,6 +213,14 @@ class TaskActivity : Activity() {
         }
         setupCard.shown(ready && !setUp && !running)
         setupButton.text = getString(if (hasKey) R.string.phone_setup_model else R.string.phone_setup_key)
+        // Once Pinky is set up, what keeps it running through a long task,
+        // until the person allows it or puts it off. Whether a vendor's
+        // autostart is on cannot be read, so that card stays until put off.
+        batteryCard.shown(
+            ready && setUp && !running && !settings.batteryPutOff && (!unrestricted || Battery.hasAutostart()),
+        )
+        batteryBody.shown(!unrestricted)
+        batteryAllow.shown(!unrestricted)
 
         // Pinky on a computer drives the phone (its claim): a task here
         // waits until it is done.
@@ -478,6 +493,33 @@ class TaskActivity : Activity() {
         setupButton = look.button("", Look.Kind.PRIMARY) { openSettings() }
         c.addView(look.buttons(setupButton), look.matchWrap())
         setupCard = c
+        return c
+    }
+
+    private fun batteryCard(): View {
+        val c = look.card()
+        c.addView(look.text(getString(R.string.phone_battery_title), Look.BODY, look.ink, 600))
+        batteryBody = look.text(getString(R.string.phone_battery_body), Look.SMALL, look.ink2).apply {
+            setPadding(0, look.dp(6), 0, 0)
+        }
+        c.addView(batteryBody, look.matchWrap())
+        val buttons = mutableListOf<View>(
+            look.button(getString(R.string.phone_update_later), Look.Kind.PLAIN) {
+                settings.batteryPutOff = true
+                render()
+            },
+        )
+        if (Battery.hasAutostart()) {
+            c.addView(
+                look.text(getString(R.string.phone_autostart_body), Look.SMALL, look.ink2).apply { setPadding(0, look.dp(6), 0, 0) },
+                look.matchWrap(),
+            )
+            buttons += look.button(getString(R.string.phone_autostart_open)) { Battery.openAutostart(this) }
+        }
+        batteryAllow = look.button(getString(R.string.phone_battery_allow), Look.Kind.PRIMARY) { Battery.askUnrestricted(this) }
+        buttons += batteryAllow
+        c.addView(look.buttons(*buttons.toTypedArray()), look.matchWrap())
+        batteryCard = c
         return c
     }
 

@@ -56,6 +56,11 @@ class TaskSettings(context: Context) {
     /** The cost limit in tokens, for a model whose prices Pinky does not know (pilot.Config.TokenLimit). */
     val tokenLimit: Long get() = (maxCost * 1_000_000).toLong()
 
+    /** Whether the person put off the task screen's card about battery limits (Battery); Settings still has them. */
+    var batteryPutOff: Boolean
+        get() = prefs.getBoolean("battery_put_off", false)
+        set(v) = prefs.edit().putBoolean("battery_put_off", v).apply()
+
     /** The model as the person reads it: a Claude model's name, or the name the service gave. */
     fun modelLabel(p: String = provider): String {
         val m = model(p)

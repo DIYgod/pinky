@@ -1483,7 +1483,37 @@ var (
 	// attempt was used.
 	ErrPINNotEntered = errors.New("the PIN was not entered")
 	ErrNotFound      = errors.New("not found")
+	// ErrBusy: another agent drives the phone, so this one may not act on
+	// it until that one is done (BusyError says who).
+	ErrBusy = errors.New("another agent is using the phone")
+	// ErrStoppedOnPhone: the person stopped the agent's task on the phone
+	// itself (Stop on Pinky for Android's pill), and the task must end. A
+	// driver returns it from Observe and the actions until the agent stops
+	// working (WorkWatcher).
+	ErrStoppedOnPhone = errors.New("the person stopped this task on the phone")
 )
+
+// BusyError is ErrBusy with who holds the phone: By "phone" for Pinky on
+// the phone running a task of its own, Task that task's name when it has
+// one. A driver returns it from Observe and the actions while an agent
+// works on a phone another agent holds; nothing was done.
+type BusyError struct {
+	By   string // "phone" (Pinky on the phone) or "computer" (another computer)
+	Task string
+}
+
+func (e *BusyError) Error() string {
+	who := "Pinky on another computer is using the phone"
+	if e.By == "phone" {
+		who = "Pinky on the phone is running a task"
+	}
+	if e.Task != "" {
+		who += fmt.Sprintf(" (%q)", e.Task)
+	}
+	return who + "; nothing was done, and the phone stays busy until that task ends"
+}
+
+func (e *BusyError) Is(target error) bool { return target == ErrBusy }
 
 // SetupError is a Provider.Open that failed because the phone waits for the
 // person to do a step first, the way Info.Setup and Info.Detail name a step

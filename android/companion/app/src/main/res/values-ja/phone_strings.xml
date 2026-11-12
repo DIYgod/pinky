@@ -147,6 +147,17 @@
     <string name="phone_off">オフ</string>
     <string name="phone_accessibility_desc">Pinky はこのサービスで画面を読み取り、操作します。</string>
     <string name="phone_app_info_desc">Pinky の電池使用量と制限付き設定。</string>
+    <string name="phone_battery_title">Pinky を動かし続ける</string>
+    <string name="phone_battery_body">長いタスクの途中で、Android がバックグラウンドの Pinky を停止することがあります。Pinky の電池使用を「制限なし」にしてください。</string>
+    <string name="phone_battery_allow">許可</string>
+    <string name="phone_autostart_body">このスマホは、自動起動が許可されていないアプリも停止します。Pinky の自動起動をオンにしてください。</string>
+    <string name="phone_autostart_open">自動起動を開く</string>
+    <string name="phone_battery">電池</string>
+    <string name="phone_battery_unrestricted">制限なし</string>
+    <string name="phone_battery_optimized">最適化</string>
+    <string name="phone_battery_desc">「制限なし」にすると、長いタスクの途中でも Pinky が動き続けます。</string>
+    <string name="phone_autostart">自動起動</string>
+    <string name="phone_autostart_desc">このスマホが Pinky を停止したときに、もう一度起動できるようにします。</string>
     <string name="phone_section_about">情報</string>
     <string name="phone_version">バージョン</string>
     <string name="phone_update_check">アップデートを確認</string>

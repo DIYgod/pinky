@@ -22,7 +22,9 @@ func (d *Device) Drag(ctx context.Context, g driver.Drag) error {
 // holds the session's input, so it may take screenshots (adb) but must not
 // open a video stream, which waits for that input.
 func (d *Device) DragReplan(ctx context.Context, g driver.Drag, at int, replan func(context.Context) []driver.DragStop) error {
-	d.used()
+	if err := d.acting(ctx); err != nil {
+		return err
+	}
 	err := d.withInput(ctx, true, func(l *live) error { return l.drag(ctx, g, at, replan) })
 	if err == nil {
 		d.markAwake()
@@ -37,7 +39,9 @@ func (b *Background) Drag(ctx context.Context, g driver.Drag) error {
 
 // DragReplan implements driver.DragReplanner, as on the main display.
 func (b *Background) DragReplan(ctx context.Context, g driver.Drag, at int, replan func(context.Context) []driver.DragStop) error {
-	b.d.used()
+	if err := b.d.acting(ctx); err != nil {
+		return err
+	}
 	if err := b.ready(ctx); err != nil {
 		return err
 	}

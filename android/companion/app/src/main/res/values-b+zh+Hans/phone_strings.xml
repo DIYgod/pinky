@@ -146,6 +146,17 @@
     <string name="phone_off">已关闭</string>
     <string name="phone_accessibility_desc">Pinky 通过这项服务读取屏幕并进行操作。</string>
     <string name="phone_app_info_desc">Pinky 的耗电和受限制的设置。</string>
+    <string name="phone_battery_title">让 Pinky 保持运行</string>
+    <string name="phone_battery_body">在较长的任务中，Android 可能会在后台停止 Pinky。请允许 Pinky 不受限制地使用电池。</string>
+    <string name="phone_battery_allow">允许</string>
+    <string name="phone_autostart_body">这台手机还会停止没有开启自启动的应用。请为 Pinky 开启自启动。</string>
+    <string name="phone_autostart_open">打开自启动设置</string>
+    <string name="phone_battery">电池</string>
+    <string name="phone_battery_unrestricted">不受限制</string>
+    <string name="phone_battery_optimized">已优化</string>
+    <string name="phone_battery_desc">设为不受限制后，Pinky 在较长的任务中也能保持运行。</string>
+    <string name="phone_autostart">自启动</string>
+    <string name="phone_autostart_desc">这台手机停止 Pinky 后，允许它重新启动。</string>
     <string name="phone_section_about">关于</string>
     <string name="phone_version">版本</string>
     <string name="phone_update_check">检查更新</string>
