@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- While no agent has connected yet, Settings › Agents shows Connect an agent first, without scrolling.
+- Choosing the team that signs the iPhone helper no longer runs off the window: a long team name is shortened in the middle, with the whole name on hover, and a long list of teams scrolls.
+- The reminder above an iPhone that asks which team should sign the helper now has Cancel.
+- When an update is available, What's new on its card gives the same day as What's new after the update; west of China it could show the day before.
+- Approvals in English now ask for the action itself, as "Tap at 540,1200?" or "Press back?", instead of "Tapped at 540,1200?".
+
 ## 2026.1112.3 (2026-11-12)
 
 - On phones that accept Pinky's change to their accessibility settings without keeping it, such as vivo phones with OriginOS 6, Pinky now says so right away: the Pinky for Android card, the checkup and Settings › Phones tell you to turn on Pinky in the phone's accessibility settings by hand, and tasks on those phones no longer wait 10 seconds for it first.
