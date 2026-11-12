@@ -25,6 +25,7 @@ import (
 //	{"cmd":"decide","need":"...","decision":"allow_once"} → {"ok":true}
 //	{"cmd":"preset","preset":1}                         → {"ok":true}  (policy.Preset)
 //	{"cmd":"stop"} / {"cmd":"dismiss"}                  → {"ok":true}
+//	{"cmd":"stop","computer":true}                      → {"ok":true}  (StopComputer)
 //
 // A failed command replies {"ok":false,"error":"...","code":"..."}: the
 // code, when there is one, names an error the screens say in the person's
@@ -36,6 +37,7 @@ type request struct {
 	Decision string `json:"decision"`
 	Note     string `json:"note"`
 	Preset   int    `json:"preset"`
+	Computer bool   `json:"computer"` // stop: Pinky on a computer, not the task
 	StartRequest
 }
 
@@ -53,6 +55,7 @@ const (
 	CodeNoModel  = "no_model"  // an OpenAI-compatible API without a model
 	CodeNoTask   = "no_task"   // an empty task
 	CodeBusy     = "busy"      // a task already runs
+	CodeComputer = "computer"  // ErrComputer: Pinky on a computer uses the phone
 )
 
 // codeOf is the code of a command's error, or "" for one the screens show
@@ -69,6 +72,8 @@ func codeOf(err error) string {
 		return CodeNoTask
 	case errors.Is(err, pilot.ErrBusy):
 		return CodeBusy
+	case errors.Is(err, ErrComputer):
+		return CodeComputer
 	}
 	return ""
 }
@@ -142,7 +147,11 @@ func (c *Core) handle(r request) reply {
 	case "preset":
 		err = c.SetPreset(policy.Preset(r.Preset))
 	case "stop":
-		c.Stop()
+		if r.Computer {
+			err = c.StopComputer()
+		} else {
+			c.Stop()
+		}
 	case "dismiss":
 		c.Dismiss()
 	default:

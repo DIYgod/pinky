@@ -23,6 +23,10 @@
     <string name="phone_setup_key">Add an API key</string>
     <string name="phone_setup_model">Choose a model</string>
 
+    <!-- The task screen: while Pinky on a computer uses the phone (its claim). -->
+    <string name="phone_computer_title">Pinky on your computer is using this phone</string>
+    <string name="phone_computer_detail">You can start a task here when it\'s done.</string>
+
     <!-- The task screen: a task, while it runs and once it ended. -->
     <string name="phone_task_hint">What should Pinky do on this phone?</string>
     <string name="phone_start">Start</string>
@@ -61,6 +65,7 @@
     <string name="phone_err_no_device">Pinky is off. Turn it on in Accessibility settings.</string>
     <string name="phone_err_no_model">Choose a model in Settings first.</string>
     <string name="phone_err_busy">Pinky is already working on a task.</string>
+    <string name="phone_err_computer">Pinky on your computer is using this phone. Try again when it\'s done.</string>
     <string name="phone_err_start">Couldn\'t start: %1$s</string>
     <string name="phone_err_key_lost">The saved API key can\'t be read any more. Add it again in Settings.</string>
 
@@ -86,6 +91,8 @@
     <string name="phone_pill_working">Working · %1$s</string>
     <string name="phone_pill_starting">Starting</string>
     <string name="phone_pill_waiting">Waiting for you</string>
+    <!-- Short: the pill stays over the screen Pinky on a computer works on. -->
+    <string name="phone_pill_computer">In use by your computer</string>
     <string name="phone_close">Close</string>
     <string name="phone_asks">Pinky asks</string>
     <string name="phone_rule">Rule: %1$s</string>

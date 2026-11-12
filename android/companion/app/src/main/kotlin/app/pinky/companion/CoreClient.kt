@@ -22,7 +22,7 @@ object CoreClient {
     /**
      * The core said no. code names the reason when the screens know it
      * (control.go's Code constants: no_device, no_key, no_model, no_task,
-     * busy), else it is empty.
+     * busy, computer), else it is empty.
      */
     class Refused(val code: String, message: String) : Exception(message)
 

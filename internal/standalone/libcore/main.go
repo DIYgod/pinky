@@ -66,7 +66,10 @@ func start(dataDir, pkg, companionSocket, coreSocket, version string, logw io.Wr
 			// pictures in, and each costs a capture on the phone.
 			NoScreenshots: true,
 		},
-		Log: log,
+		// The task claims the phone, so that Pinky on a computer and Pinky
+		// on the phone never drive it at once.
+		Claims: local.NewClaims(app),
+		Log:    log,
 	})
 	if err != nil {
 		ln.Close()

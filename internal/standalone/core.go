@@ -54,7 +54,11 @@ type Options struct {
 	// Pilot tunes the agent; Server, Version, Key and Notify are set by
 	// the Core.
 	Pilot pilot.Options
-	Log   *slog.Logger
+	// Claims is who drives the phone: the core claims it while a task
+	// runs, and starts none while Pinky on a computer holds it. Nil claims
+	// nothing.
+	Claims Claims
+	Log    *slog.Logger
 }
 
 // Core is Pinky on the phone.
@@ -67,8 +71,11 @@ type Core struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
+	startMu sync.Mutex // a task starts or ends one at a time (Start, ended)
+
 	mu   sync.Mutex
 	key  string // the API key of the running task, in memory only
+	run  int    // counts the tasks started, so that an earlier one's end leaves a later one alone
 	last *gateway.TaskView
 	subs map[chan struct{}]struct{}
 }
@@ -127,6 +134,9 @@ func New(o Options) (*Core, error) {
 	}
 	c.pilot = pilot.New(popt)
 	go c.follow()
+	if o.Claims != nil {
+		go o.Claims.Watch(ctx, c.changed, c.claimLost)
+	}
 	return c, nil
 }
 
@@ -191,7 +201,10 @@ type StartRequest struct {
 	MaxCost  float64 `json:"max_cost"`
 }
 
-// Start starts the person's task on the phone.
+// Start starts the person's task on the phone. The task claims the phone
+// first, so Start fails with ErrComputer while Pinky on a computer uses it;
+// the checks that need no phone come before, so that a mistake in the form
+// claims nothing.
 func (c *Core) Start(r StartRequest) error {
 	d, ok := c.device()
 	if !ok || d.Info.State != driver.StateOnline {
@@ -201,42 +214,86 @@ func (c *Core) Start(r StartRequest) error {
 	if key == "" {
 		return ErrNoKey
 	}
-	c.mu.Lock()
-	c.key, c.last = key, nil
-	c.mu.Unlock()
 	cfg := pilot.Config{Provider: r.Provider, Model: r.Model, BaseURL: r.BaseURL, MaxSteps: r.MaxSteps,
 		MaxTime: time.Duration(r.MaxMin) * time.Minute, MaxCost: r.MaxCost}
-	if err := c.pilot.Start(cfg, d.Info.ID, r.Task); err != nil {
-		c.forgetKey()
+	task := strings.TrimSpace(r.Task)
+	if task == "" {
+		return pilot.ErrNoTask
+	}
+	if cfg.Normalize().Model == "" {
+		return pilot.ErrNoModel
+	}
+	c.startMu.Lock()
+	defer c.startMu.Unlock()
+	// The running task holds the claim: claiming again would rename it,
+	// and the failed start would give it back.
+	if s, ok := c.pilot.Status(d.Info.ID); ok && s.Running() {
+		return pilot.ErrBusy
+	}
+	if cl := c.opt.Claims; cl != nil {
+		ctx, cancel := context.WithTimeout(c.ctx, claimWait)
+		busy, err := cl.Claim(ctx, task)
+		cancel()
+		if err != nil {
+			return err
+		}
+		if busy {
+			return ErrComputer
+		}
+	}
+	c.mu.Lock()
+	c.key, c.last = key, nil
+	c.run++
+	run := c.run
+	c.mu.Unlock()
+	if err := c.pilot.Start(cfg, d.Info.ID, task); err != nil {
+		c.endedLocked(run)
 		return err
 	}
-	go c.forgetKeyAtEnd(d.Info.ID)
+	go c.endTask(d.Info.ID, run)
 	return nil
 }
 
-// forgetKeyAtEnd drops the key once the task ends.
-func (c *Core) forgetKeyAtEnd(device string) {
+// endTask waits for run's task to end, then ends it.
+func (c *Core) endTask(device string, run int) {
+	defer c.ended(run)
 	ch, done := c.subscribe()
 	defer done()
 	for {
 		if s, ok := c.pilot.Status(device); !ok || !s.Running() {
-			c.forgetKey()
 			return
 		}
 		select {
 		case <-ch:
 		case <-time.After(time.Second):
 		case <-c.ctx.Done():
-			c.forgetKey()
 			return
 		}
 	}
 }
 
-func (c *Core) forgetKey() {
+// ended drops the key of run's task and gives the phone back, unless
+// another task started since.
+func (c *Core) ended(run int) {
+	c.startMu.Lock()
+	defer c.startMu.Unlock()
+	c.endedLocked(run)
+}
+
+func (c *Core) endedLocked(run int) {
 	c.mu.Lock()
-	c.key = ""
+	current := run == c.run
+	if current {
+		c.key = ""
+	}
 	c.mu.Unlock()
+	if current && c.opt.Claims != nil {
+		// Not c.ctx: the claim must not outlive the task when the core
+		// closes either.
+		ctx, cancel := context.WithTimeout(context.Background(), claimWait)
+		defer cancel()
+		c.opt.Claims.Release(ctx)
+	}
 }
 
 // Stop stops the task: the gateway's first, so Activity says the person

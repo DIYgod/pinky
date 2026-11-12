@@ -18,6 +18,9 @@
     <string name="phone_setup_key">添加 API 密钥</string>
     <string name="phone_setup_model">选择模型</string>
 
+    <string name="phone_computer_title">电脑上的 Pinky 正在使用这台手机</string>
+    <string name="phone_computer_detail">它完成后，你就可以在这里开始任务。</string>
+
     <string name="phone_task_hint">要 Pinky 在这台手机上做什么？</string>
     <string name="phone_start">开始</string>
     <string name="phone_task_limit">每个任务最多 %1$s</string>
@@ -50,6 +53,7 @@
     <string name="phone_err_no_device">Pinky 还没有开启。请在无障碍设置中开启。</string>
     <string name="phone_err_no_model">请先在“设置”中选择模型。</string>
     <string name="phone_err_busy">Pinky 已经在处理一个任务。</string>
+    <string name="phone_err_computer">电脑上的 Pinky 正在使用这台手机。等它完成后再试。</string>
     <string name="phone_err_start">无法开始：%1$s</string>
     <string name="phone_err_key_lost">已保存的 API 密钥无法读取了。请在“设置”中重新添加。</string>
 
@@ -70,6 +74,7 @@
     <string name="phone_pill_working">正在处理 · %1$s</string>
     <string name="phone_pill_starting">正在开始</string>
     <string name="phone_pill_waiting">等你处理</string>
+    <string name="phone_pill_computer">电脑正在使用这台手机</string>
     <string name="phone_close">关闭</string>
     <string name="phone_asks">Pinky 想确认</string>
     <string name="phone_rule">规则：%1$s</string>

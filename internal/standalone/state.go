@@ -10,11 +10,20 @@ import (
 // State is what Pinky's screens show: the phone, the agent's task with its
 // steps, and what waits for the person.
 type State struct {
-	Device DeviceState `json:"device"`
-	Preset int         `json:"preset"` // when agents ask: policy.Preset
-	Agent  *AgentState `json:"agent,omitempty"`
-	Task   *TaskState  `json:"task,omitempty"`
-	Needs  []Need      `json:"needs"`
+	Device   DeviceState    `json:"device"`
+	Preset   int            `json:"preset"` // when agents ask: policy.Preset
+	Computer *ComputerState `json:"computer,omitempty"`
+	Agent    *AgentState    `json:"agent,omitempty"`
+	Task     *TaskState     `json:"task,omitempty"`
+	Needs    []Need         `json:"needs"`
+}
+
+// ComputerState is Pinky on a computer while it holds the phone: the
+// screens start no task meanwhile, and the pill offers Stop when it is
+// Stoppable (an older desktop Pinky is not).
+type ComputerState struct {
+	Task      string `json:"task,omitempty"`
+	Stoppable bool   `json:"stoppable"`
 }
 
 // DeviceState is the phone as the gateway sees it.
@@ -83,6 +92,11 @@ func (c *Core) State() State {
 	if ok {
 		st.Device = DeviceState{Ready: d.Info.State == "online", Name: d.Info.Name, Status: string(d.Status),
 			Line: d.StatusLine, Detail: d.Info.Detail}
+	}
+	if cl := c.opt.Claims; cl != nil {
+		if task, stoppable, held := cl.Computer(); held {
+			st.Computer = &ComputerState{Task: task, Stoppable: stoppable}
+		}
 	}
 	// Only the agent starts tasks here: its task is the newest one of the
 	// phone that started with it, never an earlier one or a dismissed one.

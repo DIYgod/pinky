@@ -65,6 +65,9 @@ class TaskActivity : Activity() {
     private lateinit var coreDetail: TextView
     private lateinit var setupCard: View
     private lateinit var setupButton: TextView
+    private lateinit var computerCard: View
+    private lateinit var computerTask: TextView
+    private lateinit var computerStop: TextView
     private lateinit var runCard: View
     private lateinit var runTask: TextView
     private lateinit var runUsage: TextView
@@ -104,6 +107,7 @@ class TaskActivity : Activity() {
         col.addView(offCard(), look.below(12))
         col.addView(coreCard(), look.below(12))
         col.addView(setupCard(), look.below(12))
+        col.addView(computerCard(), look.below(12))
         col.addView(runCard(), look.below(12))
         col.addView(endCard(), look.below(12))
         col.addView(askBox(), look.below(12))
@@ -160,8 +164,9 @@ class TaskActivity : Activity() {
     }
 
     // The screen: at most one of what Pinky needs first (the service, the
-    // core, a key and a model), then the task that runs or the one that
-    // ended, then the box for a new one.
+    // core, a key and a model), then Pinky on a computer while it uses the
+    // phone, the task that runs or the one that ended, then the box for a
+    // new one.
 
     private fun render() {
         main.removeCallbacks(rerender)
@@ -196,6 +201,17 @@ class TaskActivity : Activity() {
         }
         setupCard.shown(ready && !setUp && !running)
         setupButton.text = getString(if (hasKey) R.string.phone_setup_model else R.string.phone_setup_key)
+
+        // Pinky on a computer drives the phone (its claim): a task here
+        // waits until it is done.
+        val computer = st?.optJSONObject("computer")?.takeIf { !running }
+        computerCard.shown(ready && computer != null)
+        if (computer != null) {
+            computerTask.say(computer.optString("task"))
+            computerStop.shown(computer.optBoolean("stoppable"))
+        } else {
+            look.enable(computerStop, true)
+        }
 
         runCard.shown(running)
         if (agent != null && running) {
@@ -242,7 +258,9 @@ class TaskActivity : Activity() {
     }
 
     private fun updateStart() {
-        look.enable(startButton, input.text.isNotBlank() && !starting)
+        // Start waits while Pinky on a computer uses the phone.
+        val computer = state?.optJSONObject("computer") != null
+        look.enable(startButton, input.text.isNotBlank() && !starting && !computer)
     }
 
     // A task.
@@ -292,6 +310,7 @@ class TaskActivity : Activity() {
         "no_key" -> getString(R.string.phone_no_key)
         "no_model" -> getString(R.string.phone_err_no_model)
         "busy" -> getString(R.string.phone_err_busy)
+        "computer" -> getString(R.string.phone_err_computer)
         "no_task" -> "" // Start waits for a task; nothing to say.
         else -> getString(R.string.phone_err_start, e.message ?: e.code)
     }
@@ -299,6 +318,15 @@ class TaskActivity : Activity() {
     private fun stop() {
         look.enable(stopButton, false)
         CoreClient.send(CoreClient.cmd("stop")) { err -> if (err != null) main.post { look.enable(stopButton, true) } }
+    }
+
+    // Stop on the computer's card ends Pinky on a computer's claim, as Stop
+    // on the pill does; desktop Pinky stops its agent when it hears.
+    private fun stopComputer() {
+        look.enable(computerStop, false)
+        CoreClient.send(CoreClient.cmd("stop", "computer" to true)) { err ->
+            if (err != null) main.post { look.enable(computerStop, true) }
+        }
     }
 
     private fun dismiss() {
@@ -475,6 +503,31 @@ class TaskActivity : Activity() {
         setupButton = look.button("", Look.Kind.PRIMARY) { openSettings() }
         c.addView(look.buttons(setupButton), look.matchWrap())
         setupCard = c
+        return c
+    }
+
+    private fun computerCard(): View {
+        val top = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        top.addView(look.text("●", Look.SMALL, look.accent).apply { setPadding(0, 0, look.dp(8), 0) })
+        top.addView(
+            look.text(getString(R.string.phone_computer_title), Look.BODY, look.ink, 600),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        computerStop = look.button(getString(R.string.phone_stop), Look.Kind.DANGER) { stopComputer() }
+        top.addView(computerStop)
+        computerTask = look.text("", Look.BODY, look.ink2).apply { setPadding(0, look.dp(8), 0, 0) }
+        computerTask.say("")
+        val detail = look.text(getString(R.string.phone_computer_detail), Look.SMALL, look.ink3).apply {
+            setPadding(0, look.dp(6), 0, 0)
+        }
+        val c = look.card()
+        c.addView(top, look.matchWrap())
+        c.addView(computerTask, look.matchWrap())
+        c.addView(detail, look.matchWrap())
+        computerCard = c
         return c
     }
 

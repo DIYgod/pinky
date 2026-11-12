@@ -19,6 +19,9 @@
     <string name="phone_setup_key">API キーを追加</string>
     <string name="phone_setup_model">モデルを選ぶ</string>
 
+    <string name="phone_computer_title">パソコンの Pinky がこのスマホを操作中です</string>
+    <string name="phone_computer_detail">終わったら、ここでタスクを開始できます。</string>
+
     <string name="phone_task_hint">このスマホで Pinky に何をしてもらいますか？</string>
     <string name="phone_start">開始</string>
     <string name="phone_task_limit">1 タスクあたり最大 %1$s</string>
@@ -51,6 +54,7 @@
     <string name="phone_err_no_device">Pinky がオフです。ユーザー補助の設定でオンにしてください。</string>
     <string name="phone_err_no_model">先に「設定」でモデルを選んでください。</string>
     <string name="phone_err_busy">Pinky はすでにタスクを実行中です。</string>
+    <string name="phone_err_computer">パソコンの Pinky がこのスマホを操作中です。終わってからもう一度お試しください。</string>
     <string name="phone_err_start">開始できませんでした：%1$s</string>
     <string name="phone_err_key_lost">保存した API キーを読み取れなくなりました。「設定」でもう一度追加してください。</string>
 
@@ -71,6 +75,7 @@
     <string name="phone_pill_working">作業中 · %1$s</string>
     <string name="phone_pill_starting">開始しています</string>
     <string name="phone_pill_waiting">あなたの対応待ち</string>
+    <string name="phone_pill_computer">パソコンから操作中</string>
     <string name="phone_close">閉じる</string>
     <string name="phone_asks">Pinky からの確認</string>
     <string name="phone_rule">ルール：%1$s</string>

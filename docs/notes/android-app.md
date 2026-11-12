@@ -81,7 +81,7 @@ Never two agents at once, and the person always sees who is acting. Milestone 1 
 - **Desktop Pinky** claims when an agent starts working on the phone, on the connection that already holds its event subscription. If the phone is busy, the task does not start, and Pinky shows the phone as busy: "Pinky on the phone is running a task". An older app without `claim` answers `unknown_command`, and desktop Pinky goes on as today.
 - **Pinky on the phone** claims when a task starts. If a computer holds the phone, the task screen says so and Start waits; the core refuses `start` too. An older desktop Pinky that does not claim still holds an event subscription while its agent works; the app counts that as a computer's claim.
 - **Desktop Pinky leaves the service on** when `ping` says `on_phone`: the person turned it on for Pinky on the phone, and turning it off would also turn on-phone mode off. `Enable` already leaves a service that is on alone, but two backstops in `internal/driver/android/companion.go` force it off: `quietLocked`, for a service an older Pinky left on for good, and `disableLocked` when the service was on before the agent started. Today they spare it only because the core's connection counts as another client (`companionPeers`); Milestone 2 makes both check `on_phone`. Desktop Pinky still turns the service off when it turned it on itself and on-phone mode is off.
-- **Who is acting.** On-phone mode's pill shows while either side works: "Pinky on your computer is working" with Stop for a computer's agent (Stop releases the claim and the computer's agent gets `stopped`), and the task's own line for a task on the phone. In desktop mode alone nothing changes on the phone: Pinky on the computer shows the person what happens.
+- **Who is acting.** On-phone mode's pill shows while either side works: "In use by your computer" while a computer holds the phone, with Stop when it claimed (Stop ends the claim and the computer's agent gets `stopped`) and without for an older desktop Pinky, and the task's own line for a task on the phone. The pill was to say "Pinky on your computer is working", but it cut that line off at its width limit (55% of the screen), and with Stop it spread over 79% of the top of the screen the computer's agent works on; the short line fits in about 64%. In desktop mode alone nothing changes on the phone: Pinky on the computer shows the person what happens.
 
 ## Milestone 2 so far
 
@@ -91,7 +91,7 @@ On-phone mode is still in debug builds only (`on_phone_ui`), and everything belo
 
 Both run in the `:ui` process, are closed to agents as the debug page is (`policy.IsPinkyScreen`, `OwnUI`, sensitive content), and speak English, Simplified Chinese and Japanese (`res/values*/phone_strings.xml`).
 
-- **The task screen** (`TaskActivity`) takes the person through setup first: turning the service on, with the hint for Android 13+'s restricted settings and a link to App info, then a key and a model. If the core cannot start, it says why (`core_error` in the service's reply to `on_phone`). Then it takes a task, shows it while it runs (its steps, cost and time, what it waits for, Stop) and how it ended, and lists its steps under Activity. Start's errors are named by the core's codes (`no_device`, `no_key`, `no_model`, `no_task`, `busy`). When the feed offers an update, a card offers it (Download, Later).
+- **The task screen** (`TaskActivity`) takes the person through setup first: turning the service on, with the hint for Android 13+'s restricted settings and a link to App info, then a key and a model. If the core cannot start, it says why (`core_error` in the service's reply to `on_phone`). Then it takes a task, shows it while it runs (its steps, cost and time, what it waits for, Stop) and how it ended, and lists its steps under Activity. Start's errors are named by the core's codes (`no_device`, `no_key`, `no_model`, `no_task`, `busy`, `computer`). When the feed offers an update, a card offers it (Download, Later).
 - **Settings** (`SettingsActivity`), as desktop Pinky has them in Settings › Ask Pinky and Approvals: the service (Anthropic by default, or OpenAI-compatible), its key, model and address, each kept per service (`TaskSettings`); a task's limits on steps, time and cost (tokens for a model without prices); when Pinky asks (the core's `policy.Preset`, so it changes only while the core runs); the service and App info in Android's settings; the version and Check for updates.
 - **Keys** (`Secrets`) are encrypted with an AES key that lives in the Android Keystore and never leaves it. Only the ciphertext is in the app's files, which are not backed up, and nothing logs a key or its length.
 - **The look** (`Look`) is desktop Pinky's palette and type, light and dark (`res/values/colors.xml`, `res/values-night`), built in code.
@@ -99,9 +99,19 @@ Both run in the `:ui` process, are closed to agents as the debug page is (`polic
 - **The pill** reads the task's last step as Activity does, so an answered approval reads "You answered: …", not "Waiting for you". Its line gives way to its button: a long line no longer pushes Stop or Close onto a second line.
 - **Updates** (`UpdateCheck`): the task screen checks the feed at most every 12 hours and offers a higher `version_code`; Download opens the APK's address in the browser. The check is off in debug builds and in builds without a version, and the feed does not publish the Android asset yet (below).
 
+### Two modes: the phone's side
+
+[Two modes on one phone](#two-modes-on-one-phone), as far as the phone goes, through the companion's `claim` ([companion-protocol.md](companion-protocol.md#claim)). Desktop Pinky does not claim yet ([Next](#next)), so for now the phone sees it as an older desktop Pinky.
+
+- **The app** serves `claim` and `claim` events in every build. A release build gains only the command and the feature: nothing on the phone claims there, and without on-phone mode a computer's claim changes nothing on the phone.
+- **The core** claims the phone when a task starts and releases it when the task ends (`standalone.Claims`; on Android `local.Claims`, on the core's own subscription to `claim` events). `start` checks the device, the key, the task and the model first, then claims, and answers `computer` while a computer holds the phone. If the service restarts during a task, the core claims again; if a computer took the phone meanwhile, the task stops and reads as stopped, as if the person had pressed Stop.
+- **The core's state** has `computer` while a computer holds the phone: its `task`, if it named one, and `stoppable`, false for an older desktop Pinky. `stop` with `computer: true` ends a computer's claim (`corectl stop -computer`).
+- **The task screen** shows a card meanwhile: "Pinky on your computer is using this phone", the computer's task, "You can start a task here when it's done", and Stop when the claim can be stopped. Start waits, and a `start` the core refuses says "Pinky on your computer is using this phone. Try again when it's done."
+- **The pill** reads "In use by your computer", with Stop, or with no button for an older desktop Pinky. Stop on the pill or on the card ends the claim, and the computer hears `stopped`.
+
 ### Checked
 
-On 2026-11-12, on the Android 17 emulator with the debug build and `fakemodel -script loop`:
+On 2026-11-12, on the Android 17 emulator with the debug build and `fakemodel -script loop`, and `companionctl` as the computer for claims:
 
 | What | Result |
 | --- | --- |
@@ -114,8 +124,12 @@ On 2026-11-12, on the Android 17 emulator with the debug build and `fakemodel -s
 | Stop on the pill while a step waited | the step read "Press back" and "Not done: stopped", marked –; the pill read "Stopped" with Close |
 | Stop on the task screen; tapping the pill | stops the task; opens Pinky |
 | Simplified Chinese and Japanese (`cmd locale set-app-locales`) | the task screen, Settings, the card, the pill and the steps' wording; the gateway's words stay English |
+| Claims: a computer's subscription without them (`companionctl events`, as an older desktop Pinky) | the core's state showed the computer, not stoppable; `corectl start` answered `computer`, and `corectl stop -computer` changed nothing; the pill and the card showed it without Stop and went when the subscription ended |
+| Claims: a computer's claim (`companionctl claim -task "Order lunch"`) | a second claim got `busy` naming the computer and its task; `corectl stop -computer`, Stop on the card and Stop on the pill each ended it, and the claimer heard `stopped`; a claimer that quit freed the phone |
+| Claims: a task running on the phone | a claim got `busy` naming the phone and the task; a computer's subscription without claims was let in and changed nothing; once the task stopped, a claim went through |
+| Claims in English, Simplified Chinese and Japanese | the pill's short line fits on one line with Stop (about 64% of the screen's width in English); the card's title takes two lines in Japanese |
 
-Not checked: the new screens on the Pixel and the Mi 10 Pro, the dark theme (switching it is a phone setting), an update from the feed, and a real model.
+Not checked: the new screens on the Pixel and the Mi 10 Pro, the dark theme (switching it is a phone setting), an update from the feed, and a real model. For claims: Start waiting and its error on the task screen (the emulator had no key saved, so the task box did not show; the core's `computer` answer was checked with `corectl` and in tests), and desktop Pinky's own claims, which it does not make yet.
 
 ## Next
 
@@ -125,12 +139,13 @@ Not checked: the new screens on the Pixel and the Mi 10 Pro, the dark theme (swi
 - **Setup screens in Pinky's words and look:** the task screen and Settings are in (above). Still to come: a history of past tasks, and the rest of onboarding: vendor battery settings and staying alive.
 - **Updates without a computer:** the app checks Pinky's release feed, `latest.json` ([updates.md](updates.md#the-feed)), and offers the new APK; desktop Pinky keeps updating it as today where there is a computer. The feed gains an asset `android-arm64` for `pinky-android.apk` with the usual `url`, `sha256` and `size`, plus `version_code`: the APK changes only when `android/companion` does, so the app offers an update only for a higher `version_code`. Desktop Pinky ignores the new key, as it reads only its own `GOOS-GOARCH`.
 - **Distribution:** `pinky-android.apk` as a release asset of its own and a download link in the README.
-- **Two modes on one phone,** as above.
+- **Two modes on one phone:** the phone's side is in (above). Desktop Pinky's is left: ask for `claim` events, claim on its subscription when an agent starts and release when it stops, stop the agent on `stopped`, show the phone as busy on `busy`, and leave the service on when `ping` says `on_phone` (`quietLocked`, `disableLocked`). While a computer holds the phone in on-phone mode, the pill covers the top middle of the screen: the service refuses gestures on it (`own_ui`), and adb's taps there would land on it (not tried), so desktop Pinky should treat it as something in the way. Until desktop Pinky claims, the phone counts its event subscription as a claim it cannot stop; that includes the subscription of a checkup or an install, and a desktop Pinky built before 2026-11-08, which may keep one open all along, can keep a task on the phone waiting as long.
 - **Tests:** the prototype's `fakemodel` stands in for the model. A run with a real model needs the owner, who types the key on the phone.
 
 ### Milestone 3: take over and polish
 
 - The person's touch pauses the agent (Take over), and `FLAG_SECURE` on the approval card and Pinky's screens.
+- The pill covers the top of Pinky's own task screen (its title and Settings), while a task runs as while a computer holds the phone: hide it while Pinky's screens are in front, or leave room for it.
 - Android 10 (the Pixel): no `takeScreenshot` (API 30) and no `accessibilityDataSensitive` (API 34). On-phone mode should say what it cannot do there instead of failing.
 - Battery over a long task, on a real phone.
 - A shell tier (Shizuku or Wireless debugging) is not in the first version. The local driver keeps room for it: actions go through the service's commands, and a shell could serve the same ones.

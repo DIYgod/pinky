@@ -14,7 +14,9 @@
 //	watch [-decide D] [-after 2s]   print steps and needs until the task ends,
 //	                           answering each need with D (allow_once, deny,
 //	                           or none to leave it), and time each step
-//	stop | dismiss
+//	stop [-computer]           stop the task, or with -computer Pinky on a
+//	                           computer, as Stop on the pill does
+//	dismiss
 //	decide NEED DECISION
 package main
 
@@ -95,8 +97,13 @@ func main() {
 		_ = fs.Parse(args)
 		_, err = call(map[string]any{"cmd": "start", "task": *task, "key": *key, "provider": *provider, "base_url": *base, "model": *model,
 			"max_steps": *steps, "max_minutes": *mins})
-	case "stop", "dismiss":
-		_, err = call(map[string]any{"cmd": cmd})
+	case "stop":
+		fs := flag.NewFlagSet("stop", flag.ExitOnError)
+		computer := fs.Bool("computer", false, "end Pinky on a computer's claim instead of the task")
+		_ = fs.Parse(args)
+		_, err = call(map[string]any{"cmd": "stop", "computer": *computer})
+	case "dismiss":
+		_, err = call(map[string]any{"cmd": "dismiss"})
 	case "decide":
 		if len(args) != 2 {
 			err = fmt.Errorf("decide NEED DECISION")
