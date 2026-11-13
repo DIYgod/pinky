@@ -177,7 +177,7 @@ func (a *app) unlockButton(c *mg.Context, id string) mg.Element {
 	if busy {
 		label = locales.UnlockBusy()
 	}
-	b := button(c, label, btnOpt{kind: btnPrimary, icon: icTouchID}).Disabled(busy)
+	b := button(c, label, btnOpt{kind: btnPrimary, icon: unlockIcon()}).Disabled(busy)
 	if b.Clicked() {
 		a.unlock(id)
 	}
@@ -196,7 +196,7 @@ func (a *app) retryButton(c *mg.Context, id string) mg.Element {
 	if busy {
 		label = locales.UnlockBusy()
 	}
-	b := button(c, label, btnOpt{icon: icTouchID}).Label(locales.UnlockTryAgainLabel(name)).Disabled(busy)
+	b := button(c, label, btnOpt{icon: unlockIcon()}).Label(locales.UnlockTryAgainLabel(name)).Disabled(busy)
 	if b.Clicked() {
 		a.unlock(id)
 	}

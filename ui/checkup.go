@@ -50,7 +50,7 @@ type checkupRun struct {
 // errNoCheckup: the gateway runs no checkups.
 var errNoCheckup = errors.New("no checkups")
 
-var icCheckup = mingcute("task_2_line")
+var icCheckup = mingcute("pro/list_check_4_line")
 var icMinus = mingcute("minimize_line")
 
 // checkupOf returns the phone's last checkup, nil before the first.

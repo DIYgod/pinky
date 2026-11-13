@@ -531,7 +531,7 @@ Pinky is Go end to end, with Kotlin only inside the Android companion; every dep
 | --- | --- | --- | --- |
 | Language | Go 1.27 | BSD-3-Clause | One language for gateway, drivers and UI; cross-compiles without cgo |
 | Desktop UI | [MyGo](https://github.com/egoist/mygo) native UI | MIT | Light, native, cgo-free; tray, panels and updates built in |
-| Icons | [MingCute](https://github.com/Richard9394/MingCute), the free set, bundled in `ui/icons/mingcute` | Apache-2.0 | One family of line and filled icons on a 24 grid |
+| Icons | [MingCute](https://github.com/Richard9394/MingCute), the free set and a few of MingCute Icons System Pro, bundled in `ui/icons/mingcute` | Apache-2.0; Pro under the owner's purchased license | One family of line and filled icons on a 24 grid |
 | MCP | [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk) | Apache-2.0 (older parts MIT) | Official SDK, version 1.8 |
 | Android transport | adb server protocol (own code) and `adb` | Apache-2.0 | Shares the SDK's adb server with Android Studio |
 | Android screen and input | [scrcpy](https://github.com/Genymobile/scrcpy) server, one pinned version | Apache-2.0 | Fast H.264 stream, control channel, virtual displays |

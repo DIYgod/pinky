@@ -307,3 +307,12 @@ func unlockWords() (button, keep string) {
 	}
 	return locales.PlatformUnlockOther(), locales.PlatformUnlockKeepOther()
 }
+
+// unlockIcon is the icon of Unlock: a fingerprint where it says Touch ID,
+// an open lock where Windows Hello or the keyring asks.
+func unlockIcon() *mg.SVG {
+	if runtime.GOOS == "darwin" {
+		return icTouchID
+	}
+	return icUnlock
+}

@@ -8,18 +8,19 @@ import (
 	"github.com/DIYgod/pinky/assets"
 )
 
-// The app's icons are MingCute's (icons/mingcute, Apache-2.0): its line
-// icons at rest, and the same icon filled where a row or a tab is
-// selected (icGridOn, …). They are drawn on one grid of sizes (iconMicro
+// The app's icons are MingCute's: the free set (icons/mingcute,
+// Apache-2.0) and a few of MingCute Icons System Pro (icons/mingcute/pro,
+// under the owner's license). Line icons at rest, and the same icon filled
+// where a row or a tab is selected (icGridOn, …). They are drawn on one grid of sizes (iconMicro
 // to iconHero) in the color of the text around them, which follows the
 // theme. The keys of Android's navigation and the rotation picks keep
 // glyphs of their own, drawn as the systems draw them.
 //
-//go:embed icons/mingcute/*.svg
+//go:embed icons/mingcute/*.svg icons/mingcute/pro/*.svg
 var mingcuteSVGs embed.FS
 
 // mingcute returns the bundled MingCute icon of that name, as
-// "settings_3_line".
+// "settings_3_line", or "pro/eye_off_line" for one of the Pro set.
 func mingcute(name string) *mg.SVG {
 	b, err := mingcuteSVGs.ReadFile("icons/mingcute/" + name + ".svg")
 	if err != nil {
@@ -59,6 +60,8 @@ var (
 	icPerson   = mingcute("user_3_line")
 	icTouchID  = mingcute("fingerprint_line")
 	icLock     = mingcute("lock_line")
+	icUnlock   = mingcute("pro/lock_open_line")
+	icCable    = mingcute("pro/cable_line")
 	icWifi     = mingcute("wifi_line")
 	icWifiOff  = mingcute("wifi_off_line")
 	icSearch   = mingcute("search_line")
@@ -76,7 +79,7 @@ var (
 	icAlert    = mingcute("alert_line")
 	icExpand   = mingcute("fullscreen_line")
 	icEye      = mingcute("eye_2_line")
-	icEyeOff   = mingcute("eye_close_line")
+	icEyeOff   = mingcute("pro/eye_off_line")
 	icCamera   = mingcute("camera_line")
 	icMonitor  = mingcute("computer_line")
 	icStop     = mingcute("stop_circle_line")
@@ -86,8 +89,8 @@ var (
 	icPlug     = mingcute("plugin_line")
 
 	icVideo     = mingcute("video_line")
-	icPrivacy   = mingcute("incognito_mode_line")
-	icPrivacyOn = mingcute("incognito_mode_fill")
+	icPrivacy   = icEyeOff
+	icPrivacyOn = mingcute("pro/eye_off_fill")
 	icRotate    = mingcute("rotate_to_horizontal_line")
 	icLayer     = mingcute("layer_line")
 	icDelete    = mingcute("delete_2_line")

@@ -117,10 +117,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		mg.Column(c).AlignItems(mg.Center).Gap(sp2).Children(func() {
-			ic := icWifiOff
-			if d.Info.Virtual {
-				ic = icMonitor
-			}
+			ic := offlineIcon(d)
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 				mg.Icon(c, ic).FontSize(iconHero).TextColor(p.ink3)
 			})
@@ -619,7 +616,7 @@ func (a *app) phoneTiles(c *mg.Context, cols []mg.Track, width float32) {
 						slot.Children(func() {
 							mini := mg.Box(c).Size(pw, ph).Shrink(0).Radius(radius).Border(2, p.line2).Background(p.bg3).Center()
 							if offline {
-								mini.Children(func() { mg.Icon(c, icWifiOff).FontSize(iconBig).TextColor(p.ink3) })
+								mini.Children(func() { mg.Icon(c, offlineIcon(d)).FontSize(iconBig).TextColor(p.ink3) })
 							} else {
 								mini.Children(func() { mg.Icon(c, icAlert).FontSize(iconBig).TextColor(p.amberDot) })
 							}
@@ -751,4 +748,17 @@ func stateTitle(c *mg.Context, text string) mg.Element {
 
 func stateDetail(c *mg.Context, text string) mg.Element {
 	return mg.Text(c, text).FontSize(fsBody).LineHeight(1.5).TextColor(pal(c).ink2).TextAlign(mg.Center).MaxWidth(380)
+}
+
+// offlineIcon is what stands for an offline phone: its screen for a
+// virtual one, a cable for one last seen over USB, and no Wi-Fi for one
+// last seen over the network.
+func offlineIcon(d gateway.DeviceView) *mg.SVG {
+	switch {
+	case d.Info.Virtual:
+		return icMonitor
+	case d.Info.Connection == "usb":
+		return icCable
+	}
+	return icWifiOff
 }
