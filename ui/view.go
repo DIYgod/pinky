@@ -31,16 +31,19 @@ func (a *app) view(c *mg.Context) {
 	mg.Row(c).Fill().AlignItems(mg.Stretch).Children(func() {
 		a.sidebar(c)
 		mg.Column(c).Grow(1).MinWidth(0).Background(p.bg).Children(func() {
-			switch a.page {
-			case pageActivity:
-				a.activityPage(c)
-			case pageSettings:
-				a.settingsPage(c)
-			case pageAddPhone:
-				a.addPhonePage(c)
-			default:
-				a.phonesPage(c)
-			}
+			// A page fades in where the last one was.
+			mg.Column(c.Key(a.page)).Grow(1).MinHeight(0).Transition(swapIn()).Children(func() {
+				switch a.page {
+				case pageActivity:
+					a.activityPage(c)
+				case pageSettings:
+					a.settingsPage(c)
+				case pageAddPhone:
+					a.addPhonePage(c)
+				default:
+					a.phonesPage(c)
+				}
+			})
 		})
 	})
 	a.telemetryDialogs(c)
@@ -177,7 +180,8 @@ func (a *app) sidebarPhones(c *mg.Context) {
 		for _, d := range a.devices {
 			d := d
 			on := phones && a.sel == d.Info.ID
-			row := phoneRow(c.Key(d.Info.ID), on)
+			// A phone joining or leaving the list grows in or closes up.
+			row := phoneRow(c.Key(d.Info.ID), on).Transition(listRow())
 			if row.Clicked() {
 				a.selectPhone(d.Info.ID)
 			}
@@ -197,7 +201,7 @@ func (a *app) sidebarPhones(c *mg.Context) {
 					// No empty second line: it would lift the name off the
 					// dot beside it.
 					if line := statusLine(d); line != "" {
-						mg.Text(c, line).FontSize(fsCaption).TextColor(p.ink2).SingleLine()
+						textSwap(mg.Text(c, line).FontSize(fsCaption).TextColor(p.ink2).SingleLine())
 					}
 				})
 				a.webMirrorBadge(c, d.Info.ID)
@@ -219,7 +223,7 @@ func phoneRow(c *mg.Context, on bool) mg.Element {
 	case row.Hovered():
 		row.Background(p.ink.Alpha(wingHoverAlpha))
 	}
-	return row
+	return fillFade(row)
 }
 
 // A sidebar row's fill when selected and when hovered: the ink, faint, so

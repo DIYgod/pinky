@@ -94,20 +94,23 @@ func (a *app) addPhonePage(c *mg.Context) {
 					}
 				})
 			}
-			switch s.step {
-			case "android":
-				a.addAndroid(c)
-			case "qr":
-				a.addQR(c)
-			case "tailnet":
-				a.addTailnet(c)
-			case "iphone":
-				a.addIPhone(c)
-			case "virtual":
-				a.addVirtual(c)
-			default:
-				a.addChoose(c)
-			}
+			// Each step fades in where the last one was.
+			mg.Column(c.Key(s.step)).Gap(sp5).Transition(swapIn()).Children(func() {
+				switch s.step {
+				case "android":
+					a.addAndroid(c)
+				case "qr":
+					a.addQR(c)
+				case "tailnet":
+					a.addTailnet(c)
+				case "iphone":
+					a.addIPhone(c)
+				case "virtual":
+					a.addVirtual(c)
+				default:
+					a.addChoose(c)
+				}
+			})
 		})
 	})
 }

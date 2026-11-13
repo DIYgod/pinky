@@ -32,6 +32,9 @@ func TestMain(m *testing.M) {
 	// The helper's words are told by the tests' clock, which is the
 	// computer's until a test sets it (clockAt).
 	timeNow = testNow
+	// The tests' clock stands still, so what arrives shows at once rather
+	// than halfway (withMotion turns the motion back on).
+	stillMotion = true
 	os.Exit(m.Run())
 }
 

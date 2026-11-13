@@ -17,7 +17,9 @@ func (a *app) rightPanel(c *mg.Context) {
 	mg.Scroll(c).Width(rightPanelWidth).Shrink(0).BorderWidth(0, 0, 0, 1).BorderColor(p.line).Background(p.wing).
 		Padding(sp5, sp4).Gap(sp6).Label(locales.NeedsAndTasksLabel()).Children(func() {
 		if len(a.needs) > 0 {
-			mg.Column(c).Label(locales.NeedsSection()).Children(func() {
+			// The first request brings Needs you in with it, and the last
+			// takes it away; the cards between come and go on their own.
+			mg.Column(c.Key("needs")).Label(locales.NeedsSection()).Transition(cardIn()).Children(func() {
 				sectionLabel(c, locales.NeedsSection())
 				mg.Column(c).Gap(sp3).Children(func() {
 					for _, n := range a.needs {
@@ -35,7 +37,9 @@ func (a *app) rightPanel(c *mg.Context) {
 		if d := a.device(a.sel); d != nil {
 			a.phoneTasksCard(c, *d)
 		}
-		mg.Column(c).Label(locales.TasksSection()).Children(func() {
+		// Tasks slides down as a request arrives over it in Needs you, and
+		// back up as the request goes.
+		mg.Column(c.Key("tasks")).Label(locales.TasksSection()).Transition(slide()).Children(func() {
 			sectionLabel(c, locales.TasksSection())
 			mg.Column(c).Gap(8).Children(func() {
 				a.askBox(c)
@@ -104,6 +108,11 @@ func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 	p := pal(c)
 	card := mg.Column(c).Padding(14).Radius(rCard).Background(p.amberTint).Border(1, p.amberLine).Gap(2)
 	card = raised(c, card)
+	if !floating {
+		// In Needs you a request arrives and leaves; the floating panel
+		// is a window of its own, which shows at once.
+		card.Transition(cardIn())
+	}
 	card.Children(func() {
 		needEyebrow(c, n)
 		mg.Text(c, needTitle(n)).FontSize(fsHeadline).FontWeight(fwSemibold).LineHeight(1.35).Margin(6, 0, 0, 0)
@@ -485,7 +494,7 @@ func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 			key := fmt.Sprintf("%s/%d", t.ID, s.Index)
 			shot := a.hasShot(s)
 			open := shot && a.previews[key]
-			mg.Column(c.Key(i)).Gap(8).Role(mg.RoleListItem).Children(func() {
+			mg.Column(c.Key(i)).Gap(8).Role(mg.RoleListItem).Transition(rowIn()).Children(func() {
 				var row mg.Element
 				if shot {
 					row = mg.ButtonBase(c).Radius(rSmall).Gap(10).AlignItems(mg.Start).Justify(mg.Start).

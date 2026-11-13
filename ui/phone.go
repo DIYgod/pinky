@@ -408,7 +408,7 @@ func (a *app) controlBanner(c *mg.Context, id string, text controlText, width fl
 	spans := []mg.Span{{Text: text.bold, Weight: fwSemibold, Color: p.ink}, {Text: text.rest, Color: p.ink2}}
 	label := locales.PhoneHandBack()
 	height := controlBannerHeight(c, spans, label, width)
-	b := mg.Row(c).Width(width).Height(height).Shrink(0).
+	b := mg.Row(c.Key("control-"+id)).Width(width).Height(height).Shrink(0).Transition(bannerIn()).
 		Padding(bannerPadY, bannerPadY, bannerPadY, bannerPadX).Radius(rCard).Background(p.panel).Border(1, p.line2).Gap(10).AlignItems(mg.Center).
 		Role(mg.RoleStatus)
 	shadow(c, b).Children(func() {

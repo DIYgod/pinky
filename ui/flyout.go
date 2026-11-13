@@ -252,7 +252,7 @@ func flyRow(c *mg.Context) mg.Element {
 			row.Background(p.bg3)
 		}
 	}
-	return row
+	return fillFade(row)
 }
 
 // flyoutRadius rounds the flyout's corners on macOS, as its menu bar

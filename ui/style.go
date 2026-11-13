@@ -239,7 +239,7 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 			fg = hex("#ffb4a8")
 		}
 	}
-	b.Background(bg).Border(buttonBorder, border).TextColor(fg)
+	fillFade(b.Background(bg).Border(buttonBorder, border).TextColor(fg))
 	if !o.dark && !p.dark {
 		// A push button stands a hair off the page, as the system's do.
 		b.Shadow(0, 1, 1, 0, mg.RGBA(18, 18, 28, 0.04))
@@ -322,9 +322,11 @@ func quietButton(c *mg.Context, text string) mg.Element {
 	return b
 }
 
-// dot is the prototype's 8-pixel status dot; live ones pulse.
+// dot is the prototype's 8-pixel status dot; live ones pulse. A dot that
+// changes color, as a phone's from working to waiting, fades to it.
 func dot(c *mg.Context, col mg.Color, live bool) mg.Element {
-	d := mg.Box(c).Size(8, 8).Radius(4).Background(col).Shrink(0)
+	d := mg.Box(c).Size(8, 8).Radius(4).Shrink(0)
+	d.Background(colorTo(d, "color", col))
 	if live && !c.Preferences().ReduceMotion {
 		d.Opacity(0.35 + 0.65*d.Loop("pulse", 1600*time.Millisecond, mg.Bounce(mg.EaseInOut)))
 	}
@@ -356,7 +358,7 @@ func toggle(c *mg.Context, on *bool, label string) mg.Element {
 		x = 18
 	}
 	x = s.Animate("knob", x, 150*time.Millisecond)
-	s.Background(bg).Draw(func(pt *mg.Painter, r mg.Rect) {
+	s.Background(colorTo(s, "track", bg)).Draw(func(pt *mg.Painter, r mg.Rect) {
 		k := mg.Rect{X: r.X + x, Y: r.Y + 2, W: 16, H: 16}
 		pt.Shadow(k, 8, 0, 1, 2, 0, mg.RGBA(0, 0, 0, 0.25))
 		pt.Fill(k, p.white, 8)
@@ -442,7 +444,15 @@ func sheet(c *mg.Context, open *bool, fn func()) mg.Element {
 	p := pal(c)
 	w, h := c.Size()
 	return mg.DialogBase(c, open, func(back, panel mg.Element) {
-		back.Background(mg.RGBA(0, 0, 0, 0.32))
+		// The backdrop fades in, and the dialog with it, rising a little
+		// and growing from just under its size. Both go at once when
+		// closed: MyGo builds no dialog to see go.
+		back.Background(mg.RGBA(0, 0, 0, 0.32)).Transition(mg.ElementTransition{
+			Colors: true, Duration: motionFor(motionShort), Enter: &mg.Motion{}, ExitDuration: -1,
+		})
+		panel.Transition(mg.ElementTransition{
+			Colors: true, Duration: motionFor(motionMove), Enter: &mg.Motion{Y: 8, Scale: 0.98}, ExitDuration: -1,
+		})
 		panel.Padding(sp6).Gap(sp3).Radius(rSheet).Background(p.panel).Border(1, p.line).
 			MaxWidth(w-2*sp6).MaxHeight(h-2*sp6).
 			Shadow(0, 1, 3, 0, p.shadowLo).Shadow(0, 24, 60, 0, mg.RGBA(0, 0, 0, 0.22))
@@ -466,6 +476,7 @@ func menuItem(c *mg.Context, text string, col mg.Color) mg.Element {
 	case b.Hovered() || b.Focused():
 		b.Background(p.bg3)
 	}
+	fillFade(b)
 	if col == (mg.Color{}) {
 		col = p.ink
 	}

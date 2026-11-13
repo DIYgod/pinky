@@ -70,9 +70,12 @@ func (a *app) settingsPage(c *mg.Context) {
 				case on:
 					b.Background(p.sel)
 					selectionMark(c, b)
+				case b.Pressed():
+					b.Background(p.sel)
 				case b.Hovered():
 					b.Background(p.bg3)
 				}
+				fillFade(b)
 				if b.Clicked() {
 					s.sec = sec
 				}
@@ -98,7 +101,7 @@ func (a *app) settingsPage(c *mg.Context) {
 		a.watchFileProblems(c)
 		a.watchGatewaySettings(c)
 		mg.Scroll(c).Grow(1).MinWidth(0).Padding(28, 40).Children(func() {
-			mg.Column(c).MaxWidth(640).Gap(28).Children(func() {
+			mg.Column(c.Key(s.sec)).MaxWidth(640).Gap(28).Transition(swapIn()).Children(func() {
 				switch s.sec {
 				case secPhones:
 					a.settingsPhones(c)
