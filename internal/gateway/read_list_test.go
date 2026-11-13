@@ -532,9 +532,11 @@ func TestReadListStopsBeforeProtectedControl(t *testing.T) {
 	dev := &readListDevice{
 		Device: base,
 		pages:  [][]string{{"first long title", "second long title"}, {"second long title", "third long title"}},
+		// A slider that runs along the list: a swipe that scrolls the
+		// list may slide it.
 		overlay: []screen.Element{{
-			Role: screen.RoleButton, Label: "Place order · $12.80",
-			Bounds: screen.Rect{X: 0, Y: 1500, W: 1080, H: 500},
+			Role: screen.RoleOther, Label: "Slide to pay $12.80",
+			Bounds: screen.Rect{X: 0, Y: 800, W: 1080, H: 1200},
 		}},
 	}
 	g := newDevGateway(t, base, dev)
@@ -860,11 +862,11 @@ func TestReadListChecksOCROnlyProtectedSwipeTarget(t *testing.T) {
 		pages:  [][]string{{"first long title", "second long title"}, {"second long title", "third long title"}},
 		overlay: []screen.Element{{
 			Role:   screen.RoleOther,
-			Bounds: screen.Rect{X: 0, Y: 1500, W: 1080, H: 500},
+			Bounds: screen.Rect{X: 0, Y: 800, W: 1080, H: 1200},
 		}},
 		ocrOnly: []screen.Element{{
 			Role: screen.RoleText, Label: "Slide to pay $12.80", Source: screen.SourceOCR,
-			Bounds: screen.Rect{X: 200, Y: 1650, W: 680, H: 120},
+			Bounds: screen.Rect{X: 0, Y: 850, W: 1080, H: 1100},
 		}},
 	}
 	g := newDevGateway(t, base, dev)
