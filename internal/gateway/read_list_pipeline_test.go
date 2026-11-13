@@ -117,12 +117,23 @@ func TestReadListReadOnly(t *testing.T) {
 		t.Fatalf("read-only read: %+v", res)
 	}
 
-	// But a swipe that starts on a protected control is refused, and
-	// nothing asks the person.
+	// A swipe that starts on a wide button in the list scrolls it.
 	dev.page, dev.swipes = 0, 0
 	dev.overlay = []screen.Element{{
 		Role: screen.RoleButton, Label: "Place order · $12.80",
 		Bounds: screen.Rect{X: 0, Y: 1500, W: 1080, H: 500},
+	}}
+	res = s.ReadList(context.Background(), ReadListRequest{MaxScreens: 3, MaxMS: 5000, OCR: "off"})
+	if res.IsError() || res.Scan == nil || res.Scan.Swipes != 2 {
+		t.Fatalf("read-only scroll from a wide button: %+v", res)
+	}
+
+	// But a swipe that may slide a protected slider is refused, and
+	// nothing asks the person. (Scrolling from a wide button is a scroll.)
+	dev.page, dev.swipes = 0, 0
+	dev.overlay = []screen.Element{{
+		Role: screen.RoleOther, Label: "Slide to pay $12.80",
+		Bounds: screen.Rect{X: 0, Y: 800, W: 1080, H: 1200},
 	}}
 	res = s.ReadList(context.Background(), ReadListRequest{MaxScreens: 3, MaxMS: 5000, OCR: "off"})
 	if res.Status != StatusBlocked || res.Scan == nil || res.Scan.Stop != "blocked" || dev.swipes != 0 {

@@ -622,15 +622,16 @@ func detect(in Input, cats []string) []Kind {
 			add(Payment)
 		}
 	case OpSwipe:
-		// Sliders such as "Slide to pay", also by their id ("slide_to_pay");
-		// a list that scrolls is no slider.
-		if t == nil {
+		// Sliders such as "Slide to pay", also by their id ("slide_to_pay").
+		// Only a slider commits by a swipe: a swipe that starts on anything
+		// else, a list or a button in it ("删除订单" in an order list),
+		// scrolls.
+		if t == nil || !slidesAlong(t, in.Move) {
 			break
 		}
-		slider := !t.Has(screen.StateScrollable) && t.Role != screen.RoleList
-		if commit, money := commitParts(t); commit || (slider && isCommitIcon(t)) {
+		if commit, money := commitParts(t); commit || isCommitIcon(t) {
 			add(Commit)
-			if money || (slider && isMoneyIcon(t)) || hasCurrency(label) || screenHasCurrency(in.Screen) {
+			if money || isMoneyIcon(t) || hasCurrency(label) || screenHasCurrency(in.Screen) {
 				add(Payment)
 			}
 		}
@@ -653,6 +654,32 @@ func detect(in Input, cats []string) []Kind {
 		}
 	}
 	return kinds
+}
+
+// slidesAlong reports whether a swipe that moves the finger by move,
+// starting on t, may slide t as a slider. It may unless t scrolls, is a
+// list, or the swipe scrolls across it: t is wider than it is tall, and
+// the swipe moves along its width less than a third of what it moves up
+// or down, as when an order list is scrolled from a button in a row
+// ("删除订单"). A diagonal swipe on "Slide to pay" still drags its knob,
+// and a sideways swipe on an element taller than it is wide may be a full
+// swipe on a row's revealed "删除" action, so both may slide. An element
+// without bounds, or a swipe without a known move, may be a slider.
+func slidesAlong(t *screen.Element, move screen.Point) bool {
+	if t.Has(screen.StateScrollable) || t.Role == screen.RoleList {
+		return false
+	}
+	if t.Bounds.Empty() || (move.X == 0 && move.Y == 0) {
+		return true
+	}
+	return !(t.Bounds.W > t.Bounds.H && 3*abs(move.X) < abs(move.Y))
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
 }
 
 func hasKind(ks []Kind, k Kind) bool {

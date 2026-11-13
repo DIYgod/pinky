@@ -901,6 +901,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 				p.from, p.to = swipeLine(area, a.Direction)
 			}
 		}
+		p.input.Move = screen.Point{X: p.to.X - p.from.X, Y: p.to.Y - p.from.Y}
 	case "pinch":
 		p.input.Op = policy.OpSwipe
 		if dev, _ := g.screenOf(d); dev != nil {
