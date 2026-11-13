@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 现在可以允许智能体在模拟器和 Simulator 上输入密码和一次性验证码，方便用测试账号测试登录：「设置 › 安全 › 允许在虚拟手机上输入密码」（默认关闭）。真机上始终不行。感谢 @ljh740。
+
 ## 2026.1113.15 (2026-11-13)
 
 - 脚本现在可以在终端里用 `pinkyctl task run "…"` 把任务交给 Pinky，再用 `status`、`steer`、`cancel`、`list` 跟进，从退出码就能知道结果。每个脚本在「设置 › 智能体」里显示为单独的智能体（用 `-as` 起名）。感谢 @ljh740。
