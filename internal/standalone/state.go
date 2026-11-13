@@ -16,6 +16,12 @@ type State struct {
 	Agent    *AgentState    `json:"agent,omitempty"`
 	Task     *TaskState     `json:"task,omitempty"`
 	Needs    []Need         `json:"needs"`
+	// Shell is the background displays' setup (display.go); nil without
+	// a Shell.
+	Shell *ShellState `json:"shell,omitempty"`
+	// Background says tasks run on a background display, which the
+	// floating window shows (the video command).
+	Background bool `json:"background,omitempty"`
 }
 
 // ComputerState is Pinky on a computer while it holds the phone: the
@@ -130,6 +136,13 @@ func (c *Core) State() State {
 	if ok {
 		st.Device = DeviceState{Ready: d.Info.State == "online", Name: d.Info.Name, Status: string(d.Status),
 			Line: d.StatusLine, Detail: d.Info.Detail, LineShown: lineShown(d)}
+	}
+	if sh := c.opt.Shell; sh != nil {
+		s := sh.State()
+		st.Shell = &s
+	}
+	if ok {
+		st.Background = c.G.Background(d.Info.ID)
 	}
 	if cl := c.opt.Claims; cl != nil {
 		if task, stoppable, held := cl.Computer(); held {

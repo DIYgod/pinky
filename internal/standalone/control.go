@@ -9,9 +9,11 @@ import (
 	"net"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // The control socket is how Pinky's own screens reach the core: line
@@ -39,6 +41,9 @@ import (
 // ended, agent.continuable says continue may go on with it; text may be
 // empty when messages wait.
 //
+// display.go has the commands of background displays (shell, video,
+// takeover, handback, touch).
+//
 // Any command may name the language Pinky's screens show, "locale":
 // "zh-Hans", "ja" or "en"; the state and the history then say the
 // gateway's words in it too (shown.go).
@@ -62,6 +67,15 @@ type request struct {
 	Limit  int    `json:"limit"`
 	// steer and continue: the person's message to the agent.
 	Text string `json:"text"`
+	// shell (display.go): what to do, Wireless debugging's port and the
+	// pairing code.
+	Op   string `json:"op"`
+	Port int    `json:"port"`
+	Code string `json:"code"`
+	// touch: the phase and the point in the video's pixels.
+	Action string `json:"action"`
+	X      int    `json:"x"`
+	Y      int    `json:"y"`
 	StartRequest
 }
 
@@ -71,8 +85,9 @@ type reply struct {
 	Code    string     `json:"code,omitempty"`
 	State   *State     `json:"state,omitempty"`
 	History []PastTask `json:"history,omitempty"`
-	More    bool       `json:"more,omitempty"` // older tasks follow
-	ID      string     `json:"id,omitempty"`   // steer: the new message's
+	More    bool       `json:"more,omitempty"`  // older tasks follow
+	ID      string     `json:"id,omitempty"`    // steer: the new message's
+	Video   *videoInfo `json:"video,omitempty"` // video: the stream that follows
 }
 
 // historyWait bounds a history command, which reads the database.
@@ -128,6 +143,10 @@ func codeOf(err error) string {
 		return CodeNoMessage
 	case errors.Is(err, pilot.ErrCannotContinue):
 		return CodeCannotContinue
+	case errors.Is(err, ErrNoShell):
+		return CodeNoShell
+	case errors.Is(err, ErrWrongCode):
+		return CodeWrongCode
 	}
 	return ""
 }
@@ -178,8 +197,12 @@ func (c *Core) serveConn(ctx context.Context, conn net.Conn) {
 			continue
 		}
 		setLocale(r.Locale)
-		if r.Cmd == "subscribe" {
+		switch r.Cmd {
+		case "subscribe":
 			c.stream(ctx, enc)
+			return
+		case "video":
+			c.video(ctx, conn, enc)
 			return
 		}
 		rep := c.handle(r)
@@ -225,6 +248,14 @@ func (c *Core) handle(r request) reply {
 		err = c.Withdraw(r.ID)
 	case "continue":
 		err = c.Continue(r.Text, r.Key)
+	case "shell":
+		err = c.shell(r)
+	case "takeover":
+		err = c.TakeOver()
+	case "handback":
+		err = c.HandBack(r.Note)
+	case "touch":
+		err = c.Touch(driver.TouchAction(r.Action), screen.Point{X: r.X, Y: r.Y})
 	default:
 		err = fmt.Errorf("unknown command %q", r.Cmd)
 	}

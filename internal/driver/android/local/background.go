@@ -473,3 +473,21 @@ var (
 	_ driver.LockReporter        = (*Background)(nil)
 	_ driver.Toucher             = (*Background)(nil)
 )
+
+// BackgroundTouch sends the person's finger on the floating window to the
+// background display a task works on; driver.ErrNotFound when none is open.
+func (p *Provider) BackgroundTouch(ctx context.Context, a driver.TouchAction, pt screen.Point) error {
+	p.mu.Lock()
+	d := p.dev
+	p.mu.Unlock()
+	if d == nil {
+		return fmt.Errorf("local: no background display: %w", driver.ErrNotFound)
+	}
+	d.bgMu.Lock()
+	b := d.bg
+	d.bgMu.Unlock()
+	if b == nil {
+		return fmt.Errorf("local: no background display: %w", driver.ErrNotFound)
+	}
+	return b.Touch(ctx, a, pt)
+}

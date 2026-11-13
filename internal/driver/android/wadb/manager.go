@@ -319,3 +319,14 @@ func (m *Manager) Close() {
 		c.Close()
 	}
 }
+
+// MarkPaired records a pairing made outside the manager (wadbctl pair with
+// the same key directory) and turns the feature on, for tools and tests.
+func (m *Manager) MarkPaired() error {
+	m.mu.Lock()
+	m.cfg.On, m.cfg.Paired = true, true
+	err := m.saveLocked()
+	m.mu.Unlock()
+	m.notify()
+	return err
+}

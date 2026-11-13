@@ -30,6 +30,7 @@ import (
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // Options set up a Core.
@@ -61,7 +62,13 @@ type Options struct {
 	// runs, and starts none while Pinky on a computer holds it. Nil claims
 	// nothing.
 	Claims Claims
-	Log    *slog.Logger
+	// Shell is the app's adb connection to its own phone, for background
+	// displays (display.go); nil leaves them out.
+	Shell Shell
+	// BackgroundTouch sends the person's finger on the floating window to
+	// the background display the task works on.
+	BackgroundTouch func(ctx context.Context, a driver.TouchAction, p screen.Point) error
+	Log             *slog.Logger
 }
 
 // Core is Pinky on the phone.
@@ -146,6 +153,9 @@ func New(o Options) (*Core, error) {
 	go c.follow()
 	if o.Claims != nil {
 		go o.Claims.Watch(ctx, c.changed, c.claimLost)
+	}
+	if o.Shell != nil {
+		o.Shell.Watch(c.changed)
 	}
 	return c, nil
 }

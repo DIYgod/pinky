@@ -11,15 +11,19 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
+	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/driver/android/local"
+	"github.com/DIYgod/pinky/internal/driver/android/wadb"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/standalone"
@@ -53,8 +57,15 @@ func start(dataDir, pkg, companionSocket, coreSocket, version string, logw io.Wr
 	if err != nil {
 		return fmt.Errorf("control socket: %w", err)
 	}
+	// Background displays: the shell connection Wireless debugging gives
+	// the app, with its key in the app's private storage, only while the
+	// person has the feature on (docs/notes/android-wadb.md).
+	sh := &shell{}
+	sh.Manager = wadb.NewManager(filepath.Join(dataDir, "wadb"), "Pinky", sh.notify)
+	provider := local.NewProvider(app)
+	provider.SetShell(sh.Manager)
 	c, err := standalone.New(standalone.Options{
-		Providers: []driver.Provider{local.NewProvider(app)},
+		Providers: []driver.Provider{provider},
 		Device:    local.ID,
 		DataDir:   dataDir,
 		// Desktop Pinky's default (Settings › Privacy).
@@ -70,10 +81,13 @@ func start(dataDir, pkg, companionSocket, coreSocket, version string, logw io.Wr
 		},
 		// The task claims the phone, so that Pinky on a computer and Pinky
 		// on the phone never drive it at once.
-		Claims: local.NewClaims(app),
-		Log:    log,
+		Claims:          local.NewClaims(app),
+		Shell:           sh,
+		BackgroundTouch: provider.BackgroundTouch,
+		Log:             log,
 	})
 	if err != nil {
+		sh.Close()
 		ln.Close()
 		return err
 	}
@@ -85,4 +99,31 @@ func start(dataDir, pkg, companionSocket, coreSocket, version string, logw io.Wr
 	}()
 	log.Info("core ready", "data", dataDir, "companion", companionSocket, "control", coreSocket)
 	return nil
+}
+
+// shell adapts wadb's Manager to standalone.Shell.
+type shell struct {
+	*wadb.Manager
+	changed atomic.Pointer[func()]
+}
+
+func (s *shell) notify() {
+	if f := s.changed.Load(); f != nil {
+		(*f)()
+	}
+}
+
+func (s *shell) Watch(changed func()) { s.changed.Store(&changed) }
+
+func (s *shell) State() standalone.ShellState {
+	st := s.Manager.State()
+	return standalone.ShellState{On: st.On, Status: string(st.Status), Port: st.Port, Error: st.Error}
+}
+
+func (s *shell) Pair(ctx context.Context, port int, code string) error {
+	err := s.Manager.Pair(ctx, port, code)
+	if errors.Is(err, wadb.ErrWrongCode) {
+		return fmt.Errorf("%w: %w", standalone.ErrWrongCode, err)
+	}
+	return err
 }
