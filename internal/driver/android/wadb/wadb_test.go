@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -53,7 +54,8 @@ func TestLoadKeyKeepsTheKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fi.Mode().Perm() != 0o600 {
+	// Windows has no Unix permissions: Go reports a writable file as 0666.
+	if runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
 		t.Fatalf("key file mode %v, want 0600", fi.Mode().Perm())
 	}
 	k2, err := LoadKey(dir)
