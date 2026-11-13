@@ -93,6 +93,9 @@ targets:
         NSSupportsLiveActivities: true
         UIBackgroundModes: [audio]
         NSFaceIDUsageDescription: Pinky asks for Face ID before it goes ahead with a step you approve.
+        # Voice input in the task box (App/Dictation.swift).
+        NSSpeechRecognitionUsageDescription: Pinky turns what you say into the task you give it, on this iPhone when it can.
+        NSMicrophoneUsageDescription: Pinky listens while you speak a task, after you tap the microphone.
         # remotepairingd's advertisement on the loopback interface gives the
         # port the core dials (PairingPort.swift); on iOS 27 the app
         # advertises itself as a host the phone may pair with

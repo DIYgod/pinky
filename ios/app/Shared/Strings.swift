@@ -200,6 +200,14 @@ enum L {
         }
     }
 
+    static var voiceNotAllowed: String {
+        String(localized: "Pinky may not use speech recognition or the microphone. You can allow them in Settings › Privacy & Security.",
+               comment: "Voice input in the task box: the person declined a permission")
+    }
+    static var voiceUnavailable: String {
+        String(localized: "Speech recognition is not available now.", comment: "Voice input in the task box could not start")
+    }
+
     /// A start or decide the core refused, by its code.
     static func refused(_ code: String?, _ error: String?) -> String {
         switch code {
@@ -208,6 +216,7 @@ enum L {
         case "no_task": String(localized: "Type a task first.", comment: "Start refused")
         case "no_model": String(localized: "Choose a model in Settings first.", comment: "Start refused")
         case "busy": String(localized: "Pinky is already working on a task.", comment: "Start refused")
+        case "shared": String(localized: "What came with the task is too long for Pinky.", comment: "Start refused: the text a shortcut passed along is too large")
         case "computer": String(localized: "Pinky on your computer is using this iPhone. Start the task when it is done, or once you choose Pause connection for this iPhone there.", comment: "Start refused")
         case "gone": String(localized: "This was already answered, or the time to answer ran out.", comment: "Decide refused")
         default: error ?? String(localized: "Something went wrong.", comment: "Unknown error")

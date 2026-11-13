@@ -394,7 +394,9 @@ final class AppModel: ObservableObject {
 
     // MARK: Tasks
 
-    func startTask(_ text: String, key: String? = nil) async {
+    /// Starts a task; `shared` is text or a link to go with it (a
+    /// shortcut's, NewTaskIntent).
+    func startTask(_ text: String, shared: String = "", key: String? = nil) async {
         problem = nil
         let key = key ?? TaskSettings.key(TaskSettings.service) ?? ""
         // iOS starts a Live Activity only for the app in front, and the core
@@ -407,6 +409,7 @@ final class AppModel: ObservableObject {
         req["max_steps"] = TaskSettings.maxSteps
         req["max_minutes"] = TaskSettings.maxMinutes
         req["max_cost"] = TaskSettings.maxCost
+        if !shared.isEmpty { req["shared"] = shared }
         let r = await call(req)
         if !r.ok {
             endActivities(nil)

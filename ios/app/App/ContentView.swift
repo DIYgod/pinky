@@ -21,6 +21,12 @@ struct ContentView: View {
     /// Settings closes, which is where the key is typed.
     @State private var hasKey = false
     @FocusState private var typing: Bool
+    @StateObject private var dictation = Dictation()
+    @ObservedObject private var drafts = Drafts.shared
+    /// What a shortcut passed along with the task (NewTaskIntent).
+    @State private var shared = ""
+    /// The box's text when the mic started: what is heard goes after it.
+    @State private var beforeVoice = ""
 
     var body: some View {
         NavigationStack {
@@ -58,6 +64,8 @@ struct ContentView: View {
                 readKey()
                 Task { await m.loadUsage() }
             }
+            .onAppear(perform: takeDraft)
+            .onChange(of: drafts.pending) { _, _ in takeDraft() }
             .animation(.default, value: m.state)
         }
         .tint(.pinkyAccent)
@@ -183,6 +191,19 @@ struct ContentView: View {
                 .lineLimit(3...8)
                 .focused($typing)
                 .padding(.vertical, 4)
+            if !shared.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "paperclip").foregroundStyle(.secondary)
+                    Text(verbatim: shared).font(.footnote).foregroundStyle(.secondary).lineLimit(3)
+                    Spacer(minLength: 0)
+                    Button { shared = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(Text("Remove"))
+                }
+            }
+            if let p = dictation.problem {
+                Text(p).font(.footnote).foregroundStyle(.red)
+            }
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: modelLabel).font(.footnote.weight(.medium)).foregroundStyle(.secondary)
@@ -192,12 +213,38 @@ struct ContentView: View {
                     }
                 }
                 Spacer()
+                if Dictation.available || dictation.listening {
+                    Button {
+                        if dictation.listening {
+                            dictation.stop()
+                        } else {
+                            typing = false
+                            beforeVoice = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                            Task {
+                                await dictation.start { heard in
+                                    text = beforeVoice.isEmpty ? heard : beforeVoice + " " + heard
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: dictation.listening ? "stop.circle.fill" : "mic")
+                            .font(.title3)
+                            .symbolEffect(.pulse, isActive: dictation.listening)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(dictation.listening ? Text("Stop listening") : Text("Speak"))
+                }
                 Button {
+                    dictation.stop()
                     let t = text
+                    let with = shared
                     typing = false
                     Task {
-                        await m.startTask(t)
-                        if m.problem == nil { text = "" }
+                        await m.startTask(t, shared: with)
+                        if m.problem == nil {
+                            text = ""
+                            shared = ""
+                        }
                     }
                 } label: {
                     Text("Start").frame(minWidth: 56)
@@ -210,6 +257,16 @@ struct ContentView: View {
                 Text("Pinky leaves this app and works in the other apps. You can watch it, answer when it asks, and stop it at any time.")
             }
         }
+    }
+
+    /// Puts a shortcut's task into the box (NewTaskIntent). A task the
+    /// person was typing gives way only to a shortcut's own words.
+    private func takeDraft() {
+        guard let d = drafts.pending else { return }
+        drafts.pending = nil
+        if !d.task.isEmpty { text = d.task }
+        shared = d.shared
+        if !d.task.isEmpty || !d.shared.isEmpty { typing = d.task.isEmpty }
     }
 
     // Read with the stored settings, so that SwiftUI redraws when they change.
