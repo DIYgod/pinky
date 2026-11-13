@@ -193,7 +193,7 @@ func (a *app) webApprovalsRequest(c *mg.Context, wa WebApprovals, q webapproval.
 	kc := c.Key("wa-req-" + q.ID)
 	mg.Row(kc).Gap(sp2).AlignItems(mg.Start).Padding(12, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).
 		Margin(0, sp4, sp2, sp4).Role(mg.RoleStatus).Children(func() {
-		mg.Icon(kc, icAlert).FontSize(16).TextColor(p.amber).Margin(2, 0, 0, 0)
+		mg.Icon(kc, icAlert).FontSize(iconBody).TextColor(p.amber).Margin(2, 0, 0, 0)
 		mg.Column(kc).Gap(6).Grow(1).MinWidth(0).Children(func() {
 			mg.Text(kc, locales.WebApprovalsRequest()).FontWeight(fwMedium)
 			mg.Text(kc, locales.WebApprovalsRequestDesc(webApprovalsBrowser(q.Browser), q.Login)).FontSize(fsSmall).LineHeight(1.4)

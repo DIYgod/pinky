@@ -343,7 +343,7 @@ func (a *app) schedRow(c *mg.Context, s schedule.Schedule) {
 		case running:
 			dot(c, p.green, true)
 		case s.Paused:
-			mg.Icon(c, icPause).FontSize(14).TextColor(p.ink3)
+			mg.Icon(c, icPause).FontSize(iconSmall).TextColor(p.ink3)
 		default:
 			dot(c, p.accentInk, false)
 		}

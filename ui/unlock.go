@@ -295,7 +295,7 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 	case st.saved[id]:
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Wrap().Children(func() {
 			mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
-				mg.Icon(c, icLock).FontSize(14).TextColor(p.ink2)
+				mg.Icon(c, icLock).FontSize(iconSmall).TextColor(p.ink2)
 				mg.Text(c, locales.PinSaved()).FontSize(fsSmall).TextColor(p.ink2)
 			})
 			if linkButton(c, locales.PinChange()).Label(locales.PinChangeLabel(name)).Clicked() {
@@ -379,7 +379,7 @@ func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
 	mg.Column(c.Key("lock-"+id)).Padding(14).Radius(12).Background(p.bg2).Border(1, p.line).Gap(8).
 		Label(locales.UnlockLocked(d.Info.Name)).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-			mg.Icon(c, icLock).FontSize(16).TextColor(p.ink2)
+			mg.Icon(c, icLock).FontSize(iconBody).TextColor(p.ink2)
 			mg.Text(c, locales.UnlockLocked(d.Info.Name)).FontSize(fsHeadline).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 		})
 		if wrong {

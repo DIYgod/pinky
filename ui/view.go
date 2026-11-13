@@ -107,7 +107,7 @@ func (a *app) sidebar(c *mg.Context) {
 			a.add.reset(a)
 		}
 		add.TextColor(navInk(c, add, on)).Label(locales.SidebarAddPhone()).Children(func() {
-			mg.Icon(c, icPlus).FontSize(16)
+			mg.Icon(c, icPlus).FontSize(iconBody)
 			mg.Text(c, locales.SidebarAddPhone()).FontSize(fsBody)
 		})
 
@@ -115,11 +115,11 @@ func (a *app) sidebar(c *mg.Context) {
 		a.agentCard(c)
 		a.updateCards(c)
 		mg.Column(c).Gap(2).Padding(sp2, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).Children(func() {
-			footRow(c, icHistory, locales.SidebarActivity(), a.page == pageActivity, func() {
+			footRow(c, icHistory, icHistoryOn, locales.SidebarActivity(), a.page == pageActivity, func() {
 				a.page = pageActivity
 				a.act.load(a)
 			})
-			footRow(c, icSettings, locales.SidebarSettings(), a.page == pageSettings, func() { a.page = pageSettings })
+			footRow(c, icSettings, icSettingsOn, locales.SidebarSettings(), a.page == pageSettings, func() { a.page = pageSettings })
 			// Stop all shows once Pinky lists a phone: before that it has
 			// nothing to stop. Its shortcut works either way.
 			if len(a.devices) == 0 {
@@ -136,7 +136,7 @@ func (a *app) sidebar(c *mg.Context) {
 				a.stopAll()
 			}
 			stop.TextColor(p.red).Children(func() {
-				mg.Icon(c, icStop).FontSize(16)
+				mg.Icon(c, icStop).FontSize(iconBody)
 				mg.Text(c, locales.SidebarStopAll()).FontSize(fsBody).Grow(1)
 				mg.Text(c, shortcutLabel()).FontSize(fsCaption).TextColor(p.ink3)
 			})
@@ -173,7 +173,7 @@ func (a *app) sidebarPhones(c *mg.Context) {
 				reveal(row, allPhones)
 			}
 			row.MinHeight(32).TextColor(navInk(c, row, on)).Label(locales.SidebarAllPhones()).Children(func() {
-				mg.Icon(c, icGrid).FontSize(16)
+				mg.Icon(c, pick(on, icGridOn, icGrid)).FontSize(iconBody)
 				mg.Text(c, locales.SidebarAllPhones()).FontSize(fsBody)
 			})
 		}
@@ -243,16 +243,26 @@ func navInk(c *mg.Context, row mg.Element, on bool) mg.Color {
 	return p.ink2
 }
 
-// footRow is a row at the foot of the sidebar: Activity, Settings.
-func footRow(c *mg.Context, ic *mg.SVG, text string, on bool, click func()) {
+// footRow is a row at the foot of the sidebar: Activity, Settings. Its
+// icon is icOn while the row is selected.
+func footRow(c *mg.Context, ic, icOn *mg.SVG, text string, on bool, click func()) {
 	row := phoneRow(c, on).Height(32).Label(text)
 	if row.Clicked() {
 		click()
 	}
 	row.TextColor(navInk(c, row, on)).Children(func() {
-		mg.Icon(c, ic).FontSize(16)
+		mg.Icon(c, pick(on, icOn, ic)).FontSize(iconBody)
 		mg.Text(c, text).FontSize(fsBody)
 	})
+}
+
+// pick returns a if on, else b: a selected row's filled icon, or the
+// line one.
+func pick(on bool, a, b *mg.SVG) *mg.SVG {
+	if on {
+		return a
+	}
+	return b
 }
 
 // statusDot is a phone's dot: green and pulsing while an agent works,

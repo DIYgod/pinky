@@ -463,7 +463,7 @@ const (
 	reminderPadY   = sp2
 	reminderPadEnd = sp2
 	reminderPadX   = 14
-	reminderIcon   = 16
+	reminderIcon   = iconBody
 	reminderGap    = 10
 	reminderStack  = sp2
 	// reminderChrome is what its padding and border take of its height.

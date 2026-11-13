@@ -62,7 +62,7 @@ func (a *app) settingsPage(c *mg.Context) {
 	mg.Row(c).Grow(1).MinHeight(0).AlignItems(mg.Stretch).Children(func() {
 		mg.Column(c).Width(200).Shrink(0).Padding(sp3, 10).Gap(2).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
 			Role(mg.RoleTabList).Label(locales.SettingsSectionsLabel()).Children(func() {
-			tab := func(sec settingsSection, ic *mg.SVG, name string, needs bool) {
+			tab := func(sec settingsSection, ic, icOn *mg.SVG, name string, needs bool) {
 				on := s.sec == sec
 				b := mg.ButtonBase(c.Key(sec)).Height(32).Padding(0, 10, 0, rowInset).Radius(rControl).Gap(10).AlignItems(mg.Center).Justify(mg.Start).
 					Role(mg.RoleTab).Selected(on).Label(name)
@@ -80,22 +80,22 @@ func (a *app) settingsPage(c *mg.Context) {
 					s.sec = sec
 				}
 				b.TextColor(navInk(c, b, on)).Children(func() {
-					mg.Icon(c, ic).FontSize(16)
+					mg.Icon(c, pick(on, icOn, ic)).FontSize(iconBody)
 					mg.Text(c, name).FontSize(fsBody).Grow(1)
 					if needs {
 						dot(c, p.amberDot, false).Label(locales.SettingsNeedsYou())
 					}
 				})
 			}
-			tab(secPhones, icAndroid, locales.SettingsSectionPhones(), false)
+			tab(secPhones, icAndroid, icAndroidOn, locales.SettingsSectionPhones(), false)
 			agentsWait := false
 			for _, n := range a.needs {
 				agentsWait = agentsWait || newAgentNeed(n)
 			}
-			tab(secAgents, icPlug, locales.SettingsSectionAgents(), agentsWait)
-			tab(secSafety, icShield, locales.SettingsSectionSafety(), len(a.files.list) > 0)
-			tab(secPrivacy, icEyeOff, locales.SettingsSectionPrivacy(), false)
-			tab(secAdvanced, icSliders, locales.SettingsSectionAdvanced(), false)
+			tab(secAgents, icPlug, icPlugOn, locales.SettingsSectionAgents(), agentsWait)
+			tab(secSafety, icShield, icShieldOn, locales.SettingsSectionSafety(), len(a.files.list) > 0)
+			tab(secPrivacy, icPrivacy, icPrivacyOn, locales.SettingsSectionPrivacy(), false)
+			tab(secAdvanced, icSliders, icSlidersOn, locales.SettingsSectionAdvanced(), false)
 			a.feedbackLink(c)
 		})
 		a.watchFileProblems(c)
@@ -271,7 +271,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 						st.BlockedApps = withoutBlocked(st.BlockedApps, b)
 						a.changed()
 					}
-					rm.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(14) })
+					rm.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(iconSmall) })
 				})
 			}
 		})
@@ -460,7 +460,7 @@ func phoneHead(c *mg.Context, d gateway.DeviceView, line string) {
 		ic = icIphone
 	}
 	mg.Box(c).Size(36, 36).Radius(rControl).Background(p.bg3).Shrink(0).Justify(mg.Center).AlignItems(mg.Center).Children(func() {
-		mg.Icon(c, ic).FontSize(20).TextColor(p.ink2)
+		mg.Icon(c, ic).FontSize(iconLarge).TextColor(p.ink2)
 	})
 	mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 		mg.Text(c, d.Info.Name).FontSize(fsHeadline).FontWeight(fwSemibold)

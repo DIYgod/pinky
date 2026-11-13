@@ -171,7 +171,7 @@ func (a *app) remoteAgents(c *mg.Context) {
 			if others {
 				mg.Row(c).Gap(sp2).AlignItems(mg.Start).Padding(10, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).Margin(0, sp4, sp2, sp4).
 					Children(func() {
-						mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber)
+						mg.Icon(c, icAlert).FontSize(iconBody).TextColor(p.amber)
 						mg.Text(c, locales.RemoteOthersWarning()).
 							FontSize(fsSmall).LineHeight(1.4).Grow(1).MinWidth(0)
 					})

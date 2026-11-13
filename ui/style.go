@@ -251,7 +251,7 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 	}
 	b.Children(func() {
 		if o.icon != nil {
-			mg.Icon(c, o.icon).FontSize(18)
+			mg.Icon(c, o.icon).FontSize(iconBody)
 		}
 		if text != "" {
 			t := mg.Text(c, text).FontSize(fs).FontWeight(fwMedium)
@@ -467,9 +467,9 @@ func menuPanel(c *mg.Context, panel mg.Element) mg.Element {
 }
 
 // menuItem is the prototype's .mi row.
-func menuItem(c *mg.Context, text string, col mg.Color) mg.Element {
+func menuItem(c *mg.Context, ic *mg.SVG, text string, col mg.Color) mg.Element {
 	p := pal(c)
-	b := mg.ButtonBase(c).Label(text).MinHeight(32).Padding(6, 10).Radius(rSmall).Gap(10).AlignItems(mg.Center).Justify(mg.Start)
+	b := mg.ButtonBase(c).Label(text).MinHeight(32).Padding(6, 10).Radius(rSmall).Gap(menuGap).AlignItems(mg.Center).Justify(mg.Start)
 	switch {
 	case b.Pressed():
 		b.Background(p.sel)
@@ -480,18 +480,32 @@ func menuItem(c *mg.Context, text string, col mg.Color) mg.Element {
 	if col == (mg.Color{}) {
 		col = p.ink
 	}
-	b.Children(func() { mg.Text(c, text).FontSize(fsBody).TextColor(col) })
+	b.TextColor(col).Children(func() {
+		mg.Icon(c, ic).FontSize(iconBody)
+		mg.Text(c, text).FontSize(fsBody)
+	})
 	return b
 }
+
+// menuGap is the room between a menu row's icon and its words, and
+// menuIndent the room before content that lines up with the words.
+const (
+	menuGap    = 10
+	menuIndent = iconBody + menuGap
+)
 
 // menuText is the words of a menu row with a line under its name, as
 // Work in background and Pause connection have: the name at the size of
 // menuItem's, the line smaller and secondary.
-func menuText(c *mg.Context, name, desc string, ink mg.Color) {
+func menuText(c *mg.Context, ic *mg.SVG, name, desc string, ink mg.Color) {
 	p := pal(c)
-	mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-		mg.Text(c, name).FontSize(fsBody).TextColor(ink)
-		mg.Text(c, desc).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink2)
+	mg.Row(c).Grow(1).MinWidth(0).Gap(menuGap).AlignItems(mg.Start).Children(func() {
+		// The icon sits beside the name, the first line.
+		mg.Icon(c, ic).FontSize(iconBody).TextColor(ink).Margin(1, 0, 0, 0)
+		mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+			mg.Text(c, name).FontSize(fsBody).TextColor(ink)
+			mg.Text(c, desc).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink2)
+		})
 	})
 }
 

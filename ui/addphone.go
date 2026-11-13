@@ -186,7 +186,7 @@ func (a *app) addChoose(c *mg.Context) {
 func tileIcon(c *mg.Context, ic *mg.SVG) mg.Element {
 	p := pal(c)
 	b := mg.Box(c).Size(36, 36).Radius(rControl).Background(p.bg3).Center().Shrink(0)
-	b.Children(func() { mg.Icon(c, ic).FontSize(20).TextColor(p.ink2) })
+	b.Children(func() { mg.Icon(c, ic).FontSize(iconLarge).TextColor(p.ink2) })
 	return b
 }
 
@@ -218,7 +218,7 @@ func (a *app) addQR(c *mg.Context) {
 			}
 			mg.Column(c).Size(208, 208).Center().Gap(8).Padding(16).Children(func() {
 				if st.state == "failed" {
-					mg.Icon(c, icAlert).FontSize(26).TextColor(hex("#975800"))
+					mg.Icon(c, icAlert).FontSize(iconHero).TextColor(hex("#975800"))
 					mg.Text(c, locales.PairingNoCode()).FontSize(fsSmall).TextColor(hex("#5b5b64"))
 				} else {
 					spinner(c)
@@ -231,7 +231,7 @@ func (a *app) addQR(c *mg.Context) {
 		// may help, and a new QR code.
 		mg.Column(c).Gap(10).Padding(sp3, 14).Radius(rControl).Background(p.bg2).Role(mg.RoleStatus).Children(func() {
 			mg.Row(c).Gap(10).AlignItems(mg.Start).Children(func() {
-				mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot).Shrink(0)
+				mg.Icon(c, icAlert).FontSize(iconBody).TextColor(p.amberDot).Shrink(0)
 				mg.Text(c, st.err).Grow(1).MinWidth(0)
 			})
 			mg.Row(c).Gap(10).Justify(mg.End).Wrap().Children(func() {

@@ -172,7 +172,7 @@ func (a *app) foundButtons(c *mg.Context, d gateway.DeviceView, small bool) {
 func (a *app) foundPage(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
-		mg.Icon(c, icWifi).FontSize(28).TextColor(p.accentInk)
+		mg.Icon(c, icWifi).FontSize(iconHero).TextColor(p.accentInk)
 		mg.Text(c, locales.FoundTitle(d.Info.Name)).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center)
 		if line := foundLine(d); line != "" {
 			mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink3)
@@ -235,7 +235,7 @@ func (a *app) foundBox(c *mg.Context) {
 	p := pal(c)
 	mg.Column(c).Padding(14, 16).Radius(12).Background(p.bg2).Gap(10).Label(locales.AddPhoneIPhoneFoundTitle()).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-			mg.Icon(c, icWifi).FontSize(16).TextColor(p.accentInk)
+			mg.Icon(c, icWifi).FontSize(iconBody).TextColor(p.accentInk)
 			mg.Text(c, locales.AddPhoneIPhoneFoundTitle()).FontSize(fsHeadline).FontWeight(fwSemibold)
 		})
 		guideText(c, locales.AddPhoneIPhoneFoundDetail())
@@ -263,7 +263,7 @@ func (a *app) changedPage(c *mg.Context, d gateway.DeviceView) {
 	busy := a.foundBusy(d.Info.ID)
 	_, can := a.api.(phoneTruster)
 	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
-		mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
+		mg.Icon(c, icAlert).FontSize(iconHero).TextColor(p.amberDot)
 		mg.Text(c, locales.ChangedTitle(d.Info.Name)).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center)
 		mg.Text(c, locales.ChangedDetail(d.Info.Name)).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		mg.Box(c).Height(4)
@@ -362,7 +362,7 @@ func lostOnWiFi(d gateway.DeviceView) bool {
 func (a *app) lostPage(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
-		mg.Icon(c, icWifiOff).FontSize(28).TextColor(p.amberDot)
+		mg.Icon(c, icWifiOff).FontSize(iconHero).TextColor(p.amberDot)
 		mg.Text(c, locales.LostTitle(d.Info.Name)).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center)
 		mg.Text(c, locales.LostDetail(d.Info.Name)).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		mg.Box(c).Height(4)

@@ -93,7 +93,7 @@ func emptyWell(c *mg.Context, ic *mg.SVG, text string, extra func()) {
 	p := pal(c)
 	mg.Column(c).Padding(sp6, sp5).Gap(sp3).Radius(rCard).Background(p.ink.Alpha(0.035)).AlignItems(mg.Center).Children(func() {
 		mg.Box(c).Size(40, 40).Radius(20).Background(p.card).Border(1, p.line).Justify(mg.Center).AlignItems(mg.Center).Children(func() {
-			mg.Icon(c, ic).FontSize(18).TextColor(p.ink3)
+			mg.Icon(c, ic).FontSize(iconLarge).TextColor(p.ink3)
 		})
 		mg.Text(c, text).FontSize(fsSmall).LineHeight(1.5).TextColor(p.ink2).TextAlign(mg.Center).MaxWidth(220)
 		if extra != nil {
@@ -516,9 +516,9 @@ func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 						case stepNow:
 							dot(c, p.green, true)
 						case stepYou:
-							mg.Icon(c, icPerson).FontSize(15).TextColor(p.ink2)
+							mg.Icon(c, icPerson).FontSize(iconBody).TextColor(p.ink2)
 						default:
-							mg.Icon(c, icCheck).FontSize(15).TextColor(p.ink3)
+							mg.Icon(c, icCheck).FontSize(iconBody).TextColor(p.ink3)
 						}
 					})
 					mg.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
@@ -540,7 +540,7 @@ func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 					if shot {
 						// Hidden until the row is pointed at or focused: most
 						// steps have one, and a camera on each is noise.
-						cam := mg.Icon(c, icCamera).FontSize(13).TextColor(p.ink3).Margin(3, 2, 0, 0).Shrink(0)
+						cam := mg.Icon(c, icCamera).FontSize(iconSmall).TextColor(p.ink3).Margin(3, 2, 0, 0).Shrink(0)
 						if !row.Hovered() && !row.Focused() && !open {
 							cam.Opacity(0)
 						}

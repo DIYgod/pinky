@@ -312,7 +312,7 @@ func (a *app) helperInstall(c *mg.Context, id, name string, o helperOpt) bool {
 func (a *app) helperInstallingPage(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	mg.Column(c).AlignItems(mg.Center).Gap(sp2).Width(420).MaxWidth(420).Children(func() {
-		mg.Icon(c, icIphone).FontSize(28).TextColor(p.ink2)
+		mg.Icon(c, icIphone).FontSize(iconHero).TextColor(p.ink2)
 		stateTitle(c, locales.CheckHelperTitle())
 		a.helperInstall(c, d.Info.ID, d.Info.Name, helperOpt{center: true})
 	})

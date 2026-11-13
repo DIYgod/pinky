@@ -111,7 +111,7 @@ func (a *app) phoneTasksCard(c *mg.Context, d gateway.DeviceView) {
 	mg.Column(c.Key("phone-tasks-"+id)).Padding(14).Radius(12).Background(p.bg2).Border(1, p.line).Gap(8).
 		Label(locales.PhoneTasksTitle()).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-			mg.Icon(c, ic).FontSize(16).TextColor(p.ink2)
+			mg.Icon(c, ic).FontSize(iconBody).TextColor(p.ink2)
 			mg.Text(c, locales.PhoneTasksTitle()).FontSize(fsHeadline).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 		})
 		mg.Text(c, phoneTasksWords(d)).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)

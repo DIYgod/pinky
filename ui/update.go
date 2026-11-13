@@ -92,8 +92,8 @@ type compAuto struct {
 var retryDelays = []time.Duration{time.Hour, 4 * time.Hour, 24 * time.Hour}
 
 var (
-	icUpdate  = icon(`<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>`)
-	icSparkle = icon(`<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17v4"/><path d="M17 19h4"/>`)
+	icUpdate  = mingcute("download_2_line")
+	icSparkle = mingcute("sparkles_line")
 )
 
 // startUpdates begins checking for updates once the main window exists.
@@ -474,7 +474,7 @@ func cardClose(c *mg.Context, label string) bool {
 	if x.Hovered() {
 		x.Background(p.bg3)
 	}
-	x.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(12) })
+	x.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(iconMicro) })
 	return x.Clicked()
 }
 
@@ -494,7 +494,7 @@ func (a *app) companionByHandCards(c *mg.Context) {
 		title := locales.UpdateCompanionByHandTitle()
 		sideCard(c, "companion-by-hand-"+id, title, func() {
 			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
-				mg.Icon(c, icAndroid).FontSize(15).TextColor(p.accentInk)
+				mg.Icon(c, icAndroid).FontSize(iconBody).TextColor(p.accentInk)
 				mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 				if cardClose(c, locales.UpdateCompanionByHandDismissLabel()) {
 					a.seenRefusal(id)
@@ -529,7 +529,7 @@ func (a *app) updateCard(c *mg.Context) {
 	sideCard(c, "update", locales.UpdateCardLabel(), func() {
 		head := func(title string) {
 			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
-				mg.Icon(c, icUpdate).FontSize(15).TextColor(p.accentInk)
+				mg.Icon(c, icUpdate).FontSize(iconBody).TextColor(p.accentInk)
 				mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 			})
 		}
@@ -607,7 +607,7 @@ func (a *app) updateActions(c *mg.Context) {
 				mygo.Clipboard.WriteText(loc.Command)
 				a.toasts = append(a.toasts, locales.UpdateCopiedCommand(loc.Command))
 			}
-			b.TextColor(p.ink2).Children(func() { mg.Icon(c, icCopy).FontSize(13) })
+			b.TextColor(p.ink2).Children(func() { mg.Icon(c, icCopy).FontSize(iconSmall) })
 		})
 		if quietButton(c, locales.UpdateLater()).Clicked() {
 			a.laterUpdate()
@@ -726,7 +726,7 @@ func (a *app) newsCard(c *mg.Context) {
 	}
 	sideCard(c, "news", locales.UpdateWhatsNew(), func() {
 		mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
-			mg.Icon(c, icSparkle).FontSize(15).TextColor(p.accentInk)
+			mg.Icon(c, icSparkle).FontSize(iconBody).TextColor(p.accentInk)
 			mg.Text(c, card).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 			if cardClose(c, locales.UpdateNewsDismissLabel()) {
 				a.dismissNews()
