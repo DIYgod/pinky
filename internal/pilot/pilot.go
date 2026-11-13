@@ -1,7 +1,9 @@
 // Package pilot is Ask Pinky: Pinky's own agent, which does one task on
 // one phone with a model the person chose. It is for simple tasks, for
-// people who use no other agent: one task, one phone, no skills, nothing
-// remembered between tasks.
+// people who use no other agent: one task, one phone. What it carries
+// from one task to the next is the person's notes, which they approve and
+// can change (memory.go); what it knows of common apps is the guides of
+// package guides (knowledge.go).
 //
 // It works through Pinky's own MCP server, like every agent: an MCP
 // session over the SDK's in-memory transports, the phone_* tools with
@@ -27,6 +29,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/DIYgod/pinky/internal/mcp"
+	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/secret"
 )
 
@@ -72,6 +75,9 @@ type Config struct {
 	MaxSteps int
 	MaxTime  time.Duration
 	MaxCost  float64
+	// NoMemory leaves the person's notes out of the task: it neither reads
+	// them nor suggests new ones.
+	NoMemory bool
 }
 
 // Normalize fills in the defaults.
@@ -215,6 +221,11 @@ type Status struct {
 	// Continue makes it a task the person watches (run.attendLocked).
 	Scheduled *Scheduled
 	Met       *bool
+	// Suggested are the notes the model suggested keeping, which the
+	// person keeps (Runner.Keep) or not (Runner.Drop). They are the whole
+	// task's: a continued task keeps those of its earlier stretches, and
+	// MaxSuggestions counts them all.
+	Suggested []Suggestion
 }
 
 // What a task waits for the person to do (Status.Waiting).
@@ -316,6 +327,12 @@ type Options struct {
 	// Usage counts the tokens each request used (and checks, Check), by
 	// day, service and model; nil counts nothing.
 	Usage *Usage
+	// Memories are the person's notes, which each task reads and suggests
+	// more of; nil keeps no notes.
+	Memories *Memories
+	// Blocked reports whether the person blocked an app (the gateway's
+	// policy.Engine.Blocked): a note about it is refused. nil blocks none.
+	Blocked func(screen.App) bool
 }
 
 // Runner runs Pinky's own agent, one task a phone at a time.
@@ -595,6 +612,55 @@ func (r *Runner) StopAll() {
 	}
 }
 
+// Memories returns the person's notes, nil when Pinky keeps none.
+func (r *Runner) Memories() *Memories { return r.opt.Memories }
+
+// Keep keeps the i-th note the task on a phone suggested.
+func (r *Runner) Keep(device string, i int) error {
+	return r.decide(device, i, func(s *Suggestion) error {
+		m, err := r.opt.Memories.Add(s.Kind, s.Text, s.App)
+		if err != nil {
+			return err
+		}
+		s.Kept = &m
+		return nil
+	})
+}
+
+// Drop declines the i-th note the task on a phone suggested.
+func (r *Runner) Drop(device string, i int) error {
+	return r.decide(device, i, func(s *Suggestion) error {
+		s.Dropped = true
+		return nil
+	})
+}
+
+func (r *Runner) decide(device string, i int, f func(*Suggestion) error) error {
+	if r.opt.Memories == nil {
+		return ErrMemoryGone
+	}
+	r.mu.Lock()
+	ru := r.runs[device]
+	r.mu.Unlock()
+	if ru == nil {
+		return ErrMemoryGone
+	}
+	ru.mu.Lock()
+	if i < 0 || i >= len(ru.st.Suggested) || ru.st.Suggested[i].Decided() {
+		ru.mu.Unlock()
+		return ErrMemoryGone
+	}
+	// Status hands out copies: change a copy of the list.
+	list := append([]Suggestion(nil), ru.st.Suggested...)
+	err := f(&list[i])
+	if err == nil {
+		ru.st.Suggested = list
+	}
+	ru.mu.Unlock()
+	r.notify()
+	return err
+}
+
 // Status returns the task on a phone: the running one, or the last that
 // ended until Dismiss.
 func (r *Runner) Status(device string) (Status, bool) {
@@ -647,13 +713,24 @@ type run struct {
 	base Status
 	seq  int             // numbers the person's messages
 	read map[string]bool // the messages the model has read, by id
+	// said are the words of the messages the model has read: with the
+	// task, what a said note may quote.
+	said []string
 
 	// The conversation, kept after the task ends for Continue; carry are
 	// the answers to the calls of the model's last turn that never ran,
-	// for its next request.
-	m     model
-	tools []tool
-	carry []result
+	// for its next request, and carryGuide the guides that were to follow
+	// them.
+	m          model
+	tools      []tool
+	carry      []result
+	carryGuide string
+
+	// Of the work goroutine alone, which one stretch at a time runs: the
+	// app of the last screen, and the guides the task has had, in any of
+	// its stretches.
+	app    screen.App
+	guided map[string]bool
 
 	// cancelled is set when the agent that handed Pinky the task
 	// cancelled it: it ends as Cancelled, released as cancelled.
@@ -703,6 +780,11 @@ func (ru *run) takePending() []Message {
 	ru.st.Pending = nil
 	for _, m := range msgs {
 		ru.read[m.ID] = true
+		if m.From == "" {
+			// The person's own words, which a said note may quote; an
+			// agent's message is not.
+			ru.said = append(ru.said, m.Text)
+		}
 	}
 	device := ru.st.Device
 	ru.mu.Unlock()
@@ -826,6 +908,7 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	}()
 
 	tools := ru.tools
+	memory := !cfg.NoMemory && ru.r.opt.Memories != nil
 	if m == nil {
 		list, err := cs.ListTools(ctx, nil)
 		if err != nil {
@@ -841,6 +924,11 @@ func (ru *run) work(ctx context.Context) (End, string) {
 				json.Unmarshal(b, &s)
 			}
 			tools = append(tools, tool{name: t.Name, description: t.Description, schema: s})
+		}
+		// Whether the task uses the notes is decided as it starts: a
+		// continued task goes on with the same tools and system prompt.
+		if memory {
+			tools = append(tools, rememberTool)
 		}
 		tools = append(tools, finishFor(sch))
 	}
@@ -888,30 +976,46 @@ func (ru *run) work(ctx context.Context) (End, string) {
 
 	var text string
 	if m == nil {
-		m, err = newModel(cfg, key, ru.r.opt.HTTPClient, systemPrompt(cfg)+scheduledPrompt(sch), tools)
+		m, err = newModel(cfg, key, ru.r.opt.HTTPClient, systemPrompt(cfg, memory)+scheduledPrompt(sch), tools)
 		if err != nil {
 			return ru.end(cs, Error, err.Error())
 		}
 		ru.mu.Lock()
 		ru.m, ru.tools = m, tools
 		ru.mu.Unlock()
-		text = firstMessage(task, device, res.text, time.Now().In(zone(sch)))
+		// The notes go once, in the task's first message: a continued
+		// task has them in its conversation already.
+		var kept string
+		if memory {
+			kept = notes(ru.r.opt.Memories.List())
+		}
+		text = firstMessage(task, device, res.text, time.Now().In(zone(sch)), kept, ru.guideFor(res.text))
 		if extra := scheduledMessage(sch); extra != "" {
 			text = strings.Replace(text, "</task>\n\n", "</task>\n\n"+extra, 1)
 		}
 		text += ru.req.Extra.prompt()
 		if ru.req.Agent.Name != "" {
 			text += "\n\n" + fromAgent(ru.req.Agent.Name)
+			if kept != "" {
+				text += "\n\n" + agentNotes
+			}
 		}
 		if a, ok := m.(attacher); ok && len(ru.req.Extra.Images) > 0 {
 			a.attach(ru.req.Extra.images())
 		}
 	} else {
 		m.setKey(key)
+		// Guides the last stretch had no request left to send, then the
+		// guide of the screen now, if the task has not had it.
+		ru.mu.Lock()
+		carried := ru.carryGuide
+		ru.carryGuide = ""
+		ru.mu.Unlock()
 		text = continueMessage(device, res.text, time.Now().In(zone(sch)), ru.continuedBy())
 		if attended != "" {
 			text += "\n\n" + attended
 		}
+		text = joinText(joinText(text, ru.guideFor(res.text)), carried)
 	}
 	return ru.loop(ctx, cs, m, tools, key, text)
 }
@@ -927,6 +1031,12 @@ func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools [
 	// rest are the calls of the model's last turn without an answer: when
 	// the task ends before they run, they get one with the next request.
 	var rest []call
+	// guide are the guides of the screens of the last turn, which go
+	// after their results as Pinky's own text: not a tool's result, so
+	// they stay when old results are cleared. A guide is marked sent as
+	// it is found: one the stretch had no request left for goes with the
+	// next stretch's first.
+	var guide []string
 	defer func() {
 		carry := append([]result(nil), results...)
 		for _, c := range rest {
@@ -934,6 +1044,7 @@ func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools [
 		}
 		ru.mu.Lock()
 		ru.carry = carry
+		ru.carryGuide = strings.Join(guide, "\n\n")
 		ru.mu.Unlock()
 	}()
 	nudged := false
@@ -950,6 +1061,9 @@ func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools [
 		t, err := m.send(mctx, results, text)
 		mcancel()
 		results, text = nil, ""
+		if err == nil {
+			guide = nil
+		}
 		if t != nil {
 			ru.count(t.usage, cfg)
 		}
@@ -990,6 +1104,11 @@ func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools [
 			case leftOut[c.name] || !has(tools, c.name):
 				results = append(results, result{id: c.id, text: "error: unknown_tool\nThere is no tool " + c.name + ".", isError: true})
 				continue
+			case c.name == rememberName:
+				// Not a step: it changes nothing on the phone.
+				r := ru.remember(c)
+				results = append(results, result{id: c.id, text: r, isError: strings.HasPrefix(r, "error: ")})
+				continue
 			}
 			if end := ru.limit(); end != Running {
 				return ru.end(cs, end, "")
@@ -1001,8 +1120,12 @@ func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools [
 				return ru.stoppedEnd()
 			}
 			results = append(results, result{id: c.id, text: res.text, images: res.images, isError: res.isError})
+			if g := ru.guideFor(res.text); g != "" {
+				guide = append(guide, g)
+			}
 		}
 		rest = nil
+		text = strings.Join(guide, "\n\n")
 	}
 }
 

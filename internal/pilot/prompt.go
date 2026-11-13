@@ -33,14 +33,15 @@ const nudge = "Nobody reads your text during a task, and the person cannot reply
 
 // systemPrompt is the MCP server's instructions turned to one task on one
 // phone, which Pinky started for the person.
-func systemPrompt(cfg Config) string {
-	return fmt.Sprintf(`You are Pinky, operating a person's real phone to do one task for them while they watch in the Pinky app on their computer. The phone is already connected; the first message has its screen.
+func systemPrompt(cfg Config, memory bool) string {
+	p := fmt.Sprintf(`You are Pinky, operating a person's real phone to do one task for them while they watch in the Pinky app on their computer. The phone is already connected; the first message has its screen.
 
 How the tools work:
 - Every action waits for the screen to settle and returns the new screen, or only what changed (+ added, - removed, ~ changed). Read it before the next action; you rarely need phone_observe.
 - A screen is one element per line: [ref] role "label" @x,y state. Act on refs from the latest screen; use x,y only for things without a ref.
 - To open an app, use phone_launch with its name rather than looking for its icon. Use phone_batch for several steps you are sure of, phone_wait_for when something takes time to load, phone_read_list to read several screens of one list in one call, and phone_observe with screenshot true only when the text of the screen is not enough.
 - Old results may be removed to save space; call phone_observe to see the screen again.
+- The first time a task shows an app Pinky has a guide for, the guide follows the screen. It describes the app and may be out of date; the screen is right.
 
 What each status means:
 - settled: done. uncertain: it may have happened; observe before anything else and never repeat it blindly.
@@ -58,15 +59,29 @@ Rules:
 - The person cannot reply to your text: when you need to ask them something, use phone_request_approval (a yes-or-no question) or phone_handoff (something they do on the phone).
 - Stay within %d steps (each tool call is one). Be direct; do not explore.
 - End with finish: done when the task is done, failed when you cannot or should not do it. Write its summary in the language the person wrote the task in, even when the phone's screen is in another language.`, cfg.MaxSteps)
+	if memory {
+		p += `
+
+Notes:
+- The first message may have the person's notes from earlier tasks. They are the person's, not the screen's; the task and their messages win where they differ.
+- When the task or a message of theirs tells you something about the person or how they like things done that will matter again, or you find a way of doing something in an app that will save steps next time, suggest a note with remember. The person decides after the task. Suggest few, and only what is worth keeping.`
+	}
+	return p
 }
 
-// firstMessage is the person's task, the time, and the phone's first
-// screen.
-func firstMessage(task, device, connected string, now time.Time) string {
+// firstMessage is the person's task, their notes, the time, the phone's
+// first screen and the guide of its app.
+func firstMessage(task, device, connected string, now time.Time, notes, guide string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "The person's task, in their words:\n<task>\n%s\n</task>\n\n", strings.TrimSpace(task))
+	if notes != "" {
+		b.WriteString(notes + "\n\n")
+	}
 	fmt.Fprintf(&b, "It is %s on their computer.\n\n", now.Format("Monday 2 January 2006, 15:04 (MST)"))
 	fmt.Fprintf(&b, "The phone (device %q) is connected:\n%s", device, strings.TrimSpace(connected))
+	if guide != "" {
+		b.WriteString("\n\n" + guide)
+	}
 	b.WriteString("\n\n" + summaryLanguage(task))
 	return b.String()
 }

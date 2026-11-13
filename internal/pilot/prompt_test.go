@@ -24,11 +24,11 @@ func TestScriptLanguage(t *testing.T) {
 // The first message ends with the summary's language, after a screen that
 // may be in another one (an English task on a phone set to Chinese).
 func TestFirstMessageSummaryLanguage(t *testing.T) {
-	msg := firstMessage("Work out 12 × 34 in Calculator", "iPhone", `[1] button "计算器"`, time.Now())
+	msg := firstMessage("Work out 12 × 34 in Calculator", "iPhone", `[1] button "计算器"`, time.Now(), "", "")
 	if !strings.HasSuffix(msg, "write finish's summary in English, whatever language the phone's screen is in.") {
 		t.Errorf("first message does not end with the summary's language:\n%s", msg)
 	}
-	msg = firstMessage("Öffne den Rechner", "iPhone", "", time.Now())
+	msg = firstMessage("Öffne den Rechner", "iPhone", "", time.Now(), "", "")
 	if !strings.HasSuffix(msg, "in the language the person wrote the task in, whatever language the phone's screen is in.") {
 		t.Errorf("first message does not end with the summary's language:\n%s", msg)
 	}
