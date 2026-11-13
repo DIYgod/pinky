@@ -592,12 +592,14 @@ func detect(in Input, cats []string) []Kind {
 }
 
 // slidesAlong reports whether a swipe that moves the finger by move,
-// starting on t, may slide t as a slider: t does not scroll, is no list,
-// and the swipe runs along its long side, as a finger slides along "Slide
-// to pay" or a slider's track; a square knob slides either way. A swipe
-// across an element (up an order list from a button wider than it is
-// tall) scrolls whatever holds it. An element without bounds, or a swipe
-// without a known move, may be a slider.
+// starting on t, may slide t as a slider. It may unless t scrolls, is a
+// list, or the swipe scrolls across it: t is wider than it is tall, and
+// the swipe moves along its width less than a third of what it moves up
+// or down, as when an order list is scrolled from a button in a row
+// ("删除订单"). A diagonal swipe on "Slide to pay" still drags its knob,
+// and a sideways swipe on an element taller than it is wide may be a full
+// swipe on a row's revealed "删除" action, so both may slide. An element
+// without bounds, or a swipe without a known move, may be a slider.
 func slidesAlong(t *screen.Element, move screen.Point) bool {
 	if t.Has(screen.StateScrollable) || t.Role == screen.RoleList {
 		return false
@@ -605,10 +607,7 @@ func slidesAlong(t *screen.Element, move screen.Point) bool {
 	if t.Bounds.Empty() || (move.X == 0 && move.Y == 0) {
 		return true
 	}
-	if abs(move.X) >= abs(move.Y) {
-		return t.Bounds.W >= t.Bounds.H
-	}
-	return t.Bounds.H >= t.Bounds.W
+	return !(t.Bounds.W > t.Bounds.H && 3*abs(move.X) < abs(move.Y))
 }
 
 func abs(n int) int {

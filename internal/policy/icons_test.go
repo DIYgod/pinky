@@ -168,10 +168,11 @@ func TestIconSliders(t *testing.T) {
 	}
 }
 
-// A swipe commits only on a slider it slides along. Scrolling 淘宝's order
+// A swipe commits only on a slider it may slide. Scrolling 淘宝's order
 // list up from its "删除订单" button, with prices all over the screen, is
 // a scroll (field report: read-only mode refused it as a payment), while a
-// swipe along "Slide to pay" or its track still asks.
+// swipe along "Slide to pay" or its track, a diagonal one across it, and a
+// full swipe on a row's revealed "删除" still ask.
 func TestSwipeOnlySlidesSliders(t *testing.T) {
 	e := commitsEngine(t)
 	shop := screen.App{Name: "Example Shop", ID: "com.example.shop"}
@@ -193,6 +194,10 @@ func TestSwipeOnlySlidesSliders(t *testing.T) {
 		{"vertical slider", screen.Element{Role: screen.RoleOther, Label: "Slide to pay", Bounds: screen.Rect{X: 500, Y: 800, W: 160, H: 900}}, screen.Point{Y: -700}, Ask},
 		{"unknown move", del, screen.Point{}, Ask},
 		{"square knob", screen.Element{Role: screen.RoleOther, ID: "com.example.shop:id/slide_to_pay", Bounds: screen.Rect{X: 60, Y: 2200, W: 140, H: 140}}, right, Ask},
+		{"scroll a little sideways", del, screen.Point{X: 300, Y: 1200}, Allow},
+		{"diagonal slide to pay", screen.Element{Role: screen.RoleOther, Label: "Slide to pay", Bounds: screen.Rect{X: 60, Y: 2200, W: 1060, H: 140}}, screen.Point{X: 600, Y: -700}, Ask},
+		{"full swipe on a revealed action", screen.Element{Role: screen.RoleButton, Label: "删除", Bounds: screen.Rect{X: 979, Y: 1000, W: 200, H: 240}}, screen.Point{X: -800}, Ask},
+		{"square knob up", screen.Element{Role: screen.RoleOther, ID: "com.example.shop:id/slide_to_pay", Bounds: screen.Rect{X: 60, Y: 2200, W: 140, H: 140}}, screen.Point{Y: -600}, Ask},
 	} {
 		tt := c.t
 		v := e.Evaluate(Input{Op: OpSwipe, App: shop, Screen: scr, Target: &tt, Move: c.move})
