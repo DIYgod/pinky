@@ -2,6 +2,7 @@ package ios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -21,20 +22,22 @@ import (
 // So on such a phone Pinky watches the picture after each input
 // (inputEcho): whether it changed within echoWait, logged with the
 // display shown, the stream's display id, the HID service and the panel
-// point. When the last stillLimit touches on the display in use changed
-// nothing, and none ever did there, a touch returns an error that says so
+// point. When the last stillLimit inputs on the display in use changed
+// nothing, whatever earlier ones did, a touch returns an error that says so
 // (the gateway answers "uncertain" with it) instead of a silent success.
 // Home listens for the phone's answer to the button and, when the phone
 // refused it or the picture did not change, goes home with a swipe up
-// from the bottom edge, as on any iPhone without a Home button.
+// from the bottom edge, as on any iPhone without a Home button; when the
+// swipe changes nothing either, Home returns an error (uncertain), not a
+// success.
 
 const (
 	// echoWait is how long the picture is watched after an input.
 	echoWait = 1200 * time.Millisecond
 	// echoBefore is how far back "before the input" reaches.
 	echoBefore = time.Second
-	// stillLimit is how many touches in a row may change nothing on a
-	// display that never showed a change before touches report it.
+	// stillLimit is how many inputs in a row may change nothing on the
+	// display in use before touches report it.
 	stillLimit = 2
 	// homeReplyWait is how long Home waits for the phone's answer.
 	homeReplyWait = 300 * time.Millisecond
@@ -117,9 +120,28 @@ func (d *Device) inputTarget() (shown string, streamOn int, displays string) {
 	return shown, d.streamOn, describeDisplays(d.dinfo.Displays)
 }
 
-// inputUnseen returns an error when touches on the display shown have
-// shown no change stillLimit times in a row and never one before, nil
-// otherwise or on a phone with one display.
+// unseenError is inputUnseen's error: the input was sent, but the ones
+// before it on the display in use changed nothing.
+type unseenError struct {
+	still   int    // inputs in a row that changed nothing
+	moved   int    // inputs on the display that ever changed the picture
+	display string // the display's key
+	stream  int    // the stream's display id
+}
+
+func (e *unseenError) Error() string {
+	if e.moved == 0 {
+		return fmt.Sprintf("the screen did not change after the last %d touches on the display in use (%s, streamed as display %d). On a phone with two screens Pinky's touches may reach only one of them (on iPhone Duo, the outer display): fold the phone to use the outer display, or call phone_handoff", e.still, e.display, e.stream)
+	}
+	return fmt.Sprintf("the screen did not change after the last %d touches on the display in use (%s, streamed as display %d), though earlier ones there did. They may have missed, or the phone may have stopped taking Pinky's touches: observe the screen before touching it again, and call phone_handoff if touches keep changing nothing", e.still, e.display, e.stream)
+}
+
+// inputUnseen returns an error when the last stillLimit inputs on the
+// display shown changed nothing, nil otherwise or on a phone with one
+// display. It judges the last inputs only: an earlier one that changed the
+// picture does not vouch for the ones after it (GitHub issue #106: on an
+// iPhone Duo a tap that changed the picture was followed by ones that did
+// nothing, each reported as done).
 func (d *Device) inputUnseen() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -131,10 +153,10 @@ func (d *Device) inputUnseen() error {
 		key = d.want
 	}
 	c := d.echo[key]
-	if c == nil || c.Moved > 0 || c.Still < stillLimit {
+	if c == nil || c.Still < stillLimit {
 		return nil
 	}
-	return fmt.Errorf("the screen did not change after the last %d touches on the display in use (%s, streamed as display %d). On a phone with two screens Pinky's touches may reach only one of them (on iPhone Duo, the outer display): fold the phone to use the outer display, or call phone_handoff", c.Still, key, d.streamOn)
+	return &unseenError{still: c.Still, moved: c.Moved, display: key, stream: d.streamOn}
 }
 
 // noteEcho counts what an input on display key did.
@@ -222,19 +244,52 @@ func (d *Device) homeMulti(ctx context.Context) error {
 	if ans.Err != nil {
 		why = fmt.Sprintf("the phone refused the Home button (%v)", ans.Err)
 	}
+	// The same swipe as the one that brings up the passcode pad
+	// (power.go's swipeUp), which works on the phones tried: from the last
+	// row of the screen, fast, lifted while still moving.
 	s := d.freshDisplay(ctx).upright()
 	from := screen.Point{X: s.Width / 2, Y: s.Height - 1}
 	to := screen.Point{X: s.Width / 2, Y: s.Height * 45 / 100}
 	t = time.Now()
-	if err := d.Swipe(ctx, from, to, 250*time.Millisecond); err != nil {
-		return fmt.Errorf("home: %s; then the swipe up from the bottom edge: %w", why, err)
+	serr := d.Swipe(ctx, from, to, 250*time.Millisecond)
+	if ue := (*unseenError)(nil); errors.As(serr, &ue) {
+		// The swipe was sent; what the touches before it did is not
+		// Home's answer, the picture after it is.
+		serr = nil
 	}
-	swiped := d.waitMoved(ctx, m, t, homeEchoWait)
-	d.log.Info("iphone: Home by a swipe up", "device", d.info.ID, "why", why, "moved", swiped, "shown", shown)
+	swiped := serr == nil && d.waitMoved(ctx, m, t, homeEchoWait)
+	if serr == nil && !swiped && ctx.Err() != nil {
+		serr = ctx.Err()
+	}
+	d.log.Info("iphone: Home by a swipe up", "device", d.info.ID, "why", why, "moved", swiped,
+		"swipe_error", errString(serr), "shown", shown)
+	note, err := homeSwipeOutcome(why, serr, swiped)
+	if err != nil {
+		return err
+	}
 	d.mu.Lock()
-	d.inputNote = fmt.Sprintf("Home: %s, so Pinky swiped up from the bottom edge instead. Check that the home screen shows.", why)
+	d.inputNote = note
 	d.mu.Unlock()
 	return nil
+}
+
+// homeSwipeOutcome is what Home on a phone with several displays returns
+// after the Home button did nothing (why says what) and Pinky swiped up
+// from the bottom edge: the swipe's error, or whether the picture changed
+// after it. A swipe that changed nothing either is an error, which the
+// gateway answers as "uncertain" with it: the phone may have taken neither
+// (as on an iPhone Duo folded with an app open, GitHub issue #106), or the
+// home screen showed already. A swipe that changed the picture leaves a
+// note for the agent (TakeInputNote), since the change may not be the home
+// screen.
+func homeSwipeOutcome(why string, swipeErr error, swiped bool) (note string, err error) {
+	if swipeErr != nil {
+		return "", fmt.Errorf("home: %s; then the swipe up from the bottom edge: %w", why, swipeErr)
+	}
+	if !swiped {
+		return "", fmt.Errorf("home: %s, and not after a swipe up from the bottom edge either, so the phone may have taken neither (if the home screen showed already, there was nothing to change). On a phone with two screens, Pinky's input may reach only one of them: observe the screen, and if an app still shows, call phone_handoff", why)
+	}
+	return fmt.Sprintf("Home: %s, so Pinky swiped up from the bottom edge instead and the screen changed. Check that the home screen shows.", why), nil
 }
 
 // waitMoved waits up to limit for the picture of m to change after t.
