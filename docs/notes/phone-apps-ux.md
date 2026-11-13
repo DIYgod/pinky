@@ -50,8 +50,8 @@ One set of states, in this order of precedence; the card shows the first that ho
 | Set up | A setup step is left | Set up Pinky | The steps, numbered, done ones ticked, the next one with its button | The next step's button |
 | Not ready | Set up, but the phone cannot be reached | Starting Pinky… / Pinky can't reach this phone | What to do | (iPhone: Turn on, when the VPN is off) |
 | Computer | Pinky on a computer holds the phone | Pinky on your computer is using this phone | Its task; "You can start a task here when it's done." (iPhone adds Pause connection) | Stop, when the computer's claim can be stopped |
-| Running | A task runs | Pinky is working on it (a green dot) | The task; steps, cost, time; "Waiting for you: …" in amber while an approval waits | Stop |
-| Ended | The last task ended and was not dismissed | Done / Stopped / Couldn't finish / Couldn't start, with the end's color | The model's summary or why; the task; what it used | Dismiss (the task box stays below it) |
+| Running | A task runs | Pinky is working on it (a green dot) | The task; steps, cost, time; "Waiting for you: …" in amber while an approval waits; the person's messages Pinky has not read yet ("Pinky reads this at its next step") | Stop; a field "Add or change instructions…" with Send; Edit and Withdraw on each unread message |
+| Ended | The last task ended and was not dismissed | Done / Stopped / Couldn't finish / Couldn't start, with the end's color | The model's summary or why; the task; what it used; messages Pinky never read, when there are any | Dismiss (the task box stays below it); when it can go on (`continuable`), a field "Tell Pinky what to do next…" with Continue: the same task carries on, its limits counted anew |
 
 ### Setup steps
 
@@ -109,5 +109,14 @@ It tells people that the app can do tasks by itself, where they look, without na
 - **Android** (`claude/platform-phone-apps`): one launcher entry in every build, on-phone mode in release builds too (`on_phone_ui` true everywhere), the setup card with numbered steps, icon buttons for Activity and Settings, the tinted running and computer cards, the footer under the task box, and the pill hidden over Pinky's own screen.
 - **iPhone**: the screens rewritten to this note: `ContentView` (the status card, Pinky asks, the task box with the model and the limit, Steps, Activity), `ActivityView` (by day, 20 at a time, a past task with its steps), `SettingsView` (the five sections), `TaskSettings` (the model's choices and the limits, sent with each start as Android sends them) and `Look`/`Palette` (desktop Pinky's colors, shared with the Live Activity). The string catalog has every new word in English, Chinese and Japanese, with the Android app's translations.
 - **Desktop Pinky**: the names in its three locales and the gateway's words, the card and the row above, and the README's section on Pinky on the phone (English and Chinese).
-- **Looking at the iPhone's screens**: the Simulator runs no packet tunnel, so a debug build launched with `-pinkyDemo <scenario>` (`setup`, `model`, `ready`, `running`, `asks`, `ended`, `computer`) shows canned states and talks to no core (`App/Demo.swift`). Add `-AppleLanguages "(zh-Hans)"` for Chinese; the canned tasks follow the language.
+- **Looking at the iPhone's screens**: the Simulator runs no packet tunnel, so a debug build launched with `-pinkyDemo <scenario>` (`setup`, `model`, `ready`, `running`, `asks`, `ended`, `computer`, `steer`, `continue`) shows canned states and talks to no core (`App/Demo.swift`). Add `-AppleLanguages "(zh-Hans)"` for Chinese; the canned tasks follow the language.
 
+## Messages and Continue (2026-11-13)
+
+Both apps, on the core's `steer`, `withdraw` and `continue` commands ([builtin-agent.md](builtin-agent.md#messages-and-continue)):
+
+- **While Pinky works**, under the status card: the person's messages Pinky has not read yet, oldest first, each with "Pinky reads this at its next step", Edit and Withdraw; then a one-line field "Add or change instructions…" with Send (Return sends). Edit is a dialog on Android and inline on the iPhone; saving it empty withdraws. A message Pinky read meanwhile says "Pinky has already read it."; one the task ended under moves to Continue's field.
+- **Once it ended and can go on** (`agent.continuable`; not while Pinky on a computer holds the phone): the unread messages under "Pinky didn't read these before the task ended. Continue to send them.", then "Tell Pinky what to do next…" with Continue, enabled with text or with messages waiting. Continue reads the key of the service the task runs on (`agent.provider`), not the one Settings shows now, and leaves Pinky's screen as Start does. The task box for a new task stays below.
+- Once read, a message is a step, "You said: “…”" (the iPhone marks it with a speech bubble in the accent color).
+- While Pinky's own screen is in front, the gateway refuses the agent's steps on it, as before: a message sent from the task screen is read at the next request, and the agent acts once the person leaves.
+- Checked: Android's unit tests (`SteeringTest`) and debug build; the iPhone's simulator build and its `steer` and `continue` demo scenarios in English, Chinese and Japanese. Not yet tried on a phone or with a real core end to end.

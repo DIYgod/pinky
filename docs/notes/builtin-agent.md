@@ -12,6 +12,39 @@ A person types a task ("set an alarm for 7:00"), picks a phone and starts it; Pi
   - When Pinky ends a task itself (a limit, a bad key, an error), `Options.Describe` writes the summary Activity shows; the app passes `ui.DescribePilot`, in the person's language.
 - The agent is called Pinky (`mcp.BuiltinName`). `gateway.AgentInfo.Trusted` marks the session the person started in Pinky's own window: `approveAgent` lets it through without the New agent question (the person just asked for it), and it keeps the scope they set for Pinky in Settings › Agents like any agent's. `mcp.DisplayName` never gives an external client the name Pinky.
 
+## Messages and Continue
+
+While Pinky works, the person can write to it (steer); once a task ended, they can continue it with a new message. The flow follows [Mika](https://github.com/wangzan101/Mika)'s steering (its docs, not its code).
+
+- **A message while it works** (`Runner.Steer`) waits in `Status.Pending` until the loop's next request. Until then `Runner.Edit` changes it and `Runner.Withdraw` (or Edit with empty text) takes it back; both fail with `ErrRead` once the model has it, and with `ErrNoMessage` for an id that is gone. Steer fails with `ErrNotRunning` when no task runs and `ErrEmpty` for blank text.
+- **How the model gets it.** The loop takes the pending messages before each request and sends them after the tool results, in a text block of their own: "The person sent you a message in Pinky. It comes from them, not from the phone's screen:" and each message in `<message>` tags. Never inside a tool result, where screen text goes. The system prompt says only the task and these messages come from the person, the latest wins where they differ, and a message approves nothing: the gateway still asks before risky steps, and nothing about approvals changed. A message that arrives while the model wrote text instead of calling a tool is the answer to it, in place of the usual nudge.
+- **In the steps.** Once read, each message becomes a step of the task, `You said: “…”` (`gateway.PersonSaid`, tool `gateway.PersonStep` = `person_message`), so Activity and the history show what the person said and when. A pending message is not a step yet, so editing or withdrawing it leaves nothing behind.
+- **Continue** (`Runner.Continue`) carries on a task that ended (done, stopped, a limit, failed) when `Status.Continuable` says so: the conversation is still in memory and the task reached the model. It reads the key again (`Options.Key`), reconnects to the phone and sends the model "The task had ended. The person has continued it…", the person's message and the screen. Text may be empty when messages wait from before the end. Tool calls the end cut off get a `not_run` result first, so the conversation stays valid; the API key leaves the model after each stretch.
+- **One task.** Continue reopens the gateway's task instead of starting another: `mcp.Server.ConnectBuiltinTask` passes the task's id as `gateway.AgentInfo.Continue`, and `phone_connect` takes the ended task back (same id, same steps, its end cleared; only Pinky's own trusted session can, and only on the same phone). Activity and the history keep one task, which ends again with the new outcome.
+- **Limits count anew** each time, with the task's original model and limits: a task that stopped at its 100-step limit gets 100 more. `Status` keeps the whole task's totals (`Steps`, `Cost`, `Tokens`, `Elapsed`), and `Continues` counts the stretches. Rationale: the person decides each stretch, as they decided the first, and a limit that ended the task would otherwise end the continuation at once.
+- **Scope.** Only the phone's latest Ask Pinky task can continue, until Dismiss, a new task or the app's restart (the conversation lives in memory). Continuing an older task from Activity is not supported.
+
+### Go API (for other callers, such as MCP task tools)
+
+`internal/pilot`:
+
+| | |
+|---|---|
+| `(*Runner).Steer(device, text) (Message, error)` | a message to the running task; `Message{ID, Text, At}`, ids `m1`, `m2`, … per task |
+| `(*Runner).Edit(device, id, text) error` | changes a pending message; empty text withdraws |
+| `(*Runner).Withdraw(device, id) error` | takes back a pending message |
+| `(*Runner).Continue(device, text) error` | carries on the ended task; `ErrCannotContinue`, `ErrBusy`, `ErrEmpty`, `ErrClosed` |
+| `Status.TaskID` | the gateway's task id, once connected |
+| `Status.Pending` | messages not read yet, oldest first |
+| `Status.Continuable`, `Status.Continues` | whether Continue can go on; how often it did |
+| `Status.Resumed`, `Status.Worked`, `Status.Elapsed(now)` | when the stretch started; the time before it; the whole task's working time |
+
+Errors: `ErrEmpty`, `ErrNotRunning`, `ErrRead`, `ErrNoMessage`, `ErrCannotContinue`. `Options.Notify` fires on each change, as before.
+
+`internal/gateway` (additive): `AgentInfo.Continue` (the id of an ended task of the trusted builtin agent that its `phone_connect` reopens), `(*Gateway).PersonSaid(deviceID, text) error` (a settled `person_message` step on the builtin agent's live task, else `ErrNoTask`), `PersonStep`. `internal/mcp` (additive): `ConnectBuiltinTask(ctx, transport, taskID)`, `PersonSaid(device, text)`, `TaskOf(device)` (the builtin agent's live task's id). `gwtext` says `You said: “…”` in the app's language (`gwStepYouSaid`).
+
+On the phone, the core's control socket has `steer`, `withdraw` and `continue` (`internal/standalone/control.go`), and the state's `agent` carries `pending`, `continuable` and `continues`.
+
 ## Models
 
 Two services, side by side in Settings › Agents › Ask Pinky; each has its own key, model and address.
@@ -36,6 +69,7 @@ The API key is in the system's keychain (`secret.Store`, account `model-key:<pro
 - The box at the top of Tasks in the right panel: "What should Pinky do on Pixel 9?", a phone menu on All phones, the model and the cost limit, Start (also ⌘↩ / Ctrl+Enter). It waits while another agent works on the phone, and on a phone that is offline.
 - Without a key or a model it says what is missing and links to Settings › Agents, scrolled to Ask Pinky. The keychain is asked off the UI thread and the answer cached; a task that ends with NoKey or BadKey asks again.
 - While Pinky works: steps, cost and time, and Stop. The task's own card under it is the gateway's, with Take over and its steps. When it ends: the outcome, the summary or the reason, and Dismiss.
+- While Pinky works, a field "Add or change instructions…" with Send (Return), and the messages Pinky has not read yet, each with "Pinky reads this at its next step", Edit and Withdraw. When it ended and can go on: a field "Tell Pinky what to do next…" with Continue, under the unread messages if any. A message sent just as the task ended moves to Continue's field.
 - Stop and Stop all stop the gateway's task first, then Pinky's loop, so the phone is free at once.
 - Settings › Agents › Ask Pinky: on or off (on by default), the service, the key, the model, the address and the three limits.
 
@@ -55,5 +89,7 @@ Estimate: a 20-step task on Opus 5.5 sends about 15–25k tokens a step, mostly 
 ## Tests
 
 - `internal/pilot`: fake Messages and Chat Completions APIs (`httptest`) script the model's turns against a gateway with demo phones: a task to its end, each status (approval, take over, locked, stopped), the limits, a refusal, a bad key, trimming, and the request's shape (tools, cache markers, betas, no key anywhere but its headers).
-- `ui/ask_test.go`: the box, its setup state, saving the key, Start and Stop, Stop all, another agent on the phone, All phones and the endings, with a fake runner.
-- Not tried yet: a real API call (needs the owner's key) and a real phone (needs their OK).
+- `internal/pilot/steer_test.go`: messages while it works (edit, withdraw, read, before the first request, as the answer to text), Continue (one task in the history, the conversation's shape on both APIs, the limits anew, after Stop with a message waiting, a task that cannot continue), and `Elapsed`.
+- `internal/standalone/steer_test.go`: steer, withdraw and continue over the control socket, the codes, the step in another language, one task in the history.
+- `ui/ask_test.go`: the box, its setup state, saving the key, Start and Stop, Stop all, another agent on the phone, All phones and the endings, Send, Edit, Withdraw and Continue, with a fake runner.
+- Not tried yet: a real API call (needs the owner's key) and a real phone (needs their OK); steering and Continue against a real model.
