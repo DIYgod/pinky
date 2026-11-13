@@ -77,6 +77,8 @@ func newSchedApp(t *testing.T) (*testApp, *schedFakePilot, *mg.Tester, string) {
 // schedule shows under Tasks with its next time.
 func TestScheduleDialog(t *testing.T) {
 	ta, _, tt, id := newSchedApp(t)
+	// Tall enough that the Tasks section's rows sit below the Ask box.
+	tt.SetSize(1280, 1100)
 	ta.ask.draft = "Check the weather"
 	frameUntil(t, ta, tt, locales.SchedButton())
 	if err := tt.Click(locales.SchedButton()); err != nil {
