@@ -180,9 +180,11 @@ func (c *claude) setKey(key string) { c.key = key }
 func (c *claude) header() http.Header {
 	h := http.Header{}
 	h.Set("Anthropic-Version", anthropicVersion)
-	h.Set("Authorization", "Bearer "+c.key)
-	if !c.official {
-		h.Set("X-Api-Key", c.key)
+	if c.key != "" {
+		h.Set("Authorization", "Bearer "+c.key)
+		if !c.official {
+			h.Set("X-Api-Key", c.key)
+		}
 	}
 	if len(c.betas) > 0 {
 		h.Set("Anthropic-Beta", strings.Join(c.betas, ","))

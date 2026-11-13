@@ -234,7 +234,7 @@ func TestAskPinkySetupAndKey(t *testing.T) {
 
 	// An OpenAI-compatible service needs a model too.
 	saveTestKey(t, ta, pilot.OpenAI)
-	ta.settings.PilotProvider = pilot.OpenAI
+	ta.settings.PilotService = pilot.CustomOpenAI
 	frameUntil(t, ta, tt, "Choose a model in Settings › Agents")
 }
 
@@ -438,5 +438,117 @@ func TestAskPinkySteerAndContinue(t *testing.T) {
 	frameUntil(t, ta, tt, "Pinky is working on it")
 	if len(fp.cont) != 1 || fp.cont[0] != "Now the green one" {
 		t.Fatalf("continued with %q", fp.cont)
+	}
+}
+
+// checkingPilot is fakePilot that checks models and counts usage, as
+// pilot.Runner does.
+type checkingPilot struct {
+	*fakePilot
+	mu      sync.Mutex
+	checked []pilot.Config
+	rows    []pilot.UsageRow
+}
+
+func (f *checkingPilot) Check(_ context.Context, cfg pilot.Config) pilot.CheckResult {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.checked = append(f.checked, cfg)
+	if cfg.Model == "bad-model" {
+		return pilot.CheckResult{Problem: pilot.CheckNotFound, Status: 404, Detail: "no such model"}
+	}
+	return pilot.CheckResult{OK: true, Millis: 1200}
+}
+
+func (f *checkingPilot) Usage(since string) []pilot.UsageRow {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []pilot.UsageRow
+	for _, r := range f.rows {
+		if r.Day >= since {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func (f *checkingPilot) checks() []pilot.Config {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]pilot.Config(nil), f.checked...)
+}
+
+func TestAskPinkyServices(t *testing.T) {
+	ta, fp, tt := newAskApp(t, true, false)
+	today := time.Now().Format(time.DateOnly)
+	cp := &checkingPilot{fakePilot: fp, rows: []pilot.UsageRow{
+		{Day: today, Service: "deepseek", Model: "deepseek-flash", Requests: 3, Input: 40_000, Output: 1_000, Cost: 0.0123},
+	}}
+	ta.app.opt.Pilot = cp
+	ta.settings.PilotService = "deepseek"
+	saveTestKey(t, ta, "deepseek")
+
+	// The box names the model and its service, and what it used today.
+	frameUntil(t, ta, tt, "Start")
+	frameUntil(t, ta, tt, "Today: 41,000 tokens · US$0.012")
+	if !hasText(tt, "deepseek-flash · DeepSeek") {
+		t.Errorf("no model line: %q", tt.Texts())
+	}
+
+	// Settings: the service, its suggested model, the check and usage.
+	ta.openAskSettings()
+	frameUntil(t, ta, tt, "Usage")
+	for _, want := range []string{"DeepSeek", "deepseek-flash", "https://api.deepseek.com", "Last 7 days", "3 requests · 41,000 tokens · US$0.012"} {
+		if !hasText(tt, want) {
+			t.Errorf("no %q: %q", want, tt.Texts())
+		}
+	}
+	if err := tt.Click("Check the model now"); err != nil {
+		t.Fatal(err)
+	}
+	frameUntil(t, ta, tt, "The model answered and used a tool, in 1.2 s.")
+	if c := cp.checks(); len(c) != 1 || c[0].Service != "deepseek" || c[0].KeyName() != "deepseek" {
+		t.Fatalf("checked %+v", c)
+	}
+
+	// Another model, typed: saved for the service, and checked at once.
+	ta.ask.editing, ta.ask.value = askEditModel, ""
+	tt.Frame()
+	tt.Type("bad-model")
+	tt.Key(0, mg.KeyEnter)
+	frameUntil(t, ta, tt, "The service doesn't know this model or address. Check the model's name and the API address.")
+	if !hasText(tt, "The service said: HTTP 404 · no such model") {
+		t.Errorf("no detail: %q", tt.Texts())
+	}
+	if ta.settings.PilotModels["deepseek"] != "bad-model" || ta.settings.PilotConfig().Model != "bad-model" {
+		t.Errorf("settings: %+v", ta.settings.PilotModels)
+	}
+}
+
+func TestPilotConfigOfBefore(t *testing.T) {
+	s := DefaultSettings()
+	s.PilotProvider, s.PilotOpenAIModel, s.PilotOpenAIURL = pilot.OpenAI, "glm-5", "https://open.example/v1"
+	if c := s.PilotConfig(); c.Service != pilot.CustomOpenAI || c.Model != "glm-5" || c.BaseURL != "https://open.example/v1" || c.KeyName() != pilot.OpenAI {
+		t.Fatalf("%+v", c)
+	}
+	s.PilotProvider, s.PilotAnthropicModel = pilot.Anthropic, "claude-sonnet-5-5"
+	if c := s.PilotConfig(); c.Service != pilot.Anthropic || c.Model != "claude-sonnet-5-5" || c.KeyName() != pilot.Anthropic {
+		t.Fatalf("%+v", c)
+	}
+	// A service this version does not know falls back to the API's.
+	s.PilotService = "gone"
+	if c := s.PilotConfig(); c.Service != pilot.Anthropic {
+		t.Fatalf("%+v", c)
+	}
+	s.PilotService = "kimi-cn"
+	s.setPilotModel("kimi-cn", "kimi-k3")
+	if c := s.PilotConfig(); c.Model != "kimi-k3" || c.BaseURL != "https://api.moonshot.cn/v1" || c.KeyName() != "kimi-cn" {
+		t.Fatalf("%+v", c)
+	}
+	// clone keeps the maps apart.
+	cl := s.clone()
+	s.setPilotModel("kimi-cn", "kimi-k3.1-pro")
+	if cl.PilotModels["kimi-cn"] != "kimi-k3" {
+		t.Error("clone shares PilotModels")
 	}
 }

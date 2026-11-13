@@ -296,7 +296,7 @@ func TestApprovalInPinkysApp(t *testing.T) {
 	}{
 		{map[string]any{"cmd": "start", "task": "Order lunch", "base_url": h.url}, "no_key"},
 		{map[string]any{"cmd": "start", "task": " ", "key": "sk-test"}, "no_task"},
-		{map[string]any{"cmd": "start", "task": "Order lunch", "key": "sk-test", "provider": "openai"}, "no_model"},
+		{map[string]any{"cmd": "start", "task": "Order lunch", "key": "sk-test", "service": "openai-compatible"}, "no_model"},
 		{map[string]any{"cmd": "decide", "need": "nothing", "decision": "allow_once"}, "gone"},
 	} {
 		if o := h.do(t, tc.req); o.OK || o.Code != tc.code {

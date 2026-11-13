@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"maps"
 	"runtime"
 	"sort"
 	"strings"
@@ -46,9 +47,11 @@ func (a *app) changed() {
 	}
 }
 
-// clone returns s with a list of blocked apps of its own.
+// clone returns s with a list of blocked apps, and maps, of its own.
 func (s Settings) clone() Settings {
 	s.BlockedApps = append([]BlockedApp(nil), s.BlockedApps...)
+	s.PilotModels = maps.Clone(s.PilotModels)
+	s.PilotURLs = maps.Clone(s.PilotURLs)
 	return s
 }
 

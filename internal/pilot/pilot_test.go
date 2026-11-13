@@ -725,7 +725,7 @@ func TestStartErrors(t *testing.T) {
 	if err := r.Start(Config{}, "pixel", "  "); err != ErrNoTask {
 		t.Fatalf("no task: %v", err)
 	}
-	if err := r.Start(Config{Provider: OpenAI}, "pixel", "Do it"); err != ErrNoModel {
+	if err := r.Start(Config{Service: CustomOpenAI}, "pixel", "Do it"); err != ErrNoModel {
 		t.Fatalf("no model: %v", err)
 	}
 	r.Close()

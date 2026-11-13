@@ -51,17 +51,23 @@ type DeviceState struct {
 type AgentState struct {
 	Task  string `json:"task"`
 	Model string `json:"model"`
-	// Provider is the service the task's model is at (pilot.Anthropic or
-	// pilot.OpenAI): continue needs that service's key, whatever the
-	// screens' settings say now.
-	Provider string  `json:"provider,omitempty"`
-	Running  bool    `json:"running"`
-	End      string  `json:"end,omitempty"`
-	Summary  string  `json:"summary,omitempty"`
-	Steps    int     `json:"steps"`
-	Cost     float64 `json:"cost"`
-	Tokens   int64   `json:"tokens"`
-	Seconds  int64   `json:"seconds"`
+	// Provider is the API the task's model speaks (pilot.Anthropic or
+	// pilot.OpenAI), the name keys were saved under before there were
+	// services: apps of before read continue's key by it.
+	Provider string `json:"provider,omitempty"`
+	// Service is the task's model service (pilot.Services), and KeyName
+	// the name its key is saved under (pilot.KeyName): the key continue
+	// needs. KeyOptional says the service needs none (a local server).
+	Service     string  `json:"service,omitempty"`
+	KeyName     string  `json:"key_name,omitempty"`
+	KeyOptional bool    `json:"key_optional,omitempty"`
+	Running     bool    `json:"running"`
+	End         string  `json:"end,omitempty"`
+	Summary     string  `json:"summary,omitempty"`
+	Steps       int     `json:"steps"`
+	Cost        float64 `json:"cost"`
+	Tokens      int64   `json:"tokens"`
+	Seconds     int64   `json:"seconds"`
 	// Priced says Cost is in US dollars; without it the model's prices are
 	// unknown, and the cost limit is TokenLimit tokens.
 	Priced bool `json:"priced"`
@@ -184,7 +190,9 @@ func (c *Core) State() State {
 }
 
 func agentState(s pilot.Status) *AgentState {
-	a := &AgentState{Task: s.Task, Model: s.Config.Model, Provider: s.Config.Normalize().Provider, Running: s.Running(), End: string(s.End),
+	cfg := s.Config.Normalize()
+	a := &AgentState{Task: s.Task, Model: s.Config.Model, Provider: cfg.Provider, Service: cfg.Service, KeyName: cfg.KeyName(),
+		KeyOptional: cfg.KeyOptional(), Running: s.Running(), End: string(s.End),
 		Summary: s.Summary, Steps: s.Steps, Cost: s.Cost, Tokens: s.Tokens,
 		Seconds: int64(s.Elapsed(time.Now()).Seconds()), Priced: s.Priced,
 		MaxSteps: s.Config.MaxSteps, MaxMinutes: int(s.Config.MaxTime / time.Minute), MaxCost: s.Config.MaxCost,

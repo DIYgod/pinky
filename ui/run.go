@@ -142,6 +142,19 @@ type Pilot interface {
 	Continue(device, text string) error
 }
 
+// PilotChecker is a Pilot that can check a model before a task, as
+// pilot.Runner.Check does: one tiny request with one tool. Check blocks;
+// the client calls it off the main thread.
+type PilotChecker interface {
+	Check(ctx context.Context, cfg pilot.Config) pilot.CheckResult
+}
+
+// PilotUsage is a Pilot that counts the tokens its model used, as
+// pilot.Runner.Usage does: by day, service and model, newest first.
+type PilotUsage interface {
+	Usage(since string) []pilot.UsageRow
+}
+
 // Settings are what the Settings screen changes.
 type Settings struct {
 	Preset             int // 1: payments, messages and deletions; 2: payments only (the default, recommended); 3: every action
@@ -185,11 +198,19 @@ type Settings struct {
 	// AskPinky shows the box at the top of Tasks that gives Pinky's own
 	// agent a task (Options.Pilot).
 	AskPinky bool
-	// PilotProvider is the API Pinky's own agent reaches its model
-	// through, pilot.Anthropic or pilot.OpenAI. Each keeps its own model
-	// and address, so switching back finds them; empty ones are the
-	// defaults (pilot.Config.Normalize). The API keys are in the system's
-	// keychain (secret.ModelKeyAccount), never here.
+	// PilotService is the service Pinky's own agent reaches its model
+	// through (pilot.Services, by ID). Each service keeps its own model
+	// and address in PilotModels and PilotURLs, so switching back finds
+	// them; empty ones are the service's defaults (pilot.Config.Normalize).
+	// The API keys are in the system's keychain (secret.ModelKeyAccount of
+	// pilot.Config.KeyName), never here.
+	PilotService string
+	PilotModels  map[string]string `json:",omitempty"`
+	PilotURLs    map[string]string `json:",omitempty"`
+	// PilotProvider and the four after it are the settings of before
+	// there were services: the API, pilot.Anthropic or pilot.OpenAI, and
+	// each API's model and address. PilotConfig still reads them when
+	// PilotService, or its model or address, is not set.
 	PilotProvider       string
 	PilotAnthropicModel string
 	PilotAnthropicURL   string
@@ -204,14 +225,80 @@ type Settings struct {
 
 // PilotConfig is the pilot.Config of the settings.
 func (s Settings) PilotConfig() pilot.Config {
+	svc := s.pilotService()
+	if _, ok := pilot.ServiceByID(svc); !ok {
+		// A service this version does not know: the API of before.
+		s.PilotService = ""
+		svc = s.pilotService()
+	}
 	cfg := pilot.Config{
-		Provider: s.PilotProvider, Model: s.PilotAnthropicModel, BaseURL: s.PilotAnthropicURL,
+		Service: svc, Model: s.pilotModel(svc), BaseURL: s.pilotURL(svc),
 		MaxSteps: s.PilotMaxSteps, MaxTime: time.Duration(s.PilotMaxMinutes) * time.Minute, MaxCost: s.PilotMaxCost,
 	}
-	if s.PilotProvider == pilot.OpenAI {
-		cfg.Model, cfg.BaseURL = s.PilotOpenAIModel, s.PilotOpenAIURL
-	}
 	return cfg.Normalize()
+}
+
+// pilotService is the service chosen, or the one the settings of before
+// there were services name.
+func (s Settings) pilotService() string {
+	if s.PilotService != "" {
+		return s.PilotService
+	}
+	url := s.PilotAnthropicURL
+	if s.PilotProvider == pilot.OpenAI {
+		url = s.PilotOpenAIURL
+	}
+	return pilot.ServiceFor(s.PilotProvider, url)
+}
+
+// pilotModel is the model chosen for a service: the one saved for it, else
+// the one saved for its API before there were services.
+func (s Settings) pilotModel(svc string) string {
+	if m, ok := s.PilotModels[svc]; ok {
+		return m
+	}
+	switch svc {
+	case pilot.Anthropic, pilot.CustomAnthropic:
+		return s.PilotAnthropicModel
+	case pilot.OpenAI, pilot.CustomOpenAI:
+		return s.PilotOpenAIModel
+	}
+	return ""
+}
+
+// pilotURL is the address chosen for a service, as pilotModel.
+func (s Settings) pilotURL(svc string) string {
+	if u, ok := s.PilotURLs[svc]; ok {
+		return u
+	}
+	switch svc {
+	case pilot.CustomAnthropic:
+		return s.PilotAnthropicURL
+	case pilot.CustomOpenAI:
+		return s.PilotOpenAIURL
+	}
+	return ""
+}
+
+// setPilotModel saves the model chosen for a service.
+func (s *Settings) setPilotModel(svc, model string) {
+	s.PilotModels = setIn(s.PilotModels, svc, model)
+}
+
+// setPilotURL saves the address chosen for a service.
+func (s *Settings) setPilotURL(svc, url string) {
+	s.PilotURLs = setIn(s.PilotURLs, svc, url)
+}
+
+// setIn sets m[k] in a copy of m, so that the settings reported before
+// keep theirs (clone).
+func setIn(m map[string]string, k, v string) map[string]string {
+	out := make(map[string]string, len(m)+1)
+	for mk, mv := range m {
+		out[mk] = mv
+	}
+	out[k] = v
+	return out
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer

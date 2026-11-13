@@ -22,6 +22,8 @@
 //	{"cmd":"steer","id":"m1","text":"..."}   → {"ok":true}  (edits it before Pinky reads it; empty text withdraws)
 //	{"cmd":"withdraw","id":"m1"}             → {"ok":true}
 //	{"cmd":"continue","text":"...","key":"..."} → {"ok":true}  (carries on the task that ended); leaves Pinky's app first
+//	{"cmd":"check","service":"...","key":"...",...} → {"ok":true,"check":{...}}  (pilot.CheckResult; a minute at most)
+//	{"cmd":"usage","since":"2006-01-02"}    → {"ok":true,"usage":[...]}  (pilot.UsageRow, newest first)
 //
 // reason, when the phone is not ready, says why in a word Pinky's screens
 // put into the person's language: one of the Reason constants.
@@ -213,7 +215,8 @@ type request struct {
 	ID        string `json:"id"`
 	BeforeMS  int64  `json:"before_ms"`
 	Limit     int    `json:"limit"`
-	Text      string `json:"text"` // steer and continue: the person's message
+	Text      string `json:"text"`  // steer and continue: the person's message
+	Since     string `json:"since"` // usage: the first day, 2006-01-02
 	standalone.StartRequest
 }
 
@@ -228,6 +231,8 @@ type reply struct {
 	More    bool                  `json:"more,omitempty"`
 	Info    *Info                 `json:"info,omitempty"`
 	ID      string                `json:"id,omitempty"` // steer: the new message's
+	Check   *pilot.CheckResult    `json:"check,omitempty"`
+	Usage   *[]pilot.UsageRow     `json:"usage,omitempty"`
 }
 
 // Info is the connection as the core sees it, for diagnostics.
@@ -302,6 +307,15 @@ func (c *Core) handle(r request) reply {
 		}
 	case "continue":
 		return c.continueTask(ctx, r.Text, r.Key)
+	case "check":
+		res := c.sc.Check(r.StartRequest)
+		return reply{OK: true, Check: &res}
+	case "usage":
+		rows := c.sc.Usage(r.Since)
+		if rows == nil {
+			rows = []pilot.UsageRow{}
+		}
+		return reply{OK: true, Usage: &rows}
 	default:
 		return fail("", fmt.Errorf("unknown command %q", r.Cmd))
 	}
@@ -335,7 +349,7 @@ var (
 func (c *Core) start(ctx context.Context, r standalone.StartRequest) reply {
 	d := c.prov.phone()
 	st := c.sc.State()
-	cfg := pilot.Config{Provider: r.Provider, Model: r.Model}.Normalize()
+	cfg := r.Config().Normalize()
 	switch {
 	case d == nil || !st.Device.Ready:
 		return fail("no_device", errNoDevice)
@@ -343,7 +357,7 @@ func (c *Core) start(ctx context.Context, r standalone.StartRequest) reply {
 		return fail("no_task", pilot.ErrNoTask)
 	case cfg.Model == "":
 		return fail("no_model", pilot.ErrNoModel)
-	case strings.TrimSpace(r.Key) == "":
+	case strings.TrimSpace(r.Key) == "" && !cfg.KeyOptional():
 		return fail("no_key", standalone.ErrNoKey)
 	case st.Agent != nil && st.Agent.Running:
 		return fail("busy", errBusy)
@@ -365,7 +379,7 @@ func (c *Core) start(ctx context.Context, r standalone.StartRequest) reply {
 		}
 		return fail(code, err)
 	}
-	c.log.Info("task started", "provider", cfg.Provider, "model", cfg.Model)
+	c.log.Info("task started", "service", cfg.Service, "provider", cfg.Provider, "model", cfg.Model)
 	// The next publish that finds the task ended logs how, also when it
 	// ended before any publish saw it run.
 	c.mu.Lock()
@@ -383,7 +397,7 @@ func (c *Core) continueTask(ctx context.Context, text, key string) reply {
 	switch {
 	case d == nil || !st.Device.Ready:
 		return fail("no_device", errNoDevice)
-	case strings.TrimSpace(key) == "":
+	case strings.TrimSpace(key) == "" && (st.Agent == nil || !st.Agent.KeyOptional):
 		return fail("no_key", standalone.ErrNoKey)
 	case st.Agent != nil && st.Agent.Running:
 		return fail("busy", errBusy)

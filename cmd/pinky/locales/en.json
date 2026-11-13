@@ -1190,6 +1190,16 @@
   "@askTitle": {
     "description": "The name of Pinky's own agent, which does a task the person types on a phone by itself: the box at the top of Tasks, and its part of Settings › Agents."
   },
+  "askToday": "Today: {amount}",
+  "@askToday": {
+    "description": "Ask Pinky, under the model's name next to Start: what Pinky's own agent used today (askTokens, then askDollars when known).",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "48,210 tokens · US$0.21"
+      }
+    }
+  },
   "askTokens": "{count, plural, one {# token} other {# tokens}}",
   "@askTokens": {
     "description": "Ask Pinky: how many tokens a task used, or its limit, for a model whose prices Pinky does not know.",
@@ -1616,6 +1626,18 @@
   "@checkBackgroundUnlocked": {
     "description": "The checkup, working in the background: works on Android 11 and 12, only while the phone is unlocked."
   },
+  "checkBadAnswer": "The address answered, but not as an API Pinky knows. Check the API address.",
+  "@checkBadAnswer": {
+    "description": "A check of the model: an answer that is not the API's."
+  },
+  "checkBadKey": "The service didn't accept the API key. Check that it is a key of this service.",
+  "@checkBadKey": {
+    "description": "A check of the model: the service refused the key (HTTP 401 or 403)."
+  },
+  "checkBusy": "The service is busy or limited the request. Try again in a moment.",
+  "@checkBusy": {
+    "description": "A check of the model: HTTP 429 or the service's own error (5xx)."
+  },
   "checkCompanionManual": "Installed, but this phone doesn't let Pinky turn on its accessibility service over USB debugging. Turn on Pinky in the phone's accessibility settings by hand before an agent works on the phone. It then stays on until you turn it off there, and while it's on, the phone's apps, banking apps among them, can see it.",
   "@checkCompanionManual": {
     "description": "The checkup, Pinky on the phone, on a phone that took Pinky's change to its accessibility settings without an error and kept nothing of it (vivo's OriginOS 6 does): only the person can turn the app's service on, in the phone's settings. Pinky then leaves it on after tasks, until the person turns it off on the phone, and the phone's apps can see an accessibility service that is on (banking apps check for such services). A note follows that says where the switch is. Pinky is the app's name on the phone."
@@ -1958,6 +1980,30 @@
   "@checkLocalNetworkUnknown": {
     "description": "The checkup, local network: the check could not run."
   },
+  "checkNoCredit": "The service says the account has no credit left. Top it up on the service's site.",
+  "@checkNoCredit": {
+    "description": "A check of the model: HTTP 402."
+  },
+  "checkNoKey": "Add an API key first.",
+  "@checkNoKey": {
+    "description": "A check of the model: no API key is saved for the service."
+  },
+  "checkNoModel": "Choose a model first.",
+  "@checkNoModel": {
+    "description": "A check of the model in Settings › Agents › Ask Pinky: no model is chosen."
+  },
+  "checkNoTools": "The model answered but didn't use a tool. Pinky works through tools, so choose a model that uses them.",
+  "@checkNoTools": {
+    "description": "A check of the model: it answered without calling the tool, or the service said it does not support tools."
+  },
+  "checkNotFound": "The service doesn't know this model or address. Check the model's name and the API address.",
+  "@checkNotFound": {
+    "description": "A check of the model: HTTP 404."
+  },
+  "checkRejected": "The service refused the request.",
+  "@checkRejected": {
+    "description": "A check of the model: another error of the service; settingsAskCheckDetail follows with its words."
+  },
   "checkScreenFail": "The phone sends no screenshots, so agents can't see the screen. Restart the phone, then check again.",
   "@checkScreenFail": {
     "description": "The checkup, seeing the screen: failed."
@@ -2013,6 +2059,10 @@
   "checkUSBPermissionNote": "On Linux: add yourself to the plugdev group (sudo usermod -aG plugdev $LOGNAME), log out and in again, and install your distribution's udev rules for Android phones (android-sdk-platform-tools-common on Ubuntu and Debian). Then unplug the phone and plug it in again.",
   "@checkUSBPermissionNote": {
     "description": "The checkup and Add phone: how to fix checkUSBPermission. android-udev-rules and plugdev are names of Linux packages and groups: keep them as they are."
+  },
+  "checkUnreachable": "Pinky couldn't reach the API address. Check it, and that the service or server is running.",
+  "@checkUnreachable": {
+    "description": "A check of the model: no answer from the address."
   },
   "checkWiFiFail": "Pinky can't use this phone over Wi-Fi.",
   "@checkWiFiFail": {
@@ -8220,11 +8270,55 @@
   "@settingsAgentsWorking": {
     "description": "Settings › Agents: the state at the end of an agent's row, next to a green dot: one of its tasks is running."
   },
+  "settingsAskCheck": "Check",
+  "@settingsAskCheck": {
+    "description": "Settings › Agents › Ask Pinky: the title of the row that checks the model."
+  },
+  "settingsAskCheckAgain": "Check Again",
+  "@settingsAskCheckAgain": {
+    "description": "Settings › Agents › Ask Pinky: the button that checks the model again after a check."
+  },
+  "settingsAskCheckDesc": "Sends the model one tiny request to see that it answers and uses tools. Pinky does it when you save a key, model or address.",
+  "@settingsAskCheckDesc": {
+    "description": "Settings › Agents › Ask Pinky: under Check."
+  },
+  "settingsAskCheckDetail": "The service said: {detail}",
+  "@settingsAskCheckDetail": {
+    "description": "Settings › Agents › Ask Pinky: under a failed check, the service's own words, in its language.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "HTTP 401 · invalid x-api-key"
+      }
+    }
+  },
+  "settingsAskCheckLabel": "Check the model now",
+  "@settingsAskCheckLabel": {
+    "description": "Settings › Agents › Ask Pinky: what screen readers say for the Check and Check Again button."
+  },
+  "settingsAskCheckNow": "Check",
+  "@settingsAskCheckNow": {
+    "description": "Settings › Agents › Ask Pinky: the button that checks the model now."
+  },
+  "settingsAskCheckOK": "The model answered and used a tool, in {seconds} s.",
+  "@settingsAskCheckOK": {
+    "description": "Settings › Agents › Ask Pinky: a check that went well; seconds has one decimal.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "1.4"
+      }
+    }
+  },
+  "settingsAskChecking": "Checking…",
+  "@settingsAskChecking": {
+    "description": "Settings › Agents › Ask Pinky: while the check runs."
+  },
   "settingsAskCost": "Cost per task",
   "@settingsAskCost": {
     "description": "Settings › Agents › Ask Pinky: the title of the cost limit."
   },
-  "settingsAskCostDesc": "Counted from what the service reports, at Anthropic's prices.",
+  "settingsAskCostDesc": "Counted from what the service reports, at the prices it publishes.",
   "@settingsAskCostDesc": {
     "description": "Settings › Agents › Ask Pinky with a Claude model whose prices Pinky knows: the line under settingsAskCost."
   },
@@ -8284,6 +8378,16 @@
   "@settingsAskKeyKeepWindows": {
     "description": "Settings › Agents › Ask Pinky, on Windows: the line under settingsAskKey."
   },
+  "settingsAskKeyOptional": "Only if you set one up on the server. {keep}",
+  "@settingsAskKeyOptional": {
+    "description": "Settings › Agents › Ask Pinky: under API key, for a server on the person's own computer, which needs no key by default; keep says where a key stays (settingsAskKeyKeepMac and the others).",
+    "placeholders": {
+      "keep": {
+        "type": "String",
+        "example": "It stays in the macOS Keychain."
+      }
+    }
+  },
   "settingsAskKeyPlaceholder": "Paste the API key",
   "@settingsAskKeyPlaceholder": {
     "description": "Settings › Agents › Ask Pinky: the hint in the empty API key field."
@@ -8328,13 +8432,25 @@
   "@settingsAskModelDesc": {
     "description": "Settings › Agents › Ask Pinky with another service: the line under settingsAskModel."
   },
+  "settingsAskModelLocal": "The name of a model the server runs. It must read images and use tools.",
+  "@settingsAskModelLocal": {
+    "description": "Settings › Agents › Ask Pinky: under Model, for a server on the person's own computer, such as Ollama."
+  },
   "settingsAskModelNone": "None",
   "@settingsAskModelNone": {
     "description": "Settings › Agents › Ask Pinky: no model is chosen."
   },
+  "settingsAskModelOther": "Other…",
+  "@settingsAskModelOther": {
+    "description": "Settings › Agents › Ask Pinky, the Model menu: the entry that lets the person type another model's name."
+  },
   "settingsAskModelPlaceholder": "Model name",
   "@settingsAskModelPlaceholder": {
     "description": "Settings › Agents › Ask Pinky: the hint in the empty model field."
+  },
+  "settingsAskModelSuggested": "Models that read images and use tools, as Pinky needs. Choose Other… for another model of the service.",
+  "@settingsAskModelSuggested": {
+    "description": "Settings › Agents › Ask Pinky: under Model, for a service whose models Pinky suggests."
   },
   "settingsAskOn": "Show Ask Pinky",
   "@settingsAskOn": {
@@ -8344,6 +8460,14 @@
   "@settingsAskOnDesc": {
     "description": "Settings › Agents › Ask Pinky: the line under settingsAskOn."
   },
+  "settingsAskRegionChina": "China",
+  "@settingsAskRegionChina": {
+    "description": "settingsAskServiceRegion: the entry of a service for its mainland China address."
+  },
+  "settingsAskRegionGlobal": "International",
+  "@settingsAskRegionGlobal": {
+    "description": "settingsAskServiceRegion: the entry of a service for its address outside mainland China."
+  },
   "settingsAskService": "Service",
   "@settingsAskService": {
     "description": "Settings › Agents › Ask Pinky: the title of the setting that chooses the API the model is reached through."
@@ -8352,13 +8476,27 @@
   "@settingsAskServiceAnthropic": {
     "description": "Settings › Agents › Ask Pinky: a choice of service: Anthropic's Messages API, or a service that speaks it."
   },
-  "settingsAskServiceDesc": "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key.",
+  "settingsAskServiceDesc": "Who runs the model. Each service keeps its own API key, model and address.",
   "@settingsAskServiceDesc": {
-    "description": "Settings › Agents › Ask Pinky: the line under settingsAskService."
+    "description": "Settings › Agents › Ask Pinky: under Service, what the choice is."
   },
   "settingsAskServiceOpenAI": "OpenAI-compatible API",
   "@settingsAskServiceOpenAI": {
     "description": "Settings › Agents › Ask Pinky: a choice of service: OpenAI's Chat Completions API, or a service that speaks it."
+  },
+  "settingsAskServiceRegion": "{service} ({region})",
+  "@settingsAskServiceRegion": {
+    "description": "Settings › Agents › Ask Pinky, the Service menu: a service that has one entry for mainland China and one for elsewhere, such as Qwen (China).",
+    "placeholders": {
+      "service": {
+        "type": "String",
+        "example": "Qwen"
+      },
+      "region": {
+        "type": "String",
+        "example": "China"
+      }
+    }
   },
   "settingsAskSteps": "Steps per task",
   "@settingsAskSteps": {
@@ -8392,13 +8530,51 @@
   "@settingsAskURLDescAnthropic": {
     "description": "Settings › Agents › Ask Pinky with the Anthropic-compatible service: the line under settingsAskURL."
   },
+  "settingsAskURLDescLocal": "The server on this computer by default. Change it when the server runs on another computer or port.",
+  "@settingsAskURLDescLocal": {
+    "description": "Settings › Agents › Ask Pinky: under API address, for a server on the person's own computer, such as Ollama."
+  },
   "settingsAskURLDescOpenAI": "The address of the service's OpenAI-compatible API, such as https://…/v1. OpenAI's own by default.",
   "@settingsAskURLDescOpenAI": {
     "description": "Settings › Agents › Ask Pinky with the OpenAI-compatible service: the line under settingsAskURL."
   },
+  "settingsAskURLDescService": "The service's own address by default. Change it only to go through another address, such as a proxy.",
+  "@settingsAskURLDescService": {
+    "description": "Settings › Agents › Ask Pinky: under API address, for a service Pinky knows."
+  },
   "settingsAskURLErr": "Enter an address that starts with https:// or http://.",
   "@settingsAskURLErr": {
     "description": "Settings › Agents › Ask Pinky, in red, under the API address field."
+  },
+  "settingsAskUsage": "Usage",
+  "@settingsAskUsage": {
+    "description": "Settings › Agents › Ask Pinky: the heading of the tokens Pinky's own agent used."
+  },
+  "settingsAskUsageDesc": "The tokens Pinky's own agent used, as the services reported them, and what they cost where Pinky knows the prices. Kept on this computer only.",
+  "@settingsAskUsageDesc": {
+    "description": "Settings › Agents › Ask Pinky: under Usage."
+  },
+  "settingsAskUsageMonth": "Last 30 days",
+  "@settingsAskUsageMonth": {
+    "description": "Settings › Agents › Ask Pinky, Usage: the total of the last 30 days, today included."
+  },
+  "settingsAskUsageNone": "Nothing yet.",
+  "@settingsAskUsageNone": {
+    "description": "Settings › Agents › Ask Pinky, Usage: no tokens used in the period."
+  },
+  "settingsAskUsageRequests": "{count, plural, one {# request} other {# requests}}",
+  "@settingsAskUsageRequests": {
+    "description": "Settings › Agents › Ask Pinky, Usage: how many requests a model got on a day.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "settingsAskUsageWeek": "Last 7 days",
+  "@settingsAskUsageWeek": {
+    "description": "Settings › Agents › Ask Pinky, Usage: the total of the last 7 days, today included."
   },
   "settingsCancel": "Cancel",
   "@settingsCancel": {

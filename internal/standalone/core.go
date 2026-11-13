@@ -141,12 +141,19 @@ func New(o Options) (*Core, error) {
 	c.loadRuns()
 	popt := o.Pilot
 	popt.Server, popt.Version, popt.Notify = c.MCP, o.Version, c.changed
+	if popt.Usage == nil {
+		path := ""
+		if o.DataDir != "" {
+			path = filepath.Join(o.DataDir, "model-usage.json")
+		}
+		popt.Usage = pilot.OpenUsage(path)
+	}
+	// The key the screens sent with start or continue; empty for a
+	// service that needs none (a local server), which the runner allows
+	// and reports as NoKey for any other.
 	popt.Key = func(context.Context, string) (string, error) {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		if c.key == "" {
-			return "", ErrNoKey
-		}
 		return c.key, nil
 	}
 	c.pilot = pilot.New(popt)
@@ -211,7 +218,10 @@ func (c *Core) device() (gateway.DeviceView, bool) {
 
 // StartRequest starts a task.
 type StartRequest struct {
-	Task     string  `json:"task"`
+	Task string `json:"task"`
+	// Service is the service Settings chose (pilot.Services); empty is
+	// the one of Provider and BaseURL, as the apps sent before.
+	Service  string  `json:"service"`
 	Provider string  `json:"provider"`
 	Model    string  `json:"model"`
 	BaseURL  string  `json:"base_url"`
@@ -219,6 +229,12 @@ type StartRequest struct {
 	MaxSteps int     `json:"max_steps"`
 	MaxMin   int     `json:"max_minutes"`
 	MaxCost  float64 `json:"max_cost"`
+}
+
+// Config is the task's pilot.Config.
+func (r StartRequest) Config() pilot.Config {
+	return pilot.Config{Service: r.Service, Provider: r.Provider, Model: r.Model, BaseURL: r.BaseURL, MaxSteps: r.MaxSteps,
+		MaxTime: time.Duration(r.MaxMin) * time.Minute, MaxCost: r.MaxCost}
 }
 
 // Start starts the person's task on the phone. The task claims the phone
@@ -230,12 +246,11 @@ func (c *Core) Start(r StartRequest) error {
 	if !ok || d.Info.State != driver.StateOnline {
 		return ErrNoDevice
 	}
+	cfg := r.Config()
 	key := strings.TrimSpace(r.Key)
-	if key == "" {
+	if key == "" && !cfg.KeyOptional() {
 		return ErrNoKey
 	}
-	cfg := pilot.Config{Provider: r.Provider, Model: r.Model, BaseURL: r.BaseURL, MaxSteps: r.MaxSteps,
-		MaxTime: time.Duration(r.MaxMin) * time.Minute, MaxCost: r.MaxCost}
 	task := strings.TrimSpace(r.Task)
 	if task == "" {
 		return pilot.ErrNoTask
@@ -312,13 +327,14 @@ func (c *Core) Continue(text, key string) error {
 		return ErrNoDevice
 	}
 	key = strings.TrimSpace(key)
-	if key == "" {
-		return ErrNoKey
-	}
 	c.startMu.Lock()
 	defer c.startMu.Unlock()
 	s, has := c.pilot.Status(d.Info.ID)
 	switch {
+	case key == "" && !(has && s.Config.KeyOptional()):
+		// The task's own service, whatever the settings say now
+		// (AgentState.KeyName).
+		return ErrNoKey
 	case has && s.Running():
 		return pilot.ErrBusy
 	case !has || !s.Continuable:
@@ -425,6 +441,18 @@ func (c *Core) SetPreset(p policy.Preset) error {
 	c.changed()
 	return nil
 }
+
+// Check checks a model before a task uses it (pilot.Check), with the key
+// the screens send; the key is not kept. It blocks for up to a minute.
+func (c *Core) Check(r StartRequest) pilot.CheckResult {
+	ctx, cancel := context.WithTimeout(c.ctx, time.Minute)
+	defer cancel()
+	return c.pilot.CheckWith(ctx, r.Config(), r.Key)
+}
+
+// Usage is what Pinky's agent used on this phone, by day, service and
+// model, from since on (pilot.Usage.Rows).
+func (c *Core) Usage(since string) []pilot.UsageRow { return c.pilot.Usage(since) }
 
 // Dismiss forgets the ended task.
 func (c *Core) Dismiss() {

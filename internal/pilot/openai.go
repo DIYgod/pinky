@@ -251,7 +251,9 @@ func (o *openAI) post(ctx context.Context) (*oaResponse, error) {
 		return nil, err
 	}
 	h := http.Header{}
-	h.Set("Authorization", "Bearer "+o.key)
+	if o.key != "" { // a local server may need none
+		h.Set("Authorization", "Bearer "+o.key)
+	}
 	if o.session != "" {
 		h.Set("x-opencode-session", o.session)
 	}

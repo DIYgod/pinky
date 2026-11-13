@@ -143,10 +143,12 @@ func runApp(args []string) error {
 	ask := pilot.New(pilot.Options{
 		Server:  rg.MCP,
 		Version: version,
-		Key: func(ctx context.Context, provider string) (string, error) {
-			return secret.Get(ctx, secret.System(), secret.ModelKeyAccount(provider))
+		Key: func(ctx context.Context, name string) (string, error) {
+			return secret.Get(ctx, secret.System(), secret.ModelKeyAccount(name))
 		},
 		Describe: ui.DescribePilot,
+		// What it used, by day, service and model, on this computer only.
+		Usage: pilot.OpenUsage(filepath.Join(dirs.Data, "model-usage.json")),
 	})
 	defer ask.Close()
 	// Agents may hand Pinky's own agent a whole task (phone_task_run),

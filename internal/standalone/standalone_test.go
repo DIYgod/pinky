@@ -25,8 +25,9 @@ import (
 	"github.com/DIYgod/pinky/internal/policy"
 )
 
-// model is a Messages API whose turns a test scripts: each gets the text
-// the request ends with and returns the tool to call; the last repeats.
+// model is a Messages API, and a Chat Completions one, whose turns a test
+// scripts: each gets the text the request ends with and returns the tool
+// to call; the last repeats.
 type model struct {
 	mu    sync.Mutex
 	n     int
@@ -54,6 +55,16 @@ func (m *model) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return // cancelled
 	}
 	w.Header().Set("Content-Type", "application/json")
+	if strings.HasSuffix(r.URL.Path, "/chat/completions") {
+		// The same turn as Chat Completions answers it.
+		args, _ := json.Marshal(use["input"])
+		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{
+			"message": map[string]any{"role": "assistant", "tool_calls": []any{map[string]any{"id": use["id"], "type": "function",
+				"function": map[string]any{"name": use["name"], "arguments": string(args)}}}},
+			"finish_reason": "tool_calls"}},
+			"usage": map[string]any{"prompt_tokens": 100, "completion_tokens": 10}})
+		return
+	}
 	_ = json.NewEncoder(w).Encode(map[string]any{"id": "msg_1", "type": "message", "role": "assistant",
 		"model": "fake", "stop_reason": "tool_use", "content": []any{use},
 		"usage": map[string]any{"input_tokens": 100, "output_tokens": 10}})

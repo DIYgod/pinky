@@ -50,6 +50,11 @@ const (
 
 // Config is how a task runs: the model and the limits.
 type Config struct {
+	// Service is the service Settings chose (Services, by ID). A known
+	// one sets Provider, and BaseURL and Model when they are empty. Empty
+	// is the service of Provider and BaseURL (ServiceFor), as settings
+	// saved before there were services have it.
+	Service  string
 	Provider string // Anthropic (default) or OpenAI
 	// Model is the model's name; empty is DefaultModel with Anthropic. An
 	// OpenAI-compatible API needs one.
@@ -71,15 +76,28 @@ type Config struct {
 
 // Normalize fills in the defaults.
 func (c Config) Normalize() Config {
+	c.Service = strings.TrimSpace(c.Service)
 	c.Provider = strings.ToLower(strings.TrimSpace(c.Provider))
+	c.Model = strings.TrimSpace(c.Model)
+	c.BaseURL = strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
+	if c.Service == "" {
+		c.Service = ServiceFor(c.Provider, c.BaseURL)
+	}
+	if s, ok := lookup(c.Service); ok {
+		c.Provider = s.API
+		if c.BaseURL == "" {
+			c.BaseURL = s.BaseURL
+		}
+		if c.Model == "" && len(s.Models) > 0 {
+			c.Model = s.Models[0].ID
+		}
+	}
 	if c.Provider != OpenAI {
 		c.Provider = Anthropic
 	}
-	c.Model = strings.TrimSpace(c.Model)
 	if c.Model == "" && c.Provider == Anthropic {
 		c.Model = DefaultModel
 	}
-	c.BaseURL = strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
 	if c.MaxSteps <= 0 {
 		c.MaxSteps = DefaultMaxSteps
 	}
@@ -90,6 +108,17 @@ func (c Config) Normalize() Config {
 		c.MaxCost = DefaultMaxCost
 	}
 	return c
+}
+
+// KeyName is the name the service's API key is saved under (KeyName),
+// which Options.Key is asked for.
+func (c Config) KeyName() string { return KeyName(c.Service, c.Provider) }
+
+// KeyOptional reports whether the service may be used without a key: a
+// server on the person's own computer.
+func (c Config) KeyOptional() bool {
+	s, ok := lookup(c.Service)
+	return ok && s.KeyOptional
 }
 
 // Priced reports whether Pinky knows the model's prices, so that the
@@ -266,10 +295,10 @@ type Options struct {
 	Server *mcp.Server
 	// Version is Pinky's version, for the MCP client's name.
 	Version string
-	// Key returns the API key saved for a provider, secret.ErrNotFound
-	// when there is none. The Runner asks for it as each task starts and
-	// keeps it no longer than the task.
-	Key func(ctx context.Context, provider string) (string, error)
+	// Key returns the API key saved under a name (Config.KeyName),
+	// secret.ErrNotFound when there is none. The Runner asks for it as
+	// each task starts and keeps it no longer than the task.
+	Key func(ctx context.Context, name string) (string, error)
 	// Notify is called, from any goroutine, when a task's status changes.
 	Notify func()
 	// Describe writes the line Pinky gives a task it ends itself (a
@@ -278,6 +307,9 @@ type Options struct {
 	Describe func(Status) string
 	// HTTPClient makes the API requests; nil is http.DefaultClient.
 	HTTPClient *http.Client
+	// Usage counts the tokens each request used (and checks, Check), by
+	// day, service and model; nil counts nothing.
+	Usage *Usage
 }
 
 // Runner runs Pinky's own agent, one task a phone at a time.
@@ -516,6 +548,10 @@ func (r *Runner) continueRunLocked(ru *run, text, from string) error {
 	return nil
 }
 
+// Usage returns the usage rows from since on (Usage.Rows): nil when the
+// Runner counts none.
+func (r *Runner) Usage(since string) []UsageRow { return r.opt.Usage.Rows(since) }
+
 // Stop ends the task on a phone at once, cancelling a model request in
 // flight. Stop the gateway's task first (gateway.API.Stop): a task whose
 // MCP session just goes away counts as done in Activity.
@@ -711,11 +747,14 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	ru.mu.Lock()
 	cfg, device, task, taskID, m := ru.st.Config, ru.st.Device, ru.st.Task, ru.st.TaskID, ru.m
 	ru.mu.Unlock()
-	key, err := ru.r.opt.Key(ctx, cfg.Provider)
+	key, err := ru.r.opt.Key(ctx, cfg.KeyName())
+	if cfg.KeyOptional() && (errors.Is(err, secret.ErrNotFound) || err == nil) {
+		key, err = strings.TrimSpace(key), nil
+	}
 	switch {
 	case ctx.Err() != nil:
 		return ru.stoppedEnd()
-	case errors.Is(err, secret.ErrNotFound) || err == nil && strings.TrimSpace(key) == "":
+	case errors.Is(err, secret.ErrNotFound) || err == nil && strings.TrimSpace(key) == "" && !cfg.KeyOptional():
 		return NoKey, ""
 	case err != nil:
 		return Error, err.Error()
@@ -1014,10 +1053,11 @@ func (ru *run) budget(ctx context.Context) (context.Context, context.CancelFunc)
 const tokensPerDollar = 1_000_000
 
 func (ru *run) count(u usage, cfg Config) {
+	ru.r.opt.Usage.add(time.Now(), cfg, u)
 	ru.update(func(s *Status) {
 		s.Tokens += u.input + u.output + u.cacheRead + u.cacheWrite
 		if p, ok := priceOf(cfg); ok {
-			s.Cost += p.cost(u)
+			s.Cost += p.at(time.Now()).cost(u)
 		}
 	})
 }

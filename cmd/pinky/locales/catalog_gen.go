@@ -3519,6 +3519,22 @@ func (msgs Messages) AskTitle() string {
 	return Catalog.Format(msgs.locale, "askTitle", nil)
 }
 
+// AskToday says "Today: {amount}"
+// in the language the app shows.
+//
+// Ask Pinky, under the model's name next to Start: what Pinky's own agent
+// used today (askTokens, then askDollars when known).
+func AskToday(amount string) string { return In(i18n.Locale()).AskToday(amount) }
+
+// AskToday says "Today: {amount}"
+// in the language of msgs.
+//
+// Ask Pinky, under the model's name next to Start: what Pinky's own agent
+// used today (askTokens, then askDollars when known).
+func (msgs Messages) AskToday(amount string) string {
+	return Catalog.Format(msgs.locale, "askToday", map[string]any{"amount": amount})
+}
+
 // AskTokens says "{count, plural, one {# token} other {# tokens}}"
 // in the language the app shows.
 //
@@ -4597,6 +4613,48 @@ func CheckBackgroundUnlocked() string { return In(i18n.Locale()).CheckBackground
 // while the phone is unlocked.
 func (msgs Messages) CheckBackgroundUnlocked() string {
 	return Catalog.Format(msgs.locale, "checkBackgroundUnlocked", nil)
+}
+
+// CheckBadAnswer says "The address answered, but not as an API Pinky knows. Check the API address."
+// in the language the app shows.
+//
+// A check of the model: an answer that is not the API's.
+func CheckBadAnswer() string { return In(i18n.Locale()).CheckBadAnswer() }
+
+// CheckBadAnswer says "The address answered, but not as an API Pinky knows. Check the API address."
+// in the language of msgs.
+//
+// A check of the model: an answer that is not the API's.
+func (msgs Messages) CheckBadAnswer() string {
+	return Catalog.Format(msgs.locale, "checkBadAnswer", nil)
+}
+
+// CheckBadKey says "The service didn't accept the API key. Check that it is a key of this service."
+// in the language the app shows.
+//
+// A check of the model: the service refused the key (HTTP 401 or 403).
+func CheckBadKey() string { return In(i18n.Locale()).CheckBadKey() }
+
+// CheckBadKey says "The service didn't accept the API key. Check that it is a key of this service."
+// in the language of msgs.
+//
+// A check of the model: the service refused the key (HTTP 401 or 403).
+func (msgs Messages) CheckBadKey() string {
+	return Catalog.Format(msgs.locale, "checkBadKey", nil)
+}
+
+// CheckBusy says "The service is busy or limited the request. Try again in a moment."
+// in the language the app shows.
+//
+// A check of the model: HTTP 429 or the service's own error (5xx).
+func CheckBusy() string { return In(i18n.Locale()).CheckBusy() }
+
+// CheckBusy says "The service is busy or limited the request. Try again in a moment."
+// in the language of msgs.
+//
+// A check of the model: HTTP 429 or the service's own error (5xx).
+func (msgs Messages) CheckBusy() string {
+	return Catalog.Format(msgs.locale, "checkBusy", nil)
 }
 
 // CheckCompanionManual says "Installed, but this phone doesn't let Pinky turn on its accessibility service over USB debugging. Turn on Pinky in th…"
@@ -5813,6 +5871,96 @@ func (msgs Messages) CheckLocalNetworkUnknown() string {
 	return Catalog.Format(msgs.locale, "checkLocalNetworkUnknown", nil)
 }
 
+// CheckNoCredit says "The service says the account has no credit left. Top it up on the service's site."
+// in the language the app shows.
+//
+// A check of the model: HTTP 402.
+func CheckNoCredit() string { return In(i18n.Locale()).CheckNoCredit() }
+
+// CheckNoCredit says "The service says the account has no credit left. Top it up on the service's site."
+// in the language of msgs.
+//
+// A check of the model: HTTP 402.
+func (msgs Messages) CheckNoCredit() string {
+	return Catalog.Format(msgs.locale, "checkNoCredit", nil)
+}
+
+// CheckNoKey says "Add an API key first."
+// in the language the app shows.
+//
+// A check of the model: no API key is saved for the service.
+func CheckNoKey() string { return In(i18n.Locale()).CheckNoKey() }
+
+// CheckNoKey says "Add an API key first."
+// in the language of msgs.
+//
+// A check of the model: no API key is saved for the service.
+func (msgs Messages) CheckNoKey() string {
+	return Catalog.Format(msgs.locale, "checkNoKey", nil)
+}
+
+// CheckNoModel says "Choose a model first."
+// in the language the app shows.
+//
+// A check of the model in Settings › Agents › Ask Pinky: no model is
+// chosen.
+func CheckNoModel() string { return In(i18n.Locale()).CheckNoModel() }
+
+// CheckNoModel says "Choose a model first."
+// in the language of msgs.
+//
+// A check of the model in Settings › Agents › Ask Pinky: no model is
+// chosen.
+func (msgs Messages) CheckNoModel() string {
+	return Catalog.Format(msgs.locale, "checkNoModel", nil)
+}
+
+// CheckNoTools says "The model answered but didn't use a tool. Pinky works through tools, so choose a model that uses them."
+// in the language the app shows.
+//
+// A check of the model: it answered without calling the tool, or the
+// service said it does not support tools.
+func CheckNoTools() string { return In(i18n.Locale()).CheckNoTools() }
+
+// CheckNoTools says "The model answered but didn't use a tool. Pinky works through tools, so choose a model that uses them."
+// in the language of msgs.
+//
+// A check of the model: it answered without calling the tool, or the
+// service said it does not support tools.
+func (msgs Messages) CheckNoTools() string {
+	return Catalog.Format(msgs.locale, "checkNoTools", nil)
+}
+
+// CheckNotFound says "The service doesn't know this model or address. Check the model's name and the API address."
+// in the language the app shows.
+//
+// A check of the model: HTTP 404.
+func CheckNotFound() string { return In(i18n.Locale()).CheckNotFound() }
+
+// CheckNotFound says "The service doesn't know this model or address. Check the model's name and the API address."
+// in the language of msgs.
+//
+// A check of the model: HTTP 404.
+func (msgs Messages) CheckNotFound() string {
+	return Catalog.Format(msgs.locale, "checkNotFound", nil)
+}
+
+// CheckRejected says "The service refused the request."
+// in the language the app shows.
+//
+// A check of the model: another error of the service;
+// settingsAskCheckDetail follows with its words.
+func CheckRejected() string { return In(i18n.Locale()).CheckRejected() }
+
+// CheckRejected says "The service refused the request."
+// in the language of msgs.
+//
+// A check of the model: another error of the service;
+// settingsAskCheckDetail follows with its words.
+func (msgs Messages) CheckRejected() string {
+	return Catalog.Format(msgs.locale, "checkRejected", nil)
+}
+
 // CheckScreenFail says "The phone sends no screenshots, so agents can't see the screen. Restart the phone, then check again."
 // in the language the app shows.
 //
@@ -6033,6 +6181,20 @@ func CheckUSBPermissionNote() string { return In(i18n.Locale()).CheckUSBPermissi
 // keep them as they are.
 func (msgs Messages) CheckUSBPermissionNote() string {
 	return Catalog.Format(msgs.locale, "checkUSBPermissionNote", nil)
+}
+
+// CheckUnreachable says "Pinky couldn't reach the API address. Check it, and that the service or server is running."
+// in the language the app shows.
+//
+// A check of the model: no answer from the address.
+func CheckUnreachable() string { return In(i18n.Locale()).CheckUnreachable() }
+
+// CheckUnreachable says "Pinky couldn't reach the API address. Check it, and that the service or server is running."
+// in the language of msgs.
+//
+// A check of the model: no answer from the address.
+func (msgs Messages) CheckUnreachable() string {
+	return Catalog.Format(msgs.locale, "checkUnreachable", nil)
 }
 
 // CheckWiFiFail says "Pinky can't use this phone over Wi-Fi."
@@ -21967,6 +22129,130 @@ func (msgs Messages) SettingsAgentsWorking() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsWorking", nil)
 }
 
+// SettingsAskCheck says "Check"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the row that checks the
+// model.
+func SettingsAskCheck() string { return In(i18n.Locale()).SettingsAskCheck() }
+
+// SettingsAskCheck says "Check"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the row that checks the
+// model.
+func (msgs Messages) SettingsAskCheck() string {
+	return Catalog.Format(msgs.locale, "settingsAskCheck", nil)
+}
+
+// SettingsAskCheckAgain says "Check Again"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the button that checks the model again
+// after a check.
+func SettingsAskCheckAgain() string { return In(i18n.Locale()).SettingsAskCheckAgain() }
+
+// SettingsAskCheckAgain says "Check Again"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the button that checks the model again
+// after a check.
+func (msgs Messages) SettingsAskCheckAgain() string {
+	return Catalog.Format(msgs.locale, "settingsAskCheckAgain", nil)
+}
+
+// SettingsAskCheckDesc says "Sends the model one tiny request to see that it answers and uses tools. Pinky does it when you save a key, model or a…"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under Check.
+func SettingsAskCheckDesc() string { return In(i18n.Locale()).SettingsAskCheckDesc() }
+
+// SettingsAskCheckDesc says "Sends the model one tiny request to see that it answers and uses tools. Pinky does it when you save a key, model or a…"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under Check.
+func (msgs Messages) SettingsAskCheckDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskCheckDesc", nil)
+}
+
+// SettingsAskCheckDetail says "The service said: {detail}"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under a failed check, the service's
+// own words, in its language.
+func SettingsAskCheckDetail(detail string) string {
+	return In(i18n.Locale()).SettingsAskCheckDetail(detail)
+}
+
+// SettingsAskCheckDetail says "The service said: {detail}"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under a failed check, the service's
+// own words, in its language.
+func (msgs Messages) SettingsAskCheckDetail(detail string) string {
+	return Catalog.Format(msgs.locale, "settingsAskCheckDetail", map[string]any{"detail": detail})
+}
+
+// SettingsAskCheckLabel says "Check the model now"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: what screen readers say for the Check
+// and Check Again button.
+func SettingsAskCheckLabel() string { return In(i18n.Locale()).SettingsAskCheckLabel() }
+
+// SettingsAskCheckLabel says "Check the model now"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: what screen readers say for the Check
+// and Check Again button.
+func (msgs Messages) SettingsAskCheckLabel() string {
+	return Catalog.Format(msgs.locale, "settingsAskCheckLabel", nil)
+}
+
+// SettingsAskCheckNow says "Check"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the button that checks the model now.
+func SettingsAskCheckNow() string { return In(i18n.Locale()).SettingsAskCheckNow() }
+
+// SettingsAskCheckNow says "Check"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the button that checks the model now.
+func (msgs Messages) SettingsAskCheckNow() string {
+	return Catalog.Format(msgs.locale, "settingsAskCheckNow", nil)
+}
+
+// SettingsAskCheckOK says "The model answered and used a tool, in {seconds} s."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: a check that went well; seconds has
+// one decimal.
+func SettingsAskCheckOK(seconds string) string { return In(i18n.Locale()).SettingsAskCheckOK(seconds) }
+
+// SettingsAskCheckOK says "The model answered and used a tool, in {seconds} s."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: a check that went well; seconds has
+// one decimal.
+func (msgs Messages) SettingsAskCheckOK(seconds string) string {
+	return Catalog.Format(msgs.locale, "settingsAskCheckOK", map[string]any{"seconds": seconds})
+}
+
+// SettingsAskChecking says "Checking…"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: while the check runs.
+func SettingsAskChecking() string { return In(i18n.Locale()).SettingsAskChecking() }
+
+// SettingsAskChecking says "Checking…"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: while the check runs.
+func (msgs Messages) SettingsAskChecking() string {
+	return Catalog.Format(msgs.locale, "settingsAskChecking", nil)
+}
+
 // SettingsAskCost says "Cost per task"
 // in the language the app shows.
 //
@@ -21981,14 +22267,14 @@ func (msgs Messages) SettingsAskCost() string {
 	return Catalog.Format(msgs.locale, "settingsAskCost", nil)
 }
 
-// SettingsAskCostDesc says "Counted from what the service reports, at Anthropic's prices."
+// SettingsAskCostDesc says "Counted from what the service reports, at the prices it publishes."
 // in the language the app shows.
 //
 // Settings › Agents › Ask Pinky with a Claude model whose prices Pinky
 // knows: the line under settingsAskCost.
 func SettingsAskCostDesc() string { return In(i18n.Locale()).SettingsAskCostDesc() }
 
-// SettingsAskCostDesc says "Counted from what the service reports, at Anthropic's prices."
+// SettingsAskCostDesc says "Counted from what the service reports, at the prices it publishes."
 // in the language of msgs.
 //
 // Settings › Agents › Ask Pinky with a Claude model whose prices Pinky
@@ -22173,6 +22459,26 @@ func (msgs Messages) SettingsAskKeyKeepWindows() string {
 	return Catalog.Format(msgs.locale, "settingsAskKeyKeepWindows", nil)
 }
 
+// SettingsAskKeyOptional says "Only if you set one up on the server. {keep}"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under API key, for a server on the
+// person's own computer, which needs no key by default; keep says where a
+// key stays (settingsAskKeyKeepMac and the others).
+func SettingsAskKeyOptional(keep string) string {
+	return In(i18n.Locale()).SettingsAskKeyOptional(keep)
+}
+
+// SettingsAskKeyOptional says "Only if you set one up on the server. {keep}"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under API key, for a server on the
+// person's own computer, which needs no key by default; keep says where a
+// key stays (settingsAskKeyKeepMac and the others).
+func (msgs Messages) SettingsAskKeyOptional(keep string) string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyOptional", map[string]any{"keep": keep})
+}
+
 // SettingsAskKeyPlaceholder says "Paste the API key"
 // in the language the app shows.
 //
@@ -22339,6 +22645,22 @@ func (msgs Messages) SettingsAskModelDesc() string {
 	return Catalog.Format(msgs.locale, "settingsAskModelDesc", nil)
 }
 
+// SettingsAskModelLocal says "The name of a model the server runs. It must read images and use tools."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under Model, for a server on the
+// person's own computer, such as Ollama.
+func SettingsAskModelLocal() string { return In(i18n.Locale()).SettingsAskModelLocal() }
+
+// SettingsAskModelLocal says "The name of a model the server runs. It must read images and use tools."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under Model, for a server on the
+// person's own computer, such as Ollama.
+func (msgs Messages) SettingsAskModelLocal() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelLocal", nil)
+}
+
 // SettingsAskModelNone says "None"
 // in the language the app shows.
 //
@@ -22353,6 +22675,22 @@ func (msgs Messages) SettingsAskModelNone() string {
 	return Catalog.Format(msgs.locale, "settingsAskModelNone", nil)
 }
 
+// SettingsAskModelOther says "Other…"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, the Model menu: the entry that lets
+// the person type another model's name.
+func SettingsAskModelOther() string { return In(i18n.Locale()).SettingsAskModelOther() }
+
+// SettingsAskModelOther says "Other…"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, the Model menu: the entry that lets
+// the person type another model's name.
+func (msgs Messages) SettingsAskModelOther() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelOther", nil)
+}
+
 // SettingsAskModelPlaceholder says "Model name"
 // in the language the app shows.
 //
@@ -22365,6 +22703,22 @@ func SettingsAskModelPlaceholder() string { return In(i18n.Locale()).SettingsAsk
 // Settings › Agents › Ask Pinky: the hint in the empty model field.
 func (msgs Messages) SettingsAskModelPlaceholder() string {
 	return Catalog.Format(msgs.locale, "settingsAskModelPlaceholder", nil)
+}
+
+// SettingsAskModelSuggested says "Models that read images and use tools, as Pinky needs. Choose Other… for another model of the service."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under Model, for a service whose
+// models Pinky suggests.
+func SettingsAskModelSuggested() string { return In(i18n.Locale()).SettingsAskModelSuggested() }
+
+// SettingsAskModelSuggested says "Models that read images and use tools, as Pinky needs. Choose Other… for another model of the service."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under Model, for a service whose
+// models Pinky suggests.
+func (msgs Messages) SettingsAskModelSuggested() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelSuggested", nil)
 }
 
 // SettingsAskOn says "Show Ask Pinky"
@@ -22393,6 +22747,38 @@ func SettingsAskOnDesc() string { return In(i18n.Locale()).SettingsAskOnDesc() }
 // Settings › Agents › Ask Pinky: the line under settingsAskOn.
 func (msgs Messages) SettingsAskOnDesc() string {
 	return Catalog.Format(msgs.locale, "settingsAskOnDesc", nil)
+}
+
+// SettingsAskRegionChina says "China"
+// in the language the app shows.
+//
+// settingsAskServiceRegion: the entry of a service for its mainland China
+// address.
+func SettingsAskRegionChina() string { return In(i18n.Locale()).SettingsAskRegionChina() }
+
+// SettingsAskRegionChina says "China"
+// in the language of msgs.
+//
+// settingsAskServiceRegion: the entry of a service for its mainland China
+// address.
+func (msgs Messages) SettingsAskRegionChina() string {
+	return Catalog.Format(msgs.locale, "settingsAskRegionChina", nil)
+}
+
+// SettingsAskRegionGlobal says "International"
+// in the language the app shows.
+//
+// settingsAskServiceRegion: the entry of a service for its address outside
+// mainland China.
+func SettingsAskRegionGlobal() string { return In(i18n.Locale()).SettingsAskRegionGlobal() }
+
+// SettingsAskRegionGlobal says "International"
+// in the language of msgs.
+//
+// settingsAskServiceRegion: the entry of a service for its address outside
+// mainland China.
+func (msgs Messages) SettingsAskRegionGlobal() string {
+	return Catalog.Format(msgs.locale, "settingsAskRegionGlobal", nil)
 }
 
 // SettingsAskService says "Service"
@@ -22427,16 +22813,16 @@ func (msgs Messages) SettingsAskServiceAnthropic() string {
 	return Catalog.Format(msgs.locale, "settingsAskServiceAnthropic", nil)
 }
 
-// SettingsAskServiceDesc says "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key."
+// SettingsAskServiceDesc says "Who runs the model. Each service keeps its own API key, model and address."
 // in the language the app shows.
 //
-// Settings › Agents › Ask Pinky: the line under settingsAskService.
+// Settings › Agents › Ask Pinky: under Service, what the choice is.
 func SettingsAskServiceDesc() string { return In(i18n.Locale()).SettingsAskServiceDesc() }
 
-// SettingsAskServiceDesc says "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key."
+// SettingsAskServiceDesc says "Who runs the model. Each service keeps its own API key, model and address."
 // in the language of msgs.
 //
-// Settings › Agents › Ask Pinky: the line under settingsAskService.
+// Settings › Agents › Ask Pinky: under Service, what the choice is.
 func (msgs Messages) SettingsAskServiceDesc() string {
 	return Catalog.Format(msgs.locale, "settingsAskServiceDesc", nil)
 }
@@ -22455,6 +22841,24 @@ func SettingsAskServiceOpenAI() string { return In(i18n.Locale()).SettingsAskSer
 // Completions API, or a service that speaks it.
 func (msgs Messages) SettingsAskServiceOpenAI() string {
 	return Catalog.Format(msgs.locale, "settingsAskServiceOpenAI", nil)
+}
+
+// SettingsAskServiceRegion says "{service} ({region})"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, the Service menu: a service that has
+// one entry for mainland China and one for elsewhere, such as Qwen (China).
+func SettingsAskServiceRegion(service string, region string) string {
+	return In(i18n.Locale()).SettingsAskServiceRegion(service, region)
+}
+
+// SettingsAskServiceRegion says "{service} ({region})"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, the Service menu: a service that has
+// one entry for mainland China and one for elsewhere, such as Qwen (China).
+func (msgs Messages) SettingsAskServiceRegion(service string, region string) string {
+	return Catalog.Format(msgs.locale, "settingsAskServiceRegion", map[string]any{"service": service, "region": region})
 }
 
 // SettingsAskSteps says "Steps per task"
@@ -22577,6 +22981,22 @@ func (msgs Messages) SettingsAskURLDescAnthropic() string {
 	return Catalog.Format(msgs.locale, "settingsAskURLDescAnthropic", nil)
 }
 
+// SettingsAskURLDescLocal says "The server on this computer by default. Change it when the server runs on another computer or port."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under API address, for a server on the
+// person's own computer, such as Ollama.
+func SettingsAskURLDescLocal() string { return In(i18n.Locale()).SettingsAskURLDescLocal() }
+
+// SettingsAskURLDescLocal says "The server on this computer by default. Change it when the server runs on another computer or port."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under API address, for a server on the
+// person's own computer, such as Ollama.
+func (msgs Messages) SettingsAskURLDescLocal() string {
+	return Catalog.Format(msgs.locale, "settingsAskURLDescLocal", nil)
+}
+
 // SettingsAskURLDescOpenAI says "The address of the service's OpenAI-compatible API, such as https://…/v1. OpenAI's own by default."
 // in the language the app shows.
 //
@@ -22593,6 +23013,22 @@ func (msgs Messages) SettingsAskURLDescOpenAI() string {
 	return Catalog.Format(msgs.locale, "settingsAskURLDescOpenAI", nil)
 }
 
+// SettingsAskURLDescService says "The service's own address by default. Change it only to go through another address, such as a proxy."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under API address, for a service Pinky
+// knows.
+func SettingsAskURLDescService() string { return In(i18n.Locale()).SettingsAskURLDescService() }
+
+// SettingsAskURLDescService says "The service's own address by default. Change it only to go through another address, such as a proxy."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under API address, for a service Pinky
+// knows.
+func (msgs Messages) SettingsAskURLDescService() string {
+	return Catalog.Format(msgs.locale, "settingsAskURLDescService", nil)
+}
+
 // SettingsAskURLErr says "Enter an address that starts with https:// or http://."
 // in the language the app shows.
 //
@@ -22605,6 +23041,100 @@ func SettingsAskURLErr() string { return In(i18n.Locale()).SettingsAskURLErr() }
 // Settings › Agents › Ask Pinky, in red, under the API address field.
 func (msgs Messages) SettingsAskURLErr() string {
 	return Catalog.Format(msgs.locale, "settingsAskURLErr", nil)
+}
+
+// SettingsAskUsage says "Usage"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the heading of the tokens Pinky's own
+// agent used.
+func SettingsAskUsage() string { return In(i18n.Locale()).SettingsAskUsage() }
+
+// SettingsAskUsage says "Usage"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the heading of the tokens Pinky's own
+// agent used.
+func (msgs Messages) SettingsAskUsage() string {
+	return Catalog.Format(msgs.locale, "settingsAskUsage", nil)
+}
+
+// SettingsAskUsageDesc says "The tokens Pinky's own agent used, as the services reported them, and what they cost where Pinky knows the prices. Ke…"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: under Usage.
+func SettingsAskUsageDesc() string { return In(i18n.Locale()).SettingsAskUsageDesc() }
+
+// SettingsAskUsageDesc says "The tokens Pinky's own agent used, as the services reported them, and what they cost where Pinky knows the prices. Ke…"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: under Usage.
+func (msgs Messages) SettingsAskUsageDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskUsageDesc", nil)
+}
+
+// SettingsAskUsageMonth says "Last 30 days"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, Usage: the total of the last 30 days,
+// today included.
+func SettingsAskUsageMonth() string { return In(i18n.Locale()).SettingsAskUsageMonth() }
+
+// SettingsAskUsageMonth says "Last 30 days"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, Usage: the total of the last 30 days,
+// today included.
+func (msgs Messages) SettingsAskUsageMonth() string {
+	return Catalog.Format(msgs.locale, "settingsAskUsageMonth", nil)
+}
+
+// SettingsAskUsageNone says "Nothing yet."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, Usage: no tokens used in the period.
+func SettingsAskUsageNone() string { return In(i18n.Locale()).SettingsAskUsageNone() }
+
+// SettingsAskUsageNone says "Nothing yet."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, Usage: no tokens used in the period.
+func (msgs Messages) SettingsAskUsageNone() string {
+	return Catalog.Format(msgs.locale, "settingsAskUsageNone", nil)
+}
+
+// SettingsAskUsageRequests says "{count, plural, one {# request} other {# requests}}"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, Usage: how many requests a model got
+// on a day.
+func SettingsAskUsageRequests(count int) string {
+	return In(i18n.Locale()).SettingsAskUsageRequests(count)
+}
+
+// SettingsAskUsageRequests says "{count, plural, one {# request} other {# requests}}"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, Usage: how many requests a model got
+// on a day.
+func (msgs Messages) SettingsAskUsageRequests(count int) string {
+	return Catalog.Format(msgs.locale, "settingsAskUsageRequests", map[string]any{"count": count})
+}
+
+// SettingsAskUsageWeek says "Last 7 days"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, Usage: the total of the last 7 days,
+// today included.
+func SettingsAskUsageWeek() string { return In(i18n.Locale()).SettingsAskUsageWeek() }
+
+// SettingsAskUsageWeek says "Last 7 days"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, Usage: the total of the last 7 days,
+// today included.
+func (msgs Messages) SettingsAskUsageWeek() string {
+	return Catalog.Format(msgs.locale, "settingsAskUsageWeek", nil)
 }
 
 // SettingsCancel says "Cancel"

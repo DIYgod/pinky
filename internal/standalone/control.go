@@ -31,6 +31,8 @@ import (
 //	{"cmd":"history","before":<ms>,"limit":20}          → {"ok":true,"history":[...],"more":true}
 //	                                                      (History: PastTask, newest first; both fields optional)
 //	{"cmd":"history","id":"..."}                        → {"ok":true,"history":[the task, with its steps]}
+//	{"cmd":"check","service":"...","key":"...",...}     → {"ok":true,"check":{...}}  (StartRequest; pilot.CheckResult)
+//	{"cmd":"usage","since":"2006-01-02"}                → {"ok":true,"usage":[...]}  (pilot.UsageRow, newest first)
 //	{"cmd":"steer","text":"..."}                        → {"ok":true,"id":"m1"}  (Steer: to the running task)
 //	{"cmd":"steer","id":"m1","text":"..."}              → {"ok":true}  (EditMessage; empty text withdraws)
 //	{"cmd":"withdraw","id":"m1"}                        → {"ok":true}  (Withdraw)
@@ -76,6 +78,8 @@ type request struct {
 	Action string `json:"action"`
 	X      int    `json:"x"`
 	Y      int    `json:"y"`
+	// usage: the first day, 2006-01-02; empty for all.
+	Since string `json:"since"`
 	StartRequest
 }
 
@@ -88,6 +92,10 @@ type reply struct {
 	More    bool       `json:"more,omitempty"`  // older tasks follow
 	ID      string     `json:"id,omitempty"`    // steer: the new message's
 	Video   *videoInfo `json:"video,omitempty"` // video: the stream that follows
+	// Check is how a model answered the check command.
+	Check *pilot.CheckResult `json:"check,omitempty"`
+	// Usage answers the usage command; an empty list is [].
+	Usage *[]pilot.UsageRow `json:"usage,omitempty"`
 }
 
 // historyWait bounds a history command, which reads the database.
@@ -256,6 +264,15 @@ func (c *Core) handle(r request) reply {
 		err = c.HandBack(r.Note)
 	case "touch":
 		err = c.Touch(driver.TouchAction(r.Action), screen.Point{X: r.X, Y: r.Y})
+	case "check":
+		res := c.Check(r.StartRequest)
+		return reply{OK: true, Check: &res}
+	case "usage":
+		rows := c.Usage(r.Since)
+		if rows == nil {
+			rows = []pilot.UsageRow{}
+		}
+		return reply{OK: true, Usage: &rows}
 	default:
 		err = fmt.Errorf("unknown command %q", r.Cmd)
 	}
