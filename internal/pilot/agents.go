@@ -34,6 +34,10 @@ type Request struct {
 	// needs, and a task that only looks.
 	Apps     []string
 	ReadOnly bool
+	// Extra is what the person gave besides the task's words (StartWith):
+	// it goes with the first message, and stays in the conversation for
+	// Continue. Agents' tasks have none.
+	Extra Extra
 }
 
 // keepFor is how long the tasks agents handed Pinky stay to be asked

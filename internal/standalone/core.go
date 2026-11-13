@@ -229,6 +229,28 @@ type StartRequest struct {
 	MaxSteps int     `json:"max_steps"`
 	MaxMin   int     `json:"max_minutes"`
 	MaxCost  float64 `json:"max_cost"`
+	// What the person gave with the task besides its words (pilot.Extra):
+	// a question about the screen the phone shows as it starts (Pinky's
+	// floating entry), and what they shared into Pinky from another app.
+	Screen bool         `json:"screen,omitempty"`
+	Shared string       `json:"shared,omitempty"`
+	Images []StartImage `json:"images,omitempty"`
+}
+
+// StartImage is a picture the person shared with a task: "image/jpeg",
+// "image/png", "image/gif" or "image/webp", and its bytes (base64 in
+// JSON).
+type StartImage struct {
+	MIME string `json:"mime"`
+	Data []byte `json:"data"`
+}
+
+func (r StartRequest) extra() pilot.Extra {
+	x := pilot.Extra{Screen: r.Screen, Shared: r.Shared}
+	for _, im := range r.Images {
+		x.Images = append(x.Images, pilot.Image{Data: im.Data, MIME: im.MIME})
+	}
+	return x
 }
 
 // Config is the task's pilot.Config.
@@ -258,6 +280,9 @@ func (c *Core) Start(r StartRequest) error {
 	if cfg.Normalize().Model == "" {
 		return pilot.ErrNoModel
 	}
+	if _, err := r.extra().Check(); err != nil {
+		return err
+	}
 	c.startMu.Lock()
 	defer c.startMu.Unlock()
 	// The running task holds the claim: claiming again would rename it,
@@ -281,7 +306,7 @@ func (c *Core) Start(r StartRequest) error {
 	c.run++
 	run := c.run
 	c.mu.Unlock()
-	if err := c.pilot.Start(cfg, d.Info.ID, task); err != nil {
+	if err := c.pilot.StartWith(cfg, d.Info.ID, task, r.extra()); err != nil {
 		c.endedLocked(run)
 		return err
 	}

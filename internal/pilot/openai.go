@@ -25,7 +25,8 @@ type openAI struct {
 	hc       *http.Client
 	tools    []oaTool
 	history  []oaMessage
-	noImages bool // the model took no images: send none
+	noImages bool    // the model took no images: send none
+	pending  []image // pictures for the person's next message (attach)
 	// session names the conversation to services that ask for it in a
 	// header (OpenCode Go refuses requests without x-opencode-session);
 	// empty for the others.
@@ -154,6 +155,23 @@ func parameters(s map[string]any) map[string]any {
 
 func (o *openAI) setKey(key string) { o.key = key }
 
+// attach keeps pictures the person shared for their next message, before
+// its text.
+func (o *openAI) attach(images []image) { o.pending = append(o.pending, images...) }
+
+func imageParts(images []image) []oaPart {
+	var out []oaPart
+	for _, im := range images {
+		mime := im.mime
+		if mime == "" {
+			mime = "image/jpeg"
+		}
+		out = append(out, oaPart{Type: "image_url", ImageURL: &oaImageURL{
+			URL: "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(im.data)}})
+	}
+	return out
+}
+
 func (o *openAI) send(ctx context.Context, results []result, text string) (*turn, error) {
 	var images []oaPart
 	for _, r := range results {
@@ -162,19 +180,26 @@ func (o *openAI) send(ctx context.Context, results []result, text string) (*turn
 			content = "error: " + content
 		}
 		o.history = append(o.history, oaMessage{Role: "tool", ToolCallID: r.id, Content: content})
-		for _, im := range r.images {
-			mime := im.mime
-			if mime == "" {
-				mime = "image/jpeg"
-			}
-			images = append(images, oaPart{Type: "image_url", ImageURL: &oaImageURL{
-				URL: "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(im.data)}})
-		}
+		images = append(images, imageParts(r.images)...)
+	}
+	var shared []oaPart // pictures the person shared, with their text
+	if text != "" {
+		shared = imageParts(o.pending)
+		o.pending = nil
 	}
 	if o.noImages {
-		images = nil
+		images, shared = nil, nil
 	}
 	switch {
+	case len(shared) > 0:
+		// The person's message, with the pictures they shared, after
+		// any screenshots of the calls above.
+		parts := append(shared, oaPart{Type: "text", Text: text})
+		if len(images) > 0 {
+			parts = append(append([]oaPart{{Type: "text", Text: shotLabel}}, images...), parts...)
+		}
+		images = append(images, shared...)
+		o.history = append(o.history, oaMessage{Role: "user", Content: parts})
 	case len(images) > 0:
 		parts := append([]oaPart{{Type: "text", Text: shotLabel}}, images...)
 		if text != "" {
@@ -276,13 +301,17 @@ func (o *openAI) dropImages() {
 			continue
 		}
 		var texts []string
+		pictures := false
 		for _, p := range parts {
 			if p.Type == "text" && p.Text != shotLabel {
 				texts = append(texts, p.Text)
 			}
+			pictures = pictures || p.Type == "image_url"
 		}
 		if len(texts) == 0 {
 			texts = []string{"[The screenshot could not be sent: this model takes no images.]"}
+		} else if pictures {
+			texts = append(texts, "[The pictures could not be sent: this model takes no images.]")
 		}
 		o.history[i].Content = strings.Join(texts, "\n")
 	}

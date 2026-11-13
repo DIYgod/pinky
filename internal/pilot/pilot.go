@@ -339,7 +339,13 @@ func New(o Options) *Runner {
 
 // Start starts a task on a phone. It returns at once; Status follows it.
 func (r *Runner) Start(cfg Config, device, task string) error {
-	_, err := r.start(cfg, Request{Device: device, Task: task})
+	return r.StartWith(cfg, device, task, Extra{})
+}
+
+// StartWith starts a task on a phone with what the person gave besides
+// its words (Extra), as Start does.
+func (r *Runner) StartWith(cfg Config, device, task string, x Extra) error {
+	_, err := r.start(cfg, Request{Device: device, Task: task, Extra: x})
 	return err
 }
 
@@ -349,6 +355,11 @@ func (r *Runner) start(cfg Config, req Request) (*run, error) {
 	if task == "" || req.Device == "" {
 		return nil, ErrNoTask
 	}
+	x, err := req.Extra.Check()
+	if err != nil {
+		return nil, err
+	}
+	req.Extra = x
 	cfg = cfg.Normalize()
 	if cfg.Model == "" {
 		return nil, ErrNoModel
@@ -616,8 +627,7 @@ func (r *Runner) notify() {
 
 // run is one task.
 type run struct {
-	r *Runner
-
+	r   *Runner
 	req Request
 
 	mu      sync.Mutex
@@ -867,9 +877,12 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		ru.mu.Lock()
 		ru.m, ru.tools = m, tools
 		ru.mu.Unlock()
-		text = firstMessage(task, device, res.text, time.Now())
+		text = firstMessage(task, device, res.text, time.Now()) + ru.req.Extra.prompt()
 		if ru.req.Agent.Name != "" {
 			text += "\n\n" + fromAgent(ru.req.Agent.Name)
+		}
+		if a, ok := m.(attacher); ok && len(ru.req.Extra.Images) > 0 {
+			a.attach(ru.req.Extra.images())
 		}
 	} else {
 		m.setKey(key)
