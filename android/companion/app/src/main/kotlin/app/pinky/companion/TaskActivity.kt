@@ -503,17 +503,23 @@ class TaskActivity : Activity() {
         continueError.say("")
         updateContinue()
         // The key of the service the task runs on, which Settings may have
-        // changed since.
-        val provider = state?.optJSONObject("agent")?.optString("provider").orEmpty().ifEmpty { settings.provider }
+        // changed since: the name it is saved under, or, from a core of
+        // before, the API's, the name keys had then. A local server needs
+        // none.
+        val agent = state?.optJSONObject("agent")
+        val keyName = agent?.optString("key_name").orEmpty()
+            .ifEmpty { agent?.optString("provider").orEmpty() }
+            .ifEmpty { settings.keyName() }
+        val optional = agent?.optBoolean("key_optional") == true
         CoreClient.background {
             val why = try {
-                val key = secrets.load(provider)
+                val key = secrets.load(keyName)
                 when {
-                    key != null -> {
-                        CoreClient.call(CoreClient.cmd("continue", "text" to text, "key" to key))
+                    key != null || optional && !secrets.has(keyName) -> {
+                        CoreClient.call(CoreClient.cmd("continue", "text" to text, "key" to key.orEmpty()))
                         null
                     }
-                    secrets.has(provider) -> getString(R.string.phone_err_key_lost)
+                    secrets.has(keyName) -> getString(R.string.phone_err_key_lost)
                     else -> getString(R.string.phone_no_key)
                 }
             } catch (e: CoreClient.Refused) {
