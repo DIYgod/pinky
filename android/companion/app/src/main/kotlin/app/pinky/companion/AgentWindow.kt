@@ -6,6 +6,7 @@ import android.media.MediaFormat
 import android.net.LocalSocket
 import android.os.Handler
 import android.os.Looper
+import android.text.TextUtils
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
@@ -49,6 +50,7 @@ class AgentWindow(private val service: PinkyAccessibilityService, private val o:
     private var lp: WindowManager.LayoutParams? = null
 
     private var large = false
+    private var largeBefore = false // the size before the person took over
     private var videoW = 0
     private var videoH = 0
     private var yours = false // the person has the task (task.state "paused")
@@ -84,8 +86,14 @@ class AgentWindow(private val service: PinkyAccessibilityService, private val o:
         val w = root ?: create()
         if (paused != yours) {
             yours = paused
-            // Taking over means working on the picture: make it large.
-            if (paused) large = true
+            // Taking over means working on the picture: make it large, and
+            // as it was again once the person hands the task back.
+            if (paused) {
+                largeBefore = large
+                large = true
+            } else {
+                large = largeBefore
+            }
             layout()
         }
         takeButton?.text = service.getString(if (yours) R.string.phone_bg_hand_back else R.string.phone_bg_take_over)
@@ -108,6 +116,7 @@ class AgentWindow(private val service: PinkyAccessibilityService, private val o:
         lp = null
         yours = false
         large = false
+        largeBefore = false
         changed()
     }
 
@@ -129,7 +138,8 @@ class AgentWindow(private val service: PinkyAccessibilityService, private val o:
         val text = TextView(service).apply {
             setTextColor(Overlays.MUTED)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            maxLines = 1
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
             setPadding(o.px(6), 0, o.px(6), o.px(4))
         }
         val sv = SurfaceView(service)
@@ -203,6 +213,11 @@ class AgentWindow(private val service: PinkyAccessibilityService, private val o:
             h = maxH
         }
         sv.layoutParams = LinearLayout.LayoutParams(w, h)
+        // The label wraps within the picture's width, and the small
+        // window, too narrow for three buttons, leaves out Take over:
+        // tapping the picture takes over there.
+        label?.layoutParams = LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT)
+        takeButton?.visibility = if (large) View.VISIBLE else View.GONE
         sizeButton?.text = service.getString(if (large) R.string.phone_bg_window_smaller else R.string.phone_bg_window_larger)
         p.gravity = if (large) Gravity.TOP or Gravity.CENTER_HORIZONTAL else Gravity.TOP or Gravity.END
         p.x = if (large) 0 else o.px(8)
