@@ -2,6 +2,14 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 智能体现在可以用新的 phone_task_run 把整个任务交给 Pinky 自带的智能体，用 phone_task_wait、phone_task_status 和 phone_task_list 跟进，用 phone_task_steer 补充要求或让它接着做，用 phone_task_cancel 取消。任务以那个智能体的身份进行，遵守它的权限和你的规则，会带着它的名字显示在「交给 Pinky」里，你也可以在那里给它发消息或让它继续。
+- 「交给 Pinky」现在内置 DeepSeek、通义千问、Kimi、智谱 GLM、硅基流动、火山方舟、OpenRouter、Anthropic、OpenAI、Gemini、Ollama 和 LM Studio 的预设，每个服务分别保存密钥、模型和地址。
+- 保存密钥、模型或地址后会立即检查模型，出错时说清楚原因。
+- 设置里可以看到 Pinky 自带的智能体今天、近 7 天和近 30 天用了多少 token，按服务和模型列出，知道价格的还会显示费用；任务框显示今天的用量。这些数据只保存在本机。
+- Android 和 iPhone 上的 Pinky 也有同样的服务预设、检查和用量。
+
 ## 2026.1113.9 (2026-11-13)
 
 - Pinky 自带的智能体做任务时，可以在电脑上的「交给 Pinky」或手机的任务页给它发消息；Pinky 读到之前，还能编辑或撤回。

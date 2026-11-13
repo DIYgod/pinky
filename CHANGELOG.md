@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Agents can hand Pinky's own agent a whole task with the new phone_task_run, follow it with phone_task_wait, phone_task_status and phone_task_list, add to it or continue it with phone_task_steer, and cancel it with phone_task_cancel. The task works as that agent, within its access and your rules, and shows in Ask Pinky with the agent's name, where you can message or continue it too.
+- Ask Pinky now has ready-made settings for DeepSeek, Qwen, Kimi, Zhipu GLM, SiliconFlow, Volcengine Ark, OpenRouter, Anthropic, OpenAI, Gemini, Ollama and LM Studio, each with its own key, model and address.
+- Saving a key, model or address now checks the model right away and says clearly what went wrong.
+- Settings shows how many tokens Pinky's own agent used today, in the last 7 days and in the last 30, by service and model, with the cost where the price is known; the task box shows today's. It stays on your device.
+- Pinky on Android and iPhone offers the same services, the check and the usage.
+
 ## 2026.1113.9 (2026-11-13)
 
 - While Pinky's own agent works on a task, you can send it a message from Ask Pinky on the computer or from the task screen on the phone, and edit or withdraw it until Pinky reads it.
