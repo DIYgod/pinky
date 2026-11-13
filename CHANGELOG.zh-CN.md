@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1113.9 (2026-11-13)
 
 - Pinky 自带的智能体做任务时，可以在电脑上的「交给 Pinky」或手机的任务页给它发消息；Pinky 读到之前，还能编辑或撤回。
 - 任务结束后，点「继续」再发一条消息，Pinky 会接着做同一个任务，限额重新计算。
