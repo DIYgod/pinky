@@ -334,6 +334,7 @@ type app struct {
 	shownOnce bool          // the main window has shown (Options.Hidden)
 
 	mediaCache map[string]*mediaEntry // step screenshots by media id
+	mediaSweep bool                   // a sweepMedia is due (mediaKeep)
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
 	always     alwaysState       // Settings › Safety › Always allowed

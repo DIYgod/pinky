@@ -117,7 +117,14 @@ type mediaEntry struct {
 	w, h    int
 	err     error
 	loading bool
+	usedAt  time.Time // when a build last asked for it
 }
+
+// mediaKeep is how long a step screenshot no build asks for stays loaded.
+// A task looked at again soon shows its screenshots at once; the ones left
+// behind let their pixels go, megabytes each, rather than pile up over a
+// day of tasks.
+const mediaKeep = 30 * time.Second
 
 // media returns a step screenshot by its media id, loading it in the
 // background the first time: nil while it loads, or when the gateway has
@@ -131,6 +138,7 @@ func (a *app) media(id string) *mediaEntry {
 		return nil
 	}
 	if e, ok := a.mediaCache[id]; ok {
+		e.usedAt = time.Now()
 		if e.bitmap == nil {
 			return nil
 		}
@@ -139,8 +147,9 @@ func (a *app) media(id string) *mediaEntry {
 	if len(a.mediaCache) > 400 {
 		a.mediaCache = map[string]*mediaEntry{} // keep memory bounded; they load again
 	}
-	e := &mediaEntry{loading: true}
+	e := &mediaEntry{loading: true, usedAt: time.Now()}
 	a.mediaCache[id] = e
+	a.sweepMediaLater()
 	go func() {
 		ctx, cancel := context.WithTimeout(a.ctx, 10*time.Second)
 		defer cancel()
@@ -164,6 +173,31 @@ func (a *app) media(id string) *mediaEntry {
 		})
 	}()
 	return nil
+}
+
+// sweepMediaLater has sweepMedia run once mediaKeep has passed, unless
+// one is due already. It runs whether or not a window builds meanwhile: a
+// closed window builds nothing.
+func (a *app) sweepMediaLater() {
+	if a.mediaSweep {
+		return
+	}
+	a.mediaSweep = true
+	time.AfterFunc(mediaKeep, func() { a.post(a.sweepMedia) })
+}
+
+// sweepMedia lets go of the step screenshots no build asked for during
+// mediaKeep, and comes again while some stay loaded.
+func (a *app) sweepMedia() {
+	a.mediaSweep = false
+	for id, e := range a.mediaCache {
+		if time.Since(e.usedAt) >= mediaKeep {
+			delete(a.mediaCache, id)
+		}
+	}
+	if len(a.mediaCache) > 0 {
+		a.sweepMediaLater()
+	}
 }
 
 // stepShot returns the screenshot that shows a step best, the one after
