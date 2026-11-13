@@ -219,4 +219,6 @@ androidComponents {
 dependencies {
     // Unit tests of the plain Kotlin rules (app/src/test): no phone needed.
     testImplementation("junit:junit:4.13.2")
+    // org.json as Android has it, for the rules that read the core's JSON.
+    testImplementation("org.json:json:20180813")
 }

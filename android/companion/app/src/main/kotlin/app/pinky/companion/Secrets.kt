@@ -11,7 +11,9 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * The person's model keys, one per provider, kept encrypted with an AES key
+ * The person's model keys, one per service under its key name
+ * (TaskSettings.keyName: the service's ID, or the API's for the custom
+ * entries and for keys saved before there were services), kept encrypted with an AES key
  * that lives in the Android Keystore and never leaves it. Only the
  * ciphertext is in this app's files, and neither backups nor transfers to
  * a new phone take it (allowBackup="false", data_extraction_rules.xml):
@@ -22,17 +24,17 @@ class Secrets(context: Context) {
 
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** Whether a key is saved for this provider. */
-    fun has(provider: String): Boolean = prefs.contains(name(provider))
+    /** Whether a key is saved for this key name. */
+    fun has(keyName: String): Boolean = prefs.contains(name(keyName))
 
     /**
-     * The saved key for this provider, or null when there is none or it can
+     * The saved key for this key name, or null when there is none or it can
      * no longer be read (the Keystore key was lost, for example after the
      * phone's screen lock was removed on some phones): the person types it
      * again.
      */
-    fun load(provider: String): String? {
-        val stored = prefs.getString(name(provider), null) ?: return null
+    fun load(keyName: String): String? {
+        val stored = prefs.getString(name(keyName), null) ?: return null
         return try {
             val raw = Base64.decode(stored, Base64.NO_WRAP)
             if (raw.size <= IV_BYTES) return null
@@ -44,8 +46,8 @@ class Secrets(context: Context) {
         }
     }
 
-    /** Saves the key for this provider, replacing any saved before. */
-    fun save(provider: String, key: String) {
+    /** Saves the key for this key name, replacing any saved before. */
+    fun save(keyName: String, key: String) {
         val c = Cipher.getInstance(TRANSFORMATION)
         c.init(Cipher.ENCRYPT_MODE, secretKey())
         val iv = c.iv
@@ -53,15 +55,15 @@ class Secrets(context: Context) {
         val out = ByteArray(iv.size + sealed.size)
         System.arraycopy(iv, 0, out, 0, iv.size)
         System.arraycopy(sealed, 0, out, iv.size, sealed.size)
-        prefs.edit().putString(name(provider), Base64.encodeToString(out, Base64.NO_WRAP)).apply()
+        prefs.edit().putString(name(keyName), Base64.encodeToString(out, Base64.NO_WRAP)).apply()
     }
 
-    /** Forgets the key for this provider. */
-    fun forget(provider: String) {
-        prefs.edit().remove(name(provider)).apply()
+    /** Forgets the key for this key name. */
+    fun forget(keyName: String) {
+        prefs.edit().remove(name(keyName)).apply()
     }
 
-    private fun name(provider: String) = "key_$provider"
+    private fun name(keyName: String) = "key_$keyName"
 
     private fun secretKey(): SecretKey {
         val ks = KeyStore.getInstance(KEYSTORE).apply { load(null) }

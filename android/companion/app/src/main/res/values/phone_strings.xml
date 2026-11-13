@@ -143,7 +143,7 @@
     <!-- Settings: the AI model. -->
     <string name="phone_section_model">AI model</string>
     <string name="phone_service">Service</string>
-    <string name="phone_service_desc">Claude through Anthropic\'s API, or another model through a service compatible with OpenAI\'s. Each has its own key.</string>
+    <string name="phone_service_desc">Who runs the model. Each service keeps its own API key, model and address.</string>
     <string name="phone_service_anthropic">Anthropic-compatible API</string>
     <string name="phone_service_openai">OpenAI-compatible API</string>
     <string name="phone_key">API key</string>
@@ -167,6 +167,46 @@
     <string name="phone_url_desc_openai">The address of the service\'s OpenAI-compatible API, such as https://…/v1. OpenAI\'s own by default.</string>
     <string name="phone_url_err">Enter an address that starts with https:// or http://.</string>
 
+    <!-- The model's check and what it used (desktop: ui/ask.go, askCheckRow and askUsage). -->
+    <string name="phone_service_region">%1$s (%2$s)</string>
+    <string name="phone_region_china">China</string>
+    <string name="phone_region_global">International</string>
+    <string name="phone_key_optional_desc">Only if you set one up on the server. Kept encrypted on this phone and sent only to the server.</string>
+    <string name="phone_key_none">None</string>
+    <string name="phone_model_suggested_desc">Models that read images and use tools, as Pinky needs. Choose Other… for another model of the service.</string>
+    <string name="phone_model_local_desc">The name of a model the server runs. It must read images and use tools.</string>
+    <string name="phone_model_other">Other…</string>
+    <string name="phone_url_desc_service">The service\'s own address by default. Change it only to go through another address, such as a proxy.</string>
+    <string name="phone_url_desc_local">The server\'s address on your network, such as http://192.168.1.10:11434/v1: the computer that runs it, not this phone.</string>
+    <string name="phone_check">Check</string>
+    <string name="phone_check_desc">Sends the model one tiny request to see that it answers and uses tools. Pinky does it when you save a key, model or address.</string>
+    <string name="phone_check_now">Check</string>
+    <string name="phone_check_again">Check Again</string>
+    <string name="phone_checking">Checking…</string>
+    <string name="phone_check_ok">The model answered and used a tool, in %1$s s.</string>
+    <string name="phone_check_detail">The service said: %1$s</string>
+    <string name="phone_check_core_down">Turn on Pinky to check the model.</string>
+    <string name="phone_check_no_model">Choose a model first.</string>
+    <string name="phone_check_no_key">Add an API key first.</string>
+    <string name="phone_check_bad_key">The service didn\'t accept the API key. Check that it is a key of this service.</string>
+    <string name="phone_check_no_credit">The service says the account has no credit left. Top it up on the service\'s site.</string>
+    <string name="phone_check_not_found">The service doesn\'t know this model or address. Check the model\'s name and the API address.</string>
+    <string name="phone_check_busy">The service is busy or limited the request. Try again in a moment.</string>
+    <string name="phone_check_rejected">The service refused the request.</string>
+    <string name="phone_check_no_tools">The model answered but didn\'t use a tool. Pinky works through tools, so choose a model that uses them.</string>
+    <string name="phone_check_unreachable">Pinky couldn\'t reach the API address. Check it, and that the service or server is running.</string>
+    <string name="phone_check_bad_answer">The address answered, but not as an API Pinky knows. Check the API address.</string>
+    <string name="phone_section_usage">Usage</string>
+    <string name="phone_usage_desc">The tokens Pinky\'s own agent used, as the services reported them, and what they cost where Pinky knows the prices. Kept on this phone only.</string>
+    <string name="phone_usage_week">Last 7 days</string>
+    <string name="phone_usage_month">Last 30 days</string>
+    <string name="phone_usage_none">Nothing yet.</string>
+    <string name="phone_usage_today_line">Today: %1$s</string>
+    <plurals name="phone_usage_requests">
+        <item quantity="one">%1$d request</item>
+        <item quantity="other">%1$d requests</item>
+    </plurals>
+
     <!-- Settings: the limits of a task. -->
     <string name="phone_section_limits">Limits</string>
     <string name="phone_steps_limit">Steps per task</string>
@@ -174,7 +214,7 @@
     <string name="phone_time_limit">Time per task</string>
     <string name="phone_time_limit_desc">Time spent waiting for you doesn\'t count.</string>
     <string name="phone_cost_limit">Cost per task</string>
-    <string name="phone_cost_limit_desc">Counted from what the service reports, at Anthropic\'s prices.</string>
+    <string name="phone_cost_limit_desc">Counted from what the service reports, at the prices it publishes.</string>
     <string name="phone_cost_limit_desc_tokens">Pinky doesn\'t know this model\'s prices, so it counts a million tokens as US$1.</string>
 
     <!-- Settings: when Pinky asks (policy.Preset). -->

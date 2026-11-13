@@ -124,7 +124,7 @@ class RequestHandler(
     }
 
     /**
-     * debug_model sets the model's service, address and model and saves its
+     * debug_model sets the model's service (or API), address and model and saves its
      * key, as Settings does, for tests with a real model (corectl model,
      * which reads the key from its standard input so that it never appears
      * on a command line). Only debug builds have it, and only for this
@@ -135,20 +135,27 @@ class RequestHandler(
         if (!BuildConfig.DEBUG) throw RequestError("unknown_command", "unknown command: debug_model")
         if (!conn.own) throw RequestError("forbidden", "only this app's own uid may set the model")
         val settings = TaskSettings(service)
-        val p = if (req.optString("provider") == TaskSettings.OPENAI) TaskSettings.OPENAI else TaskSettings.ANTHROPIC
-        settings.provider = p
+        // A service, or an API as before there were services (corectl model).
+        val id = req.optString("service").ifEmpty {
+            val p = if (req.optString("provider") == TaskSettings.OPENAI) TaskSettings.OPENAI else TaskSettings.ANTHROPIC
+            ModelServices.serviceFor(p, req.optString("base_url"))
+        }
+        if (ModelServices.byId(service, id) == null) throw RequestError("bad_request", "unknown service $id")
+        settings.service = id
         if (req.has("base_url")) {
             val u = req.getString("base_url")
             if (!TaskSettings.urlOK(u)) throw RequestError("bad_request", "base_url must be http or https")
-            settings.setBaseUrl(p, u)
+            settings.setBaseUrl(id, u)
         }
-        if (req.has("model")) settings.setModel(p, req.getString("model"))
+        if (req.has("model")) settings.setModel(id, req.getString("model"))
         val key = req.optString("key")
-        if (key.isNotEmpty()) Secrets(service).save(p, key)
+        val name = settings.keyName(id)
+        if (key.isNotEmpty()) Secrets(service).save(name, key)
         val j = Json()
         j.beginObject()
-        j.field("provider", p)
-        j.field("key_saved", Secrets(service).has(p))
+        j.field("service", id)
+        j.field("provider", settings.provider(id))
+        j.field("key_saved", Secrets(service).has(name))
         j.endObject()
         return j.toString()
     }

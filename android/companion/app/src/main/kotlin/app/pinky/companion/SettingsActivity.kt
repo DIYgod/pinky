@@ -22,7 +22,8 @@ import java.io.IOException
  * updates.
  *
  * The model, its address and the limits are kept here (TaskSettings), the
- * keys in Secrets, each per service. When Pinky asks belongs to the core
+ * keys in Secrets, each per service. The model's check and what it used
+ * come from the core (the control socket's check and usage commands). When Pinky asks belongs to the core
  * (policy.Preset), so it changes only while the core runs. Like the task
  * screen, this one is closed to agents (Look).
  */
@@ -42,11 +43,19 @@ class SettingsActivity : Activity() {
     private var updateFound: UpdateCheck.Update? = null
     private var updateNote = ""
     private var open: Open? = null // the dialog opened last, to open again with the screen
+    private var checkRun = "" // the model a check runs for (checkSig), or ""
+    private var checkFor = "" // the model the last check was of
+    private var checkResult: JSONObject? = null // the core's pilot.CheckResult, or {"problem":"core_down"}
+    private var usage: List<ModelUsage.Row> = emptyList()
+    private var usageReads = 0
 
     private lateinit var serviceRow: Look.Row
     private lateinit var keyRow: Look.Row
     private lateinit var modelRow: Look.Row
     private lateinit var urlRow: Look.Row
+    private lateinit var checkRow: Look.Row
+    private lateinit var usageRows: List<Look.Row>
+    private lateinit var usageDays: LinearLayout
     private lateinit var stepsRow: Look.Row
     private lateinit var timeRow: Look.Row
     private lateinit var costRow: Look.Row
@@ -71,12 +80,21 @@ class SettingsActivity : Activity() {
         keyRow = look.row(getString(R.string.phone_key), desc = getString(R.string.phone_key_desc)) { keyMenu() }
         modelRow = look.row(getString(R.string.phone_model)) { chooseModel() }
         urlRow = look.row(getString(R.string.phone_url)) { editUrl() }
-        addGroup(col, R.string.phone_section_model, serviceRow.view, keyRow.view, modelRow.view, urlRow.view)
+        checkRow = look.row(getString(R.string.phone_check), desc = getString(R.string.phone_check_desc)) { runCheck() }
+        addGroup(col, R.string.phone_section_model, serviceRow.view, keyRow.view, modelRow.view, urlRow.view, checkRow.view)
 
         stepsRow = look.row(getString(R.string.phone_steps_limit), desc = getString(R.string.phone_steps_limit_desc)) { chooseSteps() }
         timeRow = look.row(getString(R.string.phone_time_limit), desc = getString(R.string.phone_time_limit_desc)) { chooseTime() }
         costRow = look.row(getString(R.string.phone_cost_limit)) { chooseCost() }
         addGroup(col, R.string.phone_section_limits, stepsRow.view, timeRow.view, costRow.view)
+
+        usageRows = listOf(R.string.phone_today, R.string.phone_usage_week, R.string.phone_usage_month).map {
+            look.row(getString(it), getString(R.string.phone_usage_none))
+        }
+        addGroup(col, R.string.phone_section_usage, *usageRows.map { it.view }.toTypedArray())
+        col.addView(look.note(getString(R.string.phone_usage_desc)), look.matchWrap())
+        usageDays = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        col.addView(usageDays, look.matchWrap())
 
         for ((id, title, desc) in PRESETS) {
             presets += id to look.choice(getString(title), getString(desc)) { setPreset(id) }
@@ -117,6 +135,7 @@ class SettingsActivity : Activity() {
     override fun onStart() {
         super.onStart()
         sub = CoreClient.subscribe(this, { st -> main.post { onState(st) } }, { main.post { onDown() } })
+        readUsage()
     }
 
     // The screen is made anew when it is turned, or its theme or language
@@ -139,7 +158,7 @@ class SettingsActivity : Activity() {
         when (o) {
             Open.SERVICE -> chooseService()
             Open.KEY_MENU -> keyMenu()
-            Open.KEY -> askKey(settings.provider)
+            Open.KEY -> askKey(settings.keyName())
             Open.MODEL -> chooseModel(typed)
             Open.URL -> editUrl(typed)
             Open.STEPS -> chooseSteps()
@@ -186,23 +205,34 @@ class SettingsActivity : Activity() {
     }
 
     private fun render() {
-        val p = settings.provider
-        serviceRow.value.say(serviceName(p))
-        val hasKey = secrets.has(p)
-        keyRow.value.say(getString(if (hasKey) R.string.phone_key_saved else R.string.phone_key_add))
-        keyRow.value.setTextColor(if (hasKey) look.ink3 else look.accent)
-        val model = settings.modelLabel(p)
+        val id = settings.service
+        val svc = settings.svc(id)
+        serviceRow.value.say(settings.serviceLabel(resources, svc))
+        val hasKey = secrets.has(svc.keyName)
+        keyRow.value.say(
+            getString(
+                when {
+                    hasKey -> R.string.phone_key_saved
+                    svc.keyOptional -> R.string.phone_key_none
+                    else -> R.string.phone_key_add
+                },
+            ),
+        )
+        keyRow.value.setTextColor(if (hasKey || svc.keyOptional) look.ink3 else look.accent)
+        keyRow.desc.say(getString(if (svc.keyOptional) R.string.phone_key_optional_desc else R.string.phone_key_desc))
+        val model = settings.modelLabel(id)
         modelRow.value.say(model.ifEmpty { getString(R.string.phone_model_none) })
         modelRow.value.setTextColor(if (model.isEmpty()) look.accent else look.ink3)
-        modelRow.desc.say(getString(if (settings.claudeList(p)) R.string.phone_model_claude_desc else R.string.phone_model_desc))
-        urlRow.value.say(settings.baseUrl(p).ifEmpty { getString(R.string.phone_url_default) })
-        urlRow.desc.say(urlDesc(p))
+        modelRow.desc.say(modelDesc(svc))
+        urlRow.value.say(settings.address(id).ifEmpty { getString(R.string.phone_url_default) })
+        urlRow.desc.say(urlDesc(svc))
+        renderCheck()
 
         stepsRow.value.say(Words.steps(resources, settings.maxSteps))
         timeRow.value.say(Words.minutes(resources, settings.maxMinutes))
         costRow.value.say(costLabel(settings.maxCost))
         costRow.desc.say(
-            getString(if (settings.priced(p)) R.string.phone_cost_limit_desc else R.string.phone_cost_limit_desc_tokens),
+            getString(if (settings.priced(id)) R.string.phone_cost_limit_desc else R.string.phone_cost_limit_desc_tokens),
         )
 
         for ((id, c) in presets) {
@@ -227,17 +257,21 @@ class SettingsActivity : Activity() {
 
     private fun chooseService() {
         open = Open.SERVICE
-        val options = listOf(TaskSettings.ANTHROPIC, TaskSettings.OPENAI)
-        look.choose(getString(R.string.phone_service), options.map { serviceName(it) }, options.indexOf(settings.provider)) { i ->
-            settings.provider = options[i]
+        val list = ModelServices.all(this)
+        look.choose(
+            getString(R.string.phone_service),
+            list.map { settings.serviceLabel(resources, it) },
+            list.indexOfFirst { it.id == settings.service },
+        ) { i ->
+            settings.service = list[i].id
             render()
         }
     }
 
     private fun keyMenu() {
-        val p = settings.provider
-        if (!secrets.has(p)) {
-            askKey(p)
+        val name = settings.keyName()
+        if (!secrets.has(name)) {
+            askKey(name)
             return
         }
         open = Open.KEY_MENU
@@ -246,25 +280,28 @@ class SettingsActivity : Activity() {
             listOf(getString(R.string.phone_key_change), getString(R.string.phone_key_remove)),
         ) { i ->
             if (i == 0) {
-                askKey(p)
+                askKey(name)
             } else {
-                secrets.forget(p)
+                secrets.forget(name)
+                checkFor = ""
+                checkResult = null
                 toast(getString(R.string.phone_key_removed_toast))
                 render()
             }
         }
     }
 
-    // Adds a key, or changes the saved one.
-    private fun askKey(p: String) {
+    // Adds a key, or changes the saved one, under its name (TaskSettings.keyName); then checks the model with it.
+    private fun askKey(name: String) {
         open = Open.KEY
-        val title = getString(if (secrets.has(p)) R.string.phone_key_change else R.string.phone_setup_key)
-        look.edit(title, getString(R.string.phone_key_desc), "", getString(R.string.phone_key_hint), Look.Field.SECRET) { v ->
+        val title = getString(if (secrets.has(name)) R.string.phone_key_change else R.string.phone_setup_key)
+        val desc = getString(if (settings.keyOptional()) R.string.phone_key_optional_desc else R.string.phone_key_desc)
+        look.edit(title, desc, "", getString(R.string.phone_key_hint), Look.Field.SECRET) { v ->
             val key = v.trim()
             // The Keystore may take a moment, the first time above all.
             CoreClient.background {
                 val saved = try {
-                    secrets.save(p, key)
+                    secrets.save(name, key)
                     true
                 } catch (e: Exception) {
                     // Only its class: its message could say how long the key is.
@@ -274,59 +311,214 @@ class SettingsActivity : Activity() {
                 main.post {
                     toast(getString(if (saved) R.string.phone_key_saved_toast else R.string.phone_key_err_save))
                     render()
+                    if (saved && !isDestroyed) runCheck()
                 }
             }
         }
     }
 
-    // typed is what the box held when the screen was made anew.
+    // typed is what the box held when the screen was made anew: the box
+    // was open, rather than the list.
     private fun chooseModel(typed: String? = null) {
         open = Open.MODEL
-        val p = settings.provider
-        if (!settings.claudeList(p)) {
-            look.edit(
-                getString(R.string.phone_model),
-                getString(R.string.phone_model_desc),
-                typed ?: settings.model(p),
-                getString(R.string.phone_model_hint),
-                Look.Field.TEXT,
-            ) { v ->
-                settings.setModel(p, v)
-                render()
-            }
+        val id = settings.service
+        val svc = settings.svc(id)
+        if (typed != null || svc.models.isEmpty()) {
+            typeModel(id, typed)
             return
         }
-        val models = TaskSettings.CLAUDE_MODELS.toMutableList()
-        val cur = settings.model(p)
-        // A model set some other way stays on the list.
-        if (models.none { it.first == cur }) models += cur to cur
-        look.choose(getString(R.string.phone_model), models.map { it.second }, models.indexOfFirst { it.first == cur }) { i ->
-            settings.setModel(p, models[i].first)
-            render()
+        // The models the service suggests, the one set some other way, and Other… to type one.
+        val cur = settings.model(id)
+        val ids = svc.models.map { it.id }.toMutableList()
+        val labels = svc.models.map { it.label }.toMutableList()
+        if (cur.isNotEmpty() && cur !in ids) {
+            ids += cur
+            labels += cur
         }
+        look.choose(getString(R.string.phone_model), labels + getString(R.string.phone_model_other), ids.indexOf(cur)) { i ->
+            if (i == ids.size) typeModel(id, null) else setModel(id, ids[i])
+        }
+    }
+
+    private fun typeModel(id: String, typed: String?) {
+        open = Open.MODEL
+        look.edit(
+            getString(R.string.phone_model),
+            modelDesc(settings.svc(id)),
+            typed ?: settings.model(id),
+            getString(R.string.phone_model_hint),
+            Look.Field.TEXT,
+        ) { v -> setModel(id, v) }
+    }
+
+    private fun setModel(id: String, v: String) {
+        settings.setModel(id, v)
+        render()
+        runCheck()
     }
 
     private fun editUrl(typed: String? = null) {
         open = Open.URL
-        val p = settings.provider
+        val id = settings.service
+        val svc = settings.svc(id)
         look.edit(
             getString(R.string.phone_url),
-            urlDesc(p),
-            typed ?: settings.baseUrl(p),
-            if (p == TaskSettings.OPENAI) "https://api.openai.com/v1" else "https://api.anthropic.com",
+            urlDesc(svc),
+            typed ?: settings.address(id),
+            svc.baseUrl.ifEmpty { if (svc.api == TaskSettings.OPENAI) "https://…/v1" else "https://api.anthropic.com" },
             Look.Field.URL,
             { v -> if (TaskSettings.urlOK(v)) null else getString(R.string.phone_url_err) },
         ) { v ->
-            settings.setBaseUrl(p, v)
+            settings.setBaseUrl(id, v)
             render()
+            runCheck()
         }
     }
 
-    private fun serviceName(p: String): String =
-        getString(if (p == TaskSettings.OPENAI) R.string.phone_service_openai else R.string.phone_service_anthropic)
+    private fun modelDesc(svc: ModelServices.Service): String = getString(
+        when {
+            svc.id == TaskSettings.ANTHROPIC -> R.string.phone_model_claude_desc
+            svc.models.isNotEmpty() -> R.string.phone_model_suggested_desc
+            svc.local -> R.string.phone_model_local_desc
+            else -> R.string.phone_model_desc
+        },
+    )
 
-    private fun urlDesc(p: String): String =
-        getString(if (p == TaskSettings.OPENAI) R.string.phone_url_desc_openai else R.string.phone_url_desc_anthropic)
+    private fun urlDesc(svc: ModelServices.Service): String = getString(
+        when {
+            svc.id == ModelServices.CUSTOM_ANTHROPIC -> R.string.phone_url_desc_anthropic
+            svc.id == ModelServices.CUSTOM_OPENAI -> R.string.phone_url_desc_openai
+            svc.local -> R.string.phone_url_desc_local
+            else -> R.string.phone_url_desc_service
+        },
+    )
+
+    // The model's check: one tiny request, in the core (pilot.Check).
+
+    /** The model a check is of. */
+    private fun checkSig(): String = settings.service + "\n" + settings.address() + "\n" + settings.model()
+
+    private fun runCheck() {
+        val sig = checkSig()
+        if (checkRun == sig) return
+        checkRun = sig
+        renderCheck()
+        val id = settings.service
+        val req = settings.checkRequest("", id)
+        val name = settings.keyName(id)
+        CoreClient.background {
+            val res = try {
+                // The key goes to the core for this one request; it is not kept there.
+                req.put("key", secrets.load(name).orEmpty())
+                CoreClient.call(req).optJSONObject("check") ?: JSONObject().put("problem", "bad_answer")
+            } catch (e: Exception) {
+                Log.w(TAG, "could not check the model: ${e.javaClass.name}")
+                JSONObject().put("problem", "core_down")
+            }
+            main.post {
+                if (checkRun != sig || isDestroyed) return@post
+                checkRun = ""
+                checkFor = sig
+                checkResult = res
+                renderCheck()
+                readUsage() // the check used a few tokens
+            }
+        }
+    }
+
+    private fun renderCheck() {
+        val sig = checkSig()
+        val res = checkResult?.takeIf { checkFor == sig }
+        when {
+            checkRun == sig -> {
+                checkRow.value.say(getString(R.string.phone_checking))
+                checkRow.value.setTextColor(look.ink3)
+            }
+            else -> {
+                checkRow.value.say(getString(if (res != null) R.string.phone_check_again else R.string.phone_check_now))
+                checkRow.value.setTextColor(look.accent)
+            }
+        }
+        if (res == null || checkRun == sig) {
+            checkRow.desc.say(getString(R.string.phone_check_desc))
+            checkRow.desc.setTextColor(look.ink3)
+            return
+        }
+        val ok = res.optBoolean("ok")
+        val detail = checkDetail(res)
+        checkRow.desc.say(checkText(res) + if (detail.isEmpty()) "" else "\n" + getString(R.string.phone_check_detail, detail))
+        checkRow.desc.setTextColor(if (ok) look.green else look.red)
+    }
+
+    /** How a check went, in the phone's language (ui/ask.go, checkText). */
+    private fun checkText(res: JSONObject): String {
+        if (res.optBoolean("ok")) {
+            return getString(R.string.phone_check_ok, String.format(java.util.Locale.ROOT, "%.1f", res.optLong("ms") / 1000.0))
+        }
+        return getString(
+            when (res.optString("problem")) {
+                "core_down" -> R.string.phone_check_core_down
+                "no_model" -> R.string.phone_check_no_model
+                "no_key" -> R.string.phone_check_no_key
+                "bad_key" -> R.string.phone_check_bad_key
+                "no_credit" -> R.string.phone_check_no_credit
+                "not_found" -> R.string.phone_check_not_found
+                "busy" -> R.string.phone_check_busy
+                "no_tools" -> R.string.phone_check_no_tools
+                "unreachable" -> R.string.phone_check_unreachable
+                "bad_answer" -> R.string.phone_check_bad_answer
+                else -> R.string.phone_check_rejected
+            },
+        )
+    }
+
+    /** What the service said of a failed check, with its HTTP status; "" for nothing worth showing (checkDetail). */
+    private fun checkDetail(res: JSONObject): String {
+        val detail = res.optString("detail")
+        val status = res.optInt("status")
+        if (res.optBoolean("ok") || detail.isEmpty() || res.optString("problem") == "no_tools" && status == 0) return ""
+        return if (status != 0) "HTTP $status · $detail" else detail
+    }
+
+    // What the model used.
+
+    private fun readUsage() {
+        val n = ++usageReads
+        CoreClient.background {
+            val rows = try {
+                ModelUsage.read()
+            } catch (_: Exception) {
+                null // the core is not there: what was read stays
+            }
+            main.post {
+                if (rows == null || n != usageReads || isDestroyed) return@post
+                usage = rows
+                renderUsage()
+            }
+        }
+    }
+
+    private fun renderUsage() {
+        for ((row, days) in usageRows.zip(listOf(0, 6, 29))) {
+            val t = ModelUsage.total(usage, ModelUsage.dayOf(-days))
+            row.value.say(if (t.tokens > 0) ModelUsage.amount(resources, t) else getString(R.string.phone_usage_none))
+        }
+        // The last days, by service and model.
+        usageDays.removeAllViews()
+        val days = usage.map { it.day }.distinct().take(USAGE_DAYS)
+        if (days.isEmpty()) return
+        val g = look.group()
+        for (day in days) {
+            val ms = ModelUsage.dayMillis(day) ?: continue
+            val lines = usage.filter { it.day == day }.joinToString("\n") { r ->
+                ModelUsage.who(settings, resources, r) + "\n" +
+                    resources.getQuantityString(R.plurals.phone_usage_requests, r.requests, r.requests) + " · " +
+                    ModelUsage.amount(resources, r.tokens, r.cost, r.unpriced)
+            }
+            look.addRow(g, look.row(Words.day(resources, ms), desc = lines).view)
+        }
+        usageDays.addView(g, look.below(12))
+    }
 
     // A task's limits.
 
@@ -433,6 +625,7 @@ class SettingsActivity : Activity() {
         private const val TAG = "PinkyScreens"
         private const val STATE_OPEN = "open_dialog"
         private const val STATE_TEXT = "open_dialog_text"
+        private const val USAGE_DAYS = 7 // how many days Usage lists one by one (ui/ask.go, usageDays)
 
         // policy.Preset's values, as desktop Pinky lists them.
         private val PRESETS = listOf(

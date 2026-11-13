@@ -116,7 +116,7 @@
 
     <string name="phone_section_model">AI 模型</string>
     <string name="phone_service">服务</string>
-    <string name="phone_service_desc">通过 Anthropic 的 API 使用 Claude，或通过兼容 OpenAI 的服务使用其他模型。两者各用各的密钥。</string>
+    <string name="phone_service_desc">选择运行模型的服务。每个服务各自保存 API 密钥、模型和地址。</string>
     <string name="phone_service_anthropic">Anthropic 兼容 API</string>
     <string name="phone_service_openai">OpenAI 兼容 API</string>
     <string name="phone_key">API 密钥</string>
@@ -140,13 +140,52 @@
     <string name="phone_url_desc_openai">服务的 OpenAI 兼容 API 地址，例如 https://…/v1。默认是 OpenAI 官方地址。</string>
     <string name="phone_url_err">请输入以 https:// 或 http:// 开头的地址。</string>
 
+    <!-- The model's check and what it used (desktop: ui/ask.go, askCheckRow and askUsage). -->
+    <string name="phone_service_region">%1$s（%2$s）</string>
+    <string name="phone_region_china">国内</string>
+    <string name="phone_region_global">国际</string>
+    <string name="phone_key_optional_desc">只在服务器设置了密钥时需要。加密保存在这台手机上，只发送给该服务器。</string>
+    <string name="phone_key_none">未设置</string>
+    <string name="phone_model_suggested_desc">这些模型都能看图并调用工具，正是 Pinky 需要的。要用这个服务的其他模型，请选“其他…”。</string>
+    <string name="phone_model_local_desc">填写服务器上运行的模型名称。这个模型需要能看图并调用工具。</string>
+    <string name="phone_model_other">其他…</string>
+    <string name="phone_url_desc_service">默认是服务的官方地址。只有要经由其他地址（例如代理）时才需要更改。</string>
+    <string name="phone_url_desc_local">服务器在你网络中的地址，例如 http://192.168.1.10:11434/v1，是运行它的电脑的地址，不是这台手机的。</string>
+    <string name="phone_check">检查</string>
+    <string name="phone_check_desc">向模型发送一个很小的请求，看它能否回应并调用工具。保存密钥、模型或地址后，Pinky 会自动检查。</string>
+    <string name="phone_check_now">检查</string>
+    <string name="phone_check_again">再次检查</string>
+    <string name="phone_checking">正在检查…</string>
+    <string name="phone_check_ok">模型已回应并调用了工具，用时 %1$s 秒。</string>
+    <string name="phone_check_detail">服务返回：%1$s</string>
+    <string name="phone_check_core_down">开启 Pinky 后才能检查模型。</string>
+    <string name="phone_check_no_model">请先选择模型。</string>
+    <string name="phone_check_no_key">请先添加 API 密钥。</string>
+    <string name="phone_check_bad_key">服务没有接受这个 API 密钥。请确认它是这个服务的密钥。</string>
+    <string name="phone_check_no_credit">服务表示账户余额不足。请在服务的网站上充值。</string>
+    <string name="phone_check_not_found">服务找不到这个模型或地址。请检查模型名称和 API 地址。</string>
+    <string name="phone_check_busy">服务繁忙或限制了请求。请稍后再试。</string>
+    <string name="phone_check_rejected">服务拒绝了这个请求。</string>
+    <string name="phone_check_no_tools">模型回应了，但没有调用工具。Pinky 要靠工具操作手机，请换一个支持工具调用的模型。</string>
+    <string name="phone_check_unreachable">Pinky 连不上这个 API 地址。请检查地址，并确认服务或服务器正在运行。</string>
+    <string name="phone_check_bad_answer">这个地址有回应，但不是 Pinky 认识的 API。请检查 API 地址。</string>
+    <string name="phone_section_usage">用量</string>
+    <string name="phone_usage_desc">Pinky 自己的智能体用掉的 token（以服务报告的为准），以及已知价格部分的费用。只保存在这台手机上。</string>
+    <string name="phone_usage_week">最近 7 天</string>
+    <string name="phone_usage_month">最近 30 天</string>
+    <string name="phone_usage_none">还没有用量。</string>
+    <string name="phone_usage_today_line">今天：%1$s</string>
+    <plurals name="phone_usage_requests">
+        <item quantity="other">%1$d 次请求</item>
+    </plurals>
+
     <string name="phone_section_limits">上限</string>
     <string name="phone_steps_limit">每个任务的步数上限</string>
     <string name="phone_steps_limit_desc">Pinky 在手机上的每个操作算一步。</string>
     <string name="phone_time_limit">每个任务的时长上限</string>
     <string name="phone_time_limit_desc">等你操作或审批的时间不计算在内。</string>
     <string name="phone_cost_limit">每个任务的费用上限</string>
-    <string name="phone_cost_limit_desc">按服务报告的用量和 Anthropic 的价格计算。</string>
+    <string name="phone_cost_limit_desc">按服务报告的用量和它公布的价格计算。</string>
     <string name="phone_cost_limit_desc_tokens">Pinky 不知道这个模型的价格，所以按每百万 token 1 美元计算。</string>
 
     <string name="phone_section_ask">Pinky 应在何时询问你？</string>

@@ -20,10 +20,14 @@
 //	decide NEED DECISION
 //	history [-before MS] [-limit N]   list the tasks that ended, newest first
 //	history ID                 print one task with its steps
-//	model -provider P [-base-url U] [-model M]   set the model as Settings
-//	                           does and save the key read from standard
-//	                           input (one line), so that it never appears
-//	                           on a command line (debug builds only)
+//	model [-service S | -provider P] [-base-url U] [-model M]   set the
+//	                           model as Settings does and save the key read
+//	                           from standard input (one line), so that it
+//	                           never appears on a command line (debug
+//	                           builds only)
+//	check [-service S] [-provider P] [-base-url U] [-model M] [-key K]
+//	                           check a model as Settings does
+//	usage [-since 2006-01-02]  print what the model used, by day
 package main
 
 import (
@@ -79,11 +83,13 @@ type reply struct {
 	State   json.RawMessage `json:"state"`
 	History json.RawMessage `json:"history"`
 	More    bool            `json:"more"`
+	Check   json.RawMessage `json:"check"`
+	Usage   json.RawMessage `json:"usage"`
 }
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: corectl state|start|watch|stop|dismiss|decide|preset|history")
+		fmt.Fprintln(os.Stderr, "usage: corectl state|start|watch|stop|dismiss|decide|preset|history|model|check|usage")
 		os.Exit(2)
 	}
 	cmd, args := os.Args[1], os.Args[2:]
@@ -101,14 +107,38 @@ func main() {
 		fs := flag.NewFlagSet("start", flag.ExitOnError)
 		task := fs.String("task", "", "the task")
 		key := fs.String("key", "fake", "the API key (a fake one for fakemodel)")
+		service := fs.String("service", "", "the service's ID (internal/pilot/services.go); empty: from -provider and -base-url")
 		provider := fs.String("provider", "", "anthropic (the default) or openai")
 		base := fs.String("base-url", "", "the API's address")
 		model := fs.String("model", "", "the model")
 		steps := fs.Int("max-steps", 0, "step limit")
 		mins := fs.Int("max-minutes", 0, "time limit")
 		_ = fs.Parse(args)
-		_, err = call(map[string]any{"cmd": "start", "task": *task, "key": *key, "provider": *provider, "base_url": *base, "model": *model,
-			"max_steps": *steps, "max_minutes": *mins})
+		_, err = call(map[string]any{"cmd": "start", "task": *task, "key": *key, "service": *service, "provider": *provider,
+			"base_url": *base, "model": *model, "max_steps": *steps, "max_minutes": *mins})
+	case "check":
+		fs := flag.NewFlagSet("check", flag.ExitOnError)
+		key := fs.String("key", "fake", "the API key (a fake one for fakemodel)")
+		service := fs.String("service", "", "the service's ID; empty: from -provider and -base-url")
+		provider := fs.String("provider", "", "anthropic (the default) or openai")
+		base := fs.String("base-url", "", "the API's address")
+		model := fs.String("model", "", "the model")
+		_ = fs.Parse(args)
+		var r reply
+		r, err = call(map[string]any{"cmd": "check", "key": *key, "service": *service, "provider": *provider,
+			"base_url": *base, "model": *model})
+		if err == nil {
+			fmt.Println(string(r.Check))
+		}
+	case "usage":
+		fs := flag.NewFlagSet("usage", flag.ExitOnError)
+		since := fs.String("since", "", "the first day, 2006-01-02; empty for all")
+		_ = fs.Parse(args)
+		var r reply
+		r, err = call(map[string]any{"cmd": "usage", "since": *since})
+		if err == nil {
+			fmt.Println(string(r.Usage))
+		}
 	case "stop":
 		fs := flag.NewFlagSet("stop", flag.ExitOnError)
 		computer := fs.Bool("computer", false, "end Pinky on a computer's claim instead of the task")
@@ -156,11 +186,12 @@ func main() {
 		}
 	case "model":
 		fs := flag.NewFlagSet("model", flag.ExitOnError)
+		service := fs.String("service", "", "the service's ID (internal/pilot/services.go); empty: from -provider and -base-url")
 		provider := fs.String("provider", "anthropic", "anthropic or openai")
 		base := fs.String("base-url", "", "the API's address (empty: the service's default)")
 		model := fs.String("model", "", "the model")
 		_ = fs.Parse(args)
-		err = setModel(*provider, *base, *model)
+		err = setModel(*service, *provider, *base, *model)
 	default:
 		err = fmt.Errorf("unknown command %q", cmd)
 	}
@@ -191,7 +222,7 @@ func call(req map[string]any) (reply, error) {
 
 // setModel sends debug_model to the service with the key read from
 // standard input. It prints only whether a key is saved, never the key.
-func setModel(provider, base, model string) error {
+func setModel(service, provider, base, model string) error {
 	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil && line == "" {
 		return fmt.Errorf("no key on standard input")
@@ -205,13 +236,14 @@ func setModel(provider, base, model string) error {
 		return err
 	}
 	defer conn.Close()
-	if err := json.NewEncoder(conn).Encode(map[string]any{"id": 1, "cmd": "debug_model", "provider": provider,
+	if err := json.NewEncoder(conn).Encode(map[string]any{"id": 1, "cmd": "debug_model", "service": service, "provider": provider,
 		"base_url": base, "model": model, "key": key}); err != nil {
 		return err
 	}
 	var r struct {
 		OK     bool `json:"ok"`
 		Result struct {
+			Service  string `json:"service"`
 			Provider string `json:"provider"`
 			KeySaved bool   `json:"key_saved"`
 		} `json:"result"`
@@ -223,7 +255,7 @@ func setModel(provider, base, model string) error {
 	if !r.OK {
 		return fmt.Errorf("%v", r.Error)
 	}
-	fmt.Printf("provider %s, key saved: %v\n", r.Result.Provider, r.Result.KeySaved)
+	fmt.Printf("service %s (%s), key saved: %v\n", r.Result.Service, r.Result.Provider, r.Result.KeySaved)
 	return nil
 }
 

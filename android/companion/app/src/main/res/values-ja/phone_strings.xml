@@ -117,7 +117,7 @@
 
     <string name="phone_section_model">AI モデル</string>
     <string name="phone_service">サービス</string>
-    <string name="phone_service_desc">Anthropic の API で Claude を使うか、OpenAI 互換のサービスでほかのモデルを使います。キーはそれぞれ別です。</string>
+    <string name="phone_service_desc">モデルを動かすサービスです。API キー、モデル、アドレスはサービスごとに保存されます。</string>
     <string name="phone_service_anthropic">Anthropic 互換 API</string>
     <string name="phone_service_openai">OpenAI 互換 API</string>
     <string name="phone_key">API キー</string>
@@ -141,13 +141,52 @@
     <string name="phone_url_desc_openai">サービスの OpenAI 互換 API のアドレス（https://…/v1 など）。既定は OpenAI 公式です。</string>
     <string name="phone_url_err">https:// または http:// で始まるアドレスを入力してください。</string>
 
+    <!-- The model's check and what it used (desktop: ui/ask.go, askCheckRow and askUsage). -->
+    <string name="phone_service_region">%1$s（%2$s）</string>
+    <string name="phone_region_china">中国本土</string>
+    <string name="phone_region_global">国際</string>
+    <string name="phone_key_optional_desc">サーバーでキーを設定した場合だけ必要です。このスマホに暗号化して保存され、サーバーにだけ送られます。</string>
+    <string name="phone_key_none">未設定</string>
+    <string name="phone_model_suggested_desc">画像を読めてツールを使える、Pinky に向いたモデルです。サービスのほかのモデルを使うには「その他…」を選びます。</string>
+    <string name="phone_model_local_desc">サーバーで動かしているモデルの名前。画像を読めて、ツールを使えるモデルが必要です。</string>
+    <string name="phone_model_other">その他…</string>
+    <string name="phone_url_desc_service">既定ではサービス公式のアドレスです。プロキシなど別のアドレスを経由するときだけ変更します。</string>
+    <string name="phone_url_desc_local">ネットワーク上のサーバーのアドレス（http://192.168.1.10:11434/v1 など）。このスマホではなく、サーバーを動かしているパソコンのアドレスです。</string>
+    <string name="phone_check">確認</string>
+    <string name="phone_check_desc">モデルに小さなリクエストを 1 つ送り、応答してツールを使えるか確かめます。キー、モデル、アドレスを保存すると Pinky が自動で確認します。</string>
+    <string name="phone_check_now">確認</string>
+    <string name="phone_check_again">もう一度確認</string>
+    <string name="phone_checking">確認しています…</string>
+    <string name="phone_check_ok">モデルが応答し、ツールを使いました（%1$s 秒）。</string>
+    <string name="phone_check_detail">サービスの応答: %1$s</string>
+    <string name="phone_check_core_down">Pinky をオンにするとモデルを確認できます。</string>
+    <string name="phone_check_no_model">先にモデルを選んでください。</string>
+    <string name="phone_check_no_key">先に API キーを追加してください。</string>
+    <string name="phone_check_bad_key">サービスが API キーを受け付けませんでした。このサービスのキーか確認してください。</string>
+    <string name="phone_check_no_credit">アカウントの残高がないとサービスが返しました。サービスのサイトでチャージしてください。</string>
+    <string name="phone_check_not_found">サービスがこのモデルかアドレスを見つけられません。モデル名と API アドレスを確認してください。</string>
+    <string name="phone_check_busy">サービスが混み合っているか、リクエストを制限しました。少し待ってからもう一度お試しください。</string>
+    <string name="phone_check_rejected">サービスがリクエストを拒否しました。</string>
+    <string name="phone_check_no_tools">モデルは応答しましたが、ツールを使いませんでした。Pinky はツールで操作するので、ツールを使えるモデルを選んでください。</string>
+    <string name="phone_check_unreachable">Pinky が API アドレスに接続できませんでした。アドレスと、サービスやサーバーが動いているか確認してください。</string>
+    <string name="phone_check_bad_answer">アドレスは応答しましたが、Pinky が扱える API ではありません。API アドレスを確認してください。</string>
+    <string name="phone_section_usage">使用量</string>
+    <string name="phone_usage_desc">Pinky 自身のエージェントが使ったトークン（サービスの報告どおり）と、料金がわかる分の費用です。このスマホにだけ保存されます。</string>
+    <string name="phone_usage_week">過去 7 日間</string>
+    <string name="phone_usage_month">過去 30 日間</string>
+    <string name="phone_usage_none">まだありません。</string>
+    <string name="phone_usage_today_line">今日: %1$s</string>
+    <plurals name="phone_usage_requests">
+        <item quantity="other">%1$d 回のリクエスト</item>
+    </plurals>
+
     <string name="phone_section_limits">上限</string>
     <string name="phone_steps_limit">1 タスクの最大ステップ数</string>
     <string name="phone_steps_limit_desc">スマホでの操作 1 回が 1 ステップです。</string>
     <string name="phone_time_limit">1 タスクの最大時間</string>
     <string name="phone_time_limit_desc">あなたの操作や承認を待つ時間は含みません。</string>
     <string name="phone_cost_limit">1 タスクの最大費用</string>
-    <string name="phone_cost_limit_desc">サービスが報告する使用量と Anthropic の料金から計算します。</string>
+    <string name="phone_cost_limit_desc">サービスが報告する使用量と、公開されている料金から計算します。</string>
     <string name="phone_cost_limit_desc_tokens">Pinky はこのモデルの料金を知らないため、100 万トークンを 1 ドルとして数えます。</string>
 
     <string name="phone_section_ask">確認が必要な操作</string>

@@ -103,6 +103,8 @@ class TaskActivity : Activity() {
     private lateinit var input: EditText
     private lateinit var modelLine: TextView
     private lateinit var limitLine: TextView
+    private lateinit var todayLine: TextView
+    private var usedToday: String? = null // what the model used today (ModelUsage.today), as last read
     private lateinit var startButton: TextView
     private lateinit var askFooter: TextView
     private lateinit var error: TextView
@@ -167,7 +169,7 @@ class TaskActivity : Activity() {
     override fun onResume() {
         super.onResume()
         serviceOn = look.serviceOn()
-        hasKey = secrets.has(settings.provider)
+        hasKey = settings.keyOptional() || secrets.has(settings.keyName())
         // The person may come back from Android's battery settings.
         unrestricted = Battery.unrestricted(this)
         update = UpdateCheck.offered(this)
@@ -318,6 +320,8 @@ class TaskActivity : Activity() {
         askBox.shown(ready && setUp && !running)
         askFooter.shown(ready && setUp && !running && agent == null)
         modelLine.say(settings.modelLabel())
+        todayLine.say(usedToday)
+        todayLine.shown(usedToday != null)
         limitLine.say(
             getString(R.string.phone_task_limit, Words.limit(resources, settings.priced(), settings.maxCost, settings.tokenLimit)),
         )
@@ -352,16 +356,18 @@ class TaskActivity : Activity() {
         starting = true
         error.say("")
         updateStart()
-        val provider = settings.provider
+        val id = settings.service
+        val name = settings.keyName(id)
+        val optional = settings.keyOptional(id)
         CoreClient.background {
             val why = try {
-                val key = secrets.load(provider)
+                val key = secrets.load(name)
                 when {
-                    key != null -> {
-                        CoreClient.call(settings.startRequest(task, key, provider))
+                    key != null || optional && !secrets.has(name) -> {
+                        CoreClient.call(settings.startRequest(task, key.orEmpty(), id))
                         null
                     }
-                    secrets.has(provider) -> getString(R.string.phone_err_key_lost)
+                    secrets.has(name) -> getString(R.string.phone_err_key_lost)
                     else -> getString(R.string.phone_no_key)
                 }
             } catch (e: CoreClient.Refused) {
@@ -651,6 +657,18 @@ class TaskActivity : Activity() {
         historyFor = shown
         val n = ++historyReads
         CoreClient.background {
+            // What the model used today changes as tasks end, as the list does.
+            val today = try {
+                ModelUsage.today(resources, ModelUsage.read())
+            } catch (_: Exception) {
+                usedToday
+            }
+            main.post {
+                if (!isDestroyed && today != usedToday) {
+                    usedToday = today
+                    render()
+                }
+            }
             // A read that fails keeps the list as it was, until the next.
             val page = try {
                 PastTasks.page(this, 0, RECENT + 1)
@@ -953,10 +971,12 @@ class TaskActivity : Activity() {
         }
         modelLine = look.text("", Look.SMALL, look.ink2, 500)
         limitLine = look.text("", Look.SMALL, look.ink3)
+        todayLine = look.text("", Look.SMALL, look.ink3)
         val texts = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(modelLine)
             addView(limitLine)
+            addView(todayLine)
         }
         startButton = look.button(getString(R.string.phone_start), Look.Kind.PRIMARY) { startTask() }
         val row = LinearLayout(this).apply {
