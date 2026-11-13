@@ -166,7 +166,8 @@ var switchValues = map[string]func() string{
 	"portrait": locales.GwValuePortrait, "landscape": locales.GwValueLandscape, "upside down": locales.GwValueUpsideDown,
 	"reverse landscape": locales.GwValueReverseLandscape, "auto-rotate": locales.GwValueAutoRotate,
 	"light": locales.GwValueLight, "dark": locales.GwValueDark, "automatic": locales.GwValueAutomatic,
-	"custom": locales.GwValueCustom, "none": locales.GwValueNoLocation,
+	"custom": locales.GwValueCustom, "custom_schedule": locales.GwValueCustom, "custom_bedtime": locales.GwValueCustom,
+	"none": locales.GwValueNoLocation,
 }
 
 func switchName(s string) string {
