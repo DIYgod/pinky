@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
@@ -65,5 +66,48 @@ func TestProviderSetShellReachesTheDevice(t *testing.T) {
 func TestHasFeatures(t *testing.T) {
 	if !hasFeatures([]string{"a", "b", "c"}, "c", "a") || hasFeatures([]string{"a"}, "a", "b") {
 		t.Fatal("hasFeatures")
+	}
+}
+
+func TestUntrackedDisplayReadsAsEmptyAfterALaunch(t *testing.T) {
+	b := &Background{w: 1080, h: 2400}
+	now := time.Now()
+	if !b.untracked(now) {
+		t.Fatal("before any launch an untracked display is empty")
+	}
+	if n := b.nudgeDue(now); n != 0 {
+		t.Fatalf("nudge %d before any launch", n)
+	}
+	b.launchPkg, b.launchedAt = "com.android.settings", now
+	if !b.untracked(now.Add(launchGrace - time.Millisecond)) {
+		t.Fatal("within launchGrace an untracked display is empty")
+	}
+	if b.untracked(now.Add(launchGrace)) {
+		t.Fatal("after launchGrace an untracked display is a failure")
+	}
+
+	steps := []struct {
+		after time.Duration
+		want  int
+	}{
+		{time.Second, 0},
+		{nudgeKeyAfter, 1},
+		{2 * time.Second, 0}, // the key once
+		{nudgeStartAfter, 2},
+		{5 * time.Second, 0}, // the start once
+	}
+	for _, s := range steps {
+		if got := b.nudgeDue(now.Add(s.after)); got != s.want {
+			t.Fatalf("after %v: nudge %d, want %d", s.after, got, s.want)
+		}
+	}
+	b.nudges = 0
+	if got := b.nudgeDue(now.Add(nudgeAfterLaunch)); got != 0 {
+		t.Fatalf("nudge %d once the launch is old", got)
+	}
+
+	s := b.emptyScreen()
+	if s.Width != 1080 || s.Height != 2400 || s.Orientation != "portrait" || len(s.Elements) != 0 {
+		t.Fatalf("empty screen %+v", s)
 	}
 }

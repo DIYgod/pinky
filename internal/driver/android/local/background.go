@@ -143,6 +143,11 @@ type Background struct {
 	reset  time.Time
 	closed bool
 	done   chan struct{}
+
+	// The last app started on the display, for launchGrace.
+	launchPkg  string
+	launchedAt time.Time
+	nudges     int
 }
 
 // DisplayID is the display's id.
@@ -196,6 +201,12 @@ func (b *Background) Info() driver.Info {
 func (b *Background) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	t, err := b.d.c.Dump(ctx, companion.DumpOptions{Display: b.display})
 	if err != nil {
+		if errors.Is(err, driver.ErrUnsupported) && ctx.Err() == nil && b.untracked(time.Now()) {
+			// Not tracked by accessibility yet (see launchGrace): an
+			// empty display, not one Pinky cannot read.
+			b.nudge(ctx, time.Now())
+			return b.emptyScreen(), nil
+		}
 		return nil, b.d.wrap(err)
 	}
 	s := agentScreen(t, b.d.app.Package)
@@ -203,7 +214,84 @@ func (b *Background) Observe(ctx context.Context, opt driver.ObserveOptions) (*s
 	if s.App.Name == "" {
 		s.App.Name = b.d.appName(s.App.ID)
 	}
+	if s.App.ID == "" {
+		b.nudge(ctx, time.Now())
+	}
 	return s, nil
+}
+
+// Right after an app starts on the display, accessibility may not track
+// the display yet (the companion answers unsupported, "not open to
+// accessibility services") or show only the splash screen, which it
+// leaves out. On the API 36 emulator the first read after the launch
+// failed that way, and the gateway then moved the task to the phone's own
+// screen for good. As desktop Pinky does (internal/driver/android,
+// launchGrace), such reads count as an empty display for a while, and
+// nudge the display once each: a key that does nothing, then a second
+// start of the app.
+const (
+	launchGrace      = 10 * time.Second
+	nudgeKeyAfter    = 1500 * time.Millisecond
+	nudgeStartAfter  = 4 * time.Second
+	nudgeAfterLaunch = 15 * time.Second
+	keycodeUnknown   = 0 // KEYCODE_UNKNOWN: apps ignore it, but it counts as input on the display
+)
+
+// untracked reports whether a read that finds the display untracked at
+// now means an empty display: before any app was started on it, or
+// within launchGrace of the last start.
+func (b *Background) untracked(now time.Time) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.launchedAt.IsZero() || now.Sub(b.launchedAt) < launchGrace
+}
+
+// nudgeDue says which nudge, if any, is due at now for a read that found
+// no app on the display: 1 for the key, 2 for starting the app again, 0
+// for none. It counts the nudge as sent.
+func (b *Background) nudgeDue(now time.Time) int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.launchedAt.IsZero() || b.launchPkg == "" {
+		return 0
+	}
+	since := now.Sub(b.launchedAt)
+	if since >= nudgeAfterLaunch {
+		return 0
+	}
+	switch {
+	case b.nudges == 0 && since >= nudgeKeyAfter:
+		b.nudges = 1
+		return 1
+	case b.nudges == 1 && since >= nudgeStartAfter:
+		b.nudges = 2
+		return 2
+	}
+	return 0
+}
+
+// nudge sends the nudge that is due, if any (see launchGrace).
+func (b *Background) nudge(ctx context.Context, now time.Time) {
+	switch b.nudgeDue(now) {
+	case 1:
+		if err := b.s.Send(scrcpy.InjectKeycode(scrcpy.ActionDown, keycodeUnknown, 0, 0)); err == nil {
+			_ = b.s.Send(scrcpy.InjectKeycode(scrcpy.ActionUp, keycodeUnknown, 0, 0))
+		}
+	case 2:
+		b.mu.Lock()
+		pkg := b.launchPkg
+		b.mu.Unlock()
+		_, _ = b.s.StartApp(ctx, pkg)
+	}
+}
+
+// emptyScreen is the display with nothing on it that accessibility shows.
+func (b *Background) emptyScreen() *screen.Screen {
+	o := "portrait"
+	if b.w > b.h {
+		o = "landscape"
+	}
+	return &screen.Screen{Width: b.w, Height: b.h, Orientation: o, CapturedAt: time.Now()}
 }
 
 // Screenshot is not offered: the core on the phone sends no pictures.
@@ -319,6 +407,9 @@ func (b *Background) Launch(ctx context.Context, app string) error {
 		// the phone's own screen.
 		return fmt.Errorf("local: %s runs only on the phone's own screen: %w", pkg, driver.ErrUnsupported)
 	}
+	b.mu.Lock()
+	b.launchPkg, b.launchedAt, b.nudges = pkg, time.Now(), 0
+	b.mu.Unlock()
 	return nil
 }
 
