@@ -112,6 +112,35 @@ func TestDownloadMirrorRefusesChangedFiles(t *testing.T) {
 	}
 }
 
+func TestDiskImageMirrorReady(t *testing.T) {
+	base, files := fakeMirror(t, "")
+	original := mirrorFiles
+	mirrorFiles = files
+	defer func() { mirrorFiles = original }()
+	own := t.TempDir()
+	if DiskImageMirrorReady(own) {
+		t.Fatal("missing image reported ready")
+	}
+	if err := downloadMirror(context.Background(), http.DefaultClient, base, files, own, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !DiskImageMirrorReady(own) {
+		t.Fatal("verified image reported missing")
+	}
+	path := filepath.Join(own, mirrorFolder, "Restore", filepath.FromSlash(files[0].to))
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b[0] ^= 1
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if DiskImageMirrorReady(own) {
+		t.Fatal("corrupted image reported ready")
+	}
+}
+
 func TestMirrorFilesPinned(t *testing.T) {
 	if got := mirrorSize(mirrorFiles); got != 32437683 {
 		t.Errorf("the pinned files add up to %d bytes", got)

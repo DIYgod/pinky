@@ -23,7 +23,7 @@ RELEASE_SIGN ?= Developer ID Application: NATURAL SELECTION LABS PTE. LTD. (492J
 NOTARY_PROFILE ?= pinky-notary
 DMG := build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 
-.PHONY: build test vet check app e2e companion companion-release ffmpeg adb release notarize dist
+.PHONY: build test vet check app windows-dev e2e companion companion-release ffmpeg adb release notarize dist
 
 build:
 	CGO_ENABLED=0 go build ./...
@@ -76,6 +76,12 @@ app:
 ifeq ($(UNAME),Darwin)
 	ADB="$(if $(wildcard $(ADB)/BUILD.txt),$(ADB))" SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 endif
+
+# Local Windows development: prepare the pinned developer disk image, build
+# Pinky.exe, then put the verified FFmpeg 9 DLLs beside it. Released packages
+# use scripts/dist.sh and its separately built LGPL FFmpeg instead.
+windows-dev:
+	sh scripts/windows-dev.sh
 
 # Pinky.app and its .dmg for this Mac's processor, signed with the
 # Developer ID and notarized, to try on other Macs. Releases are made by
