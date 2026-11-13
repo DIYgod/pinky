@@ -2969,6 +2969,38 @@ func (msgs Messages) AskContinuePlaceholder() string {
 	return Catalog.Format(msgs.locale, "askContinuePlaceholder", nil)
 }
 
+// AskByAgent says "Asked by {agent}"
+// in the language the app shows.
+//
+// Ask Pinky, under the box's state: an agent on the computer handed Pinky
+// this task (phone_task_run).
+func AskByAgent(agent string) string { return In(i18n.Locale()).AskByAgent(agent) }
+
+// AskByAgent says "Asked by {agent}"
+// in the language of msgs.
+//
+// Ask Pinky, under the box's state: an agent on the computer handed Pinky
+// this task (phone_task_run).
+func (msgs Messages) AskByAgent(agent string) string {
+	return Catalog.Format(msgs.locale, "askByAgent", map[string]any{"agent": agent})
+}
+
+// AskCancelled says "{agent} cancelled the task."
+// in the language the app shows.
+//
+// Why an Ask Pinky task ended: the agent that handed Pinky the task
+// cancelled it (phone_task_cancel).
+func AskCancelled(agent string) string { return In(i18n.Locale()).AskCancelled(agent) }
+
+// AskCancelled says "{agent} cancelled the task."
+// in the language of msgs.
+//
+// Why an Ask Pinky task ended: the agent that handed Pinky the task
+// cancelled it (phone_task_cancel).
+func (msgs Messages) AskCancelled(agent string) string {
+	return Catalog.Format(msgs.locale, "askCancelled", map[string]any{"agent": agent})
+}
+
 // AskDismiss says "Dismiss"
 // in the language the app shows.
 //
@@ -14049,6 +14081,26 @@ func GwStepYouDenied(action string) string { return In(i18n.Locale()).GwStepYouD
 // only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwStepYouDenied(action string) string {
 	return Catalog.Format(msgs.locale, "gwStepYouDenied", map[string]any{"action": action})
+}
+
+// GwStepAgentSaid says "{agent} said: “{message}”"
+// in the language the app shows.
+//
+// A step: a message to Pinky's own agent from the agent on the computer
+// that handed it the task (phone_task_steer), which Pinky's agent read.
+// Shown only in other languages; in English the gateway's own words show.
+func GwStepAgentSaid(agent string, message string) string {
+	return In(i18n.Locale()).GwStepAgentSaid(agent, message)
+}
+
+// GwStepAgentSaid says "{agent} said: “{message}”"
+// in the language of msgs.
+//
+// A step: a message to Pinky's own agent from the agent on the computer
+// that handed it the task (phone_task_steer), which Pinky's agent read.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepAgentSaid(agent string, message string) string {
+	return Catalog.Format(msgs.locale, "gwStepAgentSaid", map[string]any{"agent": agent, "message": message})
 }
 
 // GwStepYouSaid says "You said: “{message}”"

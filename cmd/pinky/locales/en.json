@@ -958,6 +958,26 @@
   "@askContinuePlaceholder": {
     "description": "Ask Pinky once its task ended: the placeholder of askContinueField."
   },
+  "askByAgent": "Asked by {agent}",
+  "@askByAgent": {
+    "description": "Ask Pinky, under the box's state: an agent on the computer handed Pinky this task (phone_task_run).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "askCancelled": "{agent} cancelled the task.",
+  "@askCancelled": {
+    "description": "Why an Ask Pinky task ended: the agent that handed Pinky the task cancelled it (phone_task_cancel).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
   "askDismiss": "Dismiss",
   "@askDismiss": {
     "description": "Ask Pinky: the button that hides how its last task ended."
@@ -5277,6 +5297,20 @@
       "action": {
         "type": "String",
         "example": "send the message"
+      }
+    }
+  },
+  "gwStepAgentSaid": "{agent} said: “{message}”",
+  "@gwStepAgentSaid": {
+    "description": "A step: a message to Pinky's own agent from the agent on the computer that handed it the task (phone_task_steer), which Pinky's agent read. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "message": {
+        "type": "String",
+        "example": "Use the blue one"
       }
     }
   },

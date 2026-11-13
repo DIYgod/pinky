@@ -1,4 +1,4 @@
-// Package mcp is Pinky's MCP server: the 20 phone_* tools agents call. It
+// Package mcp is Pinky's MCP server: the phone_* tools agents call. It
 // translates tool calls into gateway sessions and renders results as text
 // in the screen format. One MCP session maps to one gateway Session, so a
 // session that closes ends its leases and withdraws its approvals.
@@ -46,20 +46,23 @@ type Server struct {
 
 	mu       sync.Mutex
 	sessions map[*sdk.ServerSession]*gateway.Session
-	builtin  map[*sdk.ServerSession]bool // sessions of Pinky's own agent
+	// builtin are the sessions of Pinky's own agent: nil for Pinky, or
+	// the agent it works for (ConnectFor).
+	builtin map[*sdk.ServerSession]*gateway.AgentInfo
 	// continues are the tasks sessions of Pinky's own agent continue
-	// (ConnectBuiltinTask), by session.
+	// (ConnectBuiltinTask, ConnectFor), by session.
 	continues  map[*sdk.ServerSession]string
 	middleware []sdk.Middleware       // Use's, for the HTTP servers made later
 	uploads    map[string]*uploadLink // upload links by token (upload.go)
 
 	downloads map[string]*downloadLink // download links by token (download.go)
+	tasks     Tasks                    // Pinky's own agent, for phone_task_* (tasks.go)
 }
 
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
 	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}, uploads: map[string]*uploadLink{},
-		downloads: map[string]*downloadLink{}, builtin: map[*sdk.ServerSession]bool{},
+		downloads: map[string]*downloadLink{}, builtin: map[*sdk.ServerSession]*gateway.AgentInfo{},
 		continues: map[*sdk.ServerSession]string{}}
 	s.srv = s.newSDK(false)
 	return s
@@ -135,12 +138,26 @@ func (s *Server) ConnectBuiltin(ctx context.Context, t sdk.Transport) error {
 // takes the task back rather than starting another
 // (gateway.AgentInfo.Continue). An empty id is ConnectBuiltin.
 func (s *Server) ConnectBuiltinTask(ctx context.Context, t sdk.Transport, task string) error {
+	return s.connectBuiltin(ctx, t, nil, task)
+}
+
+// ConnectFor starts an MCP session of Pinky's own agent doing a task that
+// another agent handed it (phone_task_run), as ConnectBuiltinTask does.
+// Its gateway session is that agent's: its approval as a new agent, its
+// scope and everything else are the agent's, as if it made the calls
+// itself. task continues an ended task of it, as in ConnectBuiltinTask.
+func (s *Server) ConnectFor(ctx context.Context, t sdk.Transport, agent gateway.AgentInfo, task string) error {
+	agent.Trusted = false
+	return s.connectBuiltin(ctx, t, &agent, task)
+}
+
+func (s *Server) connectBuiltin(ctx context.Context, t sdk.Transport, agent *gateway.AgentInfo, task string) error {
 	ss, err := s.srv.Connect(ctx, t, nil)
 	if err != nil {
 		return err
 	}
 	s.mu.Lock()
-	s.builtin[ss] = true
+	s.builtin[ss] = agent
 	if task != "" {
 		s.continues[ss] = task
 	}
@@ -165,11 +182,21 @@ func (s *Server) ConnectBuiltinTask(ctx context.Context, t sdk.Transport, task s
 // on a phone to the task's steps (gateway.Gateway.PersonSaid).
 func (s *Server) PersonSaid(device, text string) error { return s.g.PersonSaid(device, text) }
 
+// AgentSaid adds what the agent that handed Pinky's own agent its task
+// told it to the task's steps (gateway.Gateway.AgentSaid).
+func (s *Server) AgentSaid(device, agent, text string) error {
+	return s.g.AgentSaid(device, agent, text)
+}
+
 // TaskOf is the id of the task Pinky's own agent runs on a phone, "" when
-// it runs none.
-func (s *Server) TaskOf(device string) string {
+// it runs none. agent is the agent whose task it does (ConnectFor), ""
+// for Pinky's own.
+func (s *Server) TaskOf(device, agent string) string {
+	if agent == "" {
+		agent = BuiltinName
+	}
 	for _, t := range s.g.Tasks() {
-		if t.DeviceID == device && t.Agent == BuiltinName && t.Ended.IsZero() {
+		if t.DeviceID == device && t.Agent == agent && t.Ended.IsZero() {
 			return t.ID
 		}
 	}
@@ -200,29 +227,7 @@ func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session
 	if gs, ok := s.sessions[req.Session]; ok {
 		return gs
 	}
-	info := gateway.AgentInfo{Name: "Agent"}
-	if ci := req.ClientInfo(); ci != nil {
-		info.Name = DisplayName(ci.Name, ci.Title)
-		info.Client = strings.TrimSpace(ci.Name + " " + ci.Version)
-	}
-	switch {
-	case s.builtin[req.Session]:
-		// Each task of Pinky's own agent is a session of its own, which
-		// ends with the task: there is nothing to reconnect to.
-		info = gateway.AgentInfo{Name: BuiltinName, Client: strings.TrimSpace("pinky " + s.version), Trusted: true,
-			Continue: s.continues[req.Session]}
-	case remote:
-		// Clients over HTTP may open a session for every call, or leave
-		// the last one open: a newer session continues the older ones'.
-		info.Name += RemoteSuffix
-		info.Resume = true
-	default:
-		// A client on this computer may drop its session and start a new
-		// one, as Claude Desktop does after a call times out: the new one
-		// continues the task the old one left.
-		info.Reconnect = true
-	}
-	gs := s.g.OpenSession(info)
+	gs := s.g.OpenSession(s.agentLocked(req, remote))
 	s.sessions[req.Session] = gs
 	// Whichever transport carries it (stdio through the socket, or HTTP),
 	// the gateway session ends with the MCP session.
@@ -232,6 +237,39 @@ func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session
 		s.forget(ss)
 	}()
 	return gs
+}
+
+// agentLocked is the agent an MCP session is, for its gateway session.
+// The caller holds s.mu.
+func (s *Server) agentLocked(req *sdk.CallToolRequest, remote bool) gateway.AgentInfo {
+	if a, ok := s.builtin[req.Session]; ok {
+		// Each task of Pinky's own agent is a session of its own, which
+		// ends with the task: there is nothing to reconnect to.
+		info := gateway.AgentInfo{Name: BuiltinName, Client: strings.TrimSpace("pinky " + s.version), Trusted: true}
+		if a != nil {
+			// Pinky's own agent, doing a task another agent handed it.
+			info = *a
+		}
+		info.Pilot, info.Continue = true, s.continues[req.Session]
+		return info
+	}
+	info := gateway.AgentInfo{Name: "Agent"}
+	if ci := req.ClientInfo(); ci != nil {
+		info.Name = DisplayName(ci.Name, ci.Title)
+		info.Client = strings.TrimSpace(ci.Name + " " + ci.Version)
+	}
+	if remote {
+		// Clients over HTTP may open a session for every call, or leave
+		// the last one open: a newer session continues the older ones'.
+		info.Name += RemoteSuffix
+		info.Resume = true
+	} else {
+		// A client on this computer may drop its session and start a new
+		// one, as Claude Desktop does after a call times out: the new one
+		// continues the task the old one left.
+		info.Reconnect = true
+	}
+	return info
 }
 
 // knownClients maps MCP client names to the names people know.

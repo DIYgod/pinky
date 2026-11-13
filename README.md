@@ -219,6 +219,8 @@ Then type the task at the top of **Tasks** on the phone's page, for example "Set
 
 A task stops at 100 steps, 20 minutes or US$2, whichever comes first; you can change these in Settings › Agents, and time spent waiting for you doesn't count. Cost is counted at Anthropic's prices; for a model Pinky has no prices for, a million tokens count as US$1. Ask Pinky remembers nothing between tasks and works on one phone at a time: for anything bigger, connect an agent ([details](docs/notes/builtin-agent.md)).
 
+Your agent can hand Ask Pinky a whole task too, instead of driving the phone step by step: `phone_task_run` starts it with the model and limits you set here, `phone_task_wait`, `phone_task_status` and `phone_task_list` follow it, `phone_task_steer` corrects it or carries it on, and `phone_task_cancel` stops it. Such a task works as that agent, not as Pinky: its first connection asks you, its access in Settings › Agents and your rules apply, and only you answer its approvals. The box at the top of **Tasks** shows it, with the agent's name: you can write to it and **Continue** it there as your own, and it still works as that agent; **Stop** ends it, and then the agent cannot carry it on. It works while Pinky's window is open, not in `pinky daemon` ([details](docs/mcp.md#phone_task_run)).
+
 <a id="pinky-on-the-phone"></a>
 
 ### Pinky on the phone

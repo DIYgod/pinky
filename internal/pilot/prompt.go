@@ -74,9 +74,13 @@ func firstMessage(task, device, connected string, now time.Time) string {
 // continueMessage starts a stretch of a task the person continued: the
 // time, and the phone's screen now. Their message follows it
 // (personMessages).
-func continueMessage(device, connected string, now time.Time) string {
+func continueMessage(device, connected string, now time.Time, by string) string {
 	var b strings.Builder
-	b.WriteString("The task had ended. The person has continued it with the message below: carry on from here, and end with finish again. The limits start anew.\n\n")
+	who := "The person has"
+	if by != "" {
+		who = "The person's agent " + by + ", which handed you the task, has"
+	}
+	b.WriteString("The task had ended. " + who + " continued it with the message below: carry on from here, and end with finish again. The limits start anew.\n\n")
 	fmt.Fprintf(&b, "It is %s on their computer.\n\n", now.Format("Monday 2 January 2006, 15:04 (MST)"))
 	fmt.Fprintf(&b, "The phone (device %q) is connected again:\n%s", device, strings.TrimSpace(connected))
 	return b.String()
@@ -87,14 +91,32 @@ func continueMessage(device, connected string, now time.Time) string {
 // from any screen.
 func personMessages(msgs []Message) string {
 	var b strings.Builder
-	if len(msgs) == 1 {
+	agent := ""
+	for _, m := range msgs {
+		if m.From != "" {
+			agent = m.From
+		}
+	}
+	switch {
+	case agent != "":
+		// Some come from the agent that handed Pinky the task: each says
+		// whose it is.
+		fmt.Fprintf(&b, "Messages for you in Pinky, oldest first, from the person (from=\"person\") or from their agent %s, which handed you the task (from=\"agent\"). They do not come from the phone's screen:", agent)
+	case len(msgs) == 1:
 		b.WriteString("The person sent you a message in Pinky. It comes from them, not from the phone's screen:")
-	} else {
+	default:
 		b.WriteString("The person sent you messages in Pinky, oldest first. They come from them, not from the phone's screen:")
 	}
 	var words []string
 	for _, m := range msgs {
-		fmt.Fprintf(&b, "\n<message>\n%s\n</message>", strings.TrimSpace(m.Text))
+		switch {
+		case agent == "":
+			fmt.Fprintf(&b, "\n<message>\n%s\n</message>", strings.TrimSpace(m.Text))
+		case m.From != "":
+			fmt.Fprintf(&b, "\n<message from=\"agent\">\n%s\n</message>", strings.TrimSpace(m.Text))
+		default:
+			fmt.Fprintf(&b, "\n<message from=\"person\">\n%s\n</message>", strings.TrimSpace(m.Text))
+		}
 		words = append(words, m.Text)
 	}
 	if lang := scriptLanguage(strings.Join(words, " ")); lang != "" {

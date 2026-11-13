@@ -118,6 +118,25 @@ Testing an app on the phone? `phone_logs` reads that app's own log lines and cra
 
 `phone_device` flips the switches developers test with: `{ rotation: "landscape" }`, `{ appearance: "dark" }`, `{ location: { latitude: 35.6812, longitude: 139.7671 } }`; with no arguments it reads them, and the phone's model, system, battery and storage. `phone_launch { app: "Settings", language: "ja" }` opens an app in another language (`region: "JP"` for its formats) and restarts it if it runs. These change the person's phone, so on a real phone the person approves them first; on emulators and Simulators they usually go through at once. Pinky puts everything back when you release the phone; `phone_device { reset: ["all"] }` does it sooner. What a phone cannot do returns `unsupported` with why: there is no simulated location on an Android phone, for example.
 
+## Handing Pinky a whole task
+
+For a simple task where only the outcome matters (set an alarm, look something up in one app), you can hand it to Pinky's own agent instead of driving the phone yourself. It works with the model and limits the person chose in Pinky.
+
+```text
+→ phone_task_run { task: "Set an alarm for 7:00 tomorrow and tell me if one already exists" }
+← running · task_id: t3f9c2a17b04e · Pixel 9 · steps: 0
+→ phone_task_wait { task_id: "t3f9c2a17b04e" }
+← done · task_id: t3f9c2a17b04e · Pixel 9 · steps: 6
+  Pinky's agent did the task. Its summary: Set an alarm for 7:00; none existed.
+```
+
+- Write `task` as you would for a person: what to do, and what to report back. Pinky's agent sees only those words and the screen.
+- Call `phone_task_wait` again while it returns `running`. `waiting_for_person` means it waits for an approval or a handoff that only the person can answer: wait, or tell them. You cannot approve anything for it.
+- The task works as you: your first connection asks the person, and your access and their rules apply. `stopped` means the person stopped it; do not start it again unless they ask. `phone_task_cancel` ends it.
+- To correct it or ask for more, `phone_task_steer { task_id, message }`: a running task reads it before its next step, an ended one carries on with it. Not after the person stopped it.
+- Release a phone you hold before you hand Pinky a task there. `phone_task_list` lists your tasks from the last day; you see only your own.
+- It works only while Pinky's window is open and Ask Pinky is on with a model and key; otherwise the call returns `unsupported` and you drive the phone with the tools above.
+
 ## Things you must not do
 
 - Never type passwords or one-time codes; Pinky refuses (`rule: credentials`). Call `phone_handoff { reason: "Please sign in to Dinely" }` and wait.

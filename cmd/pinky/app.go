@@ -149,6 +149,18 @@ func runApp(args []string) error {
 		Describe: ui.DescribePilot,
 	})
 	defer ask.Close()
+	// Agents may hand Pinky's own agent a whole task (phone_task_run),
+	// with the model and limits of Ask Pinky, while this window is open
+	// for the person to follow it.
+	var askCfg atomic.Pointer[ui.Settings]
+	// A copy: the client changes settings on its own thread.
+	first := settings
+	askCfg.Store(&first)
+	rg.MCP.SetTasks(ask.ForAgents(func() (pilot.Config, bool) {
+		s := askCfg.Load()
+		return s.PilotConfig(), s.AskPinky
+	}))
+	defer rg.MCP.SetTasks(nil)
 	ready := false
 	err = ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
 		BindShow: func(f func()) { show.Store(&f) },
@@ -161,6 +173,7 @@ func runApp(args []string) error {
 		Log:   c.Log,
 		Pilot: ask,
 		OnSettings: func(old, s ui.Settings) {
+			askCfg.Store(&s)
 			applySettings(rg, old, s, c.Log)
 			applyTelemetry(tel, s)
 			unlock.on.Store(s.UnlockFromComputer)

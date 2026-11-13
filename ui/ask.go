@@ -263,6 +263,9 @@ func (a *app) askRunning(c *mg.Context, s pilot.Status) {
 		// How far it is, under the words and across the card, so that it
 		// fits on a line in every language.
 		mg.Text(c, usageText(s, c.Now())).FontSize(fsCaption).TextColor(p.ink2).FontFeatures("tnum").Margin(0, 0, 0, 8+sp2)
+		if s.By != "" {
+			mg.Text(c, locales.AskByAgent(s.By)).FontSize(fsCaption).TextColor(p.ink3).Margin(0, 0, 0, 8+sp2)
+		}
 	})
 	a.askPending(c, s)
 	a.askMessageRow(c, s.Device, false)
@@ -418,6 +421,9 @@ func (a *app) askEnded(c *mg.Context, s pilot.Status) {
 			mg.Text(c, reason).FontSize(fsSmall).LineHeight(1.4).Selectable()
 		}
 		mg.Text(c, usageText(s, c.Now())).FontSize(fsCaption).TextColor(p.ink3).FontFeatures("tnum")
+		if s.By != "" {
+			mg.Text(c, locales.AskByAgent(s.By)).FontSize(fsCaption).TextColor(p.ink3)
+		}
 	})
 	if !s.Continuable {
 		return
@@ -496,6 +502,8 @@ func pilotEndIn(m locales.Messages, s pilot.Status) (title, reason string) {
 		return m.AskEndNotStarted(), m.AskNoKey()
 	case pilot.BadKey:
 		return m.AskEndNotStarted(), m.AskBadKey()
+	case pilot.Cancelled:
+		return m.AskEndStopped(), m.AskCancelled(s.By)
 	}
 	return m.AskEndFailed(), s.Summary
 }

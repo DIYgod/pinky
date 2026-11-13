@@ -548,6 +548,79 @@ Returns `settled` with `decision: allow`, or `approval_denied`, with the person'
 
 Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone waits for a step (`device_needs_setup`) ends by itself once Pinky has opened the phone, with `note: "The phone is ready."`; if the person hands back before that, the result is `device_needs_setup` again, with their note. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer, if unlocking is all its `reason` asks for ("Please unlock the phone"); one that asks for more ("Unlock the phone, then sign in to Wise") stays open until the person hands back, and so does any handoff after an unlock on the phone itself. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
 
+### phone_task_run
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `task` | string, required | The whole task in words, as you would give it to a person: what to do and what to report back |
+| `device` | string | The phone, by id or name; optional with one phone online |
+| `apps` | string array | As in `phone_connect` |
+| `read_only` | bool | As in `phone_connect` |
+
+Hands the task to Pinky's own agent ([Ask Pinky](notes/builtin-agent.md)), which does it on the phone by itself with the model, key and limits the person set in Settings › Agents › Ask Pinky. Returns at once: `running · task_id: t3f9c… · Pixel 9 · steps: 0`, then the model and the limits. Follow it with `phone_task_wait`.
+
+The task works as the agent that handed it over, not as Pinky: its gateway session carries that agent's name, so the agent's first connection asks the person (rule `New agent`, shown as `waiting_for_person` with `waiting: approval`), the agent's scope and read-only mode apply, and a Stop keeps that agent off the phone as it would after its own task. The calling agent cannot answer the task's approvals or handoffs; the person does, in Pinky. Activity shows the task under the agent's name; the box at the top of Tasks shows Pinky working, "Asked by" the agent, with Stop.
+
+Errors: `unsupported` while Pinky's window is closed (`pinky daemon`), while Ask Pinky is off, or without a model or API key; `device_busy` while Pinky's agent does another task on that phone; `invalid_argument` and `device_offline` as for `phone_connect`. A phone another session holds, yours included, ends the task at once as `error` with `lease_held`'s message: release it first.
+
+### phone_task_status
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `task_id` | string, required | From `phone_task_run` |
+| `since_step` | int | Only the steps after this one; default the last 10 |
+
+The first line is the status, `task_id`, the phone and `steps`:
+
+| Status | Meaning |
+| --- | --- |
+| `running` | Pinky's agent is working |
+| `waiting_for_person` | It waits for the person: `waiting: approval` (an approval, or the agent's first connection) or `waiting: handoff` (it handed them the phone). Nothing for you to do but wait or tell them |
+| `done` / `failed` | The model finished; the message has its summary |
+| `stopped` | The person stopped it in Pinky. Do not start it again unless they ask |
+| `cancelled` | You cancelled it |
+| `limit_reached` | It reached Ask Pinky's `limit: steps`, `time` or `cost` |
+| `refused`, `no_key`, `bad_key`, `error` | The model declined, Pinky has no key or the API refused it, or something failed; the message says what |
+
+Then what it means, the task's words and how far it got (`claude-opus-5-5: 12 of 100 steps, 3 of 20 minutes, US$0.21 of US$2.00`), and its steps, numbered from 1: `4. phone_tap settled — Open Alarms (Opening the alarm list.)`, the tool, its status, the model's `intent` and what the model wrote before the call. An agent sees only the tasks it handed Pinky (by its name), for a day after they end.
+
+### phone_task_wait
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `task_id` | string, required | From `phone_task_run` |
+| `timeout_ms` | int | 1000 to 45000; default 30000 |
+| `since_step` | int | As in `phone_task_status` |
+
+Waits until the task ends or starts waiting for the person, then returns as `phone_task_status`; at the timeout it returns `running`: call it again. With a progress token it sends a notification for each step.
+
+### phone_task_steer
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `task_id` | string, required | From `phone_task_run` |
+| `message` | string, required | A correction, or what to do next |
+
+While the task runs, Pinky's agent reads the message before its next step. Once it ended (`done`, `failed`, `cancelled`, `limit_reached`, …), the message carries the same task on under the same `task_id`: the same phone, the same conversation, its steps added to the task's, and the limits counting anew. Returns as `phone_task_status`; follow it with `phone_task_wait`.
+
+The model gets your message marked as the agent's, apart from the person's, and is told the person's words win where they differ. Activity shows it as "Claude Code said: “…”", and your task's steps as `your message: “…”`. It approves nothing: risky steps still wait for the person.
+
+The person can write to the task and continue it in Pinky too, as their own. Either way it stays your task: it carries on as your session, with your scope and their rules, never as Pinky's.
+
+Errors: `unsupported` for a task the person stopped (their Stop is theirs; tell them instead), for one Pinky can no longer carry on (the phone had another task of Pinky's since, or the app restarted), and while Ask Pinky is off; `device_busy` while Pinky's agent works on another task on that phone; `invalid_argument` for an empty message.
+
+### phone_task_cancel
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `task_id` | string, required | From `phone_task_run` |
+
+Stops the task at once, cancelling a model request in flight, and releases the phone with outcome `cancelled`; what it did stays done. Cancelling an ended task returns its status.
+
+### phone_task_list
+
+No arguments. Lists the tasks this agent handed Pinky in the last day, the newest first: `t3f9c… · done · Pixel 9 · steps: 7 · started 14:02 · “Set an alarm for 7:00”`.
+
 ## Saving screenshots and reports
 
 An agent that writes a bug report or a pull request can keep what it saw as files: `phone_observe { save: "onboarding-1.png" }` saves a screenshot, and `phone_release { export: true }` the task's report. Both write into the phone's folder on the computer, `<data>/files/<phone id>/` (the one `phone_files` uses), and nothing to the phone, so they ask nothing, except for a screen recording: read-only and watch-only agents may save, in read-only mode too. They work on every phone, iPhones included. A Pinky without a data folder returns `unsupported`.

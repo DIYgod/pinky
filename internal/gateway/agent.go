@@ -39,13 +39,19 @@ type AgentInfo struct {
 	// in Pinky's window: it needs no New agent approval, as the person just
 	// asked for it. Its scope and everything else work as any agent's.
 	Trusted bool
-	// Continue is, for Pinky's own agent (Trusted), the id of a task of
-	// its that ended which the session's phone_connect continues: the
-	// person gave the task a new message (pilot.Runner.Continue). The task
+	// Continue is, for Pinky's own agent (Pilot), the id of a task of its
+	// that ended which the session's phone_connect continues: the person
+	// gave the task a new message (pilot.Runner.Continue). The task
 	// runs again as the same task, in Activity and the history, with its
 	// steps so far; a task the gateway no longer has, or one on another
 	// phone, starts afresh.
 	Continue string
+	// Pilot marks a session of Pinky's own agent (internal/pilot): one the
+	// person started (Trusted), or one doing a task another agent handed
+	// it, under that agent's name and without Trusted. Only Pinky's MCP
+	// server sets it; it lets the session continue a task (Continue) and
+	// take the person's messages (PersonSaid), and changes nothing else.
+	Pilot bool
 }
 
 // Status is the outcome of a call, from DESIGN.md's Results table.
@@ -813,7 +819,7 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 // caller holds g.mu.
 func (g *Gateway) reopenLocked(s *Session, d *device) *task {
 	id := s.agent.Continue
-	if id == "" || !s.agent.Trusted {
+	if id == "" || !s.agent.Trusted && !s.agent.Pilot {
 		return nil
 	}
 	s.agent.Continue = ""
@@ -839,6 +845,20 @@ func (g *Gateway) reopenLocked(s *Session, d *device) *task {
 // typed while the task ran, or the one that continued it. It is ErrNoTask
 // when Pinky's own agent runs no task on the phone. It approves nothing.
 func (g *Gateway) PersonSaid(deviceID, text string) error {
+	return g.said(deviceID, "", text)
+}
+
+// AgentSaid is PersonSaid for a message from the agent that handed Pinky's
+// own agent the task (AgentInfo.Pilot), by its name: the step says the
+// agent said it, never the person.
+func (g *Gateway) AgentSaid(deviceID, agent, text string) error {
+	if strings.TrimSpace(agent) == "" {
+		agent = "Agent"
+	}
+	return g.said(deviceID, strings.TrimSpace(agent), text)
+}
+
+func (g *Gateway) said(deviceID, agent, text string) error {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return nil
@@ -846,19 +866,23 @@ func (g *Gateway) PersonSaid(deviceID, text string) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	d := g.devices[deviceID]
-	if d == nil || d.lease == nil || d.lease.ended || !d.lease.session.agent.Trusted {
+	if d == nil || d.lease == nil || d.lease.ended || !d.lease.session.agent.Trusted && !d.lease.session.agent.Pilot {
 		return ErrNoTask
 	}
 	line := strings.Join(strings.Fields(text), " ")
 	if r := []rune(line); len(r) > 300 {
 		line = string(r[:299]) + "…"
 	}
-	g.addStepLocked(d.lease.task, StepView{Tool: PersonStep, Args: argsJSON(map[string]any{"text": text}),
-		Text: fmt.Sprintf("You said: “%s”", line), Status: string(StatusSettled), At: time.Now()}, "", "")
+	args, said := map[string]any{"text": text}, fmt.Sprintf("You said: “%s”", line)
+	if agent != "" {
+		args["from"], said = agent, fmt.Sprintf("%s said: “%s”", agent, line)
+	}
+	g.addStepLocked(d.lease.task, StepView{Tool: PersonStep, Args: argsJSON(args),
+		Text: said, Status: string(StatusSettled), At: time.Now()}, "", "")
 	return nil
 }
 
-// PersonStep is the tool name of the steps PersonSaid adds.
+// PersonStep is the tool name of the steps PersonSaid and AgentSaid add.
 const PersonStep = "person_message"
 
 // ErrNoTask is PersonSaid's for a phone where Pinky's own agent runs no

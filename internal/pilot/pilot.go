@@ -118,6 +118,9 @@ const (
 	NoKey     End = "no_key"  // no API key is saved for the provider
 	BadKey    End = "bad_key" // the API did not accept the key; Summary has its words
 	Error     End = "error"   // the API or the phone failed; Summary says how
+	// Cancelled: the agent that handed Pinky the task (Status.By)
+	// cancelled it (Runner.Cancel).
+	Cancelled End = "cancelled"
 )
 
 // Status is a task of Pinky's own agent, running or ended.
@@ -157,7 +160,51 @@ type Status struct {
 	// count from there. Worked is the time of the stretches before it.
 	Resumed time.Time
 	Worked  time.Duration
+
+	// ID names the task for the agent that handed it to Pinky
+	// (phone_task_*); every task has one.
+	ID string
+	// By is the agent that handed Pinky the task over MCP (phone_task_run),
+	// by the name the person knows it by; empty when the person started
+	// it in Pinky's window.
+	By string
+	// Waiting is set while the task waits for the person: WaitApproval or
+	// WaitHandoff.
+	Waiting string
+	// Waited is the time the task waited for the person, in all its
+	// stretches, which its time limit leaves out.
+	Waited time.Duration
+	// Log is the task's latest steps, the newest last (at most maxLog);
+	// Log[i] is step LogFirst+i, counted from 1.
+	Log      []Step
+	LogFirst int
+	// Version counts the changes of the status.
+	Version int
 }
+
+// What a task waits for the person to do (Status.Waiting).
+const (
+	WaitApproval = "approval" // decide on an approval in Pinky
+	WaitHandoff  = "handoff"  // do something on the phone and hand it back
+)
+
+// Step is a phone tool the model called, and how it went.
+type Step struct {
+	At     time.Time
+	Tool   string // phone_tap, …
+	Intent string // why, in the model's words, when it gave one
+	Status string // settled, approval_denied, …, or the error's code
+	// Note is what the model wrote before it called the tool, if
+	// anything, cut to a line or two; for a message (gateway.PersonStep),
+	// its words.
+	Note string
+	// From is, for a message, the agent that sent it; empty for the
+	// person's (Message.From).
+	From string
+}
+
+// maxLog is how many steps Status.Log keeps.
+const maxLog = 200
 
 // Running reports whether the task has not ended.
 func (s Status) Running() bool { return s.Ended.IsZero() }
@@ -182,6 +229,9 @@ type Message struct {
 	ID   string
 	Text string
 	At   time.Time
+	// From is the agent that handed Pinky the task when it sent the
+	// message (Runner.SteerFor); empty for the person.
+	From string
 }
 
 // Errors of Start.
@@ -190,6 +240,8 @@ var (
 	ErrNoModel = errors.New("pilot: no model")
 	ErrBusy    = errors.New("pilot: Pinky is already doing a task on this phone")
 	ErrClosed  = errors.New("pilot: closed")
+	// ErrNotFound: no task has that ID.
+	ErrNotFound = errors.New("pilot: no such task")
 )
 
 // Errors of Steer, Edit, Withdraw and Continue.
@@ -237,6 +289,7 @@ type Runner struct {
 
 	mu     sync.Mutex
 	runs   map[string]*run // by device id, the running and the last ended
+	byID   map[string]*run // the tasks agents handed Pinky, by Status.ID (agents.go)
 	closed bool
 }
 
@@ -249,38 +302,47 @@ func New(o Options) *Runner {
 		o.HTTPClient = http.DefaultClient
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Runner{opt: o, ctx: ctx, cancel: cancel, runs: map[string]*run{}}
+	return &Runner{opt: o, ctx: ctx, cancel: cancel, runs: map[string]*run{}, byID: map[string]*run{}}
 }
 
 // Start starts a task on a phone. It returns at once; Status follows it.
 func (r *Runner) Start(cfg Config, device, task string) error {
-	task = strings.TrimSpace(task)
-	if task == "" || device == "" {
-		return ErrNoTask
+	_, err := r.start(cfg, Request{Device: device, Task: task})
+	return err
+}
+
+// start starts a task, the person's or an agent's.
+func (r *Runner) start(cfg Config, req Request) (*run, error) {
+	task := strings.TrimSpace(req.Task)
+	if task == "" || req.Device == "" {
+		return nil, ErrNoTask
 	}
 	cfg = cfg.Normalize()
 	if cfg.Model == "" {
-		return ErrNoModel
+		return nil, ErrNoModel
 	}
 	r.mu.Lock()
 	if r.closed {
 		r.mu.Unlock()
-		return ErrClosed
+		return nil, ErrClosed
 	}
-	if ru := r.runs[device]; ru != nil && ru.status().Running() {
+	if ru := r.runs[req.Device]; ru != nil && ru.status().Running() {
 		r.mu.Unlock()
-		return ErrBusy
+		return nil, ErrBusy
 	}
 	ctx, cancel := context.WithCancel(r.ctx)
 	now := time.Now()
-	ru := &run{r: r, cancel: cancel, read: map[string]bool{},
-		st: Status{Device: device, Task: task, Config: cfg, Started: now, Resumed: now}}
+	ru := &run{r: r, cancel: cancel, req: req, read: map[string]bool{}, changed: make(chan struct{}),
+		st: Status{Device: req.Device, Task: task, Config: cfg, Started: now, Resumed: now, ID: newID(), By: req.Agent.Name}}
 	_, ru.st.Priced = priceOf(cfg)
-	r.runs[device] = ru
+	r.runs[req.Device] = ru
+	if ru.st.By != "" {
+		r.keepLocked(ru)
+	}
 	r.launch(ctx, cancel, ru)
 	r.mu.Unlock()
 	r.notify()
-	return nil
+	return ru, nil
 }
 
 // launch runs ru's task, or its next stretch, until it ends. The caller
@@ -293,13 +355,14 @@ func (r *Runner) launch(ctx context.Context, cancel context.CancelFunc, ru *run)
 		end, summary := ru.work(ctx)
 		ru.mu.Lock()
 		now := time.Now()
-		ru.st.End, ru.st.Summary, ru.st.Ended = end, summary, now
+		ru.st.End, ru.st.Summary, ru.st.Ended, ru.st.Waiting = end, summary, now, ""
 		ru.st.Continuable = ru.m != nil && ru.st.TaskID != ""
 		if ru.m != nil {
 			// The key stays no longer than the stretch; Continue asks
 			// for it again.
 			ru.m.setKey("")
 		}
+		ru.changedLocked()
 		ru.mu.Unlock()
 		r.notify()
 	}()
@@ -322,14 +385,20 @@ func (r *Runner) Steer(device, text string) (Message, error) {
 	if ru == nil {
 		return Message{}, ErrNotRunning
 	}
+	return ru.steer(text, "")
+}
+
+// steer gives ru, running, a message (Steer) from the person, or from
+// the agent that handed Pinky the task (Message.From).
+func (ru *run) steer(text, from string) (Message, error) {
 	ru.mu.Lock()
 	if !ru.st.Running() {
 		ru.mu.Unlock()
 		return Message{}, ErrNotRunning
 	}
-	m := ru.addLocked(text)
+	m := ru.addLocked(text, from)
 	ru.mu.Unlock()
-	r.notify()
+	ru.r.notify()
 	return m, nil
 }
 
@@ -376,6 +445,7 @@ func (r *Runner) pending(device, id string, f func(p []Message, i int) []Message
 	if len(ru.st.Pending) == 0 {
 		ru.st.Pending = nil
 	}
+	ru.changedLocked()
 	ru.mu.Unlock()
 	r.notify()
 	return nil
@@ -409,6 +479,13 @@ func (r *Runner) continueLocked(device, text string) error {
 	if ru == nil {
 		return ErrCannotContinue
 	}
+	return r.continueRunLocked(ru, text, "")
+}
+
+// continueRunLocked continues ru, the last task on its phone (Continue),
+// with a message from the person or from the agent that handed Pinky the
+// task (Message.From). The caller holds r.mu.
+func (r *Runner) continueRunLocked(ru *run, text, from string) error {
 	ru.mu.Lock()
 	switch {
 	case ru.st.Running():
@@ -422,16 +499,18 @@ func (r *Runner) continueLocked(device, text string) error {
 		return ErrEmpty
 	}
 	if text != "" {
-		ru.addLocked(text)
+		ru.addLocked(text, from)
 	}
 	ctx, cancel := context.WithCancel(r.ctx)
 	now := time.Now()
-	ru.cancel, ru.stopped, ru.waited = cancel, false, 0
+	ru.st.Waited += ru.waited
+	ru.cancel, ru.stopped, ru.cancelled, ru.waited = cancel, false, false, 0
 	ru.base = ru.st
 	ru.st.Worked += max(0, ru.st.Ended.Sub(ru.st.Resumed))
 	ru.st.Ended, ru.st.End, ru.st.Summary, ru.st.Continuable = time.Time{}, Running, "", false
 	ru.st.Continues++
 	ru.st.Resumed = now
+	ru.changedLocked()
 	ru.mu.Unlock()
 	r.launch(ctx, cancel, ru)
 	return nil
@@ -503,6 +582,8 @@ func (r *Runner) notify() {
 type run struct {
 	r *Runner
 
+	req Request
+
 	mu      sync.Mutex
 	cancel  context.CancelFunc // the current stretch's
 	st      Status
@@ -520,12 +601,24 @@ type run struct {
 	m     model
 	tools []tool
 	carry []result
+
+	// cancelled is set when the agent that handed Pinky the task
+	// cancelled it: it ends as Cancelled, released as cancelled.
+	cancelled bool
+	// changed is closed, and replaced, at each change of st (Wait).
+	changed chan struct{}
+	// note is what the model wrote before its next call (Step.Note).
+	note string
 }
 
 func (ru *run) status() Status {
 	ru.mu.Lock()
 	defer ru.mu.Unlock()
-	return ru.st
+	s := ru.st
+	s.Waited += ru.waited
+	// Appends to the run's log never show in a copy.
+	s.Log = s.Log[:len(s.Log):len(s.Log)]
+	return s
 }
 
 func (ru *run) stop() {
@@ -538,10 +631,11 @@ func (ru *run) stop() {
 
 // addLocked adds a message from the person to those the model has not
 // read. The caller holds ru.mu.
-func (ru *run) addLocked(text string) Message {
+func (ru *run) addLocked(text, from string) Message {
 	ru.seq++
-	m := Message{ID: fmt.Sprintf("m%d", ru.seq), Text: text, At: time.Now()}
+	m := Message{ID: fmt.Sprintf("m%d", ru.seq), Text: text, At: time.Now(), From: from}
 	ru.st.Pending = append(slices.Clone(ru.st.Pending), m)
+	ru.changedLocked()
 	return m
 }
 
@@ -560,9 +654,13 @@ func (ru *run) takePending() []Message {
 		return nil
 	}
 	for _, m := range msgs {
-		_ = ru.r.opt.Server.PersonSaid(device, m.Text)
+		if m.From != "" {
+			_ = ru.r.opt.Server.AgentSaid(device, m.From, m.Text)
+		} else {
+			_ = ru.r.opt.Server.PersonSaid(device, m.Text)
+		}
 	}
-	ru.r.notify()
+	ru.logMessages(msgs)
 	return msgs
 }
 
@@ -576,8 +674,17 @@ func (ru *run) hasPending() bool {
 func (ru *run) update(f func(s *Status)) {
 	ru.mu.Lock()
 	f(&ru.st)
+	ru.changedLocked()
 	ru.mu.Unlock()
 	ru.r.notify()
+}
+
+// changedLocked counts a change of the status and wakes Wait. The caller
+// holds ru.mu.
+func (ru *run) changedLocked() {
+	ru.st.Version++
+	close(ru.changed)
+	ru.changed = make(chan struct{})
 }
 
 // firstReadRetry is how long a task waits before it reads the first
@@ -590,6 +697,9 @@ var firstReadRetry = time.Second
 var leftOut = map[string]bool{
 	"phone_connect": true, "phone_release": true, "phone_app": true, "phone_device": true,
 	"phone_files": true, "phone_logs": true,
+	// Pinky's own agent hands no task to itself.
+	"phone_task_run": true, "phone_task_status": true, "phone_task_wait": true, "phone_task_cancel": true,
+	"phone_task_list": true, "phone_task_steer": true,
 }
 
 // waits are the tools that wait for the person: their time does not count
@@ -604,7 +714,7 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	key, err := ru.r.opt.Key(ctx, cfg.Provider)
 	switch {
 	case ctx.Err() != nil:
-		return Stopped, ""
+		return ru.stoppedEnd()
 	case errors.Is(err, secret.ErrNotFound) || err == nil && strings.TrimSpace(key) == "":
 		return NoKey, ""
 	case err != nil:
@@ -618,7 +728,18 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	sctx, scancel := context.WithCancel(context.Background())
 	defer scancel()
 	st, ct := sdk.NewInMemoryTransports()
-	if err := ru.r.opt.Server.ConnectBuiltinTask(sctx, st, taskID); err != nil {
+	connect := func(ctx context.Context, t sdk.Transport) error {
+		return ru.r.opt.Server.ConnectBuiltinTask(ctx, t, taskID)
+	}
+	if ru.req.Agent.Name != "" {
+		// An agent's task works as that agent, also when the person
+		// continues it: its scope, its approval as a new agent, a Stop
+		// that keeps it off the phone.
+		connect = func(ctx context.Context, t sdk.Transport) error {
+			return ru.r.opt.Server.ConnectFor(ctx, t, ru.req.Agent, taskID)
+		}
+	}
+	if err := connect(sctx, st); err != nil {
 		return Error, err.Error()
 	}
 	cl := sdk.NewClient(&sdk.Implementation{Name: "pinky-agent", Title: mcp.BuiltinName, Version: ru.r.opt.Version}, nil)
@@ -627,6 +748,21 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		return Error, err.Error()
 	}
 	defer cs.Close()
+	defer func() {
+		// The agent cancelled it: the task ends as cancelled in Activity
+		// rather than as the session's going away.
+		ru.mu.Lock()
+		cancelled := ru.cancelled
+		ru.mu.Unlock()
+		if cancelled {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			st := ru.status()
+			st.End = Cancelled
+			cs.CallTool(ctx, &sdk.CallToolParams{Name: "phone_release", Arguments: map[string]any{
+				"outcome": "cancelled", "summary": ru.r.opt.Describe(st)}})
+		}
+	}()
 
 	tools := ru.tools
 	if m == nil {
@@ -648,7 +784,14 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		tools = append(tools, finishTool)
 	}
 
-	res := ru.call(ctx, cs, "phone_connect", map[string]any{"device": device, "task": oneLine(task)})
+	connectArgs := map[string]any{"device": device, "task": oneLine(task)}
+	if len(ru.req.Apps) > 0 {
+		connectArgs["apps"] = ru.req.Apps
+	}
+	if ru.req.ReadOnly {
+		connectArgs["read_only"] = true
+	}
+	res := ru.call(ctx, cs, "phone_connect", connectArgs)
 	if res.status == "internal" && ctx.Err() == nil {
 		// The phone is leased; only its first screen failed to read. One
 		// failed read (a busy accessibility service, as on the phone
@@ -664,12 +807,15 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	}
 	switch {
 	case ctx.Err() != nil || res.status == "stopped":
-		return Stopped, ""
+		return ru.stoppedEnd()
 	case res.isError:
+		return Error, res.message()
+	case res.status == "approval_denied":
+		// An agent's first connection the person did not allow.
 		return Error, res.message()
 	}
 	if taskID == "" {
-		taskID = ru.r.opt.Server.TaskOf(device)
+		taskID = ru.r.opt.Server.TaskOf(device, ru.req.Agent.Name)
 		ru.update(func(s *Status) { s.TaskID = taskID })
 	}
 
@@ -683,9 +829,12 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		ru.m, ru.tools = m, tools
 		ru.mu.Unlock()
 		text = firstMessage(task, device, res.text, time.Now())
+		if ru.req.Agent.Name != "" {
+			text += "\n\n" + fromAgent(ru.req.Agent.Name)
+		}
 	} else {
 		m.setKey(key)
-		text = continueMessage(device, res.text, time.Now())
+		text = continueMessage(device, res.text, time.Now(), ru.continuedBy())
 	}
 	return ru.loop(ctx, cs, m, tools, key, text)
 }
@@ -736,6 +885,9 @@ func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools [
 		if t.refused {
 			return ru.end(cs, Refused, "")
 		}
+		ru.mu.Lock()
+		ru.note = noteOf(t.text)
+		ru.mu.Unlock()
 		if len(t.calls) == 0 {
 			if ru.hasPending() {
 				// The person wrote meanwhile: their words are the answer.
@@ -767,8 +919,9 @@ func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools [
 			}
 			ru.update(func(s *Status) { s.Steps++ })
 			res := ru.call(ctx, cs, c.name, c.args)
+			ru.logStep(c, res)
 			if ctx.Err() != nil || res.status == "stopped" {
-				return Stopped, ""
+				return ru.stoppedEnd()
 			}
 			results = append(results, result{id: c.id, text: res.text, images: res.images, isError: res.isError})
 		}
@@ -789,7 +942,7 @@ func notRun(c call) result {
 // ended ends the task after err, or as stopped when the person stopped it.
 func (ru *run) ended(ctx context.Context, cs *sdk.ClientSession, err error) (End, string) {
 	if ctx.Err() != nil {
-		return Stopped, ""
+		return ru.stoppedEnd()
 	}
 	var ae *apiError
 	if errors.As(err, &ae) && ae.status == http.StatusUnauthorized {
@@ -809,7 +962,7 @@ func (ru *run) finish(ctx context.Context, cs *sdk.ClientSession, c call) (End, 
 	}
 	res := ru.call(ctx, cs, "phone_release", map[string]any{"outcome": string(end), "summary": summary})
 	if ctx.Err() != nil || res.status == "stopped" {
-		return Stopped, ""
+		return ru.stoppedEnd()
 	}
 	return end, summary
 }
@@ -821,7 +974,7 @@ func (ru *run) end(cs *sdk.ClientSession, end End, summary string) (End, string)
 	st := ru.st
 	ru.mu.Unlock()
 	if stopped {
-		return Stopped, ""
+		return ru.stoppedEnd()
 	}
 	st.End, st.Summary = end, summary
 	// A context of its own: the task's may be cancelled by now.
@@ -895,11 +1048,15 @@ func (p phoneResult) message() string {
 func (ru *run) call(ctx context.Context, cs *sdk.ClientSession, name string, args map[string]any) phoneResult {
 	start := time.Now()
 	waited := waits[name]
+	if waited {
+		ru.waiting(waitOf(name))
+	}
 	defer func() {
 		if waited {
 			ru.mu.Lock()
 			ru.waited += time.Since(start)
 			ru.mu.Unlock()
+			ru.waiting("")
 		}
 	}()
 	for {
@@ -910,6 +1067,9 @@ func (ru *run) call(ctx context.Context, cs *sdk.ClientSession, name string, arg
 		p := parse(res)
 		if p.status != "approval_pending" {
 			return p
+		}
+		if !waited {
+			ru.waiting(WaitApproval)
 		}
 		waited = true
 		if p.approvalID == "" || name == "phone_batch" {
@@ -1006,6 +1166,8 @@ func Describe(s Status) string {
 		return "Couldn't finish."
 	case Error:
 		return "Couldn't finish: " + s.Summary
+	case Cancelled:
+		return "Cancelled by " + s.By + "."
 	}
 	return s.Summary
 }

@@ -705,6 +705,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 				Call:   gateway.Call{Device: strings.TrimSpace(in.Device), ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
 				Reason: in.Reason})), nil, nil
 		})
+
+	s.addTaskTools(srv, remote)
 }
 
 // pointArg turns optional x and y into a point; both or neither.
