@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Pinky on Android now shows a task's steps, approval cards and the phone's status in the app's language (Chinese or Japanese) instead of English.
+
 ## 2026.1113.7 (2026-11-13)
 
 - The iPhone mirror no longer looks too bright: whites no longer clip and dark parts are no longer crushed to black. Thanks @shrderek.
