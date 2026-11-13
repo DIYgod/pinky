@@ -88,6 +88,18 @@ func (d *Device) readPackage(paths []string) (driver.Package, error) {
 	return driver.Package{ID: a.Package, Name: a.Name(), Version: a.Version(), Signer: a.Signer.Text(), SignerKey: a.Signer.SHA256}, nil
 }
 
+// AddApp installs an app by id and name, as if from files: for tests that
+// need an app the demo phone does not have.
+func (d *Device) AddApp(id, name string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.added == nil {
+		d.added = map[string]added{}
+	}
+	d.added[id] = added{id: id, name: name}
+	delete(d.removed, id)
+}
+
 // InstallPackage implements driver.AppManager.
 func (d *Device) InstallPackage(ctx context.Context, paths []string) error {
 	if err := d.check(ctx); err != nil {

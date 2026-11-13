@@ -139,6 +139,8 @@ type Device struct {
 	switches   map[string]string
 	noSwitch   map[string]string
 	appLocales map[string]string
+	// vit is the battery and storage it reports (vitals.go).
+	vit vitals
 }
 
 // NewDevice returns a demo phone. Android phones use the Pixel launcher,

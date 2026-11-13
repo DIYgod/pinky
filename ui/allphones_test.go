@@ -85,7 +85,7 @@ func TestAllPhonesGrid(t *testing.T) {
 	var rs []mg.Rect
 	for _, name := range manyPhones[:3] {
 		r, _ := tt.Find(locales.PhoneShow(name))
-		if !near(r.Y, 83) || !near(r.W, tileMaxWidth-2) {
+		if !near(r.Y, headerHeight+gridTop+1) || !near(r.W, tileMaxWidth-2) {
 			t.Errorf("three phones: %s's tile at %v", name, r)
 		}
 		rs = append(rs, r)
@@ -273,7 +273,9 @@ func TestAllPhonesLivePictures(t *testing.T) {
 	sa.mu.Lock()
 	again := len(sa.open) - opened
 	sa.mu.Unlock()
-	if ta.mirrors[far] != m || m.gen != gen || again != 0 {
+	// An idle iPhone's tile may hold its picture by now (tileStill),
+	// which lets the stream go but opens none.
+	if ta.mirrors[far] != m || (m.gen != gen && m.state != "still") || again != 0 {
 		t.Errorf("scrolling opened streams again: %d more, the mirror's generation %d, was %d", again, m.gen, gen)
 	}
 }

@@ -200,6 +200,12 @@ func TestScreenInputsAndPasswords(t *testing.T) {
 	if strings.Contains(s.Render(), "hunter2") {
 		t.Fatal("password text leaked into the screen")
 	}
+	// Only typed text is content: not a hint, never a password.
+	for i, want := range []string{"", "你好，Pinky", "", ""} {
+		if c := s.Elements[i].Content; c != want {
+			t.Errorf("%q: content %q, want %q", s.Elements[i].Label, c, want)
+		}
+	}
 }
 
 func TestScreenKeyboardOccludes(t *testing.T) {
@@ -225,6 +231,39 @@ func TestScreenKeyboardOccludes(t *testing.T) {
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("screen:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// keyboardPanel is a keyboard's own panel over an app that shows nothing
+// (Gboard's setup, a Unity game's text box), read with its nodes as the
+// driver reads it again (DumpOptions.IME).
+func keyboardPanel() *Tree {
+	panel := &Node{Class: "android.widget.FrameLayout", Bounds: Bounds{0, 1100, screenW, 1794}, Children: []*Node{
+		{Class: "android.widget.Button", Text: "Next", Clickable: true, Bounds: Bounds{600, 1600, 1000, 1700}},
+	}}
+	ime := Window{ID: 9, Type: WindowInputMethod, Layer: 30, Package: "com.google.android.inputmethod.latin", Bounds: Bounds{0, 1100, screenW, 1794}, Root: panel}
+	app := &Node{Class: "android.widget.FrameLayout", Bounds: Bounds{0, 0, screenW, screenH}}
+	return &Tree{Display: Display{Width: screenW, Height: screenH},
+		Windows: []Window{ime, navBar(), statusBar(), appWindow("com.example.game", "Game", app)}}
+}
+
+// The keyboard's frame is where it lies over the app (GitHub issue #71),
+// but not when its own nodes are listed: then the agent acts on it. The
+// system bars count either way.
+func TestScreenKeyboardFrame(t *testing.T) {
+	bars := []screen.Rect{{Y: 1794, W: screenW, H: screenH - 1794}, {W: screenW, H: 63}}
+	tr := keyboardPanel()
+	s := tr.Screen(ScreenOptions{Keyboard: true})
+	if !s.Keyboard || !s.KeyboardFrame.Empty() || !slices.Equal(s.Covered, bars) {
+		t.Fatalf("with its nodes: keyboard %v at %+v, covered %+v", s.Keyboard, s.KeyboardFrame, s.Covered)
+	}
+	if got := lines(s); len(got) != 2 || got[1] != `[1] button "Next" @800,1650` {
+		t.Fatalf("screen:\n%s", strings.Join(got, "\n"))
+	}
+	tr.Windows[0].Root = nil
+	s = tr.Screen(ScreenOptions{})
+	if want := (screen.Rect{Y: 1100, W: screenW, H: 694}); !s.Keyboard || s.KeyboardFrame != want || !slices.Equal(s.Covered, bars) {
+		t.Fatalf("over the app: keyboard %v at %+v, covered %+v", s.Keyboard, s.KeyboardFrame, s.Covered)
 	}
 }
 

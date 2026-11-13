@@ -70,7 +70,7 @@ func TestBackgroundDisplay(t *testing.T) {
 	if !bg.isClosed() {
 		t.Fatal("the background display stayed open after the task")
 	}
-	if _, err := g.AgentStream(ctx, "pixel", driver.StreamOptions{}); !errors.Is(err, driver.ErrNotFound) {
+	if _, err := g.AgentStream(ctx, "pixel", driver.StreamOptions{}); !errors.Is(err, driver.ErrNotFound) || errors.Is(err, ErrOwnScreen) {
 		t.Fatalf("agent stream without a task: %v", err)
 	}
 }
@@ -435,4 +435,129 @@ func TestBackgroundUnsupported(t *testing.T) {
 	if g.Background("pixel") {
 		t.Error("background on")
 	}
+}
+
+// A background display has no home screen, so an agent that works on the
+// home screen itself asks for the phone's own screen (phone_connect
+// own_screen); the person sees it in the task's steps.
+func TestBackgroundOwnScreen(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	g := newExtraGateway(t, x)
+	g.SetBackground("pixel", true)
+	s := g.OpenSession(agent)
+	defer s.Close()
+	res := s.Connect(ctx, ConnectRequest{Task: "Tidy the home screen", OwnScreen: true})
+	mustStatus(t, res, StatusSettled)
+	if !strings.Contains(res.Message, "works on the phone's own screen") || strings.Contains(res.Message, "own_screen: true") {
+		t.Fatalf("message %q", res.Message)
+	}
+	if n := len(x.backgrounds()); n != 0 {
+		t.Fatalf("%d background displays opened", n)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	if x.Current() != "dinely" {
+		t.Fatalf("phone %q", x.Current())
+	}
+	// No display opens for the rest of the task, which a window showing
+	// the agent's screen hears, to stop asking.
+	if _, err := g.AgentStream(ctx, "pixel", driver.StreamOptions{}); !errors.Is(err, ErrOwnScreen) || !errors.Is(err, driver.ErrNotFound) {
+		t.Fatalf("agent stream on the phone's own screen: %v", err)
+	}
+	if d := g.Devices()[0]; strings.Contains(d.StatusLine, "in the background") {
+		t.Fatalf("status line %q", d.StatusLine)
+	}
+	s.Release(ctx, ReleaseRequest{})
+	g.Flush()
+	tasks, err := g.History(ctx, HistoryQuery{})
+	if err != nil || len(tasks) != 1 {
+		t.Fatalf("history: %v %v", tasks, err)
+	}
+	if st := tasks[0].Steps[0]; st.Text != "Connected to Pixel 9 for “Tidy the home screen”, on the phone's own screen" ||
+		!strings.Contains(string(st.Args), `"own_screen":true`) {
+		t.Fatalf("connect step %q %s", st.Text, st.Args)
+	}
+
+	// Without background work, own_screen changes nothing.
+	x2 := newExtraDev("pixel", "Pixel 9")
+	g2 := newExtraGateway(t, x2)
+	s2 := g2.OpenSession(agent)
+	defer s2.Close()
+	res = s2.Connect(ctx, ConnectRequest{Task: "Tidy the home screen", OwnScreen: true})
+	mustStatus(t, res, StatusSettled)
+	if strings.Contains(res.Message, "own screen") {
+		t.Fatalf("message %q", res.Message)
+	}
+}
+
+// An agent that found itself on a background display connects again for
+// the same task with own_screen: the display closes and the task goes on
+// on the phone's own screen. A person who used that screen in the last
+// minute keeps it until they hand it over.
+func TestBackgroundOwnScreenAgain(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	g := newExtraGateway(t, x)
+	g.SetBackground("pixel", true)
+	s, res := connect(t, g, "Tidy the home screen")
+	if !strings.Contains(res.Message, "has no home screen") || !strings.Contains(res.Message, "own_screen: true") {
+		t.Fatalf("connect message %q", res.Message)
+	}
+	bgs := x.backgrounds()
+	if len(bgs) != 1 {
+		t.Fatalf("%d background displays opened", len(bgs))
+	}
+	res = s.Connect(ctx, ConnectRequest{Task: "Tidy the home screen", OwnScreen: true})
+	mustStatus(t, res, StatusSettled)
+	deadline := time.Now().Add(2 * time.Second)
+	for !bgs[0].isClosed() && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !bgs[0].isClosed() {
+		t.Fatal("the background display stayed open")
+	}
+	if _, err := g.AgentStream(ctx, "pixel", driver.StreamOptions{}); !errors.Is(err, ErrOwnScreen) {
+		t.Fatalf("agent stream after the task left its display: %v", err)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	if x.Current() != "dinely" || bgs[0].Current() == "dinely" {
+		t.Fatalf("phone %q, display %q", x.Current(), bgs[0].Current())
+	}
+	// Asking again changes nothing more.
+	res = s.Connect(ctx, ConnectRequest{Task: "Tidy the home screen", OwnScreen: true})
+	mustStatus(t, res, StatusSettled)
+	if strings.Contains(res.Message, "As asked") || len(x.backgrounds()) != 1 {
+		t.Fatalf("message %q, %d displays", res.Message, len(x.backgrounds()))
+	}
+
+	// The person is using the phone's own screen.
+	x2 := newExtraDev("pixel", "Pixel 9")
+	g2 := newExtraGateway(t, x2)
+	g2.SetBackground("pixel", true)
+	s2, _ := connect(t, g2, "Tidy the home screen")
+	x2.Show("settings")
+	if err := g2.PersonTouched("pixel"); err != nil {
+		t.Fatal(err)
+	}
+	res = s2.Connect(ctx, ConnectRequest{Task: "Tidy the home screen", OwnScreen: true})
+	mustStatus(t, res, StatusPaused)
+	if !strings.Contains(res.Message, "phone_handoff") {
+		t.Fatalf("message %q", res.Message)
+	}
+	if d := g2.Devices()[0]; d.Status != DeviceInControl {
+		t.Fatalf("device %+v", d)
+	}
+	mustStatus(t, s2.Act(ctx, Call{}, Action{Tool: "key", Key: "home"}), StatusPaused)
+	if x2.Current() != "settings" {
+		t.Fatalf("the agent took the person's screen: %q", x2.Current())
+	}
+
+	// The phone's own screen is locked.
+	x3 := newExtraDev("pixel", "Pixel 9")
+	g3 := newExtraGateway(t, x3)
+	g3.SetBackground("pixel", true)
+	x3.SetLocked(true)
+	s3 := g3.OpenSession(agent)
+	defer s3.Close()
+	mustStatus(t, s3.Connect(ctx, ConnectRequest{Task: "Tidy the home screen", OwnScreen: true}), StatusLocked)
 }

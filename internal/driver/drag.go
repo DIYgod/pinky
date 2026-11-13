@@ -105,3 +105,17 @@ func (g Drag) Steps(step time.Duration) []DragStep {
 type Dragger interface {
 	Drag(ctx context.Context, g Drag) error
 }
+
+// DragReplanner is a Dragger that can change the rest of a drag while the
+// finger is down. The gateway uses it on a home screen, which shrinks its
+// page once an app is picked up, to let go where the target moved to.
+type DragReplanner interface {
+	Dragger
+	// DragReplan performs g as Drag does, but once the finger has reached
+	// g.Stops[at] and rested there for its Pause, it calls replan with the
+	// finger still down and still. Stops replan returns replace
+	// g.Stops[at+1:], from g.Stops[at].Point on; nil keeps them. The finger
+	// rests while replan runs, so replan should be quick, and it must not
+	// send input to the phone. The finger always lifts, also when ctx ends.
+	DragReplan(ctx context.Context, g Drag, at int, replan func(ctx context.Context) []DragStop) error
+}

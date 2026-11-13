@@ -763,13 +763,13 @@ func TestGatewayRound3(t *testing.T) {
 		t.Fatal(err)
 	}
 	ga.waitFor(t, "the phones", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
-	if f := ga.device(pixel).Features; f != (gateway.Features{Unlock: true, Background: true, Files: true, Pinch: true}) {
+	if f := ga.device(pixel).Features; f != (gateway.Features{Unlock: true, Background: true, Files: true, Pinch: true, Rotate: true}) {
 		t.Errorf("the demo Pixel has features %+v", f)
 	}
 	ga.selectPhone(pixel)
 	tt := mg.NewTester(ga.view, 1280, 820)
 	tt.Frame()
-	if hasText(tt, "Pinky Companion") {
+	if hasText(tt, "Install Pinky on the phone") {
 		t.Errorf("a companion card for a phone without one: %q", tt.Texts())
 	}
 

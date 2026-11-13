@@ -92,14 +92,18 @@ func TestTakeoverSurvivesNewTask(t *testing.T) {
 	g.TakeOver("pixel")
 	mustStatus(t, tap(s, acct), StatusTookOver)
 
-	// Another task name, release and connect, or another session: the person
-	// stays in control.
-	mustStatus(t, s.Connect(ctx, ConnectRequest{Task: "Something else"}), StatusPaused)
-	mustStatus(t, tap(s, acct), StatusPaused)
-	s.Release(ctx, ReleaseRequest{})
+	// Another task name (refused: it never ends the running task), release
+	// and connect, or another session: the person stays in control.
+	if res := s.Connect(ctx, ConnectRequest{Task: "Something else"}); res.Error != ErrLeaseHeld {
+		t.Fatalf("another task: %+v", res)
+	}
+	mustStatus(t, s.Act(ctx, Call{Device: "pixel"}, Action{Tool: "tap", Ref: acct}), StatusPaused)
+	s.Release(ctx, ReleaseRequest{Device: "pixel"})
 	if v := g.Devices()[0]; v.Status != DeviceInControl {
 		t.Fatalf("after release: %s", v.Status)
 	}
+	mustStatus(t, s.Connect(ctx, ConnectRequest{Task: "Something else"}), StatusPaused)
+	s.Release(ctx, ReleaseRequest{Device: "pixel"})
 	other := g.OpenSession(AgentInfo{Name: "Codex"})
 	defer other.Close()
 	mustStatus(t, other.Connect(ctx, ConnectRequest{Task: "Sneaky"}), StatusPaused)

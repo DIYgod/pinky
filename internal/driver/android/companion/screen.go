@@ -44,9 +44,29 @@ func (t *Tree) Screen(opt ScreenOptions) *screen.Screen {
 			s.Orientation = "landscape"
 		}
 	}
+	// Where touches go to the keyboard or a system bar instead of the app:
+	// the keyboard window's largest touchable part is the keyboard, and
+	// its other parts (a stylus toolbar's strips) count as covered. A
+	// keyboard whose own nodes came (DumpOptions.IME, or a sheet the app
+	// walked unasked) is listed and is what the agent acts on, so it lies
+	// over nothing.
+	full := screen.Rect{W: s.Width, H: s.Height}
 	for _, w := range t.Windows {
-		if w.Type == WindowInputMethod {
+		ime := w.Type == WindowInputMethod
+		if ime {
 			s.Keyboard = true
+		}
+		if (ime && w.Root != nil) || (!ime && !t.isSystemBar(w)) {
+			continue
+		}
+		for _, r := range w.covers() {
+			r = clipTo(r, full)
+			if ime && r.W*r.H > s.KeyboardFrame.W*s.KeyboardFrame.H {
+				r, s.KeyboardFrame = s.KeyboardFrame, r
+			}
+			if !r.Empty() {
+				s.Covered = append(s.Covered, r)
+			}
 		}
 	}
 	s.App = t.foreground()
@@ -56,7 +76,6 @@ func (t *Tree) Screen(opt ScreenOptions) *screen.Screen {
 		dpi = 160
 	}
 	cv := &converter{screenArea: float64(s.Width) * float64(s.Height), minTarget: minUnlabeledDP * dpi / 160}
-	full := screen.Rect{W: s.Width, H: s.Height}
 	var above []screen.Rect // what the windows above the current one cover
 	for _, w := range t.Windows {
 		wb := w.Bounds.rect()
@@ -95,6 +114,30 @@ func (w Window) covers() []screen.Rect {
 		return []screen.Rect{wb}
 	}
 	return nil
+}
+
+// OverlaysOf returns what the accessibility overlays of the app pkg cover:
+// Pinky's own pill and approval card while Pinky on a computer holds the
+// phone in on-phone mode. A tap there lands on them, not on the app below.
+// They send no nodes (accessibilityDataSensitive) and often no package, so
+// they are known by their title, the app's package.
+func (t *Tree) OverlaysOf(pkg string) []screen.Rect {
+	full := screen.Rect{W: t.Display.Width, H: t.Display.Height}
+	var out []screen.Rect
+	for _, w := range t.Windows {
+		if w.Type != WindowAccessibilityOverlay || (w.Package != pkg && w.Title != pkg) {
+			continue
+		}
+		for _, r := range w.covers() {
+			if !full.Empty() {
+				r = clipTo(r, full)
+			}
+			if !r.Empty() {
+				out = append(out, r)
+			}
+		}
+	}
+	return out
 }
 
 // foreground picks the app the person is looking at: the top-most focused
@@ -230,13 +273,14 @@ func (cv *converter) emit(n *Node, path, label string, check *Node) {
 	}
 	role := roleOf(n, check)
 	cv.out = append(cv.out, screen.Element{
-		Role:   role,
-		Label:  label,
-		Bounds: b,
-		States: states(n, role, check),
-		Source: screen.SourceTree,
-		Path:   path,
-		ID:     n.ID,
+		Role:    role,
+		Label:   label,
+		Bounds:  b,
+		States:  states(n, role, check),
+		Source:  screen.SourceTree,
+		Path:    path,
+		ID:      n.ID,
+		Content: inputContent(n),
 	})
 }
 
@@ -353,6 +397,16 @@ func inputLabel(n *Node) string {
 	return clean(firstNonEmpty(n.Text, n.Hint, n.Desc))
 }
 
+// inputContent is the text typed into an editable field, as inputLabel
+// shows it: "" while it shows its hint (the companion sends no text then)
+// and for passwords.
+func inputContent(n *Node) string {
+	if !n.Editable || n.Password || strings.TrimSpace(n.Text) == "" {
+		return ""
+	}
+	return clean(n.Text)
+}
+
 // roleOf maps a node onto the screen model's roles. check is the node whose
 // checkable state the element shows, if any.
 func roleOf(n *Node, check *Node) string {
@@ -467,6 +521,14 @@ func intersect(a, b screen.Rect) screen.Rect {
 		return screen.Rect{}
 	}
 	return screen.Rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}
+}
+
+// clipTo returns the part of r inside full, or r when full is unknown.
+func clipTo(r, full screen.Rect) screen.Rect {
+	if full.Empty() {
+		return r
+	}
+	return intersect(r, full)
 }
 
 // largestOutside returns the largest part of a that lies above, below, left

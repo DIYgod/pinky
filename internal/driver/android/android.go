@@ -66,6 +66,11 @@ type Config struct {
 	// network, with their addresses (network.go); "" keeps them in memory
 	// only.
 	NetworkFile string
+	// CompanionManualFile keeps the phones that ignore Pinky's change to
+	// their accessibility settings (vivo's OriginOS 6), on which a service
+	// the person turned on stays on (manual.go); "" keeps them in memory
+	// only.
+	CompanionManualFile string
 
 	// VerifyWiFi has the driver check that a phone it reaches over the
 	// network is the phone it set up, and refuse one that is not
@@ -86,9 +91,25 @@ type Config struct {
 	// its own). After a failure, List tries again after serverRetry,
 	// doubling up to serverRetryMax.
 	StartServer func(ctx context.Context) error
+	// StopServer stops the adb server that runs when Pinky started it, in
+	// this run or an earlier one, and returns adb.ErrNotOwnServer for any
+	// other, which it leaves running; nil means Client.StopOwnServer. The
+	// driver stops and starts again (StartServer) a server of its own that
+	// cannot reach the local network (offnet.go).
+	StopServer func(ctx context.Context) error
+	// OtherServers, when set, lists the ports of the other adb servers on
+	// this computer (cmd/pinky passes adb.Client.OtherServers), which List
+	// asks every otherScanEvery for the phones on a cable they hold, which
+	// the server Pinky uses cannot reach (otherserver.go). Pinky never
+	// stops them.
+	OtherServers func() ([]int, error)
 
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
+	// Infof, when set, receives the messages worth keeping in the log at
+	// any level, such as an adb server the driver stopped; nil sends them
+	// to Logf.
+	Infof func(format string, args ...any)
 }
 
 func (c *Config) defaults() {
@@ -97,6 +118,9 @@ func (c *Config) defaults() {
 	}
 	if c.Browser == nil {
 		c.Browser = mdnsBrowser{}
+	}
+	if c.StopServer == nil {
+		c.StopServer = c.Client.StopOwnServer
 	}
 	if c.KnownHosts == nil {
 		c.KnownHosts = readKnownHosts
@@ -118,6 +142,14 @@ func (c *Config) logf(format string, args ...any) {
 	}
 }
 
+func (c *Config) infof(format string, args ...any) {
+	if c.Infof != nil {
+		c.Infof(format, args...)
+		return
+	}
+	c.logf(format, args...)
+}
+
 // Provider discovers and opens Android devices.
 type Provider struct {
 	cfg Config
@@ -130,17 +162,26 @@ type Provider struct {
 	// forgotten holds the phones the person removed from Pinky, by id,
 	// which the driver no longer connects to by itself (forget.go).
 	forgotten map[string]bool
+	paused    map[string]bool // phones the person paused in Pinky (pause.go)
 
 	wifi *reconnector // nil without Config.ReconnectWiFi
 	// net keeps the phones reached over the network without Wireless
 	// debugging, and link reconnects them (network.go).
 	net  *netStore
 	link *netLink
+	// manual keeps the phones on which only the person can turn Pinky for
+	// Android's service on (manual.go).
+	manual *manualStore
 	// ids checks the phones reached over the network (identity.go); nil
 	// without Config.VerifyWiFi.
 	ids *identity
 
 	server serverWatch
+	// others keeps the phones other adb servers hold (otherserver.go).
+	others otherServers
+	// dial connects to an address on the network from Pinky's own
+	// process, to tell a server that cannot reach it (offnet.go).
+	dial func(ctx context.Context, addr string) error
 	// usbNodes lists the computer's USB devices as Windows sees them, to
 	// find phones without a driver (usbdriver.go); nil elsewhere.
 	usbNodes func() ([]usbNode, error)
@@ -157,12 +198,13 @@ type Provider struct {
 // NewProvider returns a provider with the given configuration.
 func NewProvider(cfg Config) *Provider {
 	cfg.defaults()
-	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes, avd: newAVDLauncher()}
+	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes, avd: newAVDLauncher(), dial: dialOwn}
 	if cfg.ReconnectWiFi {
 		p.wifi = newReconnector(p)
 	}
 	p.net = &netStore{path: cfg.NetworkFile, logf: cfg.logf}
 	p.link = newNetLink(p)
+	p.manual = &manualStore{path: cfg.CompanionManualFile, logf: cfg.logf}
 	if cfg.VerifyWiFi {
 		p.ids = newIdentity(p)
 	}
@@ -185,6 +227,9 @@ type deviceProps struct {
 	// AVD is the name of the Android Virtual Device an emulator runs, ""
 	// on a phone.
 	AVD string
+	// XiaomiROM: the phone runs Xiaomi's MIUI or HyperOS, which drop what
+	// adb injects into a background display (displayinput.go).
+	XiaomiROM bool
 }
 
 // List implements driver.Provider. It reads each online device's
@@ -262,6 +307,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		p.ids.apply(ctx, entries, infos, props)
 	}
 	infos = mergeTransports(p.netInfos(infos))
+	p.kickOthers(entries, infos)
 	return append(infos, p.driverlessPhones(infos)...), nil
 }
 
@@ -269,10 +315,19 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 // "adb" when there is no adb to start a server with (a build without
 // Pinky's own, on a computer without one), "adb_server" when no server
 // runs and starting one failed, "adb_old" when the server that runs is
-// older than protocol 41, and "adb_restarts" when the server went away
-// three times or more within ten minutes, as when another program keeps
-// restarting it with an adb of another version.
-func (p *Provider) CheckHost() driver.HostCheck { return p.server.check(time.Now()) }
+// older than protocol 41, "adb_no_network" when the server cannot reach
+// phones on the local network and Pinky could not restart it (offnet.go),
+// and "adb_restarts" when the server went away three times or more within
+// ten minutes, as when another program keeps restarting it with an adb of
+// another version. Without any of those, it is "adb_other_server" when
+// another program's adb server holds a phone on a cable that the server
+// Pinky uses cannot reach (otherserver.go).
+func (p *Provider) CheckHost() driver.HostCheck {
+	if c := p.server.check(time.Now()); c.Missing != "" {
+		return c
+	}
+	return p.checkOthers()
+}
 
 // phoneID is the id Pinky knows a phone by: the adb serial, except over
 // Wi-Fi, where it is the phone's hardware serial (the serial adb gives a
@@ -418,6 +473,9 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 		if v, ok := strings.CutPrefix(l, "pinky-boot="); ok && pr.HardwareSerial == "" {
 			pr.HardwareSerial = serial(v)
 		}
+		if v, ok := strings.CutPrefix(l, "pinky-xiaomi="); ok && strings.TrimSpace(v) != "" {
+			pr.XiaomiROM = true
+		}
 		if v, ok := strings.CutPrefix(l, "pinky-aid="); ok {
 			if v = strings.TrimSpace(v); v != "" && v != "null" {
 				pr.AndroidID = v
@@ -467,12 +525,14 @@ func (p *Provider) dropProps(serial string) {
 // propsCommand reads what deviceProps keeps, one line each: the model, the
 // Android version, the SDK level, the name the person gave the phone and
 // ro.serialno; then ro.boot.serialno, an emulator's AVD (the property
-// was ro.kernel.qemu.avd_name before Android 12), whether the phone has
-// finished starting, and the android_id only when the shell may read
-// neither serial property (the settings command takes a moment).
+// was ro.kernel.qemu.avd_name before Android 12), Xiaomi's HyperOS or
+// MIUI version, whether the phone has finished starting, and the
+// android_id only when the shell may read neither serial property (the
+// settings command takes a moment).
 const propsCommand = "getprop ro.product.model; getprop ro.build.version.release; getprop ro.build.version.sdk; " +
 	"settings get global device_name; getprop ro.serialno; echo pinky-boot=$(getprop ro.boot.serialno); " +
 	"echo pinky-avd=$(getprop ro.boot.qemu.avd_name)$(getprop ro.kernel.qemu.avd_name); " +
+	"echo pinky-xiaomi=$(getprop ro.mi.os.version.name)$(getprop ro.miui.ui.version.name); " +
 	"echo pinky-booted=$(getprop sys.boot_completed); " +
 	"[ -n \"$(getprop ro.serialno)$(getprop ro.boot.serialno)\" ] || echo pinky-aid=$(settings get secure android_id)"
 
@@ -609,6 +669,7 @@ func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
 	}
 	d := newDevice(cfg, info, bestProps)
 	d.phoneID = id
+	d.useManuals(p.manual)
 	return d, nil
 }
 

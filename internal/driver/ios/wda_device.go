@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,6 +35,12 @@ type WDADevice struct {
 	run   *wdaRun           // the test run hosting WDA, when Pinky started it
 	l     *link             // the tunnel the run goes through, from iOS 17.4
 
+	// leftover is the runner app's folder when WDA was already answering
+	// and an earlier Pinky had started it (see runRecords): Close ends
+	// that runner too, then calls leftoverEnded. "" for any other.
+	leftover      string
+	leftoverEnded func()
+
 	scale float64
 	// width and height are the screen's size in pixels when the phone was
 	// opened, in the orientation it had then; size gives it the right way
@@ -54,7 +61,12 @@ type WDADevice struct {
 	videoMu sync.Mutex
 	video   driver.Stream // the last stream, whose picture the mirror's touches are in
 
+	// framesAfter is when OCR may try the MJPEG server's frames again after
+	// one did not come (ocrPicture); unix nanos, 0 at once.
+	framesAfter atomic.Int64
+
 	closeOnce sync.Once
+	idle      wdaIdle // rest_wda.go
 
 	logs    appLogs // the apps whose logs a task reads (logs.go)
 	procMu  sync.Mutex
@@ -101,7 +113,47 @@ func openWDA(ctx context.Context, info driver.Info, c *wdaClient, entry goios.De
 	if d.info.OSVersion == "" {
 		d.info.OSVersion = st.OS.Version
 	}
+	c.gone = d.gone
+	c.enter = d.idle.enter
+	d.idle.init()
 	return d, nil
+}
+
+// gone wraps err, a request that failed to reach WDA, as driver.ErrOffline
+// once WDA is gone, so the phone does not stay open with every call
+// failing: the gateway reads driver.ErrOffline as the phone having dropped,
+// and opens it again, which starts the runner anew. A runner Pinky started
+// is gone when its test ended (testmanagerd ends it when the runner dies)
+// or the tunnel stopped; while it runs, a failed request is only that. A
+// runner Pinky did not start (Xcode's) gives no such sign: it is gone when
+// its port no longer takes connections.
+func (d *WDADevice) gone(err error) error {
+	if err == nil || errors.Is(err, driver.ErrOffline) {
+		return err
+	}
+	var de *wdaDialError
+	if d.ended() || (d.run == nil && errors.As(err, &de)) {
+		return fmt.Errorf("%v: %w", err, driver.ErrOffline)
+	}
+	return err
+}
+
+// ended reports whether the runner's test Pinky started has ended or the
+// tunnel it went through stopped.
+func (d *WDADevice) ended() bool {
+	if d.run != nil {
+		if alive, _ := d.run.alive(); !alive {
+			return true
+		}
+	}
+	if d.l != nil && d.l.tunnel != nil {
+		select {
+		case <-d.l.tunnel.Done():
+			return true
+		default:
+		}
+	}
+	return false
 }
 
 // wdaStartTimeout bounds starting the runner: the first start after the
@@ -150,12 +202,12 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	if s.ready(ctx) {
 		return s, nil
 	}
-	bundleID, err := findWDARunner(base)
+	app, err := findRunnerApp(base)
 	if err != nil {
 		return nil, err
 	}
-	if bundleID == "" {
-		return nil, fmt.Errorf("the WebDriverAgent helper is not installed on %s: %w", info.ID, driver.ErrNotFound)
+	if app.BundleID == "" {
+		return nil, fmt.Errorf("Pinky on the iPhone is not installed on %s: %w", info.ID, driver.ErrNotFound)
 	}
 	l, err := dialLinkEntry(ctx, base)
 	if err != nil {
@@ -165,7 +217,7 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	if bind != "127.0.0.1" {
 		s.c = newWDATunnel(l.tunnel)
 	}
-	s.run, s.l = startWDA(l.entry, bundleID, bind), l
+	s.run, s.l = startWDA(l.entry, base, app, bind), l
 	return s, nil
 }
 
@@ -430,13 +482,12 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 			pictured.Add(1)
 			go func() {
 				defer pictured.Done()
-				png, err := d.c.screenshot(ctx)
-				tm.shot = time.Since(start)
+				pic, from, err := d.ocrPicture(ctx)
+				tm.shot, tm.from = time.Since(start), from
 				if err != nil {
 					return
 				}
-				png = d.uprightShot(ctx, png)
-				if l, err := recognizeText(png, ocrOptions{Languages: ocrLanguages}); err == nil {
+				if l, err := recognizeText(pic, ocrOptions{Languages: ocrLanguages}); err == nil {
 					lines, ocrDone = l, true
 				}
 				tm.ocr = time.Since(start) - tm.shot
@@ -483,7 +534,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 	if root.Rect.Width > 0 {
 		scale = float64(w) / root.Rect.Width
 	}
-	s.Elements, s.Keyboard = wdaScreenElements(root, scale, w, h, s.App.ID)
+	s.Elements, s.Keyboard, s.KeyboardFrame = wdaScreenElements(root, scale, w, h, s.App.ID)
 	if len(s.Elements) == 0 && !locked {
 		// Nothing of the app in its tree: the lock screen may be in front
 		// while lockdown says unlocked (GitHub issue #7: a first read gave
@@ -496,7 +547,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 	}
 	if ocrDone && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {
-			s.Keyboard = true
+			noteOCRKeyboard(s, top)
 			kept := lines[:0:0]
 			for _, l := range lines {
 				if l.Y < top {
@@ -512,7 +563,10 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 
 // wdaTimes are when the parts of a read ended, from its start; ocr is the
 // recognition alone.
-type wdaTimes struct{ source, lock, shot, ocr time.Duration }
+type wdaTimes struct {
+	source, lock, shot, ocr time.Duration
+	from                    string // where OCR's picture came from (ocrPicture)
+}
 
 // slowRead is how long a read may take before the log says what took the
 // time.
@@ -539,18 +593,23 @@ func (d *WDADevice) noteSlowRead(start time.Time, tm wdaTimes, root *wdaNode, oc
 	args := []any{"device", d.info.ID, "total", total.Round(time.Millisecond), "source", tm.source.Round(time.Millisecond),
 		"nodes", nodes, "lock", tm.lock.Round(time.Millisecond), "connection", d.info.Connection}
 	if ocr {
-		args = append(args, "screenshot", tm.shot.Round(time.Millisecond), "ocr", tm.ocr.Round(time.Millisecond))
+		args = append(args, "picture", tm.shot.Round(time.Millisecond), "from", tm.from, "ocr", tm.ocr.Round(time.Millisecond))
 	}
 	d.log.Info("iphone: slow screen read through WebDriverAgent", args...)
 }
 
-// appInfo names the app in front: WDA's active app, with the name from the
-// app list (WDA leaves SpringBoard's empty).
+// appInfo names the app in front: by the name the app list knows (the home
+// screen's, in the phone's language) once it has been read, else WDA's
+// active app's, else its element's label, else the app list's (WDA leaves
+// SpringBoard's empty).
 func (d *WDADevice) appInfo(ctx context.Context, a wdaApp, root *wdaNode) screen.App {
 	if a.BundleID == springBoard {
 		return screen.App{Name: "Home Screen", ID: springBoard}
 	}
-	out := screen.App{ID: a.BundleID, Name: a.Name}
+	out := screen.App{ID: a.BundleID, Name: d.cachedAppName(a.BundleID)}
+	if out.Name == "" {
+		out.Name = a.Name
+	}
 	if out.Name == "" && root != nil {
 		out.Name = strings.TrimSpace(strOr(root.Label))
 	}
@@ -564,6 +623,25 @@ func (d *WDADevice) appInfo(ctx context.Context, a wdaApp, root *wdaNode) screen
 		}
 	}
 	return out
+}
+
+// cachedAppName is the name of an app in the app list already read, without
+// reading it again; "" when it is not there.
+func (d *WDADevice) cachedAppName(id string) string {
+	d.appMu.Lock()
+	c := d.apps
+	d.appMu.Unlock()
+	if c == nil || id == "" {
+		return ""
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, a := range c.apps {
+		if a.ID == id {
+			return a.Name
+		}
+	}
+	return ""
 }
 
 // Screenshot implements driver.Device.
@@ -787,7 +865,8 @@ func (d *WDADevice) resolveApp(ctx context.Context, app string) (string, error) 
 		}
 	}
 	for _, a := range apps {
-		if strings.EqualFold(a.Name, app) || strings.EqualFold(a.ID, app) {
+		if strings.EqualFold(a.Name, app) || strings.EqualFold(a.ID, app) ||
+			slices.ContainsFunc(a.Aliases, func(n string) bool { return strings.EqualFold(n, app) }) {
 			return a.ID, nil
 		}
 	}
@@ -840,6 +919,12 @@ func (d *WDADevice) Apps(ctx context.Context) ([]driver.App, error) {
 // Locked implements driver.LockReporter: whether the phone needs its
 // passcode, from lockdown as on the CoreDevice path.
 func (d *WDADevice) Locked(ctx context.Context) (bool, error) {
+	// The gateway asks this every few seconds of every open phone, and
+	// lockdown answers it with WDA gone: say so here, so a phone whose
+	// runner ended drops before an agent's next call fails.
+	if d.ended() {
+		return false, fmt.Errorf("the WebDriverAgent runner ended: %w", driver.ErrOffline)
+	}
 	return d.lockState(ctx)
 }
 
@@ -850,7 +935,7 @@ func (d *WDADevice) Stream(ctx context.Context, opt driver.StreamOptions) (drive
 		return nil, err
 	}
 	d.interfaceTurn(ctx) // the first frames' turn
-	s, err := startFrameStream(ctx, func(ctx context.Context) (frameSource, error) {
+	s, err := startFrameStreamLog(ctx, d.log, func(ctx context.Context) (frameSource, error) {
 		src, err := openMJPEG(ctx, d.c.long, d.c.mjpeg)
 		if r, ok := src.(*mjpegReader); ok {
 			// Upside down, the frames' EXIF says up (see pictureTurn).
@@ -863,6 +948,7 @@ func (d *WDADevice) Stream(ctx context.Context, opt driver.StreamOptions) (drive
 	}
 	if fs, ok := s.(*frameStream); ok {
 		go d.followRotation(fs.done)
+		d.idle.watch(fs.done)
 	}
 	d.videoMu.Lock()
 	d.video = s
@@ -965,12 +1051,17 @@ func (d *WDADevice) videoSize() (int, int) {
 // the test run Pinky started; WDA itself stays installed.
 func (d *WDADevice) Close() error {
 	d.closeOnce.Do(func() {
+		d.idle.close()
 		d.StopAppLogs()
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		d.c.deleteSession(ctx)
 		cancel()
 		if d.run != nil {
 			d.run.stop()
+		} else if d.leftover != "" {
+			if endHelper(d.entry, d.entry, d.leftover, d.log) && d.leftoverEnded != nil {
+				d.leftoverEnded()
+			}
 		}
 		if d.l != nil {
 			d.l.Close()

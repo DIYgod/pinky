@@ -4,8 +4,9 @@
 // exec, sync (push, pull, stat) and local sockets.
 //
 // The client reuses the adb server that is already running. It never kills
-// or restarts it; StartServer (tools.go) starts one for callers that find
-// none.
+// or restarts it, except one that Pinky started itself when asked to
+// (StopOwnServer, own.go); StartServer (tools.go) starts one for callers
+// that find none.
 //
 // Protocol reference: SERVICES.TXT, SYNC.TXT and protocol.txt in AOSP's
 // packages/modules/adb.

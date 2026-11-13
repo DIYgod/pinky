@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,13 +32,17 @@ type Options struct {
 
 	ApprovalTimeout time.Duration // default 60 s, from when the panel opens
 	MaxBlock        time.Duration // default 45 s, longest a tool call blocks
+	CallBudget      time.Duration // default 45 s, the time one tool call may take in all (budget.go)
 	HandoffTimeout  time.Duration // default 15 min
 	IdleTimeout     time.Duration // default 10 min without calls ends a lease
 	ReconnectGrace  time.Duration // default 60 s a lease survives a dropped device
 	ResumeGrace     time.Duration // default 2 min a resuming agent's closed session keeps its leases for its next one
-	SettleMax       time.Duration // default 3 s
-	PollInterval    time.Duration // default 250 ms, for settling and phone_wait_for
-	DiscoverEvery   time.Duration // default 2 s
+	// LocalResumeGrace is ResumeGrace for agents on this computer
+	// (AgentInfo.Reconnect); default 60 s.
+	LocalResumeGrace time.Duration
+	SettleMax        time.Duration // default 3 s
+	PollInterval     time.Duration // default 250 ms, for settling and phone_wait_for
+	DiscoverEvery    time.Duration // default 2 s
 	// RulesEvery is how often the policy's files are checked for hand
 	// edits (policy.Engine.Refresh); default 2 s.
 	RulesEvery time.Duration
@@ -66,10 +71,12 @@ func (o *Options) defaults() {
 	}
 	set(&o.ApprovalTimeout, 60*time.Second)
 	set(&o.MaxBlock, 45*time.Second)
+	set(&o.CallBudget, 45*time.Second)
 	set(&o.HandoffTimeout, 15*time.Minute)
 	set(&o.IdleTimeout, 10*time.Minute)
 	set(&o.ReconnectGrace, 60*time.Second)
 	set(&o.ResumeGrace, 2*time.Minute)
+	set(&o.LocalResumeGrace, 60*time.Second)
 	set(&o.SettleMax, 3*time.Second)
 	set(&o.PollInterval, 250*time.Millisecond)
 	set(&o.DiscoverEvery, 2*time.Second)
@@ -118,8 +125,10 @@ type Gateway struct {
 	recordOn   bool                      // record the screen of new tasks
 	background map[string]bool           // the person's choice per phone: agents on a background display, or not
 	removed    map[string]bool           // phones the person removed, kept off the list while listed over the network (remove.go)
+	paused     map[string]bool           // phones the person paused: listed, but not opened (pause.go)
 	known      map[string]bool           // phones that are the person's, which providers may open over Wi-Fi (wifi.go)
 	names      map[string]history.Device // what the history store calls the phones Pinky has seen (wifi.go)
+	chosen     map[string]string         // the connection the person chose per phone, none for Automatic (connection.go)
 	wifiOn     bool                      // the providers use phones over Wi-Fi (SetWiFi)
 	keepDays   int                       // history retention; 0 keeps everything
 	prune      chan struct{}             // asks the retention loop to run now
@@ -151,8 +160,10 @@ func New(o Options) (*Gateway, error) {
 		hubs:       map[string]*hub{},
 		background: map[string]bool{},
 		removed:    map[string]bool{},
+		paused:     map[string]bool{},
 		known:      map[string]bool{},
 		names:      map[string]history.Device{},
+		chosen:     map[string]string{},
 		prune:      make(chan struct{}, 1),
 	}
 	if g.policy == nil {
@@ -178,6 +189,7 @@ func New(o Options) (*Gateway, error) {
 		}
 		g.loadRemoved()
 		g.loadKnown()
+		g.loadPaused()
 	}
 	g.approvals = approval.New(approval.Options{
 		Timeout:  o.ApprovalTimeout,
@@ -216,7 +228,7 @@ func (g *Gateway) Close() error {
 		s.end("gateway stopped", false)
 	}
 	g.mu.Lock()
-	g.endKeptLocked("gateway stopped")
+	g.endKeptLocked("gateway stopped", false)
 	g.mu.Unlock()
 	g.approvals.Close()
 	g.cancel()
@@ -237,6 +249,13 @@ func (g *Gateway) Close() error {
 	g.mu.Unlock()
 	for _, dev := range devs {
 		dev.Close()
+	}
+	// Providers may hold things of their own on the phones (an iPhone's
+	// helper waiting for its passcode).
+	for _, p := range g.opt.Providers {
+		if c, ok := p.(io.Closer); ok {
+			c.Close()
+		}
 	}
 	if g.store != nil {
 		return g.store.Close()
@@ -269,6 +288,7 @@ func (g *Gateway) discoverLoop() {
 		g.discover(ctx)
 		g.pollLocks(ctx)
 		cancel()
+		g.pollCapture()
 		g.expireOffline()
 	}
 }
@@ -340,6 +360,13 @@ func (g *Gateway) discover(ctx context.Context) {
 			switch {
 			case d.online:
 				gone = append(gone, d)
+			case g.paused[id]:
+				// Paused: it stays on the list, and plugging it in from
+				// now resumes it (pause.go).
+				d.pauseAway = true
+				if unlisted(d) {
+					left = append(left, id)
+				}
 			case foundLocked(d) && !g.known[id] && d.lease == nil:
 				// Found on Wi-Fi and never used: nothing to keep once it
 				// is gone (wifi.go).
@@ -417,6 +444,7 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		d = newDevice(p, info)
 		g.devices[info.ID] = d
 	}
+	resumed := g.paused[info.ID] && g.pausedListedLocked(d, info)
 	old := d.info
 	if info.Name == "" {
 		// Listed without a name, as an iPhone usbmuxd lost (wifi.go): the
@@ -459,7 +487,14 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		g.setOffline(d, movingWhy(info.Connection))
 	}
 	g.mu.Lock()
-	open := info.State == driver.StateOnline && d.dev == nil && !d.opening && !d.removed
+	if d.switching != "" && waitsForStep(info.State) {
+		// Moving to another connection for a task, it waits for the
+		// person (the passcode before the helper starts): the task's
+		// call says so at once (taskconn.go).
+		d.moving = time.Time{}
+		g.wakeLocked(d)
+	}
+	open := info.State == driver.StateOnline && d.dev == nil && !d.opening && !d.removed && !g.paused[d.id]
 	if open {
 		d.opening, d.openingAt = true, time.Now()
 		if time.Now().Before(d.moving) {
@@ -469,8 +504,11 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	}
 	offline := info.State != driver.StateOnline && d.online
 	g.mu.Unlock()
-	if !ok || old != info {
+	if !ok || old != info || resumed {
 		g.emit(Event{Kind: EventDevices, DeviceID: info.ID})
+		if waitsForStep(old.State) != waitsForStep(info.State) {
+			g.emit(Event{Kind: EventNeeds, DeviceID: info.ID}) // setupNeedLocked
+		}
 	}
 	if offline {
 		g.setOffline(d, info.Detail)
@@ -501,7 +539,27 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	dev, err := p.Open(ctx, d.id)
 	g.mu.Lock()
 	d.opening = false
-	if err != nil || g.closed || d.removed {
+	// Paused while it opened: what opened closes again (pause.go).
+	paused := g.paused[d.id]
+	if err != nil || g.closed || d.removed || paused {
+		step := false
+		if err != nil {
+			d.openErr = err
+			var se *driver.SetupError
+			if errors.As(err, &se) && se.Setup != "" && !g.closed && !d.removed && !paused {
+				// The phone waits for the person (the passcode before the
+				// helper starts): it needs setup from now, not from the
+				// next listing, so a task's call says so at once.
+				d.info.State, d.info.Setup, d.info.Detail = driver.StateNeedsSetup, se.Setup, se.Detail
+				step = true
+			}
+		}
+		if err != nil && d.switching != "" {
+			// It did not open over the connection a task moved it to:
+			// the task goes back at once (taskconn.go), or waits with
+			// the phone for the person.
+			d.moving = time.Time{}
+		}
 		g.wakeLocked(d) // calls waiting for the open (connectWait) go on
 		g.mu.Unlock()
 		if err == nil {
@@ -509,8 +567,13 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 		} else {
 			g.log.Warn("open device", "device", d.id, "err", err)
 		}
+		if step {
+			g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+			g.emit(Event{Kind: EventNeeds, DeviceID: d.id})
+		}
 		return
 	}
+	d.openErr = nil
 	d.dev = dev
 	d.over = connectionOf(listed, dev)
 	d.online = true
@@ -520,6 +583,7 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	d.workSent = false
 	g.noteWorkLocked(d)
 	info := d.info
+	leased := d.lease != nil
 	if d.lease != nil {
 		// A task that connected while the phone waited for a step has not
 		// recorded yet (firstScreen); for others this does nothing.
@@ -529,7 +593,11 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	g.mu.Unlock()
 	g.log.Info("device online", "device", d.id, "name", info.Name, "connection", d.over)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+	if leased {
+		g.emit(Event{Kind: EventNeeds, DeviceID: d.id}) // a step it waited for is done (setupNeedLocked)
+	}
 	g.readyNow(d)
+	go g.checkHelper(d)
 	if w, ok := dev.(driver.PersonWatcher); ok {
 		go g.watchPerson(d.id, w.PersonInput())
 	}
@@ -615,8 +683,10 @@ func (g *Gateway) expireOffline() {
 	var ls []*lease
 	for _, d := range g.devices {
 		// A lease on a phone that waits for a step waits with it: the
-		// person is setting it up (device_needs_setup).
-		if !d.online && d.lease != nil && !waitsForStep(d.info.State) && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
+		// person is setting it up (device_needs_setup). So does one on a
+		// phone a task moves to another connection (taskconn.go), which
+		// may take as long as the grace and falls back when it fails.
+		if !d.online && d.lease != nil && d.switching == "" && !waitsForStep(d.info.State) && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
 			ls = append(ls, d.lease)
 		}
 	}
@@ -649,11 +719,30 @@ func (g *Gateway) expireIdle() {
 // from the computer, before an agent needs it. A variable for tests.
 var idleLockEvery = 6 * time.Second
 
+// idleLockEveryWiFi is idleLockEvery for an idle phone over Wi-Fi whose
+// screen nobody watches: each read is a new lockdown session over the
+// network, which costs the phone more than one over a cable (GitHub issue
+// #96), and nothing shows the state at once but the phone's tile. A
+// variable for tests.
+var idleLockEveryWiFi = 30 * time.Second
+
+// watchedDevices returns the IDs of the devices whose picture has a hub.
+func (g *Gateway) watchedDevices() map[string]bool {
+	g.hubMu.Lock()
+	defer g.hubMu.Unlock()
+	w := make(map[string]bool, len(g.hubs))
+	for key := range g.hubs { // an ended hub leaves the map
+		w[strings.TrimSuffix(key, "#agent")] = true
+	}
+	return w
+}
+
 // pollLocks asks lock-reporting drivers about devices that have an agent,
-// and about idle ones every idleLockEvery. A locked device whose driver
-// cannot report locks is read instead, so the unlock card goes away when
-// the person unlocks.
+// and about idle ones every idleLockEvery (idleLockEveryWiFi over Wi-Fi
+// with nobody watching). A locked device whose driver cannot report locks
+// is read instead, so the unlock card goes away when the person unlocks.
 func (g *Gateway) pollLocks(ctx context.Context) {
+	watched := g.watchedDevices()
 	g.mu.Lock()
 	var report, read []*device
 	now := time.Now()
@@ -662,7 +751,11 @@ func (g *Gateway) pollLocks(ctx context.Context) {
 			continue
 		}
 		if d.lease == nil {
-			if _, ok := d.dev.(driver.LockReporter); ok && now.Sub(d.lockReadAt) >= idleLockEvery {
+			every := idleLockEvery
+			if !watched[d.id] && d.dev.Info().Connection == "wifi" {
+				every = idleLockEveryWiFi
+			}
+			if _, ok := d.dev.(driver.LockReporter); ok && now.Sub(d.lockReadAt) >= every {
 				d.lockReadAt = now
 				report = append(report, d)
 			}
@@ -745,8 +838,8 @@ func (g *Gateway) screenOfLocked(d *device) (driver.Device, bool) {
 
 // noteWorkLocked tells the phone's driver whether an agent works on it, a
 // task running while the person is not in control, when that changed
-// (driver.WorkWatcher). Android turns Pinky Companion's accessibility
-// service on only while one does.
+// (driver.WorkWatcher). Pinky on the phone's accessibility service is on
+// only while one does.
 func (g *Gateway) noteWorkLocked(d *device) {
 	ww, ok := d.dev.(driver.WorkWatcher)
 	if !ok {

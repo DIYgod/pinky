@@ -191,7 +191,11 @@ func TestRAXScreenElements(t *testing.T) {
 	host.Traits = traitRemoteHost
 	els = append(els, host, el(web, 0, xcLink, "Read more", axpRect{10, 20, 100, 30}))
 
-	got, keyboard := raxScreenElements(els, 3, 1125, 2436, "com.apple.Preferences")
+	got, keyboard, kbFrame := raxScreenElements(els, 3, 1125, 2436, "com.apple.Preferences")
+	// The keyboard's frame is the box of its keys, placed by their host.
+	if want := (screen.Rect{X: 9, Y: 1587, W: 206, H: 126}); kbFrame != want {
+		t.Errorf("keyboard frame %+v, want %+v", kbFrame, want)
+	}
 	if !keyboard {
 		t.Error("keyboard not detected")
 	}
@@ -244,7 +248,7 @@ func TestRAXScreenElementsWebContent(t *testing.T) {
 	for i := 1; i <= 8; i++ {
 		els = append(els, el(web, xcLink, axpRoleButton, string(rune('0'+i)), axpRect{float64(10 * i), 600, 8, 20}))
 	}
-	got, keyboard := raxScreenElements(els, 3, 1206, 2622, "com.apple.mobilesafari")
+	got, keyboard, _ := raxScreenElements(els, 3, 1206, 2622, "com.apple.mobilesafari")
 	if keyboard {
 		t.Error("a page's one-digit links took for a keyboard")
 	}
@@ -336,6 +340,29 @@ func TestRAXLabel(t *testing.T) {
 	} {
 		if got := raxLabel(c.e, c.role); got != c.want {
 			t.Errorf("raxLabel(%+v) = %q, want %q", c.e, got, c.want)
+		}
+	}
+}
+
+// TestRAXContent checks which part of a text field's label is typed text,
+// which the credentials rule leaves out (GitHub issue #67).
+func TestRAXContent(t *testing.T) {
+	for _, c := range []struct {
+		e    raxElement
+		role string
+		want string
+	}{
+		{raxElement{Type: xcTextView, Label: "Note", Value: "Bring the code review notes"}, screen.RoleInput, "Bring the code review notes"},
+		{raxElement{Type: xcTextField, Value: "github.com/codes"}, screen.RoleInput, "github.com/codes"},
+		// iOS 27 gives an empty field its placeholder as its value.
+		{raxElement{Type: xcTextField, Value: "Alarm", ValueText: "Alarm", Placeholder: "Alarm"}, screen.RoleInput, ""},
+		{raxElement{Type: xcTextField, Label: "Code", Value: "Code"}, screen.RoleInput, ""},
+		{raxElement{Type: xcSecureTextField, Label: "Password", Value: "••••"}, screen.RoleInput, ""},
+		{raxElement{AXRole: axpRoleTextField, Traits: traitSecureText, Label: "Password", Value: "••••"}, screen.RoleInput, ""},
+		{raxElement{Label: "Clock", ValueText: "3:51 AM"}, screen.RoleButton, ""},
+	} {
+		if got := raxContent(c.e, c.role); got != c.want {
+			t.Errorf("raxContent(%+v) = %q, want %q", c.e, got, c.want)
 		}
 	}
 }

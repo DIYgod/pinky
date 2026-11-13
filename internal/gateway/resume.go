@@ -25,6 +25,23 @@ import (
 // The person's Stop holds for the agent's newer sessions too, for
 // stopHold: a client that opens a session for every call cannot simply
 // connect again.
+//
+// Agents on this computer (AgentInfo.Reconnect) resume more narrowly. Their
+// MCP session lasts as long as the agent's: the stdio shim keeps it across
+// the app's restarts (cmd/pinky/shimconn.go). But a client may still drop
+// it and start a new one, as Claude Desktop does after a call times out
+// (field test, 2026-11-10), and the task would end with its grants. So a
+// closed session's lease is kept for Options.LocalResumeGrace, and a newer
+// session of the same agent continues it; one of a session still open
+// only from phone_connect with the same task, as the new session may come
+// up before the client closes the old one. Two sessions of one agent that
+// run side by side, as two windows of an app do, never take each other's
+// phones otherwise.
+//
+// Either way, a phone_connect for another task never continues a lease:
+// one client may run several conversations, so the newer session may be
+// another conversation's, and the task it would end may be running
+// (shared.go).
 
 // stopHold is how long a Stop keeps a resuming agent's newer sessions off
 // the phone.
@@ -39,18 +56,35 @@ type resumeStop struct {
 	at     time.Time
 }
 
-// continues reports whether s may continue the work of o: a newer session
-// of the same agent, both resuming.
-func (s *Session) continues(o *Session) bool {
-	return o != s && s.agent.Resume && o.agent.Resume && o.agent.Name == s.agent.Name && o.seq < s.seq
+// continues reports whether s may continue the work of o on lease l: a
+// newer session of the same agent, both resuming; or, for agents on this
+// computer, o closed, or task names l's task. task is phone_connect's, or
+// "" for other calls, which name none; a phone_connect for another task
+// never continues l, as it may come from another conversation sharing the
+// client's session (shared.go). The caller holds g.mu.
+func (s *Session) continues(o *Session, l *lease, task string) bool {
+	if o == s || o.agent.Name != s.agent.Name || o.seq >= s.seq {
+		return false
+	}
+	if task != "" && l.task.title != task {
+		return false
+	}
+	switch {
+	case s.agent.Resume && o.agent.Resume:
+		return true
+	case s.agent.Reconnect && o.agent.Reconnect:
+		return o.closed || task != ""
+	}
+	return false
 }
 
 // adoptLocked moves to s the lease on d that an older session of the same
 // agent holds and is not using, with its open approvals, and returns it;
-// nil when there is none. The caller holds g.mu.
-func (g *Gateway) adoptLocked(s *Session, d *device) *lease {
+// nil when there is none. task is phone_connect's task, or "". The caller
+// holds g.mu.
+func (g *Gateway) adoptLocked(s *Session, d *device, task string) *lease {
 	l := d.lease
-	if l == nil || l.ended || l.inflight > 0 || !s.continues(l.session) || g.barredLocked(s, d) {
+	if l == nil || l.ended || l.inflight > 0 || !s.continues(l.session, l, task) || g.barredLocked(s, d) {
 		return nil
 	}
 	old := l.session
@@ -65,14 +99,20 @@ func (g *Gateway) adoptLocked(s *Session, d *device) *lease {
 	leaseID := l.id
 	g.approvals.Rebind(func(i approval.Info) bool { return i.Binding.Lease == leaseID }, s.id)
 	g.log.Info("a newer session continues the lease", "device", d.id, "agent", s.agent.Name, "task", l.task.title)
+	// The conversations that shared the older session share this one.
+	if old.shared {
+		g.markSharedLocked(s)
+	}
+	g.noteSharedLocked(s)
 	return l
 }
 
-// adoptableLocked returns the phones whose leases s may continue.
-func (g *Gateway) adoptableLocked(s *Session) []*device {
+// adoptableLocked returns the phones whose leases s may continue, for
+// task as adoptLocked takes it.
+func (g *Gateway) adoptableLocked(s *Session, task string) []*device {
 	var out []*device
 	for _, d := range g.devices {
-		if l := d.lease; l != nil && !l.ended && l.inflight == 0 && s.continues(l.session) && !g.barredLocked(s, d) {
+		if l := d.lease; l != nil && !l.ended && l.inflight == 0 && s.continues(l.session, l, task) && !g.barredLocked(s, d) {
 			out = append(out, d)
 		}
 	}
@@ -86,10 +126,11 @@ func (g *Gateway) adoptableLocked(s *Session) []*device {
 }
 
 // busyElsewhereLocked returns a result when an older session of the same
-// agent holds d and is in the middle of a call on it.
-func (g *Gateway) busyElsewhereLocked(s *Session, d *device) *Result {
+// agent holds d and is in the middle of a call on it. task is as for
+// adoptLocked.
+func (g *Gateway) busyElsewhereLocked(s *Session, d *device, task string) *Result {
 	l := d.lease
-	if l == nil || l.ended || l.inflight == 0 || !s.continues(l.session) {
+	if l == nil || l.ended || l.inflight == 0 || !s.continues(l.session, l, task) {
 		return nil
 	}
 	holder := fmt.Sprintf("%s · %s", l.session.agent.Name, l.task.title)
@@ -148,29 +189,38 @@ func (g *Gateway) noteStopLocked(s *Session, device string) {
 
 // keepLocked keeps the lease of a resuming agent's session that closed for
 // a newer session to continue, and ends it after Options.ResumeGrace
-// unless one did.
+// (LocalResumeGrace for an agent on this computer) unless one did. A
+// session that continued it and closed in turn keeps it with a grace of
+// its own.
 func (g *Gateway) keepLocked(l *lease) {
-	g.log.Info("lease kept for the agent's next session", "device", l.dev.id, "agent", l.session.agent.Name)
-	time.AfterFunc(g.opt.ResumeGrace, func() {
+	s := l.session
+	grace := g.opt.ResumeGrace
+	if !s.agent.Resume {
+		grace = g.opt.LocalResumeGrace
+	}
+	g.log.Info("lease kept for the agent's next session", "device", l.dev.id, "agent", s.agent.Name, "grace", grace)
+	time.AfterFunc(grace, func() {
 		g.mu.Lock()
 		defer g.mu.Unlock()
-		if !g.closed && !l.ended && l.session.closed {
+		if !g.closed && !l.ended && l.session == s {
 			g.endLeaseLocked(l, OutcomeDisconnected, "")
 		}
 	})
 }
 
-// EndKeptLeases ends the leases kept for resuming agents' next sessions,
-// as when the person turns remote agents off.
+// EndKeptLeases ends the leases kept for remote agents' next sessions, as
+// when the person turns remote agents off.
 func (g *Gateway) EndKeptLeases() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	g.endKeptLocked(OutcomeDisconnected)
+	g.endKeptLocked(OutcomeDisconnected, true)
 }
 
-func (g *Gateway) endKeptLocked(outcome string) {
+// endKeptLocked ends the leases kept for agents' next sessions: only remote
+// agents' with remote.
+func (g *Gateway) endKeptLocked(outcome string, remote bool) {
 	for _, d := range g.devices {
-		if l := d.lease; l != nil && !l.ended && l.session.closed {
+		if l := d.lease; l != nil && !l.ended && l.session.closed && (!remote || l.session.agent.Resume) {
 			g.endLeaseLocked(l, outcome, "")
 		}
 	}

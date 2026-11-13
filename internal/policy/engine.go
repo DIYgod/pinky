@@ -94,19 +94,20 @@ func (e *Engine) SetReadOnly(deviceID string, on bool) error {
 
 // ForgetDevice drops what the rules keep about one phone, which the person
 // removed from Pinky: its read-only switch, and its entry in the rules
-// file's read_only_devices, which is then saved. Read-only mode for every
+// file's read_only_devices and its Always allow answers, which is then
+// saved. Read-only mode for every
 // device stays as it is.
 func (e *Engine) ForgetDevice(deviceID string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	delete(e.readOnlyDevices, deviceID)
-	if deviceID == "" || !contains(e.file.ReadOnlyDevices, deviceID) {
+	if deviceID == "" || (!contains(e.file.ReadOnlyDevices, deviceID) && !e.standsForLocked(deviceID)) {
 		return nil
 	}
 	if err := e.syncLocked(&e.rulesDisk); err != nil {
 		return err
 	}
-	if !contains(e.file.ReadOnlyDevices, deviceID) {
+	if !contains(e.file.ReadOnlyDevices, deviceID) && !e.standsForLocked(deviceID) {
 		return nil // a hand edit took it out meanwhile
 	}
 	var keep []string
@@ -116,7 +117,28 @@ func (e *Engine) ForgetDevice(deviceID string) error {
 		}
 	}
 	e.file.ReadOnlyDevices = keep
+	// The phone's Always allow answers (standing.go) go with it.
+	xs := e.file.AlwaysAllow[:0:0]
+	for _, x := range e.file.AlwaysAllow {
+		if x.Device != deviceID {
+			xs = append(xs, x)
+		}
+	}
+	if len(xs) == 0 {
+		xs = nil
+	}
+	e.file.AlwaysAllow = xs
 	return e.saveRulesLocked()
+}
+
+// standsForLocked reports whether an Always allow answer names the device.
+func (e *Engine) standsForLocked(deviceID string) bool {
+	for _, x := range e.file.AlwaysAllow {
+		if x.Device == deviceID {
+			return true
+		}
+	}
+	return false
 }
 
 // ReadOnly reports whether read-only mode applies to the device.
@@ -163,6 +185,10 @@ func (e *Engine) Evaluate(in Input) Verdict {
 	app := in.App
 	if in.Op == OpLaunch {
 		app = in.Launch
+	}
+	if IsPinkyScreen(app) && !(in.Op == OpKey && in.Key == "home") {
+		return Verdict{Decision: Deny, Rule: RulePinkyApps,
+			Reason: "Agents cannot open or act on Pinky's own screen: it holds the person's approvals and Stop."}
 	}
 	cats := e.apps.Categories(app)
 	kinds := detect(in, cats)
@@ -235,7 +261,7 @@ func (e *Engine) Evaluate(in Input) Verdict {
 			v.Decision = Deny
 			v.Reason = fmt.Sprintf("Read-only mode is on, and this would need approval (%s).", v.Rule)
 			v.Rule = RuleReadOnly
-		case v.Decision == Allow && in.Op == OpType && !IsSearchField(in.Target):
+		case v.Decision == Allow && in.Op == OpType && !IsSearchBox(in.Target, in.Screen):
 			v.Decision, v.Rule = Deny, RuleReadOnly
 			v.Reason = "Read-only mode is on: the agent may type only into search fields."
 		}

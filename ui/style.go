@@ -31,6 +31,11 @@ type palette struct {
 	shadowLo mg.Color // the two layers of the prototype's --shadow
 	shadowHi mg.Color
 	white    mg.Color
+
+	// The surfaces of the layout: the sidebar and the panel on the right
+	// are the wings around the page, the cards sit on them, the groups of
+	// rows sit on a page, and the rim is the phone's metal edge.
+	wing, card, group, rim mg.Color
 }
 
 var lightPalette = palette{
@@ -38,12 +43,13 @@ var lightPalette = palette{
 	line: hex("#ebebef"), line2: hex("#d9d9e0"),
 	ink: hex("#1d1d22"), ink2: hex("#5b5b64"), ink3: hex("#6c6c75"),
 	accent: hex("#5450d6"), accentInk: hex("#4542c4"), accentBtn: hex("#5450d6"), accentTint: hex("#f1f0fd"),
-	amber: hex("#975800"), amberDot: hex("#df8601"), amberTint: hex("#fff6eb"), amberLine: hex("#f6d7b1"), amberEdge: hex("#e79733"),
+	amber: hex("#975800"), amberDot: hex("#df8601"), amberTint: hex("#fff7ed"), amberLine: hex("#f4dcbc"), amberEdge: hex("#e79733"),
 	red: hex("#c32c18"), redTint: hex("#fef0ed"), redLine: hex("#f0c6bd"),
 	green: hex("#2f9e5a"), ovl: hex("#5048e5"), phone: hex("#131317"),
 	brand: hex("#ee4d6c"), lemon: hex("#ffbe1a"),
 	shadowLo: mg.RGBA(18, 18, 28, 0.05), shadowHi: mg.RGBA(18, 18, 28, 0.10),
 	white: hex("#ffffff"),
+	wing:  hex("#f5f5f7"), card: hex("#ffffff"), group: hex("#f7f7f9"), rim: hex("#3a3a41"),
 }
 
 var darkPalette = palette{
@@ -52,15 +58,60 @@ var darkPalette = palette{
 	line: hex("#2e2e34"), line2: hex("#404047"),
 	ink: hex("#ededf2"), ink2: hex("#b3b3bc"), ink3: hex("#a3a3ad"),
 	accent: hex("#9895ff"), accentInk: hex("#b0aeff"), accentBtn: hex("#5b57e0"), accentTint: hex("#262549"),
-	amber: hex("#f7a74e"), amberDot: hex("#f7a74e"), amberTint: hex("#342210"), amberLine: hex("#674520"), amberEdge: hex("#b6762a"),
+	amber: hex("#f7a74e"), amberDot: hex("#f7a74e"), amberTint: hex("#322a23"), amberLine: hex("#5a4530"), amberEdge: hex("#b6762a"),
 	red: hex("#f87a60"), redTint: hex("#3a1e19"), redLine: hex("#723b31"),
 	green: hex("#4cc38a"), ovl: hex("#7a73ff"), phone: hex("#050506"),
 	brand: hex("#ff8a9b"), lemon: hex("#ffbe1a"),
 	shadowLo: mg.RGBA(0, 0, 0, 0.4), shadowHi: mg.RGBA(0, 0, 0, 0.45),
 	white: hex("#ffffff"),
+	wing:  hex("#212125"), card: hex("#29292e"), group: hex("#232327"), rim: hex("#3c3c44"),
 }
 
 func hex(s string) mg.Color { return mg.Hex(s) }
+
+// The type ramp. Every size the client draws text at is one of these,
+// but for the few drawn things that are pictures more than text (a PIN's
+// digits, a pairing code).
+const (
+	fsCaption  = 12 // eyebrows, counts, meta under a name, shortcuts
+	fsSmall    = 13 // descriptions and secondary lines
+	fsBody     = 14 // body text, rows and buttons
+	fsHeadline = 15 // the titles of cards and groups
+	fsTitle3   = 17 // the title of a page's header
+	fsTitle2   = 20 // the title of a page's content and of dialogs
+	fsTitle1   = 26 // the welcome and empty pages
+)
+
+// The weights: text, labels and controls, titles, and the largest titles.
+const (
+	fwRegular  = 400
+	fwMedium   = 500
+	fwSemibold = 600
+	fwBold     = 700
+)
+
+// The spacing scale, on a grid of 4 points.
+const (
+	sp1 = 4
+	sp2 = 8
+	sp3 = 12
+	sp4 = 16
+	sp5 = 20
+	sp6 = 24
+	sp8 = 32
+)
+
+// The radii, by the size of the thing rounded.
+const (
+	rSmall   = 6  // small buttons, chips, thumbnails
+	rControl = 8  // buttons, rows, menu items
+	rCard    = 12 // cards, tiles, popovers, the phone's keys
+	rSheet   = 16 // dialogs
+)
+
+// headerHeight is the height of the sidebar's brand row and of a page's
+// header beside it, which line up.
+const headerHeight = 52
 
 // pal returns the palette of the theme the view builds with.
 func pal(c *mg.Context) *palette {
@@ -107,15 +158,51 @@ type btnOpt struct {
 	icon  *mg.SVG
 	label string // accessible name for an icon-only button
 	dark  bool   // the dark, translucent buttons over a tile
+	// maxW is the most the button is wide, where it has less room than
+	// its label takes: the label then keeps its start and its end, around
+	// an ellipsis.
+	maxW float32
+	// shrink keeps a button of words no wider than the row or column it is
+	// in, its label cut as with maxW where that has less room, and then
+	// whole in a tooltip.
+	shrink bool
+}
+
+// A button's sizes: its height and the padding beside its label, for a
+// regular and a small one, and its border (button, buttonWidth).
+const (
+	buttonHeight      = 34
+	buttonPadX        = 14
+	smallButtonHeight = 28
+	smallButtonPadX   = 10
+	buttonBorder      = 1
+)
+
+// buttonSize returns a button's height, the padding beside its label and
+// the size of its label: a small button's when small.
+func buttonSize(small bool) (h, px, fs float32) {
+	if small {
+		return smallButtonHeight, smallButtonPadX, fsSmall
+	}
+	return buttonHeight, buttonPadX, fsBody
+}
+
+// buttonWidth returns how wide button draws a button with the label text
+// and no icon, for what lays out the words beside it.
+func buttonWidth(c *mg.Context, text string, small bool) float32 {
+	_, px, fs := buttonSize(small)
+	w, _ := c.MeasureText(0, mg.Span{Text: text, Size: fs, Weight: fwMedium})
+	return w + 2*(px+buttonBorder)
 }
 
 // button draws the prototype's .btn: 34 high, a border, a quiet hover.
 func button(c *mg.Context, text string, o btnOpt) mg.Element {
 	p := pal(c)
 	b := mg.ButtonBase(c).Gap(7).Justify(mg.Center).AlignItems(mg.Center)
-	h, px, r, fs := float32(34), float32(14), float32(8), float32(14)
+	h, px, fs := buttonSize(o.small)
+	r := float32(8)
 	if o.small {
-		h, px, r, fs = 28, 10, 7, 13
+		r = 7
 	}
 	b.Height(h).Padding(0, px).Radius(r)
 	bg, border, fg := p.panel, p.line2, p.ink
@@ -123,9 +210,13 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 	switch o.kind {
 	case btnPrimary:
 		bg, border, fg = p.accentBtn, p.accentBtn, p.white
-		if b.Pressed() {
+		switch {
+		case b.Pressed():
 			bg = bg.Mix(mg.RGB(0, 0, 0), 0.12)
+		case hovered:
+			bg = bg.Mix(mg.RGB(255, 255, 255), 0.08)
 		}
+		border = bg
 	case btnRed:
 		fg, border = p.red, p.redLine
 		if hovered {
@@ -142,7 +233,11 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 			fg = hex("#ffb4a8")
 		}
 	}
-	b.Background(bg).Border(1, border).TextColor(fg)
+	b.Background(bg).Border(buttonBorder, border).TextColor(fg)
+	if !o.dark && !p.dark {
+		// A push button stands a hair off the page, as the system's do.
+		b.Shadow(0, 1, 1, 0, mg.RGBA(18, 18, 28, 0.04))
+	}
 	if o.label != "" {
 		b.Label(o.label)
 	} else if text != "" {
@@ -153,10 +248,37 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 			mg.Icon(c, o.icon).FontSize(18)
 		}
 		if text != "" {
-			mg.Text(c, text).FontSize(fs).FontWeight(500).NoWrap()
+			t := mg.Text(c, text).FontSize(fs).FontWeight(fwMedium)
+			if o.maxW > 0 || o.shrink {
+				t.SingleLine().TruncateMiddle().MinWidth(0)
+			} else {
+				t.NoWrap()
+			}
 		}
 	})
+	if o.maxW > 0 {
+		b.MaxWidth(o.maxW)
+	}
+	if o.shrink {
+		b.MaxWidthPercent(100)
+		// Narrower than its label in the last frame, which a tooltip does
+		// not change: the label whole.
+		if lb := b.LayoutBounds(); lb.W > 0 && lb.W < buttonWidth(c, text, o.small)-0.01 {
+			b.Tooltip(text)
+		}
+	}
 	return b
+}
+
+// ringInside draws e's focus ring inside its edge rather than around it,
+// for an element in what clips its surroundings, as a list that scrolls,
+// and returns e.
+func ringInside(c *mg.Context, e mg.Element) mg.Element {
+	w := c.Theme().FocusRingWidth
+	if w <= 0 {
+		w = 2 // MyGo's, where the theme sets none
+	}
+	return e.FocusRingOffset(-w)
 }
 
 // linkButton is the prototype's .link: accent text that underlines on hover.
@@ -165,12 +287,19 @@ func linkButton(c *mg.Context, text string) mg.Element {
 	b := mg.ButtonBase(c).Label(text)
 	hovered := b.Hovered()
 	b.Children(func() {
-		t := mg.Text(c, text).FontSize(13.5).FontWeight(500).TextColor(p.accentInk)
+		t := mg.Text(c, text).FontSize(fsSmall).FontWeight(fwMedium).TextColor(p.accentInk)
 		if hovered {
 			t.Underline()
 		}
 	})
 	return b
+}
+
+// quietButtonWidth returns how wide quietButton draws text, for what lays
+// it out beside other buttons.
+func quietButtonWidth(c *mg.Context, text string) float32 {
+	w, _ := c.MeasureText(0, mg.Span{Text: text, Size: fsSmall, Weight: fwMedium})
+	return w
 }
 
 // quietButton is a text button in the secondary ink.
@@ -179,7 +308,7 @@ func quietButton(c *mg.Context, text string) mg.Element {
 	b := mg.ButtonBase(c).Label(text)
 	hovered := b.Hovered()
 	b.Children(func() {
-		t := mg.Text(c, text).FontSize(13.5).FontWeight(500).TextColor(p.ink2)
+		t := mg.Text(c, text).FontSize(fsSmall).FontWeight(fwMedium).TextColor(p.ink2)
 		if hovered {
 			t.TextColor(p.ink).Underline()
 		}
@@ -202,10 +331,10 @@ func hollowDot(c *mg.Context) mg.Element {
 	return mg.Box(c).Size(8, 8).Radius(4).Border(1.5, p.ink3).Shrink(0)
 }
 
-// sectionLabel is the prototype's .sec heading.
+// sectionLabel is the heading of a section of a panel or a list.
 func sectionLabel(c *mg.Context, text string) mg.Element {
 	p := pal(c)
-	return mg.Text(c, text).FontSize(13).FontWeight(600).TextColor(p.ink3).Margin(0, 0, 8, 0)
+	return mg.Text(c, text).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.ink3).Margin(0, 0, sp2, 0)
 }
 
 // toggle is the prototype's switch: 36 × 20, the knob sliding across.
@@ -229,15 +358,20 @@ func toggle(c *mg.Context, on *bool, label string) mg.Element {
 	return s
 }
 
-// selectionMark draws the brand's watermelon bar at the start of a
-// selected row.
+// selectionMark draws the brand's watermelon bar inside the start of a
+// selected row, clear of its rounded corners. Rows that carry it start
+// their content rowInset in.
 func selectionMark(c *mg.Context, row mg.Element) {
 	p := pal(c)
 	row.DrawOver(func(pt *mg.Painter, r mg.Rect) {
-		h := min(r.H-16, float32(18))
-		pt.Fill(mg.Rect{X: r.X + 1, Y: r.Y + (r.H-h)/2, W: 3, H: h}, p.brand, 1.5)
+		h := min(r.H-16, float32(16))
+		pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + (r.H-h)/2, W: 3, H: h}, p.brand, 1.5)
 	})
 }
+
+// rowInset is the padding at the start of a row that can be selected,
+// which leaves the selection mark its room.
+const rowInset = 12
 
 // appIcon is the letter icon of an app in Activity and Settings.
 func appIcon(c *mg.Context, name string, size, radius, font float32, col string) mg.Element {
@@ -250,35 +384,95 @@ func appIcon(c *mg.Context, name string, size, radius, font float32, col string)
 	}
 	b := mg.Box(c).Size(size, size).Radius(radius).Background(hex(col)).Center().Shrink(0)
 	b.Children(func() {
-		mg.Text(c, letter).FontSize(font).FontWeight(700).TextColor(hex("#ffffff"))
+		mg.Text(c, letter).FontSize(font).FontWeight(fwBold).TextColor(hex("#ffffff"))
 	})
 	return b
 }
 
-// shadow adds the prototype's --shadow to an element.
+// shadow lifts an element that floats over the page: a banner, a
+// popover, the phone's keys.
 func shadow(c *mg.Context, e mg.Element) mg.Element {
 	p := pal(c)
 	return e.Shadow(0, 1, 2, 0, p.shadowLo).Shadow(0, 10, 30, 0, p.shadowHi)
 }
 
+// raised lifts a card a little off the panel it sits on.
+func raised(c *mg.Context, e mg.Element) mg.Element {
+	if pal(c).dark {
+		return e
+	}
+	return e.Shadow(0, 1, 2, 0, mg.RGBA(18, 18, 28, 0.04)).Shadow(0, 2, 8, 0, mg.RGBA(18, 18, 28, 0.03))
+}
+
+// card is a card on a wing: the right panel's tasks, a tile.
+func card(c *mg.Context, e mg.Element) mg.Element {
+	p := pal(c)
+	return raised(c, e.Background(p.card).Border(1, p.line).Radius(rCard))
+}
+
+// group is a rounded group of rows on a page, as the system's settings
+// draw theirs. Its rows separate with groupRow.
+func group(c *mg.Context) mg.Element {
+	p := pal(c)
+	return mg.Column(c).Background(p.group).Border(1, p.line).Radius(rCard).Clip()
+}
+
+// groupRow pads a row of a group and draws the line under it, inset from
+// both sides, unless it is the last.
+func groupRow(c *mg.Context, row mg.Element, last bool) mg.Element {
+	p := pal(c)
+	row.Padding(sp3, sp4).MinHeight(48)
+	if !last {
+		row.DrawOver(func(pt *mg.Painter, r mg.Rect) {
+			pt.Fill(mg.Rect{X: r.X + sp4, Y: r.Y + r.H - 1, W: r.W - 2*sp4, H: 1}, p.line, 0)
+		})
+	}
+	return row
+}
+
+// sheet is a dialog over the window, as mg.Modal shows one, with the
+// app's corners, padding and shadow.
+func sheet(c *mg.Context, open *bool, fn func()) mg.Element {
+	p := pal(c)
+	w, h := c.Size()
+	return mg.DialogBase(c, open, func(back, panel mg.Element) {
+		back.Background(mg.RGBA(0, 0, 0, 0.32))
+		panel.Padding(sp6).Gap(sp3).Radius(rSheet).Background(p.panel).Border(1, p.line).
+			MaxWidth(w-2*sp6).MaxHeight(h-2*sp6).
+			Shadow(0, 1, 3, 0, p.shadowLo).Shadow(0, 24, 60, 0, mg.RGBA(0, 0, 0, 0.22))
+		fn()
+	})
+}
+
 // menuPanel styles a drawn popover like the prototype's .pop.
 func menuPanel(c *mg.Context, panel mg.Element) mg.Element {
 	p := pal(c)
-	return shadow(c, panel.Background(p.panel).Border(1, p.line2).Radius(12).Padding(6))
+	return shadow(c, panel.Background(p.panel).Border(1, p.line2).Radius(rCard).Padding(6))
 }
 
 // menuItem is the prototype's .mi row.
 func menuItem(c *mg.Context, text string, col mg.Color) mg.Element {
 	p := pal(c)
-	b := mg.ButtonBase(c).Label(text).MinHeight(36).Padding(6, 10).Radius(8).Gap(10).AlignItems(mg.Center).Justify(mg.Start)
+	b := mg.ButtonBase(c).Label(text).MinHeight(32).Padding(6, 10).Radius(rSmall).Gap(10).AlignItems(mg.Center).Justify(mg.Start)
 	if b.Hovered() || b.Focused() {
 		b.Background(p.bg3)
 	}
 	if col == (mg.Color{}) {
 		col = p.ink
 	}
-	b.Children(func() { mg.Text(c, text).FontSize(14).TextColor(col) })
+	b.Children(func() { mg.Text(c, text).FontSize(fsBody).TextColor(col) })
 	return b
+}
+
+// menuText is the words of a menu row with a line under its name, as
+// Work in background and Pause connection have: the name at the size of
+// menuItem's, the line smaller and secondary.
+func menuText(c *mg.Context, name, desc string, ink mg.Color) {
+	p := pal(c)
+	mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+		mg.Text(c, name).FontSize(fsBody).TextColor(ink)
+		mg.Text(c, desc).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink2)
+	})
 }
 
 // spinner is the prototype's .spin: a ring with an accent arc, turning.

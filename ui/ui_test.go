@@ -36,7 +36,13 @@ func newTestAppTimeout(t *testing.T, s fakeapi.Scenario, timeout time.Duration) 
 
 func newTestAppWith(t *testing.T, opt fakeapi.Options) *testApp {
 	t.Helper()
+	if opt.Now == nil {
+		opt.Now = testNow // the computer's clock, unless the test sets it (clockAt)
+	}
 	api := fakeapi.New(opt)
+	// After the app has ended (cleanups run last first): the step
+	// screenshots the fake wrote for it.
+	t.Cleanup(api.Close)
 	ta := &testApp{api: api}
 	ta.app = newApp(api, Options{NoTray: true, Shortcut: "-"})
 	testHooks(t, ta.app)
@@ -85,7 +91,7 @@ func (ta *testApp) sync() {
 // waitFor syncs until cond holds.
 func (ta *testApp) waitFor(t *testing.T, what string, cond func() bool) {
 	t.Helper()
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 1500; i++ { // long enough for go test -race
 		ta.sync()
 		if cond() {
 			return
@@ -394,9 +400,10 @@ func TestMirrorInput(t *testing.T) {
 	// The person's input paused the agent.
 	ta.waitFor(t, "takeover", func() bool { return ta.devices[0].Status == gateway.DeviceInControl })
 
-	// A wheel notch becomes a finger dragging up from the pointer.
+	// A touchpad's scroll becomes a finger dragging up from the pointer
+	// (a mouse wheel's: TestMirrorWheel).
 	n := len(ta.api.Inputs())
-	in(mg.InputEvent{Kind: mg.InputScroll, X: 135, Y: 400, DY: 40})
+	in(mg.InputEvent{Kind: mg.InputScroll, X: 135, Y: 400, DY: 40, Precise: true})
 	ta.waitFor(t, "the swipe", func() bool { return len(ta.api.Inputs()) >= n+3 })
 	sw := ta.api.Inputs()[n:]
 	if sw[0].Action != driver.TouchDown || sw[1].Action != driver.TouchMove || sw[2].Action != driver.TouchUp ||

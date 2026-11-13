@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/approval"
@@ -29,6 +30,10 @@ var (
 // unlockNeedPrefix starts the ids of unlock cards: "unlock:<device id>".
 const unlockNeedPrefix = "unlock:"
 
+// setupNeedPrefix starts the ids of the cards of a step the person does
+// on the phone for a task: "setup:<device id>".
+const setupNeedPrefix = "setup:"
+
 // Devices implements API.
 func (g *Gateway) Devices() []DeviceView {
 	g.mu.Lock()
@@ -37,17 +42,26 @@ func (g *Gateway) Devices() []DeviceView {
 	var out []DeviceView
 	for _, d := range g.sortedDevicesLocked() {
 		info := d.info
-		if !d.online && info.State == driver.StateOnline {
+		paused := g.paused[d.id]
+		if !d.online && info.State == driver.StateOnline || paused {
 			info.State = driver.StateOffline
 		}
+		if paused {
+			info.Setup, info.Detail = "", "" // nothing to set up while paused
+		}
 		st, line := g.statusLocked(d, open)
-		v := DeviceView{Info: info, Status: st, StatusLine: line}
+		v := DeviceView{Info: info, Status: st, StatusLine: line, Paused: paused, Streaming: g.capturingLocked(d)}
 		if d.online && d.dev != nil {
 			v.Features = featuresOf(d.dev)
+			// Over CoreDevice, the person's Rotate and pinch move to the
+			// helper (helperneed.go).
+			v.Features.Rotate = v.Features.Rotate || g.helperReadyLocked(d)
+			v.Features.Pinch = v.Features.Pinch || g.helperReadyLocked(d)
 		}
 		if d.lease != nil {
 			v.TaskID = d.lease.task.id
 		}
+		v.LeaseGen, v.LeaseEnded = d.leaseGen, d.leaseEnded
 		out = append(out, v)
 	}
 	return out
@@ -72,12 +86,20 @@ func featuresOf(dev driver.Device) Features {
 	_, f.Files = dev.(driver.Files)
 	_, f.Companion = dev.(driver.CompanionInstaller)
 	_, f.Pinch = dev.(driver.MultiToucher)
+	_, f.Rotate = dev.(driver.Switcher)
 	return f
 }
 
 func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, string) {
 	l := d.lease
+	if g.paused[d.id] {
+		return DeviceOffline, "Paused"
+	}
 	if !d.online {
+		if d.switching != "" && !waitsForStep(d.info.State) {
+			// Moving to another connection for a task (taskconn.go).
+			return DeviceConnecting, switchingLine(d)
+		}
 		if d.opening && d.info.State == driver.StateOnline {
 			return DeviceConnecting, connectingLine(d)
 		}
@@ -96,6 +118,11 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		if d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupDeviceService {
 			// The computer's device service lost it on Wi-Fi (wifi.go).
 			return DeviceNeedsSetup, "Lost on Wi-Fi"
+		}
+		if d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupMediaInUse {
+			// An app on the iPhone uses the camera or microphone, and iOS
+			// does not mirror it then; it connects once they are free.
+			return DeviceNeedsSetup, "Camera or microphone in use"
 		}
 		if waitsForStep(d.info.State) {
 			// Listed but not opened: the phone is connected and waits for
@@ -135,6 +162,9 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 			return DeviceInControl, "You're in control · " + l.session.agent.Name + " is paused"
 		}
 		return DeviceInControl, "You're in control"
+	}
+	if line := busyLineLocked(d); line != "" {
+		return DeviceWorking, line
 	}
 	if l != nil {
 		line := l.session.agent.Name + " · " + l.task.title
@@ -185,7 +215,7 @@ func (g *Gateway) Needs() []NeedView {
 		if info.Kind == approval.KindHandoff {
 			kind = NeedHandoff
 		}
-		out = append(out, NeedView{ID: info.ID, Kind: kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
+		out = append(out, NeedView{ID: info.ID, Kind: kind, Approval: info.Kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
 			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
 			Point: info.Point, To: info.To, Point2: info.Point2, To2: info.To2, Path: info.Path, AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info),
@@ -210,8 +240,28 @@ func (g *Gateway) Needs() []NeedView {
 				Detail:  fmt.Sprintf("%s is waiting for the phone to unlock · %s", l.session.agent.Name, l.task.title),
 				Created: time.Now()})
 		}
+		if n, ok := setupNeedLocked(d); ok {
+			out = append(out, n)
+		}
 	}
 	return out
+}
+
+// setupNeedLocked is the Needs you card of a task whose phone waits for
+// the person to do a step on the phone itself: for now the passcode iOS
+// asks before the WebDriverAgent helper may control the phone, a prompt
+// that goes away by itself unless someone sees it in time. The caller
+// holds g.mu.
+func setupNeedLocked(d *device) (NeedView, bool) {
+	l := d.lease
+	if l == nil || l.ended || !waitingLocked(d) || d.info.Setup != driver.SetupPasscode {
+		return NeedView{}, false
+	}
+	return NeedView{ID: setupNeedPrefix + d.id, Kind: NeedSetup, DeviceID: d.id, DeviceName: d.name(),
+		Agent: l.session.agent.Name, TaskID: l.task.id, Title: "Enter the passcode on " + d.name(),
+		Detail: fmt.Sprintf("iOS asks for it on the phone before Pinky on the iPhone can control it, and stops asking after a while. %s is waiting · %s",
+			l.session.agent.Name, l.task.title),
+		Created: time.Now()}, true
 }
 
 // History implements API.
@@ -277,6 +327,9 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 			return nil
 		}
 		return g.Unlock(dev)
+	}
+	if strings.HasPrefix(needID, setupNeedPrefix) {
+		return nil // it goes once the phone is ready
 	}
 	info, err := g.approvals.Get(needID)
 	if err != nil {
@@ -613,6 +666,11 @@ func (g *Gateway) personInput(deviceID string) (*device, driver.Device, error) {
 	g.takeOver(d, true)
 	g.mu.Lock()
 	dev := d.dev
+	if d.lease == nil && d.switchBack != nil {
+		// A connection a task or the person's Rotate moved the phone to
+		// stays while the person uses it (helperneed.go).
+		g.switchBackLater(d)
+	}
 	g.mu.Unlock()
 	if dev == nil {
 		return nil, nil, driver.ErrOffline
@@ -645,12 +703,23 @@ func (g *Gateway) BlockedApps(ctx context.Context) []policy.BlockedApp {
 		}
 	}
 	g.mu.Unlock()
+	// Each phone at once: an iPhone over Wi-Fi takes seconds to list its
+	// apps, and one after another the phones listed last ran out of ctx's
+	// time and their blocked apps were missing.
+	lists := make([][]driver.App, len(devs))
+	var wg sync.WaitGroup
+	for i, dev := range devs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if apps, err := dev.Apps(ctx); err == nil {
+				lists[i] = apps
+			}
+		}()
+	}
+	wg.Wait()
 	var installed []screen.App
-	for _, dev := range devs {
-		apps, err := dev.Apps(ctx)
-		if err != nil {
-			continue
-		}
+	for _, apps := range lists {
 		for _, a := range apps {
 			if a.CloneOf != nil {
 				continue // blocked or not with the app it copies

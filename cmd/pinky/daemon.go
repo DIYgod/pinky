@@ -21,6 +21,8 @@ import (
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/telemetry"
+	"github.com/DIYgod/pinky/internal/update"
+	"github.com/DIYgod/pinky/internal/webmirror"
 	"github.com/DIYgod/pinky/ui"
 )
 
@@ -31,13 +33,17 @@ func runDaemon(args []string) error {
 	verbose := fs.Bool("v", false, "log debug messages")
 	noUpdates := fs.Bool("no-update-check", false, "do not look for new versions of Pinky")
 	httpAddr := fs.String("http", "", `also serve MCP over Streamable HTTP at this address, such as "`+ui.DefaultRemoteAddr+`"; each request needs the agent token (`+"`pinky token`"+`)`)
+	mirror := fs.Bool("mirror", false, "also show the phones in a web browser at "+webmirror.URL()+"; its secret link is printed to a terminal only")
+	mirrorControl := fs.Bool("mirror-control", false, "with --mirror, also let the browser use the phones; the control link is printed to a terminal only")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	c.Log = newLogger(os.Stderr, *verbose)
 	if dirs, err := api.DefaultDirs(); err == nil && dirs.Ensure() == nil {
 		crashes := captureCrashes(dirs, "daemon", c.Log)
-		defer crashes.Stop()
+		// Not a plain Stop: a panic runs deferred calls, and a Stop removed the
+		// crash file before the runtime wrote the panic to it.
+		defer func() { crashes.Exit(recover()) }()
 		c.Crashes = crashes
 	}
 
@@ -45,7 +51,15 @@ func runDaemon(args []string) error {
 	if err != nil {
 		return err
 	}
+	// Once the gateway has closed, as the app's settings say then.
+	var restarting bool
+	defer func() {
+		s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
+		stopADBAtQuit(s.StopADBOnQuit, c.Fake, restarting, c.Log)
+	}()
 	defer rg.Close()
+	// Agents' copies of Pinky's skill follow this version.
+	go refreshSkills(c.Log)
 	// Recording, retention, iPhones over Wi-Fi and usage statistics follow
 	// the app's settings, when there are any.
 	s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
@@ -73,10 +87,19 @@ func runDaemon(args []string) error {
 		}
 		fmt.Fprintf(os.Stderr, "MCP over HTTP at %s\n", rg.Remote.URL())
 	}
+	if *mirror {
+		if err := rg.Mirror.Set(true); err != nil {
+			return err
+		}
+		rg.Mirror.SetControl(*mirrorControl)
+		printMirrorLinks(os.Stderr, rg.Mirror.Server)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	rg.srv.Quit = stop
+	// The app takes over from a daemon when the person opens it.
+	rg.srv.Kind = api.KindDaemon
 	upd := newUpdater(rg.Dirs, c.Log)
 	if err := startedUpdate(upd, c.Log).Confirm(); err != nil {
 		c.Log.Warn("update: confirm", "err", err)
@@ -85,6 +108,7 @@ func runDaemon(args []string) error {
 		go daemonUpdates(ctx, upd, c.Log)
 	}
 	err = rg.Serve(ctx)
+	restarting = update.Restarting(rg.Dirs.Config)
 	c.Log.Info("gateway stopping")
 	return err
 }
@@ -129,6 +153,8 @@ type runningGateway struct {
 	Remote *remoteAgents
 	// MCP serves agents, over the socket and HTTP.
 	MCP *mcp.Server
+	// Mirror shows the phones in a web browser while the web mirror is on.
+	Mirror *webMirror
 
 	ln  net.Listener
 	srv *api.Server
@@ -193,7 +219,7 @@ func startGateway(c gatewayConfig) (*runningGateway, error) {
 	srv := &api.Server{Gateway: g, MCP: m, Token: tok, Trusted: c.Fake, Version: version, Log: log}
 	log.Info("gateway ready", "socket", dirs.Socket(), "data", dataDir, "devices", len(g.Devices()), "fake", c.Fake, "pid", os.Getpid())
 	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, Remote: newRemoteAgents(m, tok, log), MCP: m,
-		ln: ln, srv: srv, log: log}, nil
+		Mirror: newWebMirror(g, log), ln: ln, srv: srv, log: log}, nil
 }
 
 // Serve answers agents and clients on the socket until ctx ends.
@@ -205,6 +231,9 @@ func (r *runningGateway) Serve(ctx context.Context) error {
 func (r *runningGateway) Close() {
 	if r.Remote != nil {
 		r.Remote.Close()
+	}
+	if r.Mirror != nil {
+		r.Mirror.Close()
 	}
 	r.G.Close()
 	r.ln.Close()

@@ -40,6 +40,16 @@ type Provider struct {
 	// that usbmuxd, which then carries every connection to an iPhone.
 	WiFiMux bool
 
+	// RunDir is where Pinky remembers the helper runners it started (see
+	// runRecords), so that it ends one it left after a crash; "" for
+	// nowhere.
+	RunDir string
+
+	// HelperDir is Pinky's WebDriverAgent folder, where InstallHelper
+	// keeps the helper's source and log; "" when the provider does not
+	// install the helper (helperwindow.go).
+	HelperDir string
+
 	// Log gets a line for each step Pinky takes to prepare a phone:
 	// mounting the developer disk image, showing the Developer Mode
 	// switch, asking for trust, downloading the image. nil for none.
@@ -51,9 +61,11 @@ type Provider struct {
 	setup       func(ctx context.Context, e goios.DeviceEntry) (bool, error)
 	legacySetup func(ctx context.Context, e goios.DeviceEntry) (bool, error)
 	findRunner  func(e goios.DeviceEntry) (string, error)
-	ways        map[string]string    // by UDID: the connection the person chose (see SetConnection)
-	wdaWaits    map[string]*wdaStart // by UDID: a runner waiting for the passcode (see wdaState)
-	wdaHolds    map[string]wdaHold   // by UDID: no new runner until then
+	ways        map[string]string     // by UDID: the connection the person chose (see SetConnection)
+	wdaWaits    map[string]*wdaStart  // by UDID: a runner waiting for the passcode (see wdaState)
+	wdaHolds    map[string]wdaHold    // by UDID: no new runner until then
+	mediaWaits  map[string]*mediaWait // by UDID: a session waiting for the camera and microphone (mediawait.go)
+	closed      bool                  // Close ran: no new mediaWait
 
 	// The helper's provisioning profile (wda_profile.go): by UDID, the
 	// helper whose profile List reads again, and for tests how it is read.
@@ -63,6 +75,11 @@ type Provider struct {
 	// For tests: how a phone is inspected, and the clock.
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
+
+	// For tests: how a CoreDevice session is dialed, and how often a
+	// mediaWait tries the stream (0: mediaRetry).
+	dialFn     func(ctx context.Context, info driver.Info) (coreSession, error)
+	mediaEvery time.Duration
 
 	wifi       wifiState                                               // phones over Wi-Fi (wifi.go)
 	lost       lostState                                               // phones usbmuxd lost on Wi-Fi (lost.go)
@@ -75,6 +92,8 @@ type Provider struct {
 	muxPhones  int                              // phones the last answered List found
 	listFn     func() (goios.DeviceList, error) // for tests: usbmuxd's list
 	openFails  map[string]string                // by UDID: why the last open got no picture (noVideoError.Detail)
+	paused     map[string]bool                  // by UDID: phones the person paused in Pinky (pause.go)
+	install    helperInstalling                 // installing the helper from the window (helperwindow.go)
 }
 
 // recheckOffline is how often List asks a phone that is not online again,
@@ -244,12 +263,25 @@ func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 	return out
 }
 
-// info returns what is known about the phone behind e. It inspects the
-// phone again only when its entry changed, every recheckOffline while it is
-// not online, or when its developer services went away (recheckOnline), so
-// a phone that stays attached costs little more than a look at its services
-// a minute.
+// info returns what is known about the phone behind e, needing the
+// SetupMediaInUse step while its session waits for the camera and
+// microphone (mediaState).
 func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
+	return p.mediaState(keyOf(e), e.Properties.SerialNumber, p.inspected(ctx, e))
+}
+
+// inspected returns what is known about the phone behind e. It inspects
+// the phone again only when its entry changed, every recheckOffline while
+// it is not online, or when its developer services went away
+// (recheckOnline), so a phone that stays attached costs little more than a
+// look at its services a minute.
+func (p *Provider) inspected(ctx context.Context, e goios.DeviceEntry) driver.Info {
+	if info, ok := p.pausedInfo(e); ok {
+		return info
+	}
+	if info, ok := p.installingInfo(e); ok {
+		return info
+	}
 	id, key := e.Properties.SerialNumber, keyOf(e)
 	p.mu.Lock()
 	k, ok := p.known[id]
@@ -287,7 +319,7 @@ func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 }
 
 // forgetExcept drops what List knew about phones that are gone, and stops
-// the helper's runners that waited on them.
+// the helper's runners and the sessions that waited on them.
 func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 	listed := make(map[string]bool, len(entries))
 	for _, e := range entries {
@@ -309,6 +341,11 @@ func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 		if !listed[id] {
 			stop = append(stop, s)
 			delete(p.wdaWaits, id)
+		}
+	}
+	for id := range p.mediaWaits {
+		if !listed[id] {
+			p.stopMediaWaitLocked(id)
 		}
 	}
 	for id := range p.openFails {
@@ -398,6 +435,13 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		if s, err = startWDAFor(ctx, info); err != nil {
 			return nil, err
 		}
+		if s.run != nil {
+			s.run.logger = p.logger()
+			recs := runRecords{p.RunDir}
+			if body := recs.mark(info.ID, s.run.app.Path); body != "" {
+				s.run.ended = func() { recs.unmark(info.ID, body) }
+			}
+		}
 	}
 	d, err := s.open(ctx, info)
 	switch {
@@ -406,6 +450,9 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		delete(p.wdaHolds, info.ID)
 		p.mu.Unlock()
 		d.log = p.logger()
+		if s.run == nil {
+			p.adoptLeftover(d, info.ID)
+		}
 		return d, nil
 	case errors.Is(err, errAutomation):
 		p.mu.Lock()
@@ -414,10 +461,51 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		}
 		p.wdaWaits[info.ID] = s
 		p.mu.Unlock()
+		// Until the next List says so (wdaState), the error tells.
+		return nil, &driver.SetupError{Setup: driver.SetupPasscode, Detail: automationAsk, Err: err}
 	default:
 		s.stop()
 	}
 	return nil, err
+}
+
+// adoptLeftover has the device end, on Close, the runner it took over
+// when an earlier Pinky started it (see runRecords).
+func (p *Provider) adoptLeftover(d *WDADevice, id string) {
+	recs := runRecords{p.RunDir}
+	if path := recs.started(id); path != "" {
+		d.leftover = path
+		d.leftoverEnded = func() { recs.unmark(id, "") }
+	}
+}
+
+// Close ends the helper's runners that wait for the passcode, and returns
+// once they are gone from the phones (or after wdaEndTimeout): left there,
+// the request keeps the phone from locking by itself. It closes the
+// sessions that wait for the camera and microphone too. The gateway closes
+// the provider when Pinky quits, after its devices.
+func (p *Provider) Close() error {
+	p.mu.Lock()
+	waits, media := p.wdaWaits, p.mediaWaits
+	p.wdaWaits, p.mediaWaits, p.closed = nil, nil, true
+	p.mu.Unlock()
+	var wg sync.WaitGroup
+	for _, s := range waits {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.stop()
+		}()
+	}
+	for _, w := range media {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			w.stop()
+		}()
+	}
+	wg.Wait()
+	return nil
 }
 
 func (p *Provider) logger() *slog.Logger { return logTo(p.Log) }
@@ -457,8 +545,7 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 			info.Detail = trustWiFiDetail
 			return info
 		}
-		p.prep.askTrust(e, p.logger())
-		return trustState(info, err)
+		return trustState(info, p.prep.askTrust(e, err, p.logger()))
 	}
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)
@@ -623,10 +710,10 @@ func (p *Provider) runner(e goios.DeviceEntry) (string, error) {
 // Sentences for a chosen connection the phone cannot use, and for the
 // passcode the phone asks for before the helper can control it.
 const (
-	coreDeviceTooOld = "Connecting without the helper needs iOS 27 or later; this iPhone runs iOS %s. Choose Automatic or WebDriverAgent in Settings > Phones."
-	wdaMissing       = "The WebDriverAgent helper is not installed on this iPhone. Install it once from Xcode (docs/notes/ios.md, \"Installing the WebDriverAgent helper\"), or choose another connection in Settings > Phones."
-	automationAsk    = "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone."
-	automationMissed = "The iPhone asked for its passcode to let the WebDriverAgent helper control it. If it still asks, enter the passcode there. Pinky tries again in a few minutes, or at once when you reconnect the iPhone or choose its connection again in Settings > Phones."
+	coreDeviceTooOld = "Connecting without Pinky on the iPhone needs iOS 27 or later; this iPhone runs iOS %s. Choose Automatic or Pinky on the iPhone in Settings > Phones."
+	wdaMissing       = "Pinky is not installed on this iPhone. Install it once on a Mac with Xcode, with Install Pinky on the iPhone in Pinky's window or pinkyctl helper install (docs/notes/ios.md, \"Installing Pinky on the iPhone\"), or choose another connection in Settings > Phones."
+	automationAsk    = "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky on the iPhone can control the phone."
+	automationMissed = "The iPhone asked for its passcode to let Pinky on the iPhone control it. If it still asks, enter the passcode there. Pinky tries again in a few minutes, or at once when you reconnect the iPhone or choose its connection again in Settings > Phones."
 )
 
 // coreDeviceTooOldState fills in a phone the person chose to connect
@@ -667,6 +754,7 @@ func (p *Provider) SetConnection(id, way string) error {
 	s := p.wdaWaits[id]
 	delete(p.wdaWaits, id)
 	delete(p.wdaHolds, id)
+	p.stopMediaWaitLocked(id)
 	p.mu.Unlock()
 	if s != nil {
 		go s.stop()
@@ -811,13 +899,18 @@ func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 		}
 	}
 	info := p.info(ctx, entry)
+	if info.State == driver.StateNeedsSetup && info.Setup == driver.SetupMediaInUse {
+		// Its session waits for the camera and microphone (mediaState).
+		return nil, &driver.SetupError{Setup: info.Setup, Detail: info.Detail}
+	}
 	if info.State != driver.StateOnline {
 		return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
 	}
 	dev, err := p.openBackend(ctx, info)
 	p.noteOpen(id, err)
 	if err != nil {
-		if info.Backend == backendCoreDevice {
+		var se *driver.SetupError
+		if info.Backend == backendCoreDevice && !errors.As(err, &se) {
 			// Most often the developer services went away since List
 			// looked: the next List looks again, and mounts the image.
 			p.forgetPhone(id)
@@ -838,7 +931,7 @@ func (p *Provider) openBackend(ctx context.Context, info driver.Info) (driver.De
 	case backendAccessibility:
 		return OpenAccessibility(ctx, info)
 	}
-	return open(ctx, info, p.logger())
+	return p.openCoreDevice(ctx, info)
 }
 
 // noteOpen remembers an open that failed for want of a picture, for the
@@ -848,7 +941,9 @@ func (p *Provider) noteOpen(id string, err error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	var nv *noVideoError
-	if !errors.As(err, &nv) {
+	if !errors.As(err, &nv) || mediaInUse(err) {
+		// An app holding the camera or microphone is a step of its own
+		// (mediaWait), not a phone that sends no picture.
 		delete(p.openFails, id)
 		return
 	}

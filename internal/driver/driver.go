@@ -123,6 +123,7 @@ const (
 // Setup steps, in Info.Setup.
 const (
 	SetupTrust         = "trust"          // unlock the phone, tap Trust and enter its passcode
+	SetupTrustRecord   = "trust_record"   // the phone trusts the computer, but Apple's device service cannot replace the pairing record it holds; Detail says how to let it
 	SetupDeveloperMode = "developer_mode" // turn on Developer Mode, which restarts the phone
 	SetupUnlock        = "unlock"         // unlock the phone so the computer can finish preparing it
 	SetupPreparing     = "preparing"      // the computer is preparing the phone; nothing to do but wait
@@ -171,6 +172,13 @@ const (
 	// that keeps devices apart, a VPN, asleep). Listed offline: it is not
 	// connected, and no step on the computer brings it back.
 	SetupNotOnWiFi = "not_on_wifi"
+	// SetupMediaInUse: the phone is connected and ready, but iOS refuses
+	// to mirror its screen while an app uses the camera or microphone (a
+	// call or FaceTime, Camera, Voice Memos, a screen recording with the
+	// microphone, dictation, a Mac using it as Continuity Camera). The
+	// person ends the call or closes that app; Pinky connects by itself as
+	// soon as the camera and microphone are free.
+	SetupMediaInUse = "media_in_use"
 )
 
 // Provider discovers and opens the devices of one platform.
@@ -195,6 +203,13 @@ type HostCheck struct {
 	// Apple's iPhone driver, from the Apple Devices app or iTunes),
 	// "usbmuxd" (Linux: the usbmuxd package), "usbmuxd_stopped" (Linux:
 	// installed, but not running; it starts when an iPhone is plugged in).
+	// Android's: "adb" (no adb to start a server with), "adb_server" (no
+	// server runs, and starting one failed), "adb_old" (the server is
+	// older than protocol 41), "adb_no_network" (the server cannot reach
+	// phones on the local network), "adb_restarts" (another program keeps
+	// replacing the server), "adb_other_server" (another program's adb
+	// server, on another port, holds a phone on a cable; Detail begins
+	// "Another program's adb server, on port <port>,").
 	Missing string
 	Detail  string // the same in a sentence
 }
@@ -330,9 +345,10 @@ type App struct {
 	ID     string // package name or bundle id
 	Name   string
 	System bool
-	// Aliases are other names the person knows the app by: on an iPhone,
-	// the name its home screen shows when that differs from the app's own
-	// ("微信" for WeChat, whose bundle is named WeChat in every language).
+	// Aliases are other names the person or an agent may know the app by.
+	// On an iPhone or a Simulator, Name is the name the home screen shows,
+	// in the phone's language ("微信"), and the alias is the bundle's own
+	// name when that differs ("WeChat", the same in every language).
 	Aliases []string
 	// CloneOf is set on an app clone (Android's 应用分身, Dual apps, App
 	// Twin): a second copy of an installed app that the phone keeps in
@@ -581,12 +597,109 @@ const (
 	CheckDiskImage     = "disk_image"     // the developer disk image is mounted, and the computer can mount it again after a restart
 	CheckHelper        = "helper"         // the WebDriverAgent helper answers, where Pinky drives the phone through it
 	FixInstallHelper   = "install_helper" // install the WebDriverAgent helper on the phone
-	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again) from Xcode, as it is missing or its profile ran out (Info.HelperExpires)
+	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again), from the client on a Mac with Xcode (HelperInstaller) or with pinkyctl helper install, as it is missing or its profile ran out (Info.HelperExpires); also while Pinky installs it
 )
 
 // HelperReminder is how long before Info.HelperExpires clients remind the
 // person to install the WebDriverAgent helper again.
 const HelperReminder = 48 * time.Hour
+
+// HelperInstaller is a Provider that installs the WebDriverAgent helper on
+// an iPhone, as `pinky helper install` does: Xcode builds it, signs it with
+// the person's developer team and installs it. It runs only when the
+// person asks in the client.
+type HelperInstaller interface {
+	// CanInstallHelper reports whether this computer can: a Mac with
+	// Xcode. It is cheap.
+	CanInstallHelper() bool
+	// InstallHelper installs the helper on the phone with this id, "" for
+	// the only one Xcode reaches, signed with team: "" for the team of the
+	// helper on the phone, else of the one installed there last, else the
+	// only one this computer can sign for. progress, when not nil, gets
+	// each step as it begins, from another goroutine. It takes a few
+	// minutes, during which the phone needs setup (SetupInstallHelper) and
+	// is not opened; it is looked at again afterwards. Errors are
+	// *HelperTeamsError, *HelperInstallError or the context's.
+	InstallHelper(ctx context.Context, id, team string, progress func(HelperStep)) error
+}
+
+// HelperStep is where an install of the helper is.
+type HelperStep string
+
+// The steps of HelperInstaller.InstallHelper.
+const (
+	HelperPreparing  HelperStep = "preparing"  // finding the phone and its helper, getting WebDriverAgent's source
+	HelperBuilding   HelperStep = "building"   // Xcode builds and signs it: a minute or two
+	HelperInstalling HelperStep = "installing" // installing it and starting it once; the phone may ask for its passcode
+	HelperUnlock     HelperStep = "unlock"     // Xcode waits for the phone to be unlocked
+)
+
+// HelperTeam is a developer team the computer can sign the helper for.
+type HelperTeam struct {
+	ID   string // such as "ABCDE12345"
+	Name string // the team's or the person's name, "" when unknown
+}
+
+// HelperTeamsError is InstallHelper's error when the computer can sign for
+// several teams and nothing says which: the client asks the person and
+// installs again with the one they choose.
+type HelperTeamsError struct {
+	Teams []HelperTeam
+}
+
+func (e *HelperTeamsError) Error() string {
+	names := make([]string, len(e.Teams))
+	for i, t := range e.Teams {
+		names[i] = t.ID
+		if t.Name != "" {
+			names[i] += " (" + t.Name + ")"
+		}
+	}
+	return "this Mac can sign for several teams; choose one: " + strings.Join(names, ", ")
+}
+
+// HelperInstallError is why InstallHelper failed: a code clients put into
+// words, and the details.
+type HelperInstallError struct {
+	// Fix is what the person can do about it: one of the HelperFix*
+	// constants, or "" when nothing Pinky saw explains it.
+	Fix string
+	// Err is what went wrong, in English, for logs and for clients without
+	// words for Fix.
+	Err error
+	// Hint says what to do on the command line, with its flags; "" when
+	// Err says it.
+	Hint string
+	// Log is the build's log on the computer, "" when there is none yet.
+	Log string
+}
+
+func (e *HelperInstallError) Error() string {
+	s := e.Err.Error()
+	if e.Log != "" {
+		s += " (" + e.Log + ")"
+	}
+	if e.Hint != "" {
+		s += "\n" + e.Hint
+	}
+	return s
+}
+
+func (e *HelperInstallError) Unwrap() error { return e.Err }
+
+// What the person can do about a failed install, in HelperInstallError.Fix.
+const (
+	HelperFixXcode         = "xcode"           // install Xcode (on a Mac)
+	HelperFixPhone         = "phone"           // Xcode does not reach the phone: plug it in, or put it on the Mac's Wi-Fi, and trust the Mac
+	HelperFixDeveloperMode = "developer_mode"  // turn on Developer Mode on the phone
+	HelperFixAppleID       = "apple_id"        // add an Apple ID in Xcode › Settings › Accounts
+	HelperFixOtherTeam     = "other_team"      // another team signed the helper on the phone: choose that team, or delete the helper there first
+	HelperFixSigning       = "signing"         // Xcode found no profile that signs the helper for the phone
+	HelperFixTrust         = "trust_developer" // trust the developer on the phone, in Settings › General › VPN & Device Management
+	HelperFixPasscode      = "passcode"        // the phone asked for its passcode to allow automation, and nobody entered it
+	HelperFixUnlock        = "unlock"          // the phone stayed locked
+	HelperFixDownload      = "download"        // WebDriverAgent's source did not download
+)
 
 // FileInfo is one entry of the phone's Pinky folder.
 type FileInfo struct {
@@ -823,6 +936,19 @@ const (
 	// Clients treat it as CompanionOutdated and say why.
 	CompanionPublicKey CompanionState = "public_key"
 	CompanionNoAPK     CompanionState = "no_apk" // Pinky has no APK to install (a build without it)
+	// CompanionManual: installed and current, its service is off, and the
+	// phone does not let Pinky turn it on over USB debugging: it took
+	// Pinky's change to its accessibility settings without an error and
+	// kept nothing of it (CompanionStartSettingIgnored; vivo's OriginOS 6).
+	// Only the person can turn it on, in the phone's accessibility
+	// settings. Clients that do not know it treat it as CompanionOff.
+	CompanionManual CompanionState = "manual"
+	// CompanionManualOn: installed and current, and its service is on on a
+	// phone where only the person can turn it on (CompanionManual): they
+	// did, and Pinky leaves it on after tasks, until they turn it off on
+	// the phone. The phone's apps, banking apps among them, can see it
+	// while it is on. Clients that do not know it treat it as CompanionOn.
+	CompanionManualOn CompanionState = "manual_on"
 )
 
 // CompanionInstaller installs or updates the phone's companion app from the
@@ -836,6 +962,40 @@ type CompanionInstaller interface {
 	// Protect); the call waits for that, up to ctx.
 	InstallCompanion(ctx context.Context) error
 }
+
+// CompanionStartError is the error InstallCompanion returns when Pinky
+// turned the companion app's accessibility service on and it did not
+// answer.
+type CompanionStartError struct {
+	// Reason is what kept it off, as a code clients put into words: one of
+	// the CompanionStart* constants, or "" when the phone showed nothing
+	// that explains it.
+	Reason string
+	// Detail says what Pinky saw on the phone, in a sentence, for logs and
+	// for clients without words for Reason.
+	Detail string
+}
+
+func (e *CompanionStartError) Error() string {
+	return "the companion's accessibility service did not come on: " + e.Detail
+}
+
+// Why the companion's service did not come on, in CompanionStartError.Reason.
+const (
+	// CompanionStartUIAutomation: another tool holds Android's UI
+	// automation (uiautomator, uiautomator2, Appium, Maestro), and Android
+	// keeps every accessibility service off until it lets go.
+	CompanionStartUIAutomation = "ui_automation"
+	// CompanionStartNotUnlocked: the phone has not been unlocked since it
+	// started, and Android starts the service only after that.
+	CompanionStartNotUnlocked = "not_unlocked"
+	// CompanionStartSettingIgnored: the phone took the change to
+	// enabled_accessibility_services without an error and kept nothing of
+	// it, so it does not let Pinky turn the service on over USB debugging
+	// (vivo's OriginOS 6); only the person can, in the phone's
+	// accessibility settings. CompanionState says CompanionManual then.
+	CompanionStartSettingIgnored = "setting_ignored"
+)
 
 // AppManager installs, updates, uninstalls and stops apps for agents
 // (phone_app, docs/notes/apps.md). The gateway asks the person first and
@@ -893,7 +1053,7 @@ func (e *packageError) Is(target error) bool { return target == ErrPackage }
 // WorkWatcher is told whether an agent works on the phone: from the start
 // of a task to its end, except while the person is in control. A driver
 // keeps on, only while one does, what agents need and the phone's apps can
-// see: Android's Pinky Companion, whose accessibility service banking apps
+// see: Pinky on the phone, whose accessibility service banking apps
 // refuse to sign in next to. The gateway calls AgentWorking right after it
 // opens the device and whenever the answer changes; it must return at once
 // and do any work in the background.
@@ -1124,6 +1284,77 @@ type Forgetter interface {
 	Disconnect(ctx context.Context, id string) error
 }
 
+// Pauser is a Provider that the gateway tells which phones the person
+// paused in Pinky. The gateway neither opens a paused phone nor keeps its
+// session; the provider, for its part, stops what it does with the phone
+// by itself while listing it: an iPhone's checks over a CoreDevice tunnel
+// and its WebDriverAgent runner waiting for the passcode, an Android
+// phone's reconnects over Wi-Fi. It still lists the phone as it finds it,
+// so the gateway sees it plugged in. The gateway calls SetPaused before
+// the first List for each phone paused earlier.
+type Pauser interface {
+	SetPaused(id string, paused bool)
+}
+
+// CaptureReporter is a Device that says whether it captures the phone's
+// screen right now. On an iPhone that is the display stream, during which
+// iOS tells apps the screen is being shared, keeps the camera and the
+// microphone from them and some banking apps refuse to run; the driver
+// stops it a while after the last view or input.
+type CaptureReporter interface {
+	Capturing() bool
+}
+
+// VitalsReader is a Device that reads the phone's battery and storage, for
+// the person to see on its page and for agents. Reading must not change
+// anything on the phone the person would notice: it must not turn the
+// screen on, keep it on, stop auto-lock or start capturing the screen
+// (CaptureReporter). The gateway reads rarely and never while the phone is
+// paused.
+type VitalsReader interface {
+	// Vitals reads the parts asked for; a part the phone does not report
+	// stays nil. A virtual phone reports no battery.
+	Vitals(ctx context.Context, parts VitalParts) (Vitals, error)
+}
+
+// VitalParts are the parts of Vitals to read.
+type VitalParts uint8
+
+const (
+	VitalBattery VitalParts = 1 << iota
+	VitalStorage
+)
+
+// Vitals are a phone's battery and storage as it reported them.
+type Vitals struct {
+	Battery *Battery
+	Storage *Storage
+}
+
+// Battery is the phone's battery.
+type Battery struct {
+	Level    int  // percent, 0 to 100
+	Charging bool // charging now
+	// Plugged is true while the phone is on external power, also when it
+	// does not charge because it is full or holds the charge on purpose.
+	Plugged bool
+	Full    bool
+	// TempC is the battery's temperature in degrees Celsius; 0 when the
+	// phone does not report it (iPhones).
+	TempC float64
+}
+
+// Storage is the phone's storage for apps and data, as its own Settings
+// show it.
+type Storage struct {
+	// Total is the capacity in bytes the phone is sold with (128 GB), not
+	// the size of its data partition.
+	Total int64
+	// Free is the space apps may still use in bytes, counting what the
+	// system can clear when it needs room, as Settings counts it.
+	Free int64
+}
+
 // WiFiFinder is a Provider that also reaches phones over Wi-Fi by itself:
 // iPhones and iPads that usbmuxd lists over the network. Those include
 // phones that are not the person's, such as a family member's iPad that was
@@ -1200,6 +1431,12 @@ var (
 	// ErrPairOldTool: the pairing tool cannot pair over Wi-Fi, as an adb
 	// server older than platform-tools 30.
 	ErrPairOldTool = errors.New("this computer's adb server cannot pair over Wi-Fi")
+	// ErrPairNoNetwork: the pairing tool cannot reach the local network,
+	// which Pinky reaches, as an adb server that lost macOS's Local Network
+	// access, and the driver could not restart it. Also wrapped by the
+	// driver's other connections at an address: WiFiConnector,
+	// ConnectTailnet and the Android driver's own reconnects.
+	ErrPairNoNetwork = errors.New("this computer's adb server cannot reach the local network")
 )
 
 // ConnectionChooser is a Provider that can reach a phone in more than one
@@ -1247,7 +1484,57 @@ var (
 	// attempt was used.
 	ErrPINNotEntered = errors.New("the PIN was not entered")
 	ErrNotFound      = errors.New("not found")
+	// ErrBusy: another agent drives the phone, so this one may not act on
+	// it until that one is done (BusyError says who).
+	ErrBusy = errors.New("another agent is using the phone")
+	// ErrStoppedOnPhone: the person stopped the agent's task on the phone
+	// itself (Stop on Pinky on the phone's pill), and the task must end. A
+	// driver returns it from Observe and the actions until the agent stops
+	// working (WorkWatcher).
+	ErrStoppedOnPhone = errors.New("the person stopped this task on the phone")
 )
+
+// BusyError is ErrBusy with who holds the phone: By "phone" for Pinky on
+// the phone running a task of its own, Task that task's name when it has
+// one. A driver returns it from Observe and the actions while an agent
+// works on a phone another agent holds; nothing was done.
+type BusyError struct {
+	By   string // "phone" (Pinky on the phone) or "computer" (another computer)
+	Task string
+}
+
+func (e *BusyError) Error() string {
+	who := "Pinky on another computer is using the phone"
+	if e.By == "phone" {
+		who = "Pinky on the phone is running a task"
+	}
+	if e.Task != "" {
+		who += fmt.Sprintf(" (%q)", e.Task)
+	}
+	return who + "; nothing was done, and the phone stays busy until that task ends"
+}
+
+func (e *BusyError) Is(target error) bool { return target == ErrBusy }
+
+// SetupError is a Provider.Open that failed because the phone waits for the
+// person to do a step first, the way Info.Setup and Info.Detail name a step
+// for a listed phone: the gateway shows the phone as needing setup at once,
+// without waiting for the next List to say so. Err is the driver's own
+// error.
+type SetupError struct {
+	Setup  string // a Setup* step
+	Detail string // what to do, in a sentence
+	Err    error
+}
+
+func (e *SetupError) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return e.Detail
+}
+
+func (e *SetupError) Unwrap() error { return e.Err }
 
 // Checkups. A phone's checkup checks, item by item and for real, what
 // Pinky needs on it (a key that does nothing to see that input works, a
@@ -1287,7 +1574,7 @@ const (
 	CheckADB          = "adb"           // Android: the adb server answers
 	CheckConnection   = "connection"    // the phone is connected and answers
 	CheckAuthorized   = "authorized"    // the phone allows this computer (USB debugging allowed, trusted)
-	CheckCompanion    = "companion"     // Android: Pinky Companion is installed, current and on
+	CheckCompanion    = "companion"     // Android: Pinky on the phone is installed, current and on
 	CheckInput        = "input"         // taps, swipes and keys reach the phone
 	CheckScreen       = "screen"        // screenshots and the live picture
 	CheckBackground   = "background"    // agents can work on a background display
@@ -1301,7 +1588,7 @@ const (
 	FixAuthorize        = "authorize"          // allow this computer on the phone (Allow USB debugging, Trust)
 	FixUSBPermission    = "usb_permission"     // Linux: the computer may not open the phone's USB device (udev rules)
 	FixUSBDriver        = "usb_driver"         // Windows: the phone's USB debugging has no driver
-	FixInstallCompanion = "install_companion"  // install Pinky Companion
+	FixInstallCompanion = "install_companion"  // install Pinky on the phone
 	FixUpdateCompanion  = "update_companion"   // update it to the version Pinky carries
 	FixTurnOnCompanion  = "turn_on_companion"  // turn its accessibility service on
 	FixInputPermission  = "input_permission"   // the phone refuses input from the computer (Xiaomi's USB debugging (Security settings), ColorOS's permission monitoring)
@@ -1315,6 +1602,11 @@ const (
 	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
 	FixSameNetwork      = "same_network"       // put the phone on the same Wi-Fi as this computer, one that lets devices reach each other
 	FixWiFiSetting      = "wifi_setting"       // turn on Use iPhones and iPads over Wi-Fi in Settings › Phones
+
+	// FixTurnOnCompanionByHand: turn Pinky on the phone's accessibility
+	// service on in the phone's accessibility settings, by hand: the phone
+	// does not let Pinky do it over USB debugging (CompanionManual).
+	FixTurnOnCompanionByHand = "turn_on_companion_by_hand"
 )
 
 // Setup steps of Android phones, in Info.Setup with the Setup constants:

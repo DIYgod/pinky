@@ -361,14 +361,55 @@ func IsSearchField(e *screen.Element) bool {
 	return containsAny(text, searchWords)
 }
 
+// IsSearchBox reports whether a text field typed into is a search box:
+// target, the field, reads as one (IsSearchField), or, when the screen
+// shows no field with focus (target nil), the field is one the app draws
+// itself and the screen shows a search box at its top
+// (impliedSearchBox).
+func IsSearchBox(target *screen.Element, s *screen.Screen) bool {
+	if target != nil {
+		return IsSearchField(target)
+	}
+	return impliedSearchBox(s)
+}
+
+// impliedSearchBox reports whether the field that has focus, which s does
+// not show, is most likely the app's search box. Apps that draw their own
+// text field read as no field at all: Xianyu's search box, empty, is only
+// the text of its placeholder, "搜索宝贝/帖子/用户" (GitHub issue #76). It
+// takes all of: the keyboard up, so something takes text; no element that
+// reads as a text field, which could be the one with focus; and a search
+// box's placeholder or label, not a button, in the top quarter of the
+// screen, where apps put their search box. A chat's own compose field at
+// the bottom with a search button at the top does not count.
+func impliedSearchBox(s *screen.Screen) bool {
+	if s == nil || !s.Keyboard || s.Height <= 0 {
+		return false
+	}
+	found := false
+	for i := range s.Elements {
+		e := &s.Elements[i]
+		if e.Role == screen.RoleInput || e.Has(screen.StateEditable) || e.Has(screen.StateFocused) {
+			return false
+		}
+		if e.Role == screen.RoleButton || e.Role == screen.RoleLink || e.Bounds.Empty() {
+			continue
+		}
+		if c := e.Bounds.Center(); c.Y < s.Height/4 && IsSearchField(e) {
+			found = true
+		}
+	}
+	return found
+}
+
 // IsCredentialField reports whether typing into e would hand a password or a
 // one-time code to the agent.
 //
-// The label counts as people read it: a code word anywhere in it. The
-// identifier, which agents do not see, counts by whole words (see
-// identifierWords), since apps join words there: a note's body named
-// "footprintTextView" or "barcodeNotes" must not turn into a code field
-// for the "otp" or "code" inside a longer word (GitHub issue #47). A
+// The field's name (fieldName) counts as people read it: a code word
+// anywhere in it. The identifier, which agents do not see, counts by whole
+// words (see identifierWords), since apps join words there: a note's body
+// named "footprintTextView" or "barcodeNotes" must not turn into a code
+// field for the "otp" or "code" inside a longer word (GitHub issue #47). A
 // password word counts anywhere in both.
 func IsCredentialField(e *screen.Element) bool {
 	if e == nil {
@@ -377,7 +418,7 @@ func IsCredentialField(e *screen.Element) bool {
 	if e.Has(screen.StatePassword) {
 		return true
 	}
-	label, id := strings.ToLower(e.Label), strings.ToLower(e.ID)
+	label, id := strings.ToLower(fieldName(e)), strings.ToLower(e.ID)
 	if containsAny(label, passwordWords) || containsAny(id, passwordWords) {
 		return true
 	}
@@ -397,6 +438,30 @@ func IsCredentialField(e *screen.Element) bool {
 		}
 	}
 	return false
+}
+
+// fieldName is what a text field is called: its label without the text
+// typed into it (screen.Element.Content), and without an identifier that
+// stands in for a missing label, which counts as an identifier instead.
+// What someone wrote says nothing about what the field is for: a message
+// that mentions "the code review", or an address bar showing a page about
+// codes, is no code field (GitHub issue #67).
+func fieldName(e *screen.Element) string {
+	name := e.Label
+	if c := e.Content; c != "" {
+		if name == c {
+			name = ""
+		} else if n, ok := strings.CutSuffix(name, ", "+c); ok {
+			name = n
+		}
+	}
+	// Android drivers label an unnamed field by the end of its resource id
+	// ("com.app:id/footprint_text" gives "footprint_text"), iOS by its
+	// identifier.
+	if id := e.ID; name != "" && id != "" && (name == id || strings.HasSuffix(id, "/"+name)) {
+		name = ""
+	}
+	return name
 }
 
 // identifierWords splits an identifier into lower-case words: at anything

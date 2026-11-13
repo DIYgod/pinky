@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,8 +27,8 @@ import (
 // footer offers a newer version with its notes, Update now and Later.
 // With Settings › Advanced › Update automatically on, Pinky also installs
 // it by itself once nobody has used Pinky for a while and no agent works
-// (update.Idle), and updates Pinky Companion on Android phones that are
-// free. After an update a card offers What's new: the changelog entries
+// (update.Idle), and updates Pinky's app on phones that are free.
+// After an update a card offers What's new: the changelog entries
 // newer than the version that ran before, and the companion updates.
 
 // companionUpdater updates a phone's companion app without asking
@@ -462,7 +463,47 @@ func (a *app) updateCards(c *mg.Context) {
 		return
 	}
 	a.newsCard(c)
+	a.companionByHandCards(c)
 	a.updateCard(c)
+}
+
+// cardClose is a sidebar card's close button.
+func cardClose(c *mg.Context, label string) bool {
+	p := pal(c)
+	x := mg.ButtonBase(c).Size(22, 22).Radius(6).Center().Label(label).Tooltip(locales.UpdateNewsDismiss())
+	if x.Hovered() {
+		x.Background(p.bg3)
+	}
+	x.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(12) })
+	return x.Clicked()
+}
+
+// companionByHandCards tell the person, once for each companion build,
+// that a phone refused Pinky's automatic update over USB, and how to
+// install the build by hand.
+func (a *app) companionByHandCards(c *mg.Context) {
+	var ids []string
+	for id, r := range a.refusals() {
+		if !r.Seen && a.refusedUSB(id) {
+			ids = append(ids, id)
+		}
+	}
+	slices.Sort(ids)
+	p := pal(c)
+	for _, id := range ids {
+		title := locales.UpdateCompanionByHandTitle()
+		sideCard(c, "companion-by-hand-"+id, title, func() {
+			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
+				mg.Icon(c, icAndroid).FontSize(15).TextColor(p.accentInk)
+				mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
+				if cardClose(c, locales.UpdateCompanionByHandDismissLabel()) {
+					a.seenRefusal(id)
+				}
+			})
+			mg.Text(c, locales.UpdateCompanionByHandCard(a.comp.byHand[id].Phone)).FontSize(fsSmall).TextColor(p.ink2)
+			a.companionByHandLinks(c)
+		})
+	}
 }
 
 func sideCard(c *mg.Context, key, label string, fn func()) {
@@ -489,7 +530,7 @@ func (a *app) updateCard(c *mg.Context) {
 		head := func(title string) {
 			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, icUpdate).FontSize(15).TextColor(p.accentInk)
-				mg.Text(c, title).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
+				mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 			})
 		}
 		switch s.phase {
@@ -501,7 +542,7 @@ func (a *app) updateCard(c *mg.Context) {
 			}
 			mg.Progress(c, frac).FillWidth().Label(locales.UpdateDownloadLabel())
 			mg.Row(c).AlignItems(mg.Center).Children(func() {
-				mg.Text(c, locales.UpdateProgress(mb(s.done), mb(s.total))).FontSize(12).TextColor(p.ink2).Grow(1)
+				mg.Text(c, locales.UpdateProgress(mb(s.done), mb(s.total))).FontSize(fsCaption).TextColor(p.ink2).Grow(1)
 				if quietButton(c, locales.UpdateCancel()).Clicked() && s.cancel != nil {
 					s.cancel()
 				}
@@ -509,7 +550,7 @@ func (a *app) updateCard(c *mg.Context) {
 			c.After(250 * time.Millisecond)
 		case updReady:
 			head(locales.UpdateReady(v))
-			mg.Text(c, locales.UpdateReadyDetail()).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.UpdateReadyDetail()).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.UpdateRestartNow(), btnOpt{kind: btnPrimary, small: true}).Clicked() {
 					a.upd.auto = false
@@ -521,7 +562,7 @@ func (a *app) updateCard(c *mg.Context) {
 			mg.Progress(c, -1).FillWidth().Label(locales.UpdateRestartingLabel())
 		case updFailed:
 			head(locales.UpdateFailedTitle())
-			mg.Text(c, s.err).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, s.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.UpdateTryAgain(), btnOpt{small: true}).Clicked() {
 					s.phase, s.err = updIdle, ""
@@ -552,7 +593,7 @@ func (a *app) updateActions(c *mg.Context) {
 	m := a.opt.Updates.MethodFor(*s.rel)
 	switch m {
 	case update.MethodManager:
-		mg.Text(c, locales.UpdateManagerInstalled(loc.Manager)).FontSize(12.5).TextColor(p.ink2)
+		mg.Text(c, locales.UpdateManagerInstalled(loc.Manager)).FontSize(fsSmall).TextColor(p.ink2)
 		mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, loc.Command).FontSize(12).Font("monospace").Grow(1).MinWidth(0).Selectable()
 			b := mg.ButtonBase(c).Size(24, 24).Radius(6).Center().Label(locales.UpdateCopyCommandLabel()).Tooltip(locales.UpdateCopy())
@@ -571,10 +612,10 @@ func (a *app) updateActions(c *mg.Context) {
 		return
 	case update.MethodDownload:
 		if loc.Problem != "" {
-			mg.Text(c, whereProblem(loc.Problem)).FontSize(12).TextColor(p.ink2)
+			mg.Text(c, whereProblem(loc.Problem)).FontSize(fsCaption).TextColor(p.ink2)
 		}
 		if s.file != "" {
-			mg.Text(c, locales.UpdateDownloadedHint()).FontSize(12).TextColor(p.ink2)
+			mg.Text(c, locales.UpdateDownloadedHint()).FontSize(fsCaption).TextColor(p.ink2)
 		}
 	}
 	label := locales.UpdateNowButton()
@@ -632,7 +673,7 @@ func (a *app) news(all bool) (title, line, md string, show bool) {
 	appUpdated := update.IsRelease(st.NotesFrom)
 	if len(st.Changes) > 0 && !all || len(st.Changes) > 0 && appUpdated {
 		var b strings.Builder
-		b.WriteString("### Pinky Companion\n")
+		b.WriteString("### " + locales.UpdateNewsCompanionHeading() + "\n")
 		for _, ch := range st.Changes {
 			line := locales.UpdateNewsCompanionLine(ch.Device, ch.To)
 			if ch.Kind == "companion-replaced" {
@@ -683,18 +724,13 @@ func (a *app) newsCard(c *mg.Context) {
 	sideCard(c, "news", locales.UpdateWhatsNew(), func() {
 		mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icSparkle).FontSize(15).TextColor(p.accentInk)
-			mg.Text(c, card).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
-			x := mg.ButtonBase(c).Size(22, 22).Radius(6).Center().Label(locales.UpdateNewsDismissLabel()).Tooltip(locales.UpdateNewsDismiss())
-			if x.Hovered() {
-				x.Background(p.bg3)
-			}
-			if x.Clicked() {
+			mg.Text(c, card).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
+			if cardClose(c, locales.UpdateNewsDismissLabel()) {
 				a.dismissNews()
 			}
-			x.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(12) })
 		})
 		if line != "" {
-			mg.Text(c, line).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink2)
 		}
 		if linkButton(c, locales.UpdateNewsSee()).AlignSelf(mg.Start).Clicked() {
 			a.upd.newsOpen, a.upd.newsAll = true, false
@@ -714,8 +750,8 @@ func (a *app) updateDialogs(c *mg.Context) {
 	}
 	if s.notesOpen && s.rel != nil {
 		r := s.rel
-		mg.Modal(c.Key("release-notes"), &s.notesOpen, func() {
-			a.notesDialog(c, "Pinky "+r.Version, r.Date, r.NotesIn(i18n.Locale()), func() {
+		sheet(c.Key("release-notes"), &s.notesOpen, func() {
+			a.notesDialog(c, "Pinky "+r.Version, releaseDay(r.Version, r.Date), r.NotesIn(i18n.Locale()), func() {
 				if s.phase == updIdle || s.phase == updFailed {
 					if button(c, locales.UpdateNowButton(), btnOpt{kind: btnPrimary}).Clicked() {
 						s.notesOpen = false
@@ -731,7 +767,7 @@ func (a *app) updateDialogs(c *mg.Context) {
 			s.newsOpen = false
 		} else {
 			all := s.newsAll
-			if mg.Modal(c.Key("whats-new"), &s.newsOpen, func() {
+			if sheet(c.Key("whats-new"), &s.newsOpen, func() {
 				a.notesDialog(c, title, time.Time{}, md, nil, func() {
 					s.newsOpen = false
 					if !all {
@@ -756,22 +792,47 @@ func (a *app) updateDialogs(c *mg.Context) {
 	}
 }
 
+// releaseDay is the day a release came out as its version says it,
+// YEAR.MDD.N, the day in Asia/Shanghai (docs/RELEASING.md): the day the
+// changelog's heading gives it, which What's new shows. It is that day's
+// midnight in UTC, as the changelog's dates are, so it reads the same by
+// every clock. The feed's time does not: by a clock far enough west of
+// Shanghai's, a release made early in the Shanghai day came out the day
+// before. A version that says no day falls back to the feed's time by the
+// local clock.
+func releaseDay(version string, date time.Time) time.Time {
+	if v, ok := update.Parse(version); ok && len(v) == 3 && v[0] >= 2000 {
+		y, m, d := v[0], time.Month(v[1]/100), v[1]%100
+		day := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+		if ty, tm, td := day.Date(); ty == y && tm == m && td == d {
+			return day
+		}
+	}
+	if date.IsZero() {
+		return date
+	}
+	return date.Local()
+}
+
+// notesDialog shows release notes: a title, the day (none when date is
+// zero), which it writes as the day date falls on in its own location
+// (releaseDay), the Markdown, and Close with extra's buttons beside it.
 func (a *app) notesDialog(c *mg.Context, title string, date time.Time, md string, extra func(), done func()) {
 	p := pal(c)
-	mg.Column(c).Width(520).MaxWidth(640).Gap(14).Children(func() {
+	mg.Column(c).Width(520).MaxWidth(640).Gap(sp4).Children(func() {
 		mg.Column(c).Gap(2).Children(func() {
-			mg.Text(c, title).FontSize(18).FontWeight(650).Role(mg.RoleHeading)
+			mg.Text(c, title).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
 			if !date.IsZero() {
-				mg.Text(c, locales.DayOtherYear(date.Local())).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.DayOtherYear(date)).FontSize(fsSmall).TextColor(p.ink2)
 			}
 		})
 		mg.Scroll(c).MaxHeight(420).Children(func() { markdown.View(c, md, nil) })
-		mg.Row(c).Gap(10).Justify(mg.End).AlignItems(mg.Center).Children(func() {
-			if extra != nil {
-				extra()
-			}
+		mg.Row(c).Gap(sp2).Justify(mg.End).AlignItems(mg.Center).Children(func() {
 			if button(c, locales.UpdateClose(), btnOpt{}).Clicked() {
 				done()
+			}
+			if extra != nil {
+				extra()
 			}
 		})
 	})
@@ -794,27 +855,29 @@ func (a *app) settingsUpdates(c *mg.Context) {
 	u := a.opt.Updates
 	if u == nil {
 		if a.opt.Version != "" {
-			mg.Text(c, "Pinky "+a.opt.Version).FontSize(12.5).TextColor(p.ink3)
+			mg.Text(c, "Pinky "+a.opt.Version).FontSize(fsCaption).TextColor(p.ink3)
 		}
 		return
 	}
 	s := &a.upd
-	mg.Column(c).Label(locales.UpdateSettingsTitle()).Children(func() {
-		mg.Text(c, locales.UpdateSettingsTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
-		a.toggleRow(c, "auto-update", locales.UpdateSettingsAuto(),
-			locales.UpdateSettingsAutoDesc(), false, &a.settings.AutoUpdate)
-		settingRow(c, "Pinky "+nonEmpty(a.opt.Version, update.DevVersion), a.updateLine(), false, func() {
-			b := button(c, locales.UpdateCheckNow(), btnOpt{})
-			if s.checking {
-				b.Disabled(true)
-			} else if b.Clicked() {
-				a.checkUpdate(true)
-			}
-		})
-		settingRow(c, locales.UpdateWhatsNew(), locales.UpdateSettingsNewsDesc(), true, func() {
-			if button(c, locales.UpdateShow(), btnOpt{}).Label(locales.UpdateShowLabel()).Clicked() {
-				s.newsOpen, s.newsAll = true, true
-			}
+	mg.Column(c).Gap(10).Label(locales.UpdateSettingsTitle()).Children(func() {
+		settingsHeading(c, locales.UpdateSettingsTitle(), "")
+		group(c).Children(func() {
+			a.toggleRow(c, "auto-update", locales.UpdateSettingsAuto(),
+				locales.UpdateSettingsAutoDesc(), false, &a.settings.AutoUpdate)
+			settingRow(c, "Pinky "+nonEmpty(a.opt.Version, update.DevVersion), a.updateLine(), false, func() {
+				b := button(c, locales.UpdateCheckNow(), btnOpt{})
+				if s.checking {
+					b.Disabled(true)
+				} else if b.Clicked() {
+					a.checkUpdate(true)
+				}
+			})
+			settingRow(c, locales.UpdateWhatsNew(), locales.UpdateSettingsNewsDesc(), true, func() {
+				if button(c, locales.UpdateShow(), btnOpt{}).Label(locales.UpdateShowLabel()).Clicked() {
+					s.newsOpen, s.newsAll = true, true
+				}
+			})
 		})
 	})
 }
@@ -896,6 +959,16 @@ func (a *app) companionTick(now time.Time) {
 			a.companionFor(d) // asks in the background; a later tick acts on it
 			continue
 		}
+		// A phone that refused this build over USB would refuse again, or
+		// ask on its screen with nobody there: it waits for the person, for
+		// a version they installed by hand (setCompanionState), or for a
+		// newer build, which gets one try.
+		if _, ok := a.refusals()[id]; ok && !a.companionAPK() {
+			continue // which build it refused is compared once the APK is read
+		}
+		if a.refusedUSB(id) {
+			continue
+		}
 		if cs := a.comp.state[id]; cs != driver.CompanionOutdated && cs != driver.CompanionPublicKey || !a.phoneFree(d, now) {
 			continue
 		}
@@ -932,15 +1005,25 @@ func (a *app) updateCompanion(cu companionUpdater, d gateway.DeviceView, ca *com
 		if ci != nil {
 			cs, serr = ci.CompanionState(ctx, id)
 		}
+		apk, build := "", 0
+		if refusedOverUSB(err) {
+			apk, build = a.findCompanionAPK()
+		}
 		a.post(func() {
 			ca.running = false
 			if serr == nil {
-				a.comp.state[id], a.comp.checked[id] = cs, time.Now()
+				a.setCompanionState(id, cs)
 			}
 			switch {
 			case errors.Is(err, driver.ErrNeedsPerson):
 				log.Printf("pinky: companion on %s: %v", name, err)
 				ca.needsYou = true
+			case refusedOverUSB(err):
+				// Trying this build again would not help: the sidebar tells
+				// the person once how to install it by hand, and the phone's
+				// card offers their Update too.
+				log.Printf("pinky: update the companion on %s to %s: %v; leaving it to the person", name, res.To, err)
+				a.noteRefused(id, name, false, apk, build)
 			case err != nil:
 				log.Printf("pinky: update the companion on %s: %v", name, err)
 				ca.failedAt = time.Now()
@@ -970,6 +1053,12 @@ func (a *app) companionUpdating(id string) bool {
 
 // companionAutoLine is the outdated companion card's extra line.
 func (a *app) companionAutoLine(id string) string {
+	if a.refusedUSB(id) {
+		if a.comp.err[id] != "" {
+			return "" // the person's Update failed, and its error says what to do
+		}
+		return locales.UpdateCompanionByHand()
+	}
 	if a.opt.Updates == nil || !a.settings.AutoUpdate {
 		return ""
 	}

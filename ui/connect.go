@@ -209,24 +209,23 @@ func (a *app) connectAgents(c *mg.Context) {
 	if a.opt.AgentSetup != nil {
 		c.After(10 * time.Second)
 	}
-	mg.Column(c).Gap(8).Label(locales.ConnectTitle()).Children(func() {
-		mg.Column(c).Children(func() {
-			mg.Text(c, locales.ConnectTitle()).FontSize(15).FontWeight(650)
-			intro := locales.ConnectIntro()
-			if a.opt.AgentSetup == nil {
-				intro = locales.ConnectIntroByHand()
-			}
-			mg.Text(c, intro).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
-		})
+	// Keyed, as Ask Pinky is: the two change places when the first agent
+	// connects (settingsAgents).
+	mg.Column(c.Key("connect-agents")).Gap(10).Label(locales.ConnectTitle()).Children(func() {
+		intro := locales.ConnectIntro()
+		if a.opt.AgentSetup == nil {
+			intro = locales.ConnectIntroByHand()
+		}
+		settingsHeading(c, locales.ConnectTitle(), intro)
 		if a.opt.AgentSetup != nil {
 			found := a.foundAgents()
 			switch {
 			case !s.loaded:
-				mg.Text(c, locales.ConnectLooking()).FontSize(13.5).TextColor(p.ink2).Padding(10, 0)
+				mg.Text(c, locales.ConnectLooking()).FontSize(fsSmall).TextColor(p.ink2).Padding(10, 0)
 			case len(found) == 0:
 				a.noAgents(c)
 			default:
-				mg.Column(c).Label(locales.ConnectFoundLabel()).Children(func() {
+				group(c).Label(locales.ConnectFoundLabel()).Children(func() {
 					for i, st := range found {
 						a.agentRow(c, st, i == len(found)-1)
 					}
@@ -239,9 +238,9 @@ func (a *app) connectAgents(c *mg.Context) {
 				}
 			}
 			if s.loaded && len(missing) > 0 && len(found) > 0 {
-				mg.Text(c, locales.ConnectNotHere(joinAnd(missing))).FontSize(12.5).TextColor(p.ink3)
+				mg.Text(c, locales.ConnectNotHere(joinAnd(missing))).FontSize(fsCaption).TextColor(p.ink3)
 			}
-			if linkButton(c, byHandLabel(s.byHand)).AlignSelf(mg.Start).Margin(4, 0, 0, 0).Clicked() {
+			if linkButton(c, byHandLabel(s.byHand)).AlignSelf(mg.Start).Clicked() {
 				s.byHand = !s.byHand
 			}
 			if !s.byHand {
@@ -249,10 +248,12 @@ func (a *app) connectAgents(c *mg.Context) {
 			}
 		}
 		cmd := agentCommand()
-		a.commandBlock(c, "Claude Code", locales.ConnectClaudeHint(), "claude mcp add --scope user pinky -- "+cmd,
-			locales.RemoteCommandLabel(), locales.ConnectCopyClaude())
-		a.commandBlock(c, locales.ConnectOtherTitle(), locales.ConnectOtherHint(), cmd,
-			locales.ConnectCommandLabel(), locales.ConnectCopyOther())
+		group(c).Children(func() {
+			a.commandBlock(c, "Claude Code", locales.ConnectClaudeHint(), "claude mcp add --scope user pinky -- "+cmd,
+				locales.RemoteCommandLabel(), locales.ConnectCopyClaude(), false)
+			a.commandBlock(c, locales.ConnectOtherTitle(), locales.ConnectOtherHint(), cmd,
+				locales.ConnectCommandLabel(), locales.ConnectCopyOther(), true)
+		})
 	})
 }
 
@@ -268,20 +269,17 @@ func byHandLabel(open bool) string {
 func (a *app) agentRow(c *mg.Context, st agents.Status, last bool) {
 	p := pal(c)
 	s := &a.setup
-	box := mg.Column(c.Key("setup-"+st.ID)).Padding(10, 0).Gap(6).Label(st.Name)
-	if !last {
-		box.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
-	}
+	box := groupRow(c, mg.Column(c.Key("setup-"+st.ID)).Gap(6).Justify(mg.Center).Label(st.Name), last)
 	box.Children(func() {
-		mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
-			appIcon(c, st.Name, 28, 8, 13, agentColor(st.ID))
+		mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
+			appIcon(c, st.Name, 32, rControl, 14, agentColor(st.ID))
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-				mg.Text(c, st.Name).FontWeight(600)
+				mg.Text(c, st.Name).FontWeight(fwMedium)
 				line, col := agentLine(st), p.ink2
 				if st.Problem != "" {
 					col = p.red
 				}
-				mg.Text(c, line).FontSize(13.5).TextColor(col)
+				mg.Text(c, line).FontSize(fsSmall).LineHeight(1.4).TextColor(col)
 			})
 			switch {
 			case s.busy[st.ID]:
@@ -317,14 +315,14 @@ func (a *app) agentRow(c *mg.Context, st agents.Status, last bool) {
 			}
 		}
 		if msg := s.errs[st.ID]; msg != "" {
-			mg.Text(c, locales.ConnectFailed(msg)).FontSize(13).TextColor(p.red).Role(mg.RoleStatus).Padding(0, 0, 0, 44)
+			mg.Text(c, locales.ConnectFailed(msg)).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus).Padding(0, 0, 0, 44)
 		} else if res, ok := s.done[st.ID]; ok && !(res.Opened != "" && st.State == agents.Connected) {
 			mg.Column(c).Gap(4).Padding(0, 0, 0, 44).Children(func() {
-				mg.Text(c, doneLine(st, res, s.removed[st.ID])).FontSize(13).TextColor(p.ink2).Role(mg.RoleStatus)
+				mg.Text(c, doneLine(st, res, s.removed[st.ID])).FontSize(fsSmall).TextColor(p.ink2).Role(mg.RoleStatus)
 				if len(res.Backups) > 0 {
 					path := res.Backups[len(res.Backups)-1]
 					mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-						mg.Text(c, locales.ConnectKeptCopy()).FontSize(12.5).TextColor(p.ink3)
+						mg.Text(c, locales.ConnectKeptCopy()).FontSize(fsCaption).TextColor(p.ink3)
 						if linkButton(c, locales.ConnectShowCopy()).Label(locales.ConnectShowCopyLabel(st.Name)).Clicked() {
 							a.reveal(path)
 						}
@@ -397,8 +395,8 @@ func doneLine(st agents.Status, res agents.Result, removed bool) string {
 // get one.
 func (a *app) noAgents(c *mg.Context) {
 	p := pal(c)
-	mg.Column(c).Gap(10).Padding(14).Radius(10).Background(p.bg2).Border(1, p.line).Children(func() {
-		mg.Text(c, locales.ConnectNoneFound()).FontSize(13.5)
+	group(c).Gap(sp3).Padding(sp4).Children(func() {
+		mg.Text(c, locales.ConnectNoneFound()).FontSize(fsSmall).LineHeight(1.4)
 		mg.Row(c).Gap(8).Wrap().Children(func() {
 			for _, g := range agentURLs {
 				if button(c, locales.ConnectGet(g.name), btnOpt{small: true}).Clicked() {
@@ -413,7 +411,7 @@ func (a *app) noAgents(c *mg.Context) {
 			}
 		}
 		if len(others) > 0 {
-			mg.Text(c, locales.ConnectAlsoWorks(joinAnd(others))).FontSize(12.5).TextColor(p.ink3)
+			mg.Text(c, locales.ConnectAlsoWorks(joinAnd(others))).FontSize(fsCaption).TextColor(p.ink3)
 		}
 	})
 }
@@ -480,7 +478,7 @@ func (a *app) agentCard(c *mg.Context) {
 		if st.State == agents.Outdated && (st.Why == agents.WhyMissing || st.Why == agents.WhyCoreutils) && st.Problem == "" {
 			sideCard(c, "agent-card", locales.ConnectCardBroken(st.Name), func() {
 				cardHead(c, locales.ConnectCardBroken(st.Name))
-				mg.Text(c, agentLine(st)).FontSize(12.5).TextColor(p.ink2)
+				mg.Text(c, agentLine(st)).FontSize(fsSmall).TextColor(p.ink2)
 				a.cardButtons(c, st, locales.ConnectFix(), locales.ConnectFixLabel(st.Name))
 			})
 			return
@@ -494,7 +492,7 @@ func (a *app) agentCard(c *mg.Context) {
 		cardHead(c, locales.ConnectTitle())
 		switch len(found) {
 		case 0:
-			mg.Text(c, locales.ConnectCardNone()).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.ConnectCardNone()).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.ConnectCardGet(), btnOpt{kind: btnPrimary, small: true}).Clicked() {
 					a.page, a.set.sec = pageSettings, secAgents
@@ -504,11 +502,11 @@ func (a *app) agentCard(c *mg.Context) {
 				}
 			})
 		case 1:
-			mg.Text(c, locales.ConnectCardFoundOne(found[0].Name)).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.ConnectCardFoundOne(found[0].Name)).FontSize(fsSmall).TextColor(p.ink2)
 			if msg := s.errs[found[0].ID]; msg != "" {
-				mg.Text(c, locales.ConnectFailed(msg)).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
+				mg.Text(c, locales.ConnectFailed(msg)).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			} else if res, ok := s.done[found[0].ID]; ok && res.Opened != "" {
-				mg.Text(c, locales.ConnectDoneOpened(found[0].Name)).FontSize(12.5).TextColor(p.ink2).Role(mg.RoleStatus)
+				mg.Text(c, locales.ConnectDoneOpened(found[0].Name)).FontSize(fsSmall).TextColor(p.ink2).Role(mg.RoleStatus)
 			}
 			a.cardButtons(c, found[0], locales.ConnectConnectLabel(found[0].Name), locales.ConnectConnectLabel(found[0].Name))
 		default:
@@ -516,7 +514,7 @@ func (a *app) agentCard(c *mg.Context) {
 			for i, st := range found {
 				names[i] = st.Name
 			}
-			mg.Text(c, locales.ConnectCardFound(joinAnd(names))).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.ConnectCardFound(joinAnd(names))).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.ConnectCardChoose(), btnOpt{kind: btnPrimary, small: true}).Clicked() {
 					a.page, a.set.sec = pageSettings, secAgents
@@ -533,7 +531,7 @@ func cardHead(c *mg.Context, title string) {
 	p := pal(c)
 	mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 		mg.Icon(c, icPlug).FontSize(15).TextColor(p.accentInk)
-		mg.Text(c, title).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
+		mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 	})
 }
 
@@ -555,20 +553,29 @@ func (a *app) cardButtons(c *mg.Context, st agents.Status, text, label string) {
 }
 
 // commandBlock shows a command under a title and a hint, with a button
-// that copies it; label names the command and copyLabel the button.
-func (a *app) commandBlock(c *mg.Context, title, hint, cmd, label, copyLabel string) {
+// that copies it; label names the command and copyLabel the button. It is
+// a row of a group, the last one when last is set.
+func (a *app) commandBlock(c *mg.Context, title, hint, cmd, label, copyLabel string, last bool) {
+	commandRow(c, title, hint, cmd, label, last, func() {
+		if button(c, "", btnOpt{small: true, icon: icCopy, label: copyLabel}).Clicked() {
+			a.copy(c, cmd, locales.RemoteCopiedCommand())
+		}
+	})
+}
+
+// commandRow is a row of a group with a command: a title and a hint with
+// buttons at the end, then the command as shown.
+func commandRow(c *mg.Context, title, hint, shown, label string, last bool, buttons func()) {
 	p := pal(c)
-	mg.Column(c).Gap(6).Padding(10, 0).Children(func() {
-		mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
+	groupRow(c, mg.Column(c).Gap(sp2), last).Children(func() {
+		mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-				mg.Text(c, title).FontWeight(600)
-				mg.Text(c, hint).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, title).FontWeight(fwMedium)
+				mg.Text(c, hint).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 			})
-			if button(c, "", btnOpt{small: true, icon: icCopy, label: copyLabel}).Clicked() {
-				a.copy(c, cmd, locales.RemoteCopiedCommand())
-			}
+			buttons()
 		})
-		mg.Text(c, cmd).Font("monospace").FontSize(12).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).
-			Selectable().Label(label)
+		mg.Text(c, shown).Font("monospace").FontSize(fsCaption).LineHeight(1.5).Padding(10, sp3).Radius(rControl).
+			Background(p.bg).Border(1, p.line).Selectable().Label(label)
 	})
 }

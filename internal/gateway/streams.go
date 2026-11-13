@@ -121,6 +121,34 @@ func (g *Gateway) join(ctx context.Context, key string, dev driver.Device, opt d
 	return h, mem, nil
 }
 
+// watchOpen returns a viewer of the stream under key when one is open, and
+// errNoStream when none is.
+func (g *Gateway) watchOpen(ctx context.Context, key string) (driver.Stream, error) {
+	g.hubMu.Lock()
+	h := g.hubs[key]
+	if h == nil || g.hubsClosed {
+		g.hubMu.Unlock()
+		return nil, errNoStream
+	}
+	select {
+	case <-h.ready:
+	default:
+		g.hubMu.Unlock()
+		return nil, errNoStream
+	}
+	if h.src == nil {
+		g.hubMu.Unlock()
+		return nil, errNoStream
+	}
+	v := newViewer(h)
+	h.add(v)
+	g.hubMu.Unlock()
+	return v, nil
+}
+
+// errNoStream is watchOpen's error when no stream is open.
+var errNoStream = errors.New("no video stream is open")
+
 // watch returns a viewer of dev's stream under key.
 func (g *Gateway) watch(ctx context.Context, key string, dev driver.Device, opt driver.StreamOptions) (driver.Stream, error) {
 	_, m, err := g.join(ctx, key, dev, opt, func(h *hub) member { return newViewer(h) })
@@ -459,6 +487,14 @@ func (v *viewer) Err() error {
 }
 
 func (v *viewer) release() { v.Close() }
+
+// RequestKeyFrame asks the phone for a key frame, when its stream can: a
+// viewer that could not decode a picture (the web mirror's browser) starts
+// again from one.
+func (v *viewer) RequestKeyFrame() {
+	<-v.h.ready
+	v.h.requestKeyFrame()
+}
 
 // Close leaves the hub; the device's stream closes after its last member.
 func (v *viewer) Close() error {

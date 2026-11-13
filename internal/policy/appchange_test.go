@@ -55,10 +55,11 @@ func TestAppChangeRefuses(t *testing.T) {
 		app  screen.App
 		rule string
 	}{
-		{screen.App{ID: "app.pinky.companion", Name: "Pinky Companion"}, RulePinkyApps},
+		{screen.App{ID: "app.pinky.companion", Name: "Pinky"}, RulePinkyApps},
 		{screen.App{ID: "app.pinky.companion.dev"}, RulePinkyApps},
 		{screen.App{ID: "app.pinky.companion@10"}, RulePinkyApps},
 		{screen.App{ID: "com.diygod.WebDriverAgentRunner.xctrunner", Name: "WebDriverAgentRunner-Runner"}, RulePinkyApps},
+		{screen.App{ID: "cc.diygod.iphoneuse.wda.xctrunner", Name: "Pinky Helper"}, RulePinkyApps},
 		{launcher, RuleSystemApps},
 		{chase, RuleFinance},
 		{screen.App{ID: "com.example.vault", Name: "Vault"}, RulePasswords},
@@ -176,9 +177,14 @@ func TestIsPinkyApp(t *testing.T) {
 		"app.pinky.companion":                         true,
 		"app.pinky.companion.dev":                     true,
 		"com.facebook.WebDriverAgentRunner.xctrunner": true,
-		"com.example.UITests.xctrunner":               false,
-		"app.pinky.companionx":                        false,
-		"com.dinely.app":                              false,
+		// Pinky Helper keeps whatever id it was installed with.
+		"cc.diygod.iphoneuse.wda.xctrunner":               true,
+		"pinky.ABCDE12345.WebDriverAgentRunner.xctrunner": true,
+		"com.example.helper.XCTRunner":                    true,
+		"com.example.UITests.xctrunner":                   true,
+		"app.pinky.companionx":                            false,
+		"com.dinely.app":                                  false,
+		"com.example.xctrunner.app":                       false,
 	} {
 		if got := IsPinkyApp(screen.App{ID: id}); got != want {
 			t.Errorf("%s: %v", id, got)

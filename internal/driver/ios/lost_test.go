@@ -2,6 +2,7 @@ package ios
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"strings"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/mdns"
+	"github.com/DIYgod/pinky/internal/driver/ios/netmux"
 	goios "github.com/danielpaulus/go-ios/ios"
 )
 
@@ -54,11 +56,11 @@ func TestLostPhone(t *testing.T) {
 	net := &fakeBonjour{}
 	browses := 0
 	w.lost.browseFn = func() (bonjourSource, error) { browses++; return net, nil }
-	w.lost.pairFn = func(udid string) (string, error) {
+	w.lost.pairFn = func(udid string) (netmux.PairInfo, error) {
 		if udid == "iphone" {
-			return "08:87:C7:2A:8A:DB", nil
+			return netmux.PairInfo{WiFiMAC: "08:87:C7:2A:8A:DB"}, nil
 		}
-		return "", errors.New("ReadPair failed with errorcode '22'")
+		return netmux.PairInfo{}, errors.New("ReadPair failed with errorcode '22'")
 	}
 	w.SetWiFi(true)
 	w.UseOverWiFi("iphone")
@@ -107,6 +109,49 @@ func TestLostPhone(t *testing.T) {
 	}
 }
 
+// TestLostPhonePrivateAddress: a phone on iOS 26.4 or later names its
+// instance after a private Wi-Fi address, which is not the one in the pair
+// record; the TXT record's tags for this computer still say it is the
+// phone, so it is lost, not off the network (#88). Tags for another
+// computer do not match it.
+func TestLostPhonePrivateAddress(t *testing.T) {
+	const hostID = "6A1C9B2E-3F4D-4E5A-8B7C-9D0E1F2A3B4C"
+	w := newWiFiProvider(entry("iphone", 7, "Network"))
+	w.lost.anyOS = true
+	bonjour := &fakeBonjour{}
+	w.lost.browseFn = func() (bonjourSource, error) { return bonjour, nil }
+	w.lost.pairFn = func(string) (netmux.PairInfo, error) {
+		return netmux.PairInfo{HostID: hostID, WiFiMAC: "08:87:c7:2a:8a:db"}, nil
+	}
+	advertise := func(host string) {
+		tag := netmux.AuthTag(host, "8F2D41A7")
+		bonjour.mu.Lock()
+		bonjour.services = []mdns.Service{{
+			Instance: "be:3f:0a:91:6c:25@fe80::bc3f:aff:fe91:6c25-supportsRP-26",
+			Type:     mobdevService,
+			TXT:      []string{"identifier=8F2D41A7", "authTag=" + base64.StdEncoding.EncodeToString(tag[:])},
+		}}
+		bonjour.mu.Unlock()
+	}
+	w.SetWiFi(true)
+	w.UseOverWiFi("iphone")
+	listed(t, w.Provider)
+
+	w.set() // usbmuxd lost it
+	advertise(hostID)
+	listed(t, w.Provider)
+	w.after(lostAfter)
+	if got := listed(t, w.Provider)["iphone"]; got.Setup != driver.SetupDeviceService || got.State != driver.StateNeedsSetup {
+		t.Fatalf("on the network with a private address: %+v; want lost", got)
+	}
+
+	// Another computer's record on the network: not this phone.
+	advertise("0B9E7D3C-1A2F-4C6E-9D8B-7A6F5E4D3C2B")
+	if got := listed(t, w.Provider); len(got) != 0 {
+		t.Fatalf("another computer's record: %+v", got)
+	}
+}
+
 // TestRestartDeviceService runs usbmuxd's restart through the system's
 // request for an administrator, and reads a declined one as canceled.
 func TestRestartDeviceService(t *testing.T) {
@@ -141,7 +186,7 @@ func TestLostSearchPauses(t *testing.T) {
 	browses := 0
 	var last *fakeBonjour
 	w.lost.browseFn = func() (bonjourSource, error) { browses++; last = &fakeBonjour{}; return last, nil }
-	w.lost.pairFn = func(string) (string, error) { return "08:87:c7:2a:8a:db", nil }
+	w.lost.pairFn = func(string) (netmux.PairInfo, error) { return netmux.PairInfo{WiFiMAC: "08:87:c7:2a:8a:db"}, nil }
 	w.SetWiFi(true)
 	w.UseOverWiFi("iphone") // away from home: not on usbmuxd's list, not on the network
 	listed(t, w.Provider)
@@ -179,7 +224,7 @@ func TestUnpluggedPhone(t *testing.T) {
 		w.lost.anyOS = true
 		net := &fakeBonjour{}
 		w.lost.browseFn = func() (bonjourSource, error) { return net, nil }
-		w.lost.pairFn = func(string) (string, error) { return mac, nil }
+		w.lost.pairFn = func(string) (netmux.PairInfo, error) { return netmux.PairInfo{WiFiMAC: mac}, nil }
 		w.wifi.allowFn = conn
 		w.SetWiFi(true)
 		w.UseOverWiFi("iphone")

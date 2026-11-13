@@ -1,5 +1,7 @@
-// Package companion is the Go client for Pinky's Android companion app
-// (android/companion). The app runs an accessibility service that serves
+// Package companion is the Go client for Pinky's Android app
+// (android/companion), which Pinky on a computer uses as its companion on
+// the phone and which runs tasks on the phone by itself too
+// (docs/notes/android-app.md). The app runs an accessibility service that serves
 // line-delimited JSON on an abstract socket (@pinky_companion for the
 // release build): the window and node tree, ACTION_SET_TEXT input, events
 // and settle waits. The client reaches it through `adb forward`, turns the
@@ -24,21 +26,37 @@ import (
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
-// App is one build of the companion app. Releases of Pinky carry the
+// App is one build of Pinky's Android app. Releases of Pinky carry the
 // release build, signed with Pinky's private release key; builds from the
 // source carry a development build, signed with the developer's own key
 // under an application id of its own, so that it can never install as an
-// update of a released Companion. The two can be installed side by side.
+// update of a released app. The two can be installed side by side.
 type App struct {
 	Package string // the application id
 	Socket  string // the abstract socket its service listens on
+	Label   string // its service's label, as dumpsys accessibility shows it
+	// OldLabel is the label of builds from before the app was renamed
+	// from Pinky Companion to Pinky (November 2026), which phones keep
+	// until Pinky updates them.
+	OldLabel string
 }
 
-// The companion's builds.
+// The app's builds.
 var (
-	Release = App{Package: "app.pinky.companion", Socket: "pinky_companion"}
-	Dev     = App{Package: "app.pinky.companion.dev", Socket: "pinky_companion_dev"}
+	Release = App{Package: "app.pinky.companion", Socket: "pinky_companion", Label: "Pinky", OldLabel: "Pinky Companion"}
+	Dev     = App{Package: "app.pinky.companion.dev", Socket: "pinky_companion_dev", Label: "Pinky (dev)", OldLabel: "Pinky Companion (dev)"}
 )
+
+// labeled reports whether a service list from dumpsys accessibility, such
+// as "Bound services:{Service[label=Pinky, …]}", has this build's service.
+func (a App) labeled(line string) bool {
+	for _, l := range []string{a.Label, a.OldLabel} {
+		if l != "" && (strings.Contains(line, "label="+l+",") || strings.Contains(line, "label="+l+"]")) {
+			return true
+		}
+	}
+	return false
+}
 
 // ServiceClass is the accessibility service's class, the same in every
 // build.
@@ -78,6 +96,9 @@ const (
 type Client struct {
 	run Runner
 	app App
+	// local is set for a client on the phone itself (NewLocal), which
+	// dials the abstract socket without adb.
+	local bool
 
 	mu     sync.Mutex // guards the fields below and serializes requests
 	fwd    string     // local address of the adb forward
@@ -103,6 +124,22 @@ func New(r Runner) *Client { return NewFor(r, Release) }
 // NewFor returns a client for one build of the app.
 func NewFor(r Runner, app App) *Client {
 	return &Client{run: r, app: app, subs: map[*Subscription]struct{}{}}
+}
+
+// NewLocal returns a client for a build of the app on the same phone as
+// the caller, such as Pinky's core inside the app itself
+// (internal/standalone/libcore): it dials the abstract socket directly,
+// without adb. The methods that need adb (Enable, Disable, Install and the like)
+// do not work on it.
+func NewLocal(app App) *Client {
+	return &Client{app: app, local: true, subs: map[*Subscription]struct{}{}}
+}
+
+// Call sends a command the client has no method for, such as the ones
+// Pinky's core on the phone uses, and decodes its result into out (nil
+// discards it).
+func (c *Client) Call(ctx context.Context, cmd string, params map[string]any, out any) error {
+	return c.call(ctx, cmd, params, out, true)
 }
 
 // App returns the build the client talks to.
@@ -307,16 +344,24 @@ func (c *Client) call(ctx context.Context, cmd string, params map[string]any, ou
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	reused := c.conn != nil
-	err := c.callLocked(ctx, cmd, params, out)
+	err := c.callLocked(ctx, defaultTimeout, cmd, params, out)
 	// A kept connection may have died with an earlier service instance;
 	// try once on a fresh one.
 	if err != nil && retry && reused && errors.Is(err, ErrNotRunning) && ctx.Err() == nil {
-		err = c.callLocked(ctx, cmd, params, out)
+		err = c.callLocked(ctx, defaultTimeout, cmd, params, out)
 	}
 	return err
 }
 
-func (c *Client) callLocked(ctx context.Context, cmd string, params map[string]any, out any) error {
+// callFor is call for a command that may take up to limit, longer than
+// defaultTimeout, such as a long gesture. Never retried.
+func (c *Client) callFor(ctx context.Context, limit time.Duration, cmd string, params map[string]any, out any) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.callLocked(ctx, max(limit, defaultTimeout), cmd, params, out)
+}
+
+func (c *Client) callLocked(ctx context.Context, limit time.Duration, cmd string, params map[string]any, out any) error {
 	if c.conn == nil {
 		if err := c.connectLocked(ctx); err != nil {
 			return err
@@ -337,7 +382,7 @@ func (c *Client) callLocked(ctx context.Context, cmd string, params map[string]a
 	line = append(line, '\n')
 
 	conn, rd := c.conn, c.rd
-	deadline := time.Now().Add(defaultTimeout)
+	deadline := time.Now().Add(limit)
 	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
 		deadline = d
 	}
@@ -407,6 +452,14 @@ func (c *Client) connectLocked(ctx context.Context) error {
 // forward first if needed. adb accepts the TCP connection even when nothing
 // listens on the phone, so a dead service shows up as EOF on first read.
 func (c *Client) dialLocked(ctx context.Context) (net.Conn, error) {
+	if c.local {
+		var d net.Dialer
+		conn, err := d.DialContext(ctx, "unix", "@"+c.app.Socket)
+		if err != nil {
+			return nil, c.connError(ctx, err)
+		}
+		return conn, nil
+	}
 	if c.fwd == "" {
 		addr, err := c.run.Forward(ctx, "localabstract:"+c.app.Socket)
 		if err != nil {

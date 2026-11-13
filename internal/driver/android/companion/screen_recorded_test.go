@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // Trees recorded on our Android 16 emulator with Gboard's stylus mode
@@ -51,6 +53,17 @@ func TestScreenRecordedStylusToolbar(t *testing.T) {
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("screen:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	// Where touches go to the keyboard or the status bar: the keyboard is
+	// its window's larger strip, its other strip counts as covered, and
+	// the window's empty middle, over the results, is neither.
+	s := tr.Screen(ScreenOptions{})
+	if want := (screen.Rect{X: 21, Y: 896, W: 148, H: 690}); s.KeyboardFrame != want {
+		t.Errorf("keyboard frame %+v, want %+v", s.KeyboardFrame, want)
+	}
+	wantCovered := []screen.Rect{{W: 1080, H: 128}, {Y: 2337, W: 1080, H: 63}}
+	if !slices.Equal(s.Covered, wantCovered) {
+		t.Errorf("covered %+v, want %+v", s.Covered, wantCovered)
 	}
 }
 

@@ -67,9 +67,9 @@ const (
 func (s *Session) Logs(ctx context.Context, req LogsRequest) *Result {
 	kind := strings.ToLower(strings.TrimSpace(req.Kind))
 	switch kind {
-	case "", "log", "lines":
+	case "", LogsKindLines, "log", "lines":
 		kind = LogsKindLines
-	case "crash", "crashes":
+	case LogsKindCrashes, "crash":
 		kind = LogsKindCrashes
 	default:
 		return errResult(ErrInvalidArgument, "kind must be logs or crashes.")
@@ -103,7 +103,7 @@ func (s *Session) Logs(ctx context.Context, req LogsRequest) *Result {
 	}
 	defer s.done(l)
 	g := s.g
-	ctx, cancel := mergeCtx(ctx, l.ctx)
+	ctx, cancel := g.callCtx(ctx, l)
 	defer cancel()
 	if res := g.gate(l, req.ApprovalID, false); res != nil {
 		return g.finish(l, res)
@@ -215,19 +215,22 @@ func (g *Gateway) logsRefused(app driver.App) (string, bool) {
 }
 
 // pinkyApp reports whether an id is one of Pinky's own apps on the phone:
-// Pinky Companion, or the WebDriverAgent helper on an iPhone.
+// Pinky on the phone, Pinky's iPhone app (which may host WebDriverAgent for
+// a computer), or the WebDriverAgent helper on an iPhone.
 func pinkyApp(id string) bool {
 	return id == "app.pinky.companion" || strings.HasPrefix(id, "app.pinky.companion.") ||
-		strings.HasSuffix(id, ".xctrunner")
+		policy.IsPinkyApp(screen.App{ID: id})
 }
 
 // askForLogs asks the person before an agent reads an app's logs, unless
-// they allowed it for the task. It returns nil once allowed.
+// they allowed it for the task, or always allow it for the agent on this
+// phone (standing.go). It returns nil once allowed.
 func (g *Gateway) askForLogs(ctx context.Context, l *lease, c Call, app driver.App, label, args string) *Result {
 	g.mu.Lock()
 	granted := l.logsGranted[app.ID]
 	g.mu.Unlock()
-	if granted {
+	sa := screen.App{ID: app.ID, Name: app.Name}
+	if granted || g.standingAllowed(l, policy.RuleAppLogs, sa) {
 		return nil
 	}
 	s := l.session
@@ -249,7 +252,8 @@ func (g *Gateway) askForLogs(ctx context.Context, l *lease, c Call, app driver.A
 			detail = s.agent.Name + " · " + i
 		}
 		info = g.approvals.Open(approval.Request{Kind: approval.KindAction, Binding: b, Rule: policy.RuleAppLogs, Title: title,
-			Detail: detail, App: label, Agent: s.agent.Name, TaskID: l.task.id, DeviceName: l.dev.name()})
+			Detail: detail, App: label, Agent: s.agent.Name, TaskID: l.task.id, DeviceName: l.dev.name(),
+			Data: &standingAsk{rule: policy.RuleAppLogs, agent: s.agent.Name, device: l.dev.id, deviceName: l.dev.name(), app: sa}})
 		if res := g.afterOpen(l, info); res != nil {
 			return res
 		}

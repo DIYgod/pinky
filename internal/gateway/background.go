@@ -76,8 +76,16 @@ func (g *Gateway) backgroundLocked(d *device) bool {
 	return false
 }
 
+// ErrOwnScreen is what AgentStream answers, along with driver.ErrNotFound,
+// while a task works on the phone's own screen for the rest of it: it
+// moved there, or never had a background display. No display opens for
+// it, so a window showing the agent's screen stops asking until the next
+// task.
+var ErrOwnScreen = errors.New("the task works on the phone's own screen")
+
 // AgentStream returns the live video of the background display an agent
-// is working on, or driver.ErrNotFound when none is open.
+// is working on, or driver.ErrNotFound when none is open (with
+// ErrOwnScreen when none will open during this task).
 func (g *Gateway) AgentStream(ctx context.Context, deviceID string, opt driver.StreamOptions) (driver.Stream, error) {
 	d, err := g.device(deviceID)
 	if err != nil {
@@ -85,10 +93,15 @@ func (g *Gateway) AgentStream(ctx context.Context, deviceID string, opt driver.S
 	}
 	g.mu.Lock()
 	var bg driver.Device
+	own := false
 	if l := d.lease; l != nil {
 		bg = l.bg
+		own = !l.bgWanted || l.bgOff
 	}
 	g.mu.Unlock()
+	if bg == nil && own {
+		return nil, fmt.Errorf("no agent works on a background display of %s: %w (%w)", d.name(), ErrOwnScreen, driver.ErrNotFound)
+	}
 	if bg == nil {
 		return nil, fmt.Errorf("no agent works on a background display of %s: %w", d.name(), driver.ErrNotFound)
 	}
@@ -266,6 +279,43 @@ func (g *Gateway) leaveForPhone(ctx context.Context, l *lease, why, nothing stri
 		return nil, statusResult(StatusLocked, "%s, and the phone's own screen is locked, so %s. Call phone_handoff so the person can unlock it.", why, nothing)
 	}
 	return dev, nil
+}
+
+// ownScreenHint tells an agent on a background display how to reach the
+// home screen, which only the phone's own screen has.
+const ownScreenHint = "For work on the home screen itself (moving app icons, folders, widgets), " +
+	"call phone_connect again with the same task and own_screen: true to work on the phone's own screen."
+
+// useOwnScreen moves a task that would work on a background display to
+// the phone's own screen for the rest of it, as the agent asked
+// (phone_connect own_screen), and reports whether it moved. As when an
+// app refuses the display (leaveForPhone), the person keeps a screen they
+// used in the last minute: the task starts paused until they hand it
+// over, and a locked screen waits for them to unlock it (firstScreen
+// says so). The agent's next result says where the task runs.
+func (g *Gateway) useOwnScreen(l *lease) bool {
+	d := l.dev
+	g.mu.Lock()
+	if !l.bgWanted || l.bgOff || l.ended {
+		g.mu.Unlock()
+		return false
+	}
+	if l.bg != nil {
+		g.leaveBackgroundLocked(l, "")
+	} else {
+		l.bgOff = true
+	}
+	l.bgNote = joinNote(l.bgNote, "As asked, this task works on the phone's own screen, not on a background display.")
+	using := !d.person && time.Since(d.personAt) < personRecent
+	g.mu.Unlock()
+	g.log.Info("task moved to the phone's own screen", "device", d.id, "task", l.task.id)
+	if using {
+		g.takeOver(d, false)
+		g.mu.Lock()
+		l.tookOverSeen = true
+		g.mu.Unlock()
+	}
+	return true
 }
 
 // sameDevice compares two devices without panicking on a type that cannot

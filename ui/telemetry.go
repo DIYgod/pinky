@@ -59,11 +59,11 @@ func (a *app) sharedDialog(c *mg.Context) {
 		return
 	}
 	p := pal(c)
-	mg.Modal(c, &a.t.sharedOpen, func() {
+	sheet(c, &a.t.sharedOpen, func() {
 		mg.Column(c).Width(560).Gap(12).Label(locales.TelSharedTitle()).Children(func() {
-			mg.Text(c, locales.TelSharedTitle()).FontSize(17).FontWeight(650).Role(mg.RoleHeading)
+			mg.Text(c, locales.TelSharedTitle()).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
 			mg.Text(c, locales.TelSharedDesc()).
-				FontSize(13.5).TextColor(p.ink2)
+				FontSize(fsSmall).TextColor(p.ink2)
 			mg.Scroll(c).MaxHeight(320).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
 				mg.Text(c, a.t.sharedText).Font("monospace").FontSize(12).Selectable()
 			})
@@ -85,9 +85,9 @@ func (a *app) privacyTelemetry(c *mg.Context) {
 	}
 	p := pal(c)
 	st := &a.settings
-	mg.Column(c).Gap(8).Label(locales.TelPrivacyGroup()).Children(func() {
-		mg.Text(c, locales.TelPrivacyTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
-		mg.Column(c).Children(func() {
+	mg.Column(c).Gap(10).Label(locales.TelPrivacyGroup()).Children(func() {
+		settingsHeading(c, locales.TelPrivacyTitle(), "")
+		group(c).Children(func() {
 			title := locales.TelShareUsage()
 			if telemetry.DoNotTrack() {
 				settingRow(c, title, locales.TelDoNotTrack(), false, nil)
@@ -103,7 +103,7 @@ func (a *app) privacyTelemetry(c *mg.Context) {
 			})
 		})
 		if !tel.CanSend() {
-			mg.Text(c, locales.TelSendsNothing()).FontSize(12.5).TextColor(p.ink3)
+			mg.Text(c, locales.TelSendsNothing()).FontSize(fsCaption).TextColor(p.ink3)
 		}
 	})
 }
@@ -139,5 +139,5 @@ func (a *app) feedbackLink(c *mg.Context) {
 	if b.Clicked() {
 		a.openFeedback()
 	}
-	b.TextColor(col).Children(func() { mg.Text(c, locales.TelSendFeedbackLink()).FontSize(13.5) })
+	b.TextColor(col).Children(func() { mg.Text(c, locales.TelSendFeedbackLink()).FontSize(fsBody) })
 }

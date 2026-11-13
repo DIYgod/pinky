@@ -122,7 +122,7 @@ func NewDecoder(codec driver.Codec, opt DecoderOptions) (*Decoder, error) {
 		return nil, errors.New("video: out of memory")
 	}
 	flags := int64(swsFastBilinear)
-	if opt.Smooth {
+	if opt.Smooth || !fastBilinearOK {
 		flags = swsBilinear
 	}
 	l.av_opt_set_int(d.sws, "sws_flags", flags, 0)

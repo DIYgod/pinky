@@ -79,21 +79,21 @@ func (a *app) activityPage(c *mg.Context) {
 		s.load(a)
 	}
 	pageHeader(c, func() {
-		mg.Text(c, locales.ActivityTitle()).FontSize(17).FontWeight(650)
+		pageTitle(c, locales.ActivityTitle())
 		mg.Spacer(c)
 		if button(c, locales.ExportAll(), btnOpt{icon: icExport, small: true}).Tooltip(locales.ExportAllTooltip()).Clicked() {
 			a.exportHistory(nil, locales.ExportFolderAll())
 		}
-		mg.Row(c).Width(300).Height(34).Padding(0, 12).Radius(9).Background(p.bg2).Border(1, p.line).Gap(8).AlignItems(mg.Center).Children(func() {
-			mg.Icon(c, icSearch).FontSize(16).TextColor(p.ink3)
-			mg.TextInputBase(c.Key("act-search"), &s.query).Grow(1).Placeholder(locales.ActivitySearchPlaceholder()).Label(locales.ActivitySearchLabel()).FontSize(14)
+		mg.Row(c).Width(280).Height(32).Padding(0, 10).Radius(rControl).Background(p.bg2).Border(1, p.line).Gap(sp2).AlignItems(mg.Center).Children(func() {
+			mg.Icon(c, icSearch).FontSize(15).TextColor(p.ink3)
+			mg.TextInputBase(c.Key("act-search"), &s.query).Grow(1).Placeholder(locales.ActivitySearchPlaceholder()).Label(locales.ActivitySearchLabel()).FontSize(fsBody)
 		})
 	})
 	mg.Row(c).Grow(1).MinHeight(0).AlignItems(mg.Stretch).Children(func() {
-		mg.Scroll(c).Basis(400).Grow(1).MinWidth(320).MaxWidth(520).BorderWidth(0, 1, 0, 0).BorderColor(p.line).Padding(14, 12).Gap(2).
+		mg.Scroll(c).Basis(400).Grow(1).MinWidth(320).MaxWidth(520).BorderWidth(0, 1, 0, 0).BorderColor(p.line).Padding(sp3, sp3).Gap(2).
 			Label(locales.ActivityTasksLabel()).Children(func() {
 			if !s.loaded {
-				mg.Box(c).Padding(20).Center().Children(func() { spinner(c) })
+				mg.Box(c).Padding(sp5).Center().Children(func() { spinner(c) })
 				return
 			}
 			if len(s.tasks) == 0 {
@@ -101,7 +101,11 @@ func (a *app) activityPage(c *mg.Context) {
 				if s.query != "" {
 					msg = locales.ActivityNoMatch(s.query)
 				}
-				mg.Text(c, msg).FontSize(14).TextColor(p.ink2).Padding(12)
+				ic := icHistory
+				if s.query != "" {
+					ic = icSearch
+				}
+				emptyWell(c, ic, msg, nil)
 				return
 			}
 			now := c.Now()
@@ -109,16 +113,16 @@ func (a *app) activityPage(c *mg.Context) {
 			for _, t := range s.tasks {
 				if g := dayLabel(t.Started, now); g != group {
 					group = g
-					pad := float32(16)
+					pad := float32(sp4)
 					if group == dayLabel(s.tasks[0].Started, now) {
-						pad = 4
+						pad = sp1
 					}
-					mg.Text(c, group).FontSize(13).FontWeight(600).TextColor(p.ink3).Padding(pad, 12, 6, 12)
+					mg.Text(c, group).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.ink3).Padding(pad, rowInset, 6, rowInset)
 				}
 				a.activityRow(c.Key(t.ID), t)
 			}
 		})
-		mg.Scroll(c).Basis(460).Grow(999).MinWidth(0).Padding(28, 32).Gap(18).Label(locales.ActivityDetailLabel()).Children(func() {
+		mg.Scroll(c).Basis(460).Grow(999).MinWidth(0).Padding(sp6, sp8).Gap(sp5).Label(locales.ActivityDetailLabel()).Children(func() {
 			var t *gateway.TaskView
 			for i := range s.tasks {
 				if s.tasks[i].ID == s.sel {
@@ -127,7 +131,7 @@ func (a *app) activityPage(c *mg.Context) {
 			}
 			if t == nil {
 				if s.loaded {
-					mg.Text(c, locales.ActivityChooseTask()).FontSize(14).TextColor(p.ink2)
+					mg.Text(c, locales.ActivityChooseTask()).FontSize(fsBody).TextColor(p.ink3).AlignSelf(mg.Center).Margin(sp8, 0, 0, 0)
 				}
 				return
 			}
@@ -194,7 +198,7 @@ func allowedLater(t gateway.TaskView) bool {
 func (a *app) activityRow(c *mg.Context, t gateway.TaskView) {
 	p := pal(c)
 	on := a.act.sel == t.ID
-	row := mg.ButtonBase(c).Padding(10, 12).Radius(10).Gap(12).AlignItems(mg.Center).Justify(mg.Start).FillWidth().Label(t.Title)
+	row := mg.ButtonBase(c).Padding(10, sp3, 10, rowInset).Radius(rControl).Gap(sp3).AlignItems(mg.Center).Justify(mg.Start).FillWidth().Label(t.Title)
 	switch {
 	case on:
 		row.Background(p.bg3)
@@ -208,19 +212,19 @@ func (a *app) activityRow(c *mg.Context, t gateway.TaskView) {
 	}
 	app := appOf(t)
 	row.Children(func() {
-		appIcon(c, nonEmpty(app, t.Title), 34, 9, 15, "")
-		mg.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
-			mg.Text(c, t.Title).FontWeight(600).SingleLine()
+		appIcon(c, nonEmpty(app, t.Title), 32, rControl, 14, "")
+		mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+			mg.Text(c, t.Title).FontSize(fsBody).FontWeight(fwSemibold).SingleLine()
 			sub := strings.Join(nonBlank(t.Agent, t.DeviceName, t.Started.Format("15:04")), " · ")
-			mg.Text(c, sub).FontSize(13).TextColor(p.ink2).SingleLine()
+			mg.Text(c, sub).FontSize(fsCaption).TextColor(p.ink2).SingleLine()
 		})
 		mg.Column(c).AlignItems(mg.End).Gap(2).Shrink(0).Children(func() {
 			mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 				word, _ := outcome(c, t)
-				mg.Text(c, word).FontSize(13)
+				mg.Text(c, word).FontSize(fsSmall)
 			})
 			if n := approvals(t); n > 0 {
-				mg.Text(c, locales.ActivityApprovals(n)).FontSize(12.5).TextColor(p.ink3)
+				mg.Text(c, locales.ActivityApprovals(n)).FontSize(fsCaption).TextColor(p.ink3)
 			}
 		})
 	})
@@ -258,14 +262,14 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 	app := appOf(t)
 	col := appColor(nonEmpty(app, t.Title))
 	mg.Row(c).Gap(14).AlignItems(mg.Start).Wrap().Children(func() {
-		appIcon(c, nonEmpty(app, t.Title), 44, 11, 19, col)
-		mg.Column(c).Basis(220).Grow(1).MinWidth(0).Children(func() {
-			mg.Text(c, t.Title).FontSize(20).FontWeight(650).LineHeight(1.3).Role(mg.RoleHeading)
+		appIcon(c, nonEmpty(app, t.Title), 44, 10, 19, col)
+		mg.Column(c).Basis(220).Grow(1).MinWidth(0).Gap(sp1).Children(func() {
+			mg.Text(c, t.Title).FontSize(fsTitle2).FontWeight(fwSemibold).LineHeight(1.3).Role(mg.RoleHeading)
 			when := dayLabel(t.Started, c.Now()) + " " + t.Started.Format("15:04")
 			meta := nonBlank(t.Agent, t.DeviceName, when, elapsed(taskDuration(t, c.Now())))
-			mg.Text(c, strings.Join(meta, " · ")).FontSize(13.5).TextColor(p.ink2).Margin(3, 0, 0, 0)
+			mg.Text(c, strings.Join(meta, " · ")).FontSize(fsSmall).TextColor(p.ink2)
 		})
-		mg.Row(c).Gap(8).Children(func() {
+		mg.Row(c).Gap(sp2).Children(func() {
 			rec := a.recordingOf(t.ID)
 			switch {
 			case rec != nil:
@@ -294,7 +298,7 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 		})
 	})
 	if sum := summaryOf(t); sum != "" {
-		mg.Text(c, sum).FontSize(15).LineHeight(1.5).MaxWidth(560)
+		mg.Text(c, sum).FontSize(fsHeadline).LineHeight(1.55).MaxWidth(560)
 	}
 	if a.act.replay {
 		if pl := a.rec.pl; pl != nil && pl.task == t.ID {
@@ -304,9 +308,10 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 		}
 		return
 	}
-	mg.Column(c).Gap(12).Children(func() {
-		mg.Text(c, locales.ActivitySteps()).FontSize(13).FontWeight(600).TextColor(p.ink3)
-		mg.Column(c).Gap(10).Role(mg.RoleList).Children(func() {
+	mg.Column(c).Children(func() {
+		sectionLabel(c, locales.ActivitySteps())
+		n := len(t.Steps)
+		mg.Column(c).Role(mg.RoleList).Children(func() {
 			for i, s := range t.Steps {
 				text, sub, kind := stepDisplay(t, i)
 				you := kind == stepYou
@@ -316,54 +321,80 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 				key := fmt.Sprintf("act/%s/%d", t.ID, s.Index)
 				shot := a.hasShot(s)
 				open := shot && a.previews[key]
-				mg.Column(c.Key(i)).Gap(10).Role(mg.RoleListItem).Children(func() {
-					mg.Row(c).Gap(14).AlignItems(mg.Center).Children(func() {
+				mg.Row(c.Key(i)).Gap(sp4).AlignItems(mg.Stretch).Role(mg.RoleListItem).Children(func() {
+					// The rail: the step's picture, or the person's mark, on
+					// a line that joins the steps.
+					rail := mg.Column(c).Width(stepRail).Shrink(0).AlignItems(mg.Center).Padding(sp1, 0)
+					rail.Draw(func(pt *mg.Painter, r mg.Rect) {
+						top, bot, mid := r.Y, r.Y+r.H, r.Y+sp1+stepThumbH/2
+						if i == 0 {
+							top = mid
+						}
+						if i == n-1 {
+							bot = mid
+						}
+						if bot > top {
+							pt.Fill(mg.Rect{X: r.X + r.W/2 - 1, Y: top, W: 2, H: bot - top}, p.line, 1)
+						}
+					})
+					rail.Children(func() {
 						switch {
 						case you:
-							mg.Box(c).Size(28, 54).Center().Shrink(0).Children(func() {
-								mg.Box(c).Size(28, 28).Radius(14).Background(p.bg3).Center().Children(func() {
-									mg.Icon(c, icPerson).FontSize(15).TextColor(p.ink2)
+							mg.Box(c).Size(stepRail, stepThumbH).Center().Children(func() {
+								mg.Box(c).Size(26, 26).Radius(13).Background(p.bg3).Border(2, p.bg).Center().Children(func() {
+									mg.Icon(c, icPerson).FontSize(14).TextColor(p.ink2)
 								})
 							})
 						case shot:
-							b := mg.ButtonBase(c).Radius(6).Shrink(0).Label(locales.ActivityStepShotLabel(text)).Expanded(open).
+							b := mg.ButtonBase(c).Radius(rSmall).Shrink(0).Label(locales.ActivityStepShotLabel(text)).Expanded(open).
 								Tooltip(locales.ActivityShowShot())
 							if b.Clicked() {
 								a.previews[key] = !open
 							}
-							b.Children(func() { a.shotView(c, t, s, 54) })
+							b.Children(func() { a.shotView(c, t, s, stepThumbH) })
 						default:
-							stepThumb(c, col)
+							stepThumb(c, col, stepThumbH)
 						}
-						mg.Column(c).Gap(1).Children(func() {
-							tx := mg.Text(c, text).FontSize(14)
+					})
+					mg.Column(c).Grow(1).MinWidth(0).Padding(sp1, 0).Gap(sp2).Children(func() {
+						mg.Column(c).MinHeight(stepThumbH).Justify(mg.Center).Gap(2).Children(func() {
+							tx := mg.Text(c, text).FontSize(fsBody).LineHeight(1.4)
 							if you {
-								tx.FontWeight(600)
+								tx.FontWeight(fwSemibold)
 							}
 							if sub != "" {
-								mg.Text(c, sub).FontSize(13).TextColor(p.ink2)
+								mg.Text(c, sub).FontSize(fsSmall).TextColor(p.ink2)
 							}
 						})
+						if open {
+							a.shotView(c, t, s, 420).Margin(0, 0, sp2, 0)
+						}
 					})
-					if open {
-						a.shotView(c, t, s, 420).Margin(0, 0, 6, 42)
-					}
 				})
 			}
 		})
 	})
 }
 
-// stepThumb is the small phone sketch beside an agent's step; the
-// screenshots behind it come with the history store's media.
-func stepThumb(c *mg.Context, col string) {
+// A step's picture on Activity's rail is stepThumbH high, and the rail
+// stepRail wide.
+const (
+	stepThumbH = 48
+	stepRail   = 28
+)
+
+// stepThumb is the small phone sketch beside an agent's step, h high,
+// where there is no screenshot to show: the app's color at the top, a few
+// lines under it.
+func stepThumb(c *mg.Context, col string, h float32) mg.Element {
 	p := pal(c)
-	mg.Box(c).Size(28, 54).Shrink(0).Radius(6).Border(1, p.line2).Background(hex("#ffffff")).Clip().
+	w := float32(int(h*9/19.5 + 0.5))
+	return mg.Box(c).Size(w, h).Shrink(0).Radius(5).Border(1, p.line2).Background(p.card).Clip().
 		Draw(func(pt *mg.Painter, r mg.Rect) {
-			pt.Fill(mg.Rect{X: r.X, Y: r.Y, W: r.W, H: 9}, hex(col), 0)
-			pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + 15, W: r.W - 8, H: 3}, hex("#dcdce2"), 1.5)
-			pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + 22, W: r.W - 13, H: 3}, hex("#dcdce2"), 1.5)
-			pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + r.H - 12, W: r.W - 8, H: 7}, hex("#e7e7ec"), 2)
+			pt.Fill(mg.Rect{X: r.X, Y: r.Y, W: r.W, H: 8}, hex(col), 0)
+			pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + 13, W: r.W - 8, H: 3}, p.line2, 1.5)
+			pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + 19, W: r.W - 11, H: 3}, p.line2, 1.5)
+			pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + r.H - 11, W: r.W - 8, H: 6}, p.bg3, 2)
 		})
 }
 
@@ -371,9 +402,9 @@ func stepThumb(c *mg.Context, col string) {
 // step marks, in the replay's panel.
 func (a *app) recordingPanel(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 	p := pal(c)
-	mg.Column(c).Gap(16).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label(locales.RecordingPanelLabel()).Children(func() {
-		mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
-			mg.Text(c, locales.RecordingPanelTitle(t.Title)).FontSize(16).FontWeight(650).Grow(1)
+	mg.Column(c).Gap(sp4).Padding(sp5).Radius(rCard).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label(locales.RecordingPanelLabel()).Children(func() {
+		mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
+			mg.Text(c, locales.RecordingPanelTitle(t.Title)).FontSize(fsHeadline).FontWeight(fwSemibold).Grow(1)
 			if button(c, locales.ActivityPanelClose(), btnOpt{}).Clicked() {
 				a.act.replay = false
 				a.closeRecording()
@@ -405,40 +436,40 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 		}
 		c.After(100 * time.Millisecond)
 	}
-	mg.Column(c).Gap(18).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label(locales.ReplayPanelLabel()).Children(func() {
-		mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
-			mg.Text(c, locales.ReplayPanelTitle(t.Title)).FontSize(16).FontWeight(650).Grow(1)
+	mg.Column(c).Gap(sp4).Padding(sp5).Radius(rCard).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label(locales.ReplayPanelLabel()).Children(func() {
+		mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
+			mg.Text(c, locales.ReplayPanelTitle(t.Title)).FontSize(fsHeadline).FontWeight(fwSemibold).Grow(1)
 			if button(c, locales.ActivityPanelClose(), btnOpt{}).Clicked() {
 				a.act.replay, a.act.playing = false, false
 			}
 		})
 		if n == 0 {
-			mg.Text(c, locales.ReplayNoSteps()).FontSize(13.5).TextColor(p.ink2)
+			mg.Text(c, locales.ReplayNoSteps()).FontSize(fsBody).TextColor(p.ink2)
 			return
 		}
 		s := t.Steps[st.at]
 		text, sub, _ := stepDisplay(t, st.at)
-		mg.Row(c).Gap(20).AlignItems(mg.Start).Wrap().Children(func() {
+		mg.Row(c).Gap(sp5).AlignItems(mg.Start).Wrap().Children(func() {
 			a.shotView(c, t, s, 420)
 			mg.Column(c).Basis(200).Grow(1).MinWidth(0).Gap(6).Children(func() {
-				mg.Text(c, locales.ReplayStepOf(st.at+1, n)).FontSize(12.5).FontWeight(600).TextColor(p.ink3)
-				mg.Text(c, text).FontSize(16).FontWeight(600).LineHeight(1.35)
+				mg.Text(c, locales.ReplayStepOf(st.at+1, n)).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.ink3)
+				mg.Text(c, text).FontSize(fsTitle3).FontWeight(fwSemibold).LineHeight(1.35)
 				if sub != "" {
-					mg.Text(c, sub).FontSize(13.5).TextColor(p.ink2)
+					mg.Text(c, sub).FontSize(fsBody).TextColor(p.ink2)
 				}
 				if !s.At.IsZero() {
-					mg.Text(c, s.At.Format("15:04:05")).FontSize(13).TextColor(p.ink3)
+					mg.Text(c, s.At.Format("15:04:05")).FontSize(fsSmall).TextColor(p.ink3)
 				}
-				mg.Row(c).Gap(8).Margin(10, 0, 0, 0).Children(func() {
+				mg.Row(c).Gap(sp2).Margin(sp3, 0, 0, 0).Children(func() {
 					if button(c, "", btnOpt{icon: icChevL, label: locales.ReplayPrevious()}).Width(34).Padding(0).Disabled(st.at == 0).Clicked() {
 						st.at--
 						st.playing = false
 					}
-					play := locales.ReplayPlay()
+					play, ic := locales.ReplayPlay(), icPlay
 					if st.playing {
-						play = locales.ReplayPause()
+						play, ic = locales.ReplayPause(), icPause
 					}
-					if button(c, play, btnOpt{icon: icPlay}).Clicked() {
+					if button(c, play, btnOpt{kind: btnPrimary, icon: ic}).Clicked() {
 						st.playing = !st.playing
 						if st.playing {
 							if st.at >= n-1 {
@@ -477,8 +508,8 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 			}
 		})
 		mg.Row(c).Children(func() {
-			mg.Text(c, locales.ReplayTimelineHint()).FontSize(12.5).TextColor(p.ink2).Grow(1)
-			mg.Text(c, clock(taskDuration(t, c.Now()))).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, locales.ReplayTimelineHint()).FontSize(fsCaption).TextColor(p.ink2).Grow(1)
+			mg.Text(c, clock(taskDuration(t, c.Now()))).FontSize(fsCaption).TextColor(p.ink2)
 		})
 	})
 }

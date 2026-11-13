@@ -2,12 +2,17 @@
 // hands one out only after the person confirms with Touch ID (or the Mac's
 // password), Windows Hello, or the system's equivalent. Pinky never writes a
 // PIN anywhere else, never logs it and never gives it to agents.
+//
+// It also keeps the API keys of the model services Pinky's own agent uses
+// (ModelKeyAccount). Those are read without asking the person (Get): Pinky
+// sends them to the service the person chose, never to a phone or an agent.
 package secret
 
 import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -22,6 +27,12 @@ var (
 	// Such an account always has a password, even when the person signs
 	// in with a PIN or Windows Hello.
 	ErrMicrosoftAccount = errors.New("secret: this Windows account is a Microsoft account, which has a password even when you sign in with a PIN or Windows Hello: type the Microsoft account's password")
+	// ErrAccountRestricted: Windows would not check the password of the
+	// account Pinky runs as (ERROR_ACCOUNT_RESTRICTION), and Pinky could
+	// not confirm that the account has no password. Most likely it has
+	// none and Windows' blank-password policy is in the way; a password or
+	// a Windows Hello PIN for the account makes confirming work.
+	ErrAccountRestricted = errors.New("secret: Windows won't check this account's password, most likely because it has no password: set a password or a Windows Hello PIN for it")
 )
 
 var logger atomic.Pointer[slog.Logger]
@@ -71,6 +82,40 @@ func Supported(s Store) bool {
 // PINAccount is the account a phone's PIN is saved under.
 func PINAccount(deviceID string) string { return "pin:" + deviceID }
 
+// modelKeyPrefix starts the account of every API key of a model service.
+const modelKeyPrefix = "model-key:"
+
+// ModelKeyAccount is the account the API key of a model service
+// ("anthropic", "openai") is saved under.
+func ModelKeyAccount(service string) string { return modelKeyPrefix + service }
+
+// ErrNotModelKey is what Get returns for an account that is not a model
+// service's API key: every other secret, a PIN above all, goes through
+// Reveal and the person's confirmation.
+var ErrNotModelKey = errors.New("secret: only model API keys can be read without confirmation")
+
+// Getter is a Store that can return a secret without asking the person to
+// confirm. Only Pinky's API keys are read this way; PINs always go through
+// Reveal.
+type Getter interface {
+	Get(ctx context.Context, account string) (string, error)
+}
+
+// Get returns a secret without asking the person, where the store can
+// (where the system keeps Pinky's secrets locked, as Linux's Secret Service
+// does, it may still ask to unlock them). It returns ErrNotFound when
+// nothing is saved, ErrUnsupported for a store that can only Reveal, and
+// ErrNotModelKey for an account ModelKeyAccount did not make.
+func Get(ctx context.Context, s Store, account string) (string, error) {
+	if !strings.HasPrefix(account, modelKeyPrefix) {
+		return "", ErrNotModelKey
+	}
+	if g, ok := s.(Getter); ok {
+		return g.Get(ctx, account)
+	}
+	return "", ErrUnsupported
+}
+
 // Memory is a Store in memory, for tests. Confirm stands in for the
 // system's prompt; nil confirms.
 type Memory struct {
@@ -107,6 +152,17 @@ func (s *Memory) Delete(account string) error {
 	return nil
 }
 
+// Get implements Getter.
+func (s *Memory) Get(ctx context.Context, account string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.m[account]
+	if !ok {
+		return "", ErrNotFound
+	}
+	return v, nil
+}
+
 func (s *Memory) Reveal(ctx context.Context, account, reason string) (string, error) {
 	s.mu.Lock()
 	v, ok := s.m[account]
@@ -132,3 +188,4 @@ func (unsupported) Delete(string) error       { return ErrUnsupported }
 func (unsupported) Reveal(context.Context, string, string) (string, error) {
 	return "", ErrUnsupported
 }
+func (unsupported) Get(context.Context, string) (string, error) { return "", ErrUnsupported }

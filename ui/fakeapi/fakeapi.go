@@ -94,12 +94,12 @@ type Options struct {
 // Input is one input the person sent through the mirror.
 type Input struct {
 	Device string
-	Kind   string // "touch", "touch2", "key", "text"
+	Kind   string // "touch", "touch2", "key", "text", "switch"
 	Action driver.TouchAction
 	Point  screen.Point
 	Point2 screen.Point // the second finger of "touch2"
 	Key    driver.Key
-	Text   string
+	Text   string // "switch": name=value
 }
 
 // API is the fake gateway. It is safe for concurrent use.
@@ -147,8 +147,11 @@ type API struct {
 	trusted    []string      // TrustPhone's phones (wifi.go)
 	dlErr      error         // what DownloadDiskImage fails with (iphone.go)
 	dlHold     chan struct{} // closed when held downloads go on (HoldDownload)
+	hlp        helperFake    // installing the iPhone helper (helper.go)
 	tn         *fakeTailnet  // Tailscale on this computer (tailnet.go)
 	virt       *virtualState // Simulators and emulators (virtual.go)
+
+	vit *vitalsState // phones' battery and storage (vitals.go)
 }
 
 type device struct {
@@ -173,6 +176,9 @@ type device struct {
 	updateAsks bool
 	way        string // iPhone: the connection the person chose
 	connecting string // the status line while the fake "opens" it (wifi.go)
+	paused     bool   // the person paused Pinky's connection to it (pause.go)
+	streams    int    // its streams open now, for DeviceView.Streaming
+	rotation   string // the screen's rotation the person set; "" is portrait
 }
 
 type task struct {
@@ -422,7 +428,13 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 	if running {
 		v.TaskID = d.task.view.ID
 	}
+	v.Paused = d.paused
+	v.Streaming = d.info.State == driver.StateOnline && !d.paused && d.streams > 0
 	switch {
+	case d.paused:
+		v.Status, v.StatusLine = gateway.DeviceOffline, "Paused"
+		v.Info.State, v.Info.Setup, v.Info.Detail = driver.StateOffline, "", ""
+		v.Features = gateway.Features{}
 	case d.connecting != "":
 		v.Status, v.StatusLine = gateway.DeviceConnecting, d.connecting
 		v.Info.State = driver.StateOffline
@@ -436,6 +448,8 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Lost on Wi-Fi"
 	case d.info.Setup == driver.SetupPhoneChanged && d.info.State == driver.StateNeedsSetup:
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Not the same phone"
+	case d.info.Setup == driver.SetupMediaInUse && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Camera or microphone in use"
 	case d.info.State != driver.StateOnline:
 		// Plugged in, waiting for a step, as the gateway lists such a phone
 		// (statusLocked), also while a task waits for it.
@@ -763,7 +777,38 @@ func (a *API) Stream(ctx context.Context, deviceID string, opt driver.StreamOpti
 	if opt.MaxFPS > 0 && opt.MaxFPS < fps {
 		fps = opt.MaxFPS
 	}
-	return startStream(ctx, a.opt.FFmpeg, codec, src, w, h, fps)
+	s, err := startStream(ctx, a.opt.FFmpeg, codec, src, w, h, fps)
+	if err != nil {
+		return nil, err
+	}
+	return a.counted(d, s), nil
+}
+
+// countedStream counts itself among its phone's open streams until it
+// closes, as the gateway's Streaming does.
+type countedStream struct {
+	driver.Stream
+	once sync.Once
+	done func()
+}
+
+func (s *countedStream) Close() error {
+	s.once.Do(s.done)
+	return s.Stream.Close()
+}
+
+func (a *API) counted(d *device, s driver.Stream) driver.Stream {
+	a.mu.Lock()
+	d.streams++
+	id := d.info.ID
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	return &countedStream{Stream: s, done: func() {
+		a.mu.Lock()
+		d.streams--
+		a.mu.Unlock()
+		a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	}}
 }
 
 // Touch implements gateway.API. Input from the person pauses the agent.
@@ -875,3 +920,39 @@ func cloneTask(t gateway.TaskView) gateway.TaskView {
 var errStopped = errors.New("fakeapi: scenario stopped")
 
 var _ gateway.API = (*API)(nil)
+
+// DeviceSwitch is the gateway's read of a phone's switch, for the Rotate
+// row of ⋯ under the mirror. Only the rotation is kept.
+func (a *API) DeviceSwitch(ctx context.Context, deviceID, name string) (string, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	d := a.device(deviceID)
+	switch {
+	case d == nil:
+		return "", fmt.Errorf("fakeapi: no device %q: %w", deviceID, driver.ErrNotFound)
+	case d.info.State != driver.StateOnline:
+		return "", fmt.Errorf("fakeapi: %s: %w", d.info.Name, driver.ErrOffline)
+	case name != driver.SwitchRotation:
+		return "", fmt.Errorf("fakeapi: %s: %w", name, driver.ErrUnsupported)
+	case d.rotation == "":
+		return driver.RotationPortrait, nil
+	}
+	return d.rotation, nil
+}
+
+// SetDeviceSwitch is the person turning the screen from ⋯ under the
+// mirror: their input, which pauses the agent like a touch.
+func (a *API) SetDeviceSwitch(ctx context.Context, deviceID, name, value string) error {
+	if name != driver.SwitchRotation {
+		return fmt.Errorf("fakeapi: %s: %w", name, driver.ErrUnsupported)
+	}
+	if err := a.input(Input{Device: deviceID, Kind: "switch", Text: name + "=" + value}); err != nil {
+		return err
+	}
+	a.mu.Lock()
+	if d := a.device(deviceID); d != nil {
+		d.rotation = value
+	}
+	a.mu.Unlock()
+	return nil
+}

@@ -60,7 +60,14 @@ func (g *Gateway) RemoveDevice(ctx context.Context, deviceID string, opt RemoveO
 	delete(g.devices, d.id)
 	delete(g.background, d.id)
 	delete(g.known, d.id)
+	delete(g.chosen, d.id)
+	forgetTaskWay(d)
 	g.removed[d.id] = true
+	if g.paused[d.id] {
+		// Added back, it is not paused (its row goes with ForgetDevice).
+		delete(g.paused, d.id)
+		g.tellPausedLocked(d.id, false)
+	}
 	dev := d.dev
 	d.dev, d.online, d.opening = nil, false, false
 	d.kept = nil
@@ -161,6 +168,10 @@ func (g *Gateway) unremove(id string) {
 	defer g.mu.Unlock()
 	if g.removed[id] {
 		g.addedBackLocked(id)
+	}
+	// Paired or connected by address: the person wants Pinky to use it.
+	if g.resumeLocked(id) {
+		g.log.Info("paused device connected again: resuming", "device", id)
 	}
 }
 

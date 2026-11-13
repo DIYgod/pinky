@@ -28,7 +28,7 @@ import (
 
 // stateNotInScreenshot marks an element that the screenshot, and so the
 // person watching in Pinky, does not show.
-const stateNotInScreenshot = "not_in_screenshot"
+const stateNotInScreenshot = screen.StateNotInScreenshot
 
 // Detection limits.
 const (

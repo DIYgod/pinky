@@ -121,9 +121,10 @@ func (d *WDADevice) orientation(ctx context.Context) (string, error) {
 }
 
 // setOrientation turns the device. An app that only runs upright answers
-// "Unable To Rotate Device", though the device has turned: what counts is
-// the device's orientation afterwards. The app in front turns with it when
-// it can.
+// "Unable To Rotate Device", though the device has turned (iOS 18): what
+// counts is the device's orientation afterwards. The app in front turns
+// with it when it can. On iOS 27 the device stays as the app in front
+// allows (Settings on an iPhone Air, iOS 27.3), which is said in words.
 func (d *WDADevice) setOrientation(ctx context.Context, value string) error {
 	o, ok := wdaSetOrientations[value]
 	if !ok {
@@ -138,12 +139,15 @@ func (d *WDADevice) setOrientation(ctx context.Context, value string) error {
 		if got == value {
 			return nil
 		}
-		if err == nil {
-			return fmt.Errorf("the phone stayed %s", got)
+		if err == nil || strings.Contains(err.Error(), "Unable To Rotate") {
+			return fmt.Errorf("the app in front does not turn %s, so the phone stayed %s", rotationWords(value), rotationWords(got))
 		}
 	}
 	return err
 }
+
+// rotationWords is a rotation as a sentence says it: "upside down".
+func rotationWords(v string) string { return strings.ReplaceAll(v, "_", " ") }
 
 type wdaLocation struct {
 	Latitude  *float64 `json:"latitude"`
@@ -254,7 +258,7 @@ func (d *Device) launchLocale(ctx context.Context, app string, loc driver.Locale
 	}
 	phone := ""
 	if loc.Language == "" {
-		if phone, err = lockdownLocale(ctx, d.l.base); err != nil {
+		if phone, err = lockdownLocale(ctx, d.cur().base); err != nil {
 			return fmt.Errorf("read the phone's language: %w", err)
 		}
 	}
@@ -270,7 +274,7 @@ func (d *Device) launchLocale(ctx context.Context, app string, loc driver.Locale
 	opts := input["options"].(map[string]any)
 	opts["arguments"] = args
 	opts["terminateExisting"] = true
-	svc, err := dialCoreDevice(d.l.entry, appService)
+	svc, err := dialCoreDevice(d.link().entry, appService)
 	if err != nil {
 		return err
 	}

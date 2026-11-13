@@ -85,7 +85,10 @@ func (a *app) flyoutHeight() int {
 		h += 26 + 36*min(len(a.needs), 4)
 	}
 	h += 26 + 4 + 36*max(1, len(a.devices))
-	h += 13 + 36*2
+	h += 13 + 36 // Open Pinky
+	if len(a.devices) > 0 {
+		h += 36 // Stop all
+	}
 	return h
 }
 
@@ -94,11 +97,20 @@ func (a *app) toggleFlyout() {
 		a.flyout.Close()
 		return
 	}
-	a.flyout = mygo.NewFlyout(mygo.FlyoutOptions{
+	opt := mygo.FlyoutOptions{
 		Tray: a.tray, Placement: mygo.PlacementBottom, Gap: 4,
 		Width: 320, Height: a.flyoutHeight(), Focusable: true, Shadow: true,
 		Content: mg.View(a.flyoutView),
-	})
+	}
+	// On macOS it looks like the popovers of other menu bar apps: rounded,
+	// on the popover material, with a shadow that follows the corners.
+	// Windows 11 rounds it itself and Linux has no material: both keep the
+	// opaque panel.
+	if runtime.GOOS == "darwin" {
+		opt.Vibrancy = mygo.VibrancyPopover
+		opt.CornerRadius = flyoutRadius
+	}
+	a.flyout = mygo.NewFlyout(opt)
 	a.flyout.OnClosed(func() { a.flyout = nil })
 }
 
@@ -115,9 +127,19 @@ func (a *app) flyoutView(c *mg.Context) {
 		a.flyout.Close()
 	}
 	sec := func(text string) {
-		mg.Text(c, text).FontSize(12).FontWeight(600).TextColor(p.ink3).Padding(6, 10, 4, 10)
+		mg.Text(c, text).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.ink3).Padding(6, 10, 4, 10)
 	}
-	mg.Column(c).Fill().Background(p.panel).Padding(6, 8, 8, 8).Children(func() {
+	// Over the material the flyout draws no background of its own, and
+	// its tints are translucent so the material shows through them.
+	root := mg.Column(c).Fill().Padding(6, 8, 8, 8)
+	needTint, rule := p.amberTint, p.line
+	if c.Vibrancy() {
+		c.Root().Background(mg.Transparent)
+		needTint, rule = flyTint(p, p.amberDot, 0.14, 0.18), flyTint(p, p.ink, 0.1, 0.12)
+	} else {
+		root.Background(p.panel)
+	}
+	root.Children(func() {
 		if len(a.needs) > 0 {
 			sec(locales.NeedsSection())
 			for i, n := range a.needs {
@@ -125,12 +147,12 @@ func (a *app) flyoutView(c *mg.Context) {
 					break
 				}
 				n := n
-				row := flyRow(c.Key("n-" + n.ID)).Background(p.amberTint)
+				row := flyRow(c.Key("n-" + n.ID)).Background(needTint)
 				if row.Clicked() {
 					if a.flyout != nil {
 						a.flyout.Close()
 					}
-					if n.Kind != gateway.NeedUnlock {
+					if inPanel(n) {
 						a.showPanel(true)
 					} else {
 						a.openNeed(n.ID)
@@ -146,13 +168,13 @@ func (a *app) flyoutView(c *mg.Context) {
 					if n.Kind == gateway.NeedUnlock {
 						label = locales.FlyoutUnlock()
 					}
-					mg.Text(c, label).FontWeight(500).TextColor(p.accentInk)
+					mg.Text(c, label).FontWeight(fwMedium).TextColor(p.accentInk)
 				})
 			}
 		}
 		sec(locales.FlyoutPhones())
 		if len(a.devices) == 0 {
-			mg.Text(c, locales.FlyoutNoPhones()).FontSize(13).TextColor(p.ink2).Padding(8, 10)
+			mg.Text(c, locales.FlyoutNoPhones()).FontSize(fsSmall).TextColor(p.ink2).Padding(8, 10)
 		}
 		for _, d := range a.devices {
 			d := d
@@ -166,15 +188,15 @@ func (a *app) flyoutView(c *mg.Context) {
 			}
 			row.Label(locales.FlyoutPhoneLabel(d.Info.Name, statusLine(d))).Children(func() {
 				statusDot(c, d)
-				name := mg.Text(c, d.Info.Name).FontWeight(600).Shrink(0)
+				name := mg.Text(c, d.Info.Name).FontWeight(fwSemibold).Shrink(0)
 				if d.Status == gateway.DeviceOffline {
 					name.TextColor(p.ink2)
 				}
-				mg.Text(c, statusLine(d)).FontSize(13).TextColor(p.ink2).Grow(1).MinWidth(0).SingleLine()
+				mg.Text(c, statusLine(d)).FontSize(fsSmall).TextColor(p.ink2).Grow(1).MinWidth(0).SingleLine()
 			})
 		}
 		mg.Spacer(c)
-		mg.Box(c).Height(1).Background(p.line).Margin(6, 6)
+		mg.Box(c).Height(1).Background(rule).Margin(6, 6)
 		open := flyRow(c).Label(locales.FlyoutOpenPinky())
 		if open.Clicked() {
 			if a.flyout != nil {
@@ -183,13 +205,16 @@ func (a *app) flyoutView(c *mg.Context) {
 			a.showMain()
 		}
 		open.Children(func() { mg.Text(c, locales.FlyoutOpenPinky()) })
+		if len(a.devices) == 0 {
+			return // nothing to stop yet, as in the sidebar
+		}
 		stop := flyRow(c).Label(locales.FlyoutStopAll())
 		if stop.Clicked() {
 			a.stopAll()
 		}
 		stop.Children(func() {
 			mg.Text(c, locales.FlyoutStopAll()).TextColor(p.red).Grow(1)
-			mg.Text(c, shortcutLabel()).FontSize(13).TextColor(p.ink3)
+			mg.Text(c, shortcutLabel()).FontSize(fsSmall).TextColor(p.ink3)
 		})
 	})
 }
@@ -198,9 +223,27 @@ func flyRow(c *mg.Context) mg.Element {
 	p := pal(c)
 	row := mg.ButtonBase(c).MinHeight(36).Padding(6, 10).Radius(8).Gap(10).AlignItems(mg.Center).Justify(mg.Start).FillWidth()
 	if row.Hovered() {
-		row.Background(p.bg3)
+		if c.Vibrancy() {
+			row.Background(flyTint(p, p.ink, 0.07, 0.1))
+		} else {
+			row.Background(p.bg3)
+		}
 	}
 	return row
+}
+
+// flyoutRadius rounds the flyout's corners on macOS, as its menu bar
+// popovers are rounded.
+const flyoutRadius = 12
+
+// flyTint is col at the given opacity in light and in dark appearance, a
+// tint the flyout's material shows through.
+func flyTint(p *palette, col mg.Color, light, dark float32) mg.Color {
+	a := light
+	if p.dark {
+		a = dark
+	}
+	return col.Alpha(a)
 }
 
 // needShort is a need in a few words: "Pay $12.80".
@@ -210,8 +253,11 @@ func needShort(n gateway.NeedView) string {
 		t = t[:len(t)-1]
 	}
 	t = strings.TrimSuffix(t, "\uff1f") // a translated title's full-width question mark
-	if n.Kind == gateway.NeedUnlock {
+	switch n.Kind {
+	case gateway.NeedUnlock:
 		return locales.FlyoutLocked()
+	case gateway.NeedSetup:
+		return locales.FlyoutPasscode()
 	}
 	return t
 }

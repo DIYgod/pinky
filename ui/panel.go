@@ -260,7 +260,7 @@ func (a *app) panelView(c *mg.Context) {
 						if arrowButton(c, icChevL, locales.PanelPrevious(), a.panelIdx == 0).Clicked() {
 							a.panelIdx--
 						}
-						mg.Text(c, locales.PanelPosition(a.panelIdx+1, len(asks))).FontSize(12.5).FontWeight(600).TextColor(p.ink2)
+						mg.Text(c, locales.PanelPosition(a.panelIdx+1, len(asks))).FontSize(fsSmall).FontWeight(fwSemibold).TextColor(p.ink2)
 						if arrowButton(c, icChevR, locales.PanelNext(), a.panelIdx >= len(asks)-1).Clicked() {
 							a.panelIdx++
 						}
@@ -273,18 +273,18 @@ func (a *app) panelView(c *mg.Context) {
 					if n.Kind == gateway.NeedHandoff {
 						word = locales.PanelEndsIn(elapsed(secs))
 					}
-					mg.Text(c, word).FontSize(12.5).TextColor(p.ink2)
+					mg.Text(c, word).FontSize(fsSmall).TextColor(p.ink2)
 				}
 			})
 			needEyebrow(c, n)
-			mg.Text(c, needTitle(n)).FontSize(16).FontWeight(650).LineHeight(1.3).MaxLines(2).Margin(6, 0, 0, 0).Role(mg.RoleHeading)
+			mg.Text(c, needTitle(n)).FontSize(fsHeadline).FontWeight(fwSemibold).LineHeight(1.3).MaxLines(2).Margin(6, 0, 0, 0).Role(mg.RoleHeading)
 			detail := needDetail(n)
 			if newAgentNeed(n) {
 				_, picker := a.api.(agentScoper)
 				detail = agentRequestDetail(n, picker)
 			}
 			if detail != "" {
-				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2).MaxLines(2)
+				mg.Text(c, detail).FontSize(fsSmall).TextColor(p.ink2).MaxLines(2)
 			}
 			switch {
 			case n.Kind == gateway.NeedHandoff:
@@ -313,7 +313,7 @@ func (a *app) panelView(c *mg.Context) {
 				mg.Spacer(c)
 			}
 			if noting {
-				mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
+				mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(fsSmall).FontWeight(fwSemibold).Margin(10, 0, 0, 0)
 				note := a.notes[n.ID]
 				mg.TextArea(c.Key("pnote-"+n.ID), &note).Label(locales.NeedsNoteFor(agentOf(n))).Lines(2, 3).Margin(6, 0, 0, 0).AutoFocus()
 				a.notes[n.ID] = note
@@ -361,8 +361,8 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 	p := pal(c)
 	mg.Column(c).Grow(1).MinHeight(0).Padding(16).Gap(2).Children(func() {
 		needEyebrow(c, x.need)
-		mg.Text(c, needTitle(x.need)).FontSize(16).FontWeight(650).LineHeight(1.3).MaxLines(2).Margin(6, 0, 0, 0)
-		mg.Text(c, needDetail(x.need)).FontSize(13.5).TextColor(p.ink2).MaxLines(2)
+		mg.Text(c, needTitle(x.need)).FontSize(fsHeadline).FontWeight(fwSemibold).LineHeight(1.3).MaxLines(2).Margin(6, 0, 0, 0)
+		mg.Text(c, needDetail(x.need)).FontSize(fsSmall).TextColor(p.ink2).MaxLines(2)
 		if x.need.Screenshot != nil && x.need.Kind == gateway.NeedApproval && !newAgentNeed(x.need) {
 			// What was answered, in the room the panel had for it.
 			a.approvalFigure(c, x.need, nil).Margin(12, 0, 0, 0).Grow(1).MinHeight(60)
@@ -403,7 +403,10 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 					detail = locales.PanelAllowedTaskDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
 				case gateway.AllowAlways:
 					title = locales.PanelAlwaysAllowed()
-					detail = locales.PanelAlwaysAllowedDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
+					detail = alwaysAllowedDetail(x.need)
+					if detail == "" {
+						detail = locales.PanelAlwaysAllowedDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
+					}
 				default:
 					ic, col = icX, p.ink2
 					title = locales.PanelDenied()
@@ -415,9 +418,9 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 			}
 			mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, ic).FontSize(18).TextColor(col)
-				mg.Text(c, title).FontWeight(650)
+				mg.Text(c, title).FontWeight(fwSemibold)
 			})
-			mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2)
+			mg.Text(c, detail).FontSize(fsSmall).TextColor(p.ink2)
 		})
 	})
 }

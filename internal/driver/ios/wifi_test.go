@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/ios/netmux"
 	goios "github.com/danielpaulus/go-ios/ios"
 )
 
@@ -46,7 +47,7 @@ func newWiFiProvider(list ...goios.DeviceEntry) *wifiProvider {
 		}
 		return driver.Info{ID: id, Platform: driver.IOS, Name: id, Connection: conn, State: driver.StateOnline, Backend: backendCoreDevice}
 	}
-	w.lost.pairFn = func(string) (string, error) { return "", errors.New("no pair record in tests") }
+	w.lost.pairFn = func(string) (netmux.PairInfo, error) { return netmux.PairInfo{}, errors.New("no pair record in tests") }
 	w.wifi.namesFn = func(_ context.Context, e goios.DeviceEntry) (phoneNames, error) {
 		w.mu.Lock()
 		defer w.mu.Unlock()
@@ -541,5 +542,36 @@ func TestWiFiConnectionState(t *testing.T) {
 	}
 	if count("Wi-Fi connections not looked at") != 3 { // off, untrusted, no answer
 		t.Fatalf("logs:\n%s", logs.String())
+	}
+}
+
+// A listing that keeps coming and going (a locked iPad, every 10 to 60 s)
+// is logged a few times, then once per listingFlapWindow.
+func TestWiFiListingFlapsQuiet(t *testing.T) {
+	var logs bytes.Buffer
+	now := time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC)
+	p := &Provider{Log: slog.New(slog.NewTextHandler(&logs, nil)), now: func() time.Time { return now }}
+	lines := func() []string { return strings.Split(strings.TrimSpace(logs.String()), "\n") }
+	changes := func() (n int) {
+		for _, l := range lines() {
+			if strings.Contains(l, `listed over Wi-Fi"`) {
+				n++
+			}
+		}
+		return n
+	}
+	p.wifiConnection("ipad", true)
+	for i := 0; i < 40; i++ { // 20 minutes of a change every 30 s
+		now = now.Add(30 * time.Second)
+		p.wifiConnection("ipad", i%2 == 1)
+	}
+	if n, q := changes(), strings.Count(logs.String(), "keeps changing"); n != listingFlaps || q != 2 {
+		t.Fatalf("%d listing lines, %d quiet notes:\n%s", n, q, logs.String())
+	}
+	// Steady for a while: the next change is logged.
+	now = now.Add(2 * listingFlapWindow)
+	p.wifiConnection("ipad", false)
+	if l := lines(); !strings.Contains(l[len(l)-1], "no longer listed over Wi-Fi") {
+		t.Fatalf("after a steady time:\n%s", logs.String())
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	hexenc "encoding/hex"
+	"errors"
 	"fmt"
 	"image/png"
 	"net/http"
@@ -62,6 +63,12 @@ func (f *fakeInstaller) swapped() []update.StartOptions {
 const (
 	testNotes   = "- Faster mirroring\n- Pinky updates itself"
 	testNotesZh = "- 镜像更快了\n- Pinky 会自己更新"
+	// feedDate is when the feed's release came out: 7:30 on 7 November in
+	// Asia/Shanghai, which is still 6 November by UTC and west of it.
+	feedDate = "2026-11-06T23:30:00Z"
+	// feedDay is the day its release notes give it, by every clock: its
+	// version's, 2026.1107.2, as What's new gives the changelog's.
+	feedDay = "November 7, 2026"
 )
 
 // feed serves latest.json for version and its zip.
@@ -73,8 +80,8 @@ func feed(t *testing.T, version string) (*httptest.Server, []byte) {
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/latest.json":
-			fmt.Fprintf(w, `{"version": %q, "tag": "v%s", "date": "2026-11-07T10:00:00Z", "notes": %q, "localized_notes": {"zh-Hans": %q}, "assets": {%q: {"url": %q, "sha256": %q, "size": %d}}}`,
-				version, version, testNotes, testNotesZh, update.Platform(), srv.URL+"/Pinky.zip", hexenc.EncodeToString(h[:]), len(asset))
+			fmt.Fprintf(w, `{"version": %q, "tag": "v%s", "date": %q, "notes": %q, "localized_notes": {"zh-Hans": %q}, "assets": {%q: {"url": %q, "sha256": %q, "size": %d}}}`,
+				version, version, feedDate, testNotes, testNotesZh, update.Platform(), srv.URL+"/Pinky.zip", hexenc.EncodeToString(h[:]), len(asset))
 		case "/Pinky.zip":
 			w.Write(asset)
 		default:
@@ -132,8 +139,8 @@ func TestUpdateCardThenUpdateNow(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	if !hasText(tt, "Faster mirroring") || !hasText(tt, "November 7, 2026") {
-		t.Errorf("the release notes: %q", tt.Texts())
+	if !hasText(tt, "Faster mirroring") || !hasText(tt, feedDay) {
+		t.Errorf("the release notes: %q, want the day %q", tt.Texts(), feedDay)
 	}
 	if err := tt.Click("Close"); err != nil {
 		t.Fatal(err)
@@ -153,6 +160,40 @@ func TestUpdateCardThenUpdateNow(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "Restarting Pinky") {
 		t.Errorf("the card while restarting: %q", tt.Texts())
+	}
+}
+
+// TestUpdateReleaseDay: the release notes give a release the day its
+// version says, at midnight UTC as the changelog's days are, whatever the
+// clock says of the feed's time; a version that says no day keeps the
+// feed's time by the local clock.
+func TestUpdateReleaseDay(t *testing.T) {
+	morning := time.Date(2026, 11, 6, 23, 30, 0, 0, time.UTC) // 7:30 on 7 November in Shanghai
+	day := func(y int, m time.Month, d int) time.Time { return time.Date(y, m, d, 0, 0, 0, 0, time.UTC) }
+	for _, c := range []struct {
+		version string
+		want    time.Time
+	}{
+		{"2026.1107.2", day(2026, 11, 7)},
+		{"v2026.1107.2", day(2026, 11, 7)},
+		{"2027.105.1", day(2027, 1, 5)},
+		{"2026.1231.12", day(2026, 12, 31)},
+		{"2028.229.1", day(2028, 2, 29)},
+		// No day in them: the feed's time.
+		{"2027.229.1", morning.Local()},
+		{"2026.1301.1", morning.Local()},
+		{"2026.1100.1", morning.Local()},
+		{"2026.7.1", morning.Local()},
+		{"2026.1107", morning.Local()},
+		{"0.1.0", morning.Local()},
+		{update.DevVersion, morning.Local()},
+	} {
+		if got := releaseDay(c.version, morning); !got.Equal(c.want) || got.Location() != c.want.Location() {
+			t.Errorf("releaseDay(%q) = %v, want %v", c.version, got, c.want)
+		}
+	}
+	if got := releaseDay(update.DevVersion, time.Time{}); !got.IsZero() {
+		t.Errorf("releaseDay with neither a day nor a time = %v, want none", got)
 	}
 }
 
@@ -450,12 +491,12 @@ func TestCompanionUpdatesWhenThePhoneIsFree(t *testing.T) {
 	ut.updateTick(time.Now()) // looks the companion up
 	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionOutdated })
 	tt := mg.NewTester(ut.view, 1280, 820)
-	if !hasText(tt, "Update Pinky Companion") || !hasText(tt, "Pinky updates it by itself when the phone is free.") {
+	if !hasText(tt, "Update Pinky on the phone") || !hasText(tt, "Pinky updates it by itself when the phone is free.") {
 		t.Fatalf("the companion card: %q", tt.Texts())
 	}
 	ut.updateTick(time.Now())
 	tt.Frame()
-	if !hasText(tt, "Updating Pinky Companion") {
+	if !hasText(tt, "Updating Pinky on the phone") {
 		t.Errorf("the card while updating: %q", tt.Texts())
 	}
 	ut.waitFor(t, "the companion update", func() bool { return !ut.companionUpdating("pixel-9") })
@@ -466,10 +507,10 @@ func TestCompanionUpdatesWhenThePhoneIsFree(t *testing.T) {
 		t.Error("the automatic update went through the person's install")
 	}
 	tt.Frame()
-	if hasText(tt, "Update Pinky Companion") {
+	if hasText(tt, "Update Pinky on the phone") {
 		t.Errorf("the card stays: %q", tt.Texts())
 	}
-	if !hasText(tt, "Pinky Companion was updated") || !hasText(tt, "On Pixel 9") {
+	if !hasText(tt, "Pinky on the phone was updated") || !hasText(tt, "On Pixel 9") {
 		t.Errorf("no What's new for the companion: %q", tt.Texts())
 	}
 	st := ut.u.State()
@@ -485,6 +526,150 @@ func TestCompanionUpdatesWhenThePhoneIsFree(t *testing.T) {
 	}
 }
 
+// TestCompanionUpdateRefusedOverUSB: when a phone refuses the automatic
+// update over USB, Pinky stops trying that build by itself, the sidebar
+// says so, and the phone's card offers the person's Update and the APK to
+// install by hand.
+func TestCompanionUpdateRefusedOverUSB(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	const apk = `C:\Program Files\Pinky\pinky-android.apk`
+	ut.opt.CompanionAPK = func() (string, int, error) { return apk, 130, nil }
+	ut.api.SetCompanion("pixel-9", driver.CompanionOutdated)
+	ut.api.SetInstallError("pixel-9", errors.New("android: install pinky-android.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]"))
+	ut.waitFor(t, "Pixel 9", func() bool { return ut.device("pixel-9") != nil })
+	ut.updateTick(time.Now()) // looks the companion up
+	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionOutdated })
+	ut.updateTick(time.Now())
+	if !ut.companionUpdating("pixel-9") {
+		t.Fatal("no automatic update")
+	}
+	ut.waitFor(t, "the refusal", func() bool { return !ut.companionUpdating("pixel-9") })
+	if r := ut.comp.byHand["pixel-9"]; r != (update.CompanionByHand{Phone: "Pixel 9", Build: 130}) || ut.comp.apk != apk {
+		t.Fatalf("by hand %+v, APK %q", r, ut.comp.apk)
+	}
+	tt := mg.NewTester(ut.view, 1280, 820)
+	tt.Frame()
+	if !hasText(tt, locales.UpdateCompanionByHand()) || !hasText(tt, locales.CompanionShowAPK()) || hasText(tt, locales.UpdateCompanionAuto()) {
+		t.Errorf("the card: %q", tt.Texts())
+	}
+	if !hasText(tt, locales.UpdateCompanionByHandCard("Pixel 9")) {
+		t.Errorf("no sidebar card: %q", tt.Texts())
+	}
+	// Hours later Pinky still leaves it to the person.
+	ut.updateTick(time.Now().Add(7 * time.Hour))
+	if ut.companionUpdating("pixel-9") {
+		t.Error("Pinky tries again by itself")
+	}
+	// The person's Update fails the same way: its error says what to do,
+	// and the line above it goes.
+	if err := tt.Click(locales.CompanionUpdateLabel("Pixel 9")); err != nil {
+		t.Fatal(err)
+	}
+	ut.waitFor(t, "the person's update", func() bool { return ut.comp.installing["pixel-9"].IsZero() })
+	tt.Frame()
+	if !hasText(tt, locales.CompanionErrRestricted()) || hasText(tt, locales.UpdateCompanionByHand()) || !hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("the card after the person's update: %q", tt.Texts())
+	}
+	if hasText(tt, locales.UpdateCompanionByHandCard("Pixel 9")) {
+		t.Errorf("the sidebar tells again what the card just said: %q", tt.Texts())
+	}
+	// The person installs it by hand: once Pinky sees it, the next version
+	// gets its automatic update again.
+	ut.api.SetCompanion("pixel-9", driver.CompanionOn)
+	ut.comp.checked["pixel-9"] = time.Time{}
+	ut.updateTick(time.Now().Add(7 * time.Hour))
+	ut.waitFor(t, "the hand install", func() bool { _, ok := ut.comp.byHand["pixel-9"]; return !ok })
+	if r, ok := ut.u.State().CompanionByHand["pixel-9"]; ok {
+		t.Errorf("update.json keeps %+v", r)
+	}
+}
+
+// TestCompanionRefusedOncePerBuild: Pinky remembers across restarts which
+// companion build a phone refused over USB. It tells the person once, in
+// the sidebar, doesn't try that build again, and tries a newer build once.
+func TestCompanionRefusedOncePerBuild(t *testing.T) {
+	statePath := filepath.Join(t.TempDir(), "update.json")
+	const apk = "/Applications/Pinky.app/Contents/Resources/pinky-android.apk"
+	start := func(build int) *updateTest {
+		ut := newUpdateTest(t, fakeapi.Companion)
+		ut.u.StatePath = statePath // the same update.json at each start
+		ut.opt.CompanionAPK = func() (string, int, error) { return apk, build, nil }
+		ut.api.SetCompanion("pixel-9", driver.CompanionOutdated)
+		ut.api.SetInstallError("pixel-9", errors.New("android: install pinky-android.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]"))
+		ut.waitFor(t, "Pixel 9", func() bool { return ut.device("pixel-9") != nil })
+		return ut
+	}
+	// tried runs the minutes it takes to look up the companion and the
+	// APK, and reports whether Pinky tried to update the companion.
+	tried := func(ut *updateTest) bool {
+		for range 4 {
+			ut.updateTick(time.Now())
+			if ut.companionUpdating("pixel-9") {
+				ut.waitFor(t, "the refusal", func() bool { return !ut.companionUpdating("pixel-9") })
+				return true
+			}
+			ut.waitFor(t, "the lookups", func() bool { return !ut.comp.loading["pixel-9"] && !ut.comp.apkReading })
+		}
+		return false
+	}
+	card := locales.UpdateCompanionByHandCard("Pixel 9")
+	shows := func(ut *updateTest) bool {
+		tt := mg.NewTester(ut.view, 1280, 820)
+		tt.Frame()
+		return hasText(tt, card)
+	}
+
+	ut := start(130)
+	if !tried(ut) {
+		t.Fatal("no automatic update")
+	}
+	if r := ut.u.State().CompanionByHand["pixel-9"]; r != (update.CompanionByHand{Phone: "Pixel 9", Build: 130}) {
+		t.Fatalf("update.json has %+v", r)
+	}
+	if !shows(ut) {
+		t.Error("no sidebar card")
+	}
+
+	// Restarted, with the same build: no new try, and the card stays until
+	// the person closes it.
+	ut = start(130)
+	if tried(ut) {
+		t.Error("Pinky tries the refused build again after a restart")
+	}
+	tt := mg.NewTester(ut.view, 1280, 820)
+	tt.Frame()
+	if !hasText(tt, card) || !hasText(tt, locales.CompanionShowAPK()) || !hasText(tt, locales.CompanionByHandHow()) {
+		t.Fatalf("the sidebar after a restart: %q", tt.Texts())
+	}
+	if err := tt.Click(locales.UpdateCompanionByHandDismissLabel()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if hasText(tt, card) {
+		t.Error("the card stays after Dismiss")
+	}
+	ut = start(130)
+	if tried(ut) || shows(ut) {
+		t.Error("the dismissed build comes back after a restart")
+	}
+
+	// A Pinky update brings a newer build: one try, and its refusal one
+	// card.
+	ut = start(140)
+	if !tried(ut) {
+		t.Fatal("Pinky doesn't try the newer build")
+	}
+	if r := ut.u.State().CompanionByHand["pixel-9"]; r != (update.CompanionByHand{Phone: "Pixel 9", Build: 140}) {
+		t.Errorf("update.json has %+v", r)
+	}
+	if !shows(ut) {
+		t.Error("no sidebar card for the newer build")
+	}
+	if tried(ut) {
+		t.Error("Pinky tries the newer build twice")
+	}
+}
+
 func TestCompanionSignedWithThePublicKeyIsReplaced(t *testing.T) {
 	ut := newUpdateTest(t, fakeapi.Companion)
 	ut.api.SetCompanionSignedElsewhere("pixel-9")
@@ -495,7 +680,7 @@ func TestCompanionSignedWithThePublicKeyIsReplaced(t *testing.T) {
 	ut.waitFor(t, "the replacement", func() bool { return len(ut.api.CompanionUpdates()) == 1 && !ut.companionUpdating("pixel-9") })
 	tt := mg.NewTester(ut.view, 1280, 820)
 	tt.Frame()
-	if !hasText(tt, "Reinstalled Pinky Companion on Pixel 9 with Pinky's private signing key") {
+	if !hasText(tt, "Reinstalled Pinky on Pixel 9 with Pinky's private signing key") {
 		t.Errorf("no notice of the replacement: %q", tt.Texts())
 	}
 	if st := ut.u.State(); len(st.Changes) != 1 || st.Changes[0].Kind != "companion-replaced" {
@@ -535,8 +720,8 @@ func TestCompanionCardSaysWhyForThePublicKey(t *testing.T) {
 	tt := mg.NewTester(ut.view, 1280, 820)
 	tt.Frame()
 	for _, want := range []string{
-		"Update Pinky Companion",
-		"Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it.",
+		"Update Pinky on the phone",
+		"Pinky on this phone is signed with an old key that is public, so anyone could make a fake update of it.",
 		"The new version is signed with Pinky's private key: once you update, it is safe.",
 		"The phone asks before apps are installed over USB, so this update needs you.",
 	} {
@@ -547,12 +732,12 @@ func TestCompanionCardSaysWhyForThePublicKey(t *testing.T) {
 	if hasText(tt, "Updating keeps control fast and steady.") {
 		t.Errorf("the usual update text is there too: %q", tt.Texts())
 	}
-	if err := tt.Click("Update Pinky Companion on Pixel 9"); err != nil {
+	if err := tt.Click("Update Pinky on Pixel 9"); err != nil {
 		t.Fatal(err)
 	}
 	ut.waitFor(t, "the person's update", func() bool { tt.Frame(); return ut.comp.state["pixel-9"] == driver.CompanionReady })
 	tt.Frame()
-	if !hasText(tt, "Reinstalled Pinky Companion on Pixel 9 with Pinky's private signing key") {
+	if !hasText(tt, "Reinstalled Pinky on Pixel 9 with Pinky's private signing key") {
 		t.Errorf("no notice of the replacement: %q", tt.Texts())
 	}
 	if got := ut.api.Installs(); len(got) != 1 || got[0] != "pixel-9" {
@@ -564,7 +749,7 @@ func TestCompanionCardSaysWhyForThePublicKey(t *testing.T) {
 }
 
 func TestCompanionLineAndCheckupForThePublicKey(t *testing.T) {
-	if got := companionLine(driver.CompanionPublicKey); got != "Pinky Companion has a security update" {
+	if got := companionLine(driver.CompanionPublicKey); got != "Pinky on the phone has a security update" {
 		t.Errorf("companionLine = %q", got)
 	}
 	ta := newTestApp(t, fakeapi.Companion)
@@ -585,7 +770,7 @@ func TestCompanionLineAndCheckupForThePublicKey(t *testing.T) {
 	}
 	ta.page, ta.set.sec = pageSettings, secPhones
 	tt.Frame()
-	if !hasText(tt, "Pinky Companion has a security update") {
+	if !hasText(tt, "Pinky on the phone has a security update") {
 		t.Errorf("Settings › Phones: %q", tt.Texts())
 	}
 }

@@ -507,7 +507,7 @@ var (
 	reBlocked   = re(`^Blocked by “(.*?)”: (.*)$`)
 	reOutside   = re(`^Outside the scope: (.*)$`)
 	reFailed    = re(`^Failed: (.*)$`)
-	reConnected = re(`^Connected to (.*) for “(.*)”$`)
+	reConnected = re(`^Connected to (.*) for “(.*)”(, read only)?(, on the phone's own screen)?$`)
 	reFinished  = re(`^Finished: (.*)$`)
 	reWaited    = re(`^Waited for “(.*)”$`)
 	reAskedYou  = re(`^Asked you: (.*)$`)
@@ -534,6 +534,7 @@ var outcomes = map[string]func() string{
 	"done": locales.GwOutcomeDone, "failed": locales.GwOutcomeFailed, "partial": locales.GwOutcomePartial,
 	"cancelled": locales.GwOutcomeCancelled, "stopped": locales.GwOutcomeStopped, "expired": locales.GwOutcomeExpired,
 	"disconnected": locales.GwOutcomeDisconnected, "offline": locales.GwOutcomeOffline, "replaced": locales.GwOutcomeReplaced,
+	"paused": locales.GwOutcomePaused,
 }
 
 // stepText says a step's first line as the gateway wrote it.
@@ -587,7 +588,14 @@ func stepText(s string) string {
 		return locales.GwStepFailed(asked(m[1]))
 	}
 	if m := reConnected.FindStringSubmatch(s); m != nil {
-		return locales.GwStepConnected(m[1], m[2])
+		t := locales.GwStepConnected(m[1], m[2])
+		if m[3] != "" {
+			t = locales.GwStepConnectedReadOnly(t)
+		}
+		if m[4] != "" {
+			t = locales.GwStepConnectedOwnScreen(t)
+		}
+		return t
 	}
 	if m := reFinished.FindStringSubmatch(s); m != nil {
 		if f := outcomes[m[1]]; f != nil {
@@ -797,10 +805,11 @@ func approvalText(s string) string {
 		}
 		return locales.GwAskOpen(m[1])
 	}
-	// What describe says, capitalized, as a question: "Tapped at 540,1200?",
-	// and phone_device's "Set the appearance to dark; set …?".
+	// The action itself, when nothing more particular fits: "Tap at
+	// 540,1200?" (parseQuestion); and phone_device's "Set the appearance
+	// to dark; set …?".
 	if m := reQuestion.FindStringSubmatch(s); m != nil {
-		if a, ok := parseAction(m[1]); ok {
+		if a, ok := parseQuestion(m[1]); ok {
 			return locales.GwAskQuestion(a.ask())
 		}
 		if ask, ok := askSteps(m[1]); ok {
@@ -808,6 +817,29 @@ func approvalText(s string) string {
 		}
 	}
 	return s
+}
+
+// askedVerbs are the verbs of an approval title that asks for the action
+// itself ("Tap at 540,1200?", internal/gateway's question), each with
+// describe's past tense, which parseAction reads.
+var askedVerbs = map[string]string{
+	"Tap": "Tapped", "Long-press": "Long-pressed", "Type": "Typed", "Swipe": "Swiped",
+	"Zoom": "Zoomed", "Turn": "Turned", "Drag": "Dragged", "Press": "Pressed",
+}
+
+// parseQuestion reads an action as an approval's title asks for it,
+// without the question mark: in the imperative ("Tap at 540,1200", "Type
+// “hi” and submit"), or in describe's past tense ("Tapped at 540,1200"),
+// as earlier gateways asked and the approvals they stored still do.
+func parseQuestion(s string) (action, bool) {
+	verb, rest, _ := strings.Cut(s, " ")
+	if past, ok := askedVerbs[verb]; ok {
+		if typed, ok := strings.CutSuffix(rest, "” and submit"); ok && verb == "Type" {
+			rest = typed + "” and submitted"
+		}
+		s = strings.TrimSuffix(past+" "+rest, " ")
+	}
+	return parseAction(s)
 }
 
 // giveRecordings says the Recordings card's question, without its
@@ -834,6 +866,11 @@ func needTitle(n gateway.NeedView) string {
 			return locales.GwUnlockTitle(name)
 		}
 		return n.Title
+	case n.Kind == gateway.NeedSetup:
+		if name, ok := strings.CutPrefix(n.Title, "Enter the passcode on "); ok {
+			return locales.GwSetupPasscodeTitle(name)
+		}
+		return n.Title
 	case n.Kind == gateway.NeedHandoff, n.Rule == "Agent request":
 		return n.Title // the agent's own words
 	}
@@ -842,6 +879,7 @@ func needTitle(n gateway.NeedView) string {
 
 var (
 	reUnlockDetail = re(`^(.+) is waiting for the phone to unlock · (.*)$`)
+	reSetupDetail  = re(`^iOS asks for it on the phone before (?:Pinky on the iPhone|Pinky for iPhone|the WebDriverAgent helper) can control it, and stops asking after a while\. (.+) is waiting · (.*)$`)
 	reAgentWants   = re(`^(.+) wants to connect for “(.*)”\.(?: Allowing gives it (\S+) access\.)?$`)
 	reFilesDetail  = re(`^(.+) · into the phone's Pinky folder(: .*)?$`)
 	reSettingsBack = re(`^(.+) · Pinky puts it back when the task ends$`)
@@ -854,6 +892,9 @@ func needDetail(n gateway.NeedView) string {
 	}
 	if m := reUnlockDetail.FindStringSubmatch(n.Detail); m != nil && n.Kind == gateway.NeedUnlock {
 		return locales.GwUnlockDetail(m[1], m[2])
+	}
+	if m := reSetupDetail.FindStringSubmatch(n.Detail); m != nil && n.Kind == gateway.NeedSetup {
+		return locales.GwSetupPasscodeDetail(m[1], m[2])
 	}
 	if m := reAgentWants.FindStringSubmatch(n.Detail); m != nil && newAgentNeed(n) {
 		d := locales.GwAgentWants(m[1], m[2])
@@ -934,6 +975,8 @@ func statusLine(d gateway.DeviceView) string {
 	switch s {
 	case "Offline":
 		return locales.GwStatusOffline()
+	case "Paused":
+		return locales.GwStatusPaused()
 	case "Locked":
 		return locales.GwStatusLocked()
 	case "Idle":
@@ -942,6 +985,12 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusInControl()
 	case "Needs setup":
 		return locales.GwStatusNeedsSetup()
+	case "Camera or microphone in use":
+		return locales.GwStatusMediaInUse()
+	case "Busy · Pinky on the phone is running a task":
+		return locales.GwStatusBusyPhone()
+	case "Busy · Pinky on another computer is using it":
+		return locales.GwStatusBusyComputer()
 	case "Found on Wi-Fi":
 		return locales.GwStatusFoundOnWiFi()
 	case "Not the same phone":
@@ -958,6 +1007,10 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusMovingWiFi()
 	case "Moving to the cable":
 		return locales.GwStatusMovingCable()
+	case "Switching to Pinky on the iPhone", "Switching to Pinky for iPhone", "Switching to the helper":
+		return locales.GwStatusSwitchHelper()
+	case "Switching to CoreDevice":
+		return locales.GwStatusSwitchCoreDevice()
 	}
 	if m := reReconnecting.FindStringSubmatch(s); m != nil {
 		return locales.GwStatusReconnecting(m[1])

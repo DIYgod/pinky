@@ -123,7 +123,8 @@ func TestToolList(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_drag", "phone_key",
-		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_app", "phone_logs", "phone_device", "phone_request_approval", "phone_handoff"}
+		"phone_launch", "phone_apps", "phone_batch", "phone_read_list", "phone_wait_for", "phone_files", "phone_app",
+		"phone_logs", "phone_device", "phone_request_approval", "phone_handoff"}
 	got := map[string]*sdk.Tool{}
 	for _, tool := range res.Tools {
 		got[tool.Name] = tool
@@ -143,13 +144,37 @@ func TestToolList(t *testing.T) {
 			t.Fatalf("phone_key schema misses %s: %s", s, schema)
 		}
 	}
-	schema, _ = json.Marshal(got["phone_tap"].InputSchema)
-	if strings.Contains(string(schema), `"null"`) {
-		t.Fatalf("phone_tap schema advertises null types: %s", schema)
+	// Claude Code shows a property typed ["null", ...] with its
+	// description alone: agents then guessed phone_batch's step shape.
+	for _, name := range want {
+		if schema, _ := json.Marshal(got[name].InputSchema); strings.Contains(string(schema), `"null"`) {
+			t.Fatalf("%s schema advertises null types: %s", name, schema)
+		}
+	}
+	steps := got["phone_batch"].InputSchema.(map[string]any)["properties"].(map[string]any)["steps"].(map[string]any)
+	if steps["type"] != "array" || steps["items"].(map[string]any)["type"] != "object" {
+		t.Fatalf("phone_batch steps: %v", steps)
+	}
+	apps := got["phone_connect"].InputSchema.(map[string]any)["properties"].(map[string]any)["apps"].(map[string]any)
+	if apps["type"] != "array" || apps["items"].(map[string]any)["type"] != "string" {
+		t.Fatalf("phone_connect apps: %v", apps)
 	}
 	schema, _ = json.Marshal(got["phone_batch"].InputSchema)
 	if !strings.Contains(string(schema), `"maxItems":50`) || !strings.Contains(string(schema), `"launch"`) {
 		t.Fatalf("phone_batch schema: %s", schema)
+	}
+	schema, _ = json.Marshal(got["phone_read_list"].InputSchema)
+	for _, want := range []string{`"max_screens"`, `"scroll_area"`, `"continuation"`, `"auto"`, `"all"`, `45000`} {
+		if !strings.Contains(string(schema), want) {
+			t.Fatalf("phone_read_list schema misses %s: %s", want, schema)
+		}
+	}
+	if strings.Contains(string(schema), `"null"`) {
+		t.Fatalf("phone_read_list schema advertises null types: %s", schema)
+	}
+	annotations := got["phone_read_list"].Annotations
+	if annotations == nil || annotations.DestructiveHint == nil || *annotations.DestructiveHint {
+		t.Fatalf("phone_read_list should be non-destructive acting: %+v", annotations)
 	}
 	schema, _ = json.Marshal(got["phone_device"].InputSchema)
 	for _, s := range []string{`"reverse_landscape"`, `"dark"`, `"latitude"`, `"maximum":180`, `"all"`} {
@@ -171,7 +196,7 @@ func TestPhoneDevice(t *testing.T) {
 	c := h.connect(t, "claude-code")
 	c.call(t, "phone_connect", map[string]any{"task": "Test dark mode"})
 	text, isErr := c.call(t, "phone_device", nil)
-	if isErr || !strings.Contains(text, "\nrotation: portrait\nappearance: light\nlocation: none") {
+	if isErr || !strings.Contains(text, "\nphone: Pixel 9 · Android 16\nbattery: 82%, 30 °C\nstorage: 41.3 GB free of 128 GB\nrotation: portrait\nappearance: light\nlocation: none") {
 		t.Fatalf("read:\n%s", text)
 	}
 	// A real phone asks first.
@@ -322,6 +347,22 @@ func TestSessionCloseReleasesLease(t *testing.T) {
 	}
 }
 
+// A client on this computer that drops its session and starts a new one,
+// as Claude Desktop does after a call times out, carries on with its task.
+func TestNewSessionContinuesTask(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-ai")
+	if text, isErr := c.call(t, "phone_connect", map[string]any{"task": "Lunch"}); isErr {
+		t.Fatalf("connect:\n%s", text)
+	}
+	c.cs.Close()
+	<-c.done
+	again := h.connect(t, "claude-ai")
+	if text, isErr := again.call(t, "phone_key", map[string]any{"key": "home"}); isErr {
+		t.Fatalf("the new session did not continue the task:\n%s", text)
+	}
+}
+
 func TestBatchAndScreenshot(t *testing.T) {
 	h := newHarness(t)
 	c := h.connect(t, "claude-code")
@@ -349,6 +390,36 @@ func TestBatchAndScreenshot(t *testing.T) {
 	}
 }
 
+func TestReadListOverMCP(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-code")
+	c.call(t, "phone_connect", map[string]any{"task": "Read a cart"})
+	c.call(t, "phone_launch", map[string]any{"app": "Dinely"})
+	text, _ := c.call(t, "phone_tap", map[string]any{"ref": refOf(t, c.mustCall(t, "phone_observe", nil), "Orders")})
+	text, _ = c.call(t, "phone_tap", map[string]any{"ref": refOf(t, text, "Reorder · Chicken rice bowl")})
+	text, _ = c.call(t, "phone_tap", map[string]any{"ref": refOf(t, text, "Cart · 1")})
+	if !strings.Contains(text, `"Cart"`) {
+		t.Fatalf("cart screen:\n%s", text)
+	}
+	text = c.mustCall(t, "phone_observe", nil)
+	text, isErr := c.call(t, "phone_read_list", map[string]any{
+		"ref": refOf(t, text, "Cart"), "max_screens": 3, "ocr": "off",
+	})
+	if isErr || !strings.HasPrefix(text, "settled") || !strings.Contains(text, "pages: 3") ||
+		!strings.Contains(text, "stop: no_new_content") {
+		t.Fatalf("read list:\n%s", text)
+	}
+}
+
+func (c *client) mustCall(t *testing.T, tool string, args map[string]any) string {
+	t.Helper()
+	text, isErr := c.call(t, tool, args)
+	if isErr {
+		t.Fatalf("%s failed:\n%s", tool, text)
+	}
+	return text
+}
+
 func TestHandoffOverMCP(t *testing.T) {
 	h := newHarness(t)
 	c := h.connect(t, "claude-code")
@@ -372,7 +443,8 @@ func TestHandoffOverMCP(t *testing.T) {
 }
 
 func TestDisplayName(t *testing.T) {
-	for in, want := range map[string]string{"claude-code": "Claude Code", "codex-mcp-client": "Codex", "my-agent": "My Agent", "": "Agent"} {
+	for in, want := range map[string]string{"claude-code": "Claude Code", "codex-mcp-client": "Codex", "my-agent": "My Agent", "": "Agent",
+		"local-agent-mode-pinky": "Claude Cowork", "local-agent-mode-phone": "Claude Cowork"} {
 		if got := DisplayName(in, ""); got != want {
 			t.Errorf("DisplayName(%q) = %q, want %q", in, got, want)
 		}
@@ -393,6 +465,33 @@ func TestStatusLine(t *testing.T) {
 	}
 	if got := StatusLine(&gateway.Result{Status: gateway.StatusNeedsSetup, DeviceName: "iPhone 16", Setup: "trust"}); got != "device_needs_setup · iPhone 16 · setup: trust" {
 		t.Fatal(got)
+	}
+	if got := StatusLine(&gateway.Result{Status: gateway.StatusSettled, DeviceName: "iPhone", Scan: &gateway.ScanView{
+		Pages: 3, Stop: "max_screens",
+	}}); got != "settled · iPhone · pages: 3 · stop: max_screens · complete: false" {
+		t.Fatal(got)
+	}
+}
+
+func TestRenderReadList(t *testing.T) {
+	result := render(&gateway.Result{
+		Status: gateway.StatusSettled,
+		Scan: &gateway.ScanView{
+			Pages: 2, Stop: "end", Complete: true,
+			Sections: []gateway.ScanPage{
+				{Number: 1, Lines: []string{"first", "second"}},
+				{Number: 2, Lines: []string{"third"}},
+			},
+		},
+	})
+	if len(result.Content) != 1 {
+		t.Fatalf("content = %d", len(result.Content))
+	}
+	text := result.Content[0].(*sdk.TextContent).Text
+	for _, want := range []string{"pages: 2", "stop: end", "complete: true", "screen 1", "- first", "screen 2", "- third"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("result misses %q:\n%s", want, text)
+		}
 	}
 }
 

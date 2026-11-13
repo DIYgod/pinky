@@ -183,11 +183,11 @@ func (a *app) phoneWiFiRow(c *mg.Context, d gateway.DeviceView) {
 			}
 		}
 	}
-	mg.Column(c).Gap(4).Padding(6, 0, 0, 0).Children(func() {
-		mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+	groupRow(c, mg.Column(c).Gap(sp1).Justify(mg.Center), false).Children(func() {
+		mg.Row(c).Gap(sp4).AlignItems(mg.Center).Children(func() {
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-				mg.Text(c, locales.WiFiTitle()).FontSize(13.5).FontWeight(600)
-				mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.WiFiTitle()).FontWeight(fwMedium)
+				mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 			})
 			if s.busy[id] {
 				spinner(c)
@@ -196,7 +196,7 @@ func (a *app) phoneWiFiRow(c *mg.Context, d gateway.DeviceView) {
 			}
 		})
 		if msg := s.err[id]; msg != "" {
-			mg.Text(c, msg).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, msg).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 		}
 	})
 }
@@ -250,17 +250,17 @@ func (a *app) phoneWiFiDialog(c *mg.Context) {
 	p := pal(c)
 	addr := s.got[s.ask].Addr
 	title := locales.WiFiDialogTitle(s.askName)
-	mg.Modal(c.Key("wifi-dialog"), &s.askOpen, func() {
+	sheet(c.Key("wifi-dialog"), &s.askOpen, func() {
 		mg.Column(c).Width(480).Gap(14).Label(title).Children(func() {
-			mg.Text(c, title).FontSize(17).FontWeight(650).Role(mg.RoleHeading)
-			mg.Text(c, locales.WiFiDialogWhat(nonEmpty(addr, "Wi-Fi"))).FontSize(13.5).TextColor(p.ink2)
+			mg.Text(c, title).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
+			mg.Text(c, locales.WiFiDialogWhat(nonEmpty(addr, "Wi-Fi"))).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Column(c).Gap(6).Padding(10, 12).Radius(8).Background(p.amberTint).Border(1, p.amberLine).Children(func() {
 				mg.Row(c).Gap(8).AlignItems(mg.Start).Children(func() {
 					mg.Icon(c, icAlert).FontSize(15).TextColor(p.amberDot).Shrink(0)
-					mg.Text(c, locales.WiFiDialogRisk()).FontSize(13).Grow(1).MinWidth(0)
+					mg.Text(c, locales.WiFiDialogRisk()).FontSize(fsSmall).Grow(1).MinWidth(0)
 				})
 			})
-			mg.Text(c, locales.WiFiDialogUntil()).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, locales.WiFiDialogUntil()).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Row(c).Gap(8).Justify(mg.End).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.WiFiDialogCancel(), btnOpt{}).Clicked() {
 					s.askOpen = false

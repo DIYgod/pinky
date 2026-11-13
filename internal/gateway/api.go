@@ -8,6 +8,7 @@ import (
 	"image"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/approval"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -70,11 +71,26 @@ const (
 type DeviceView struct {
 	Info       driver.Info
 	Status     DeviceStatus
-	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Needs setup", "Offline"
+	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Needs setup", "Camera or microphone in use", "Offline"
 	TaskID     string // the running task, if any
+	// LeaseGen changes whenever an agent's task starts or ends on the
+	// phone, and LeaseEnded is when the last one ended (zero when none
+	// has).
+	LeaseGen   uint64
+	LeaseEnded time.Time
 	// Features says what the phone's driver offers, so the client shows
 	// only the controls that work. All false while the phone is offline.
 	Features Features
+	// Paused is set while the person paused Pinky's connection to the
+	// phone (Gateway.PauseDevice): it shows offline, with StatusLine
+	// "Paused", and Pinky does not open it until they resume it or plug
+	// it in again.
+	Paused bool
+	// Streaming is set while the phone sends its screen to Pinky right
+	// now: a mirror or a recording watches it, or the driver keeps
+	// capturing it (an iPhone's display stream, which iOS shows as screen
+	// sharing, stops a while after the last look or input).
+	Streaming bool
 }
 
 // Features are the optional driver capabilities the client has controls for.
@@ -84,6 +100,7 @@ type Features struct {
 	Files      bool // driver.Files: the phone's Pinky folder
 	Companion  bool // driver.CompanionInstaller: an Android companion app to install
 	Pinch      bool // driver.MultiToucher: the person pinches on the mirror (Touch2)
+	Rotate     bool // driver.Switcher, or the helper to move to (helperneed.go): the person turns the screen from the ⋯ menu (SetDeviceSwitch)
 }
 
 // TaskState is the state of an agent task.
@@ -144,12 +161,22 @@ const (
 	// Answer it with TakeOver and HandBack, or Decide (allow = hand back
 	// with the note, Deny = decline, TakeOver = take over).
 	NeedHandoff NeedKind = "handoff"
+	// NeedSetup: a task waits for the person to do a step on the phone
+	// itself before Pinky can go on, such as entering the iPhone's
+	// passcode before the WebDriverAgent helper starts. Pinky shows it by
+	// itself, whether or not the agent calls phone_handoff, and it goes
+	// once the phone is ready; there is nothing to answer.
+	NeedSetup NeedKind = "setup"
 )
 
 // NeedView is a Needs you card.
 type NeedView struct {
-	ID         string
-	Kind       NeedKind
+	ID   string
+	Kind NeedKind
+	// Approval is what an approval holds (an Ask action, an agent's first
+	// connection, phone_request_approval, a handoff); "" for the cards
+	// that are not approvals (unlocking, setup).
+	Approval   approval.Kind
 	DeviceID   string
 	DeviceName string
 	App        string // the app's display name
@@ -174,9 +201,11 @@ type NeedView struct {
 	// AlwaysAllow is set when the approval can be answered with
 	// AllowAlways: from then on, Rule (and the rules that asked with it)
 	// no longer asks about such steps in App, until the person takes it
-	// back in Settings. Unset for the agent's own questions, copying
-	// files, opening apps and links, and while every action asks; there
-	// AllowAlways counts as AllowTask.
+	// back in Settings; for changing the phone's settings or reading an
+	// app's logs, for this agent on this phone (Exemption.Agent). Unset for
+	// the agent's own questions, copying files, screen recordings, opening
+	// apps and links, and while every action asks; there AllowAlways
+	// counts as AllowTask.
 	AlwaysAllow bool
 	// AllowTask is set when the approval can be answered with AllowTask:
 	// for the rest of the task, Rule (and the rules that asked with it)

@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"image/jpeg"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -71,7 +72,10 @@ func settingsTree(t *testing.T) *wdaNode {
 }
 
 func TestWDAScreenElements(t *testing.T) {
-	els, kb := wdaScreenElements(settingsTree(t), 3, 1179, 2556, "com.apple.Preferences")
+	els, kb, kbFrame := wdaScreenElements(settingsTree(t), 3, 1179, 2556, "com.apple.Preferences")
+	if want := (screen.Rect{Y: 1749, W: 1179, H: 699}); kbFrame != want {
+		t.Errorf("keyboard frame %+v, want %+v", kbFrame, want)
+	}
 	if !kb {
 		t.Error("keyboard not seen")
 	}
@@ -164,6 +168,45 @@ func TestWDABind(t *testing.T) {
 	}
 }
 
+func TestWDAGone(t *testing.T) {
+	refused := func(context.Context, int) (net.Conn, error) { return nil, errors.New("connection was refused") }
+	// Starting: WDA not answering yet is no reason to drop the phone.
+	c := newWDADial(refused)
+	if _, err := c.status(context.Background()); err == nil || errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("before open: %v", err)
+	}
+	// A runner Pinky did not start: nothing listens on WDA's port any more.
+	d := &WDADevice{c: c}
+	c.gone = d.gone
+	if _, err := c.status(context.Background()); !errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("refused, runner not Pinky's: %v, want ErrOffline", err)
+	}
+	// A request that reached WDA and failed keeps the phone.
+	other := errors.New("WebDriverAgent /source: EOF")
+	if err := d.gone(other); errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("other error: %v", err)
+	}
+	// Pinky's runner, still running: a refused connection is only that.
+	d.run = &wdaRun{done: make(chan struct{})}
+	if _, err := c.status(context.Background()); err == nil || errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("refused, run going: %v, want an error that is not ErrOffline", err)
+	}
+	d.entry.DeviceID = 1 // a phone: the lock state comes from lockdown
+	d.lockdownFn = func(context.Context) (bool, error) { return false, nil }
+	if _, err := d.Locked(context.Background()); err != nil {
+		t.Fatalf("lock state, run going: %v", err)
+	}
+	// Its test ended: any failed request, and the lock state the gateway
+	// polls, which lockdown would still answer.
+	close(d.run.done)
+	if err := d.gone(other); !errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("run ended: %v, want ErrOffline", err)
+	}
+	if _, err := d.Locked(context.Background()); !errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("lock state, run ended: %v, want ErrOffline", err)
+	}
+}
+
 func TestPickWDARunner(t *testing.T) {
 	app := func(id, name string) installationproxy.AppInfo {
 		return installationproxy.AppInfo{"CFBundleIdentifier": id, "CFBundleName": name, "CFBundleExecutable": name}
@@ -180,6 +223,42 @@ func TestPickWDARunner(t *testing.T) {
 	}
 	if got := pickWDARunner([]installationproxy.AppInfo{app("com.facebook.WebDriverAgentRunner.xctrunner", "WebDriverAgentRunner-Runner")}); got != "com.facebook.WebDriverAgentRunner.xctrunner" {
 		t.Errorf("picked %q", got)
+	}
+	// Pinky's app hosting WDA wins over the helper the phone keeps.
+	host := installationproxy.AppInfo{"CFBundleIdentifier": "pinky.abcde12345", "CFBundleName": "Pinky",
+		"CFBundleExecutable": "Pinky", wdaHostKey: true}
+	plain := installationproxy.AppInfo{"CFBundleIdentifier": "pinky.abcde12345", "CFBundleName": "Pinky", "CFBundleExecutable": "Pinky"}
+	helper := app("pinky.abcde12345.WebDriverAgentRunner.xctrunner", "WebDriverAgentRunner-Runner")
+	for _, apps := range [][]installationproxy.AppInfo{{helper, host}, {host, helper}} {
+		if got := pickWDARunner(apps); got != "pinky.abcde12345" {
+			t.Errorf("picked %q, want Pinky's app hosting WDA", got)
+		}
+	}
+	if got := pickWDARunner([]installationproxy.AppInfo{plain, helper}); got != "pinky.abcde12345.WebDriverAgentRunner.xctrunner" {
+		t.Errorf("picked %q, want the helper: the app holds no WDA", got)
+	}
+}
+
+// TestPickHelperApp: an install replaces the helper, never Pinky's app
+// hosting WDA, which pickRunnerApp prefers; with only the app there it
+// keeps the app's team.
+func TestPickHelperApp(t *testing.T) {
+	host := installationproxy.AppInfo{"CFBundleIdentifier": "pinky.abcde12345.lite", "CFBundleName": "Pinky",
+		"CFBundleExecutable": "Pinky", wdaHostKey: true,
+		"Entitlements": map[string]any{"application-identifier": "ABCDE12345.pinky.abcde12345.lite"}}
+	helper := installationproxy.AppInfo{"CFBundleIdentifier": "com.example.wda.xctrunner",
+		"CFBundleName": "WebDriverAgentRunner-Runner", "CFBundleExecutable": "WebDriverAgentRunner-Runner"}
+	for _, apps := range [][]installationproxy.AppInfo{{host, helper}, {helper, host}} {
+		if got := pickHelperApp(apps); got.BundleID != "com.example.wda.xctrunner" {
+			t.Errorf("picked %q, want the helper", got.BundleID)
+		}
+	}
+	got := pickHelperApp([]installationproxy.AppInfo{host})
+	if got.BundleID != "" || appIDTeam(got.AppID) != "ABCDE12345" {
+		t.Errorf("only the app: got %+v, want no bundle id and the app's team", got)
+	}
+	if got := pickHelperApp(nil); got != (wdaRunner{}) {
+		t.Errorf("no apps: got %+v", got)
 	}
 }
 

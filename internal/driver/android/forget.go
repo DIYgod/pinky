@@ -38,11 +38,13 @@ func (p *Provider) Remember(id string) {
 	p.mu.Unlock()
 }
 
-// forgot reports whether the person removed the phone with this id.
+// forgot reports whether the person removed the phone with this id, or
+// paused it (pause.go): either way the driver does not connect to it by
+// itself.
 func (p *Provider) forgot(id string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return id != "" && p.forgotten[id]
+	return id != "" && (p.forgotten[id] || p.paused[id])
 }
 
 // Disconnect implements driver.Forgetter. It drops the phone's connections
@@ -56,6 +58,11 @@ func (p *Provider) forgot(id string) bool {
 func (p *Provider) Disconnect(ctx context.Context, id string) error {
 	if id == "" {
 		return nil
+	}
+	// The addresses it was last connected at over Wireless debugging go
+	// too: pairing it again keeps a new one.
+	if err := p.net.keepPaired(func(g string) bool { return guidSerial(g) != id }); err != nil {
+		p.cfg.logf("android: %s: forgetting its Wireless debugging address: %v", id, err)
 	}
 	if n, ok := p.net.get(id); ok {
 		if err := p.net.update(id, func(m *netPhone) { *m = netPhone{} }); err != nil {

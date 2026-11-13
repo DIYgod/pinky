@@ -2,6 +2,8 @@ package ios
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"net"
 	"net/netip"
 	"os"
@@ -9,6 +11,8 @@ import (
 	"runtime"
 	"sort"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver/ios/netmux"
 	goios "github.com/danielpaulus/go-ios/ios"
@@ -70,6 +74,15 @@ type muxState struct {
 	pairFn   func(udid string) (netmux.PairInfo, error)
 	probeFn  func(ctx context.Context, addr netip.Addr) bool
 	dir      string // where the socket goes instead of a new folder
+	pairs    string // where the pair records are instead of netmux.LockdownDir
+}
+
+// pairDir is where the system's usbmuxd keeps pair records.
+func (m *muxState) pairDir() string {
+	if m.pairs != "" {
+		return m.pairs
+	}
+	return netmux.LockdownDir
 }
 
 // wifiMux starts the usbmuxd of its own and the search when Pinky uses
@@ -135,6 +148,7 @@ func (p *Provider) startMuxLocked() {
 		if base == "" {
 			base = os.TempDir()
 		}
+		removeOldMuxDirs(base)
 		d, err := os.MkdirTemp(base, "pinky-usbmuxd-") // 0700: this user's only
 		if err != nil {
 			m.skipped = true
@@ -153,11 +167,36 @@ func (p *Provider) startMuxLocked() {
 	p.serveMuxLocked(upstream, l, "unix://"+path)
 }
 
+// removeOldMuxDirs removes the folders that earlier Pinkys left in base.
+// Nothing tells the provider that Pinky ends, so it cannot remove its own,
+// and every start left one more until the person logged out. A folder is
+// left over when nothing listens at its socket any more; one without a
+// socket may be a Pinky's that is starting right now, unless it is old.
+func removeOldMuxDirs(base string) {
+	dirs, _ := filepath.Glob(filepath.Join(base, "pinky-usbmuxd-*"))
+	for _, dir := range dirs {
+		fi, err := os.Lstat(dir)
+		if err != nil || !fi.IsDir() {
+			continue
+		}
+		c, err := net.DialTimeout("unix", filepath.Join(dir, "usbmuxd"), time.Second)
+		switch {
+		case err == nil:
+			c.Close() // another Pinky's, which runs
+		case errors.Is(err, syscall.ECONNREFUSED):
+			os.RemoveAll(dir)
+		case errors.Is(err, fs.ErrNotExist) && time.Since(fi.ModTime()) > time.Minute:
+			os.RemoveAll(dir)
+		}
+	}
+}
+
 // serveMuxLocked runs the usbmuxd of its own on l, in front of upstream,
 // and points go-ios at it (addr). The caller holds p.nmux.mu.
 func (p *Provider) serveMuxLocked(upstream string, l net.Listener, addr string) {
 	m := &p.nmux
 	m.mux = netmux.New(upstream, p.logger())
+	m.mux.PairDir = m.pairDir()
 	go m.mux.Serve(l)
 	os.Setenv("USBMUXD_SOCKET_ADDRESS", addr)
 	os.Setenv(ownMuxVar, addr) // so that the processes it starts forget it
@@ -180,7 +219,7 @@ func ownMuxOS() bool {
 // seen, but not those the person removed. Under Only, only those phones.
 func (p *Provider) pairedUDIDs() []string {
 	ids := map[string]bool{}
-	for _, id := range netmux.PairedUDIDs(netmux.LockdownDir) {
+	for _, id := range netmux.PairedUDIDs(p.nmux.pairDir()) {
 		ids[id] = true
 	}
 	p.mu.Lock()

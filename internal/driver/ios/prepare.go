@@ -86,6 +86,12 @@ type preparer struct {
 	jobs     map[string]*mountJob // by UDID
 	revealed map[string]entryKey  // the attach the Developer Mode switch was shown for
 	asked    map[string]time.Time // the last pairing request (Windows), by UDID
+	// A phone whose accepted pairing did not reach the record here: the host
+	// id it was stuck with, and the attach it was seen through. Pairing again
+	// would only make the phone ask to be trusted while that record stays. It
+	// leaves the state when the record's host id changes or the phone is
+	// plugged in again.
+	stuck map[string]recordStuck
 	// Images Apple's signing server refused, by refusalKey, kept in
 	// refusedFile in Pinky's folder for images; loaded from refusedIn.
 	refused   map[string]time.Time
@@ -96,6 +102,7 @@ type preparer struct {
 	mountFn  func(ctx context.Context, e goios.DeviceEntry, img diskImage) (mountResult, error)
 	revealFn func(e goios.DeviceEntry) error
 	pairFn   func(e goios.DeviceEntry) error
+	recordFn func(udid string) (goios.PairRecord, error)
 	now      func() time.Time
 }
 
@@ -474,18 +481,55 @@ func revealDevMode(e goios.DeviceEntry) error {
 // themselves when a phone is plugged in, and a second pairing there could
 // race theirs. At most every 4 s while the phone waits; a pairing that the
 // person accepted saves its record through usbmuxd, as Apple's tools do.
-func (pr *preparer) askTrust(e goios.DeviceEntry, log *slog.Logger) error {
-	pair := pr.pairFn
+//
+// lockErr is why lockdown refused the phone. A phone whose answer shows that
+// it does not take the record this computer sends it (staleRecord) is asked
+// to trust this computer again: tapping Trust heals nothing while the record
+// stays, and a pairing is what replaces it. Once a pairing comes back with
+// the record unchanged, askTrust stops pairing: pairing makes a new host id
+// every time and may ask the person to trust the computer again, while the
+// step says the record here needs an administrator. It starts pairing again
+// when the record's host id changes, or when the phone is plugged in again.
+// askTrust returns the error that still explains the refusal: lockErr when it
+// paired nothing, the pairing's own error when it failed, and a
+// recordStuckError while the record here cannot take a pairing.
+func (pr *preparer) askTrust(e goios.DeviceEntry, lockErr error, log *slog.Logger) error {
+	pair, record := pr.pairFn, pr.recordFn
 	if pair == nil {
 		if runtime.GOOS != "windows" {
-			return nil
+			return lockErr
 		}
-		if _, err := goios.ReadPairRecord(e.Properties.SerialNumber); err == nil {
-			return nil // paired; lockdown says why it still refuses
-		}
-		pair = goios.Pair
+		pair, record = goios.Pair, goios.ReadPairRecord
 	}
-	id := e.Properties.SerialNumber
+	id, attach := e.Properties.SerialNumber, keyOf(e)
+	pr.mu.Lock()
+	if pr.stuck == nil {
+		pr.stuck = map[string]recordStuck{}
+	}
+	stuck, wasStuck := pr.stuck[id]
+	if wasStuck && stuck.attach != attach {
+		// A new usbmuxd attach: the person may have repaired the record
+		// and plugged the phone in again.
+		delete(pr.stuck, id)
+		wasStuck = false
+	}
+	pr.mu.Unlock()
+	if wasStuck {
+		// A changed host id means Apple's device service replaced the
+		// record it could not write before. While it stays, say why and
+		// ask the phone to pair no more.
+		if hostID(record, id) != stuck.hostID {
+			pr.setStuck(id, attach, "", false)
+		} else {
+			return recordStuckError{udid: id}
+		}
+	}
+	if record != nil && !staleRecord(lockErr) {
+		if _, err := record(id); err == nil {
+			pr.setStuck(id, attach, "", false)
+			return lockErr // paired, and the phone takes the record; lockdown says why it still refuses
+		}
+	}
 	pr.mu.Lock()
 	if pr.asked == nil {
 		pr.asked = map[string]time.Time{}
@@ -493,18 +537,96 @@ func (pr *preparer) askTrust(e goios.DeviceEntry, log *slog.Logger) error {
 	t, asked := pr.asked[id]
 	if asked && pr.clock().Sub(t) < 4*time.Second {
 		pr.mu.Unlock()
-		return nil
+		return lockErr
 	}
 	pr.asked[id] = pr.clock()
 	pr.mu.Unlock()
 	if !asked {
 		logTo(log).Info("iphone: asking the iPhone to trust this computer", "device", id)
 	}
-	err := pair(e)
-	if err == nil {
-		logTo(log).Info("iphone: the iPhone trusts this computer", "device", id)
+	before := hostID(record, id)
+	if err := pair(e); err != nil {
+		return err
 	}
-	return err
+	logTo(log).Info("iphone: the iPhone trusts this computer", "device", id)
+	if before != "" && hostID(record, id) == before {
+		// A pairing is a new host id every time: the record this computer
+		// holds is the one from before, so Apple's device service did not
+		// take the pairing the phone accepted.
+		logTo(log).Warn("iphone: the pairing the iPhone accepted did not reach this computer's pairing record", "device", id)
+		pr.setStuck(id, attach, before, true)
+		return recordStuckError{udid: id}
+	}
+	pr.setStuck(id, attach, "", false)
+	return nil
+}
+
+// recordStuck is a phone whose accepted pairing did not reach the record
+// here, with the host id the record was stuck with and the attach it was
+// seen through.
+type recordStuck struct {
+	hostID string
+	attach entryKey
+}
+
+// setStuck remembers or forgets a phone whose record cannot take a pairing.
+func (pr *preparer) setStuck(id string, attach entryKey, hostID string, stuck bool) {
+	pr.mu.Lock()
+	defer pr.mu.Unlock()
+	if !stuck {
+		delete(pr.stuck, id)
+		return
+	}
+	if pr.stuck == nil {
+		pr.stuck = map[string]recordStuck{}
+	}
+	pr.stuck[id] = recordStuck{hostID: hostID, attach: attach}
+}
+
+// staleRecord says lockdown refused the phone because it does not take the
+// pairing record this computer sends it: the record another install of
+// Apple's software wrote, which Apple's device service could not replace.
+func staleRecord(err error) bool {
+	if err == nil {
+		return false
+	}
+	m := strings.ToLower(err.Error())
+	return strings.Contains(m, "invalidhostid") || strings.Contains(m, "invalid pair record") ||
+		strings.Contains(m, "invalidpairrecord")
+}
+
+// hostID is the host id of the pairing record this computer has for udid, and
+// "" when it has none or cannot read it. record may be nil, in a test.
+func hostID(record func(string) (goios.PairRecord, error), udid string) string {
+	if record == nil {
+		return ""
+	}
+	r, err := record(udid)
+	if err != nil {
+		return ""
+	}
+	return r.HostID
+}
+
+// recordStuckError is a phone that trusts this computer and whose new pairing
+// the pairing record here did not take. Apple's device service writes the
+// record, and it cannot replace one that another install of Apple's software
+// wrote, so the phone keeps refusing the record it holds however often the
+// person taps Trust (recordStuckDetail says how to let the service write it).
+type recordStuckError struct{ udid string }
+
+func (e recordStuckError) Error() string {
+	return "the iPhone trusts this computer, but Apple's device service could not replace its pairing record for " + e.udid
+}
+
+// recordStuckDetail says how to let Apple's device service replace the
+// pairing record: on Windows the record lives in ProgramData, where only an
+// administrator may give the service the right to replace it.
+func recordStuckDetail(udid string) string {
+	return "The iPhone trusts this computer, but Apple's device service could not replace this computer's " +
+		"pairing record, which was probably written by another install of Apple's software. " +
+		"Run this in PowerShell as an administrator, then unplug the iPhone and plug it in again:\n" +
+		driver.PairRecordFixCommand(udid)
 }
 
 // Sentences for the steps, in driver.Info.Detail.
@@ -522,7 +644,15 @@ func trustState(info driver.Info, err error) driver.Info {
 	info.State = driver.StateUnauthorized
 	info.Setup = driver.SetupTrust
 	info.Detail = trustDetail
-	if m := strings.ToLower(err.Error()); strings.Contains(m, "userdenied") {
+	if err == nil {
+		return info
+	}
+	var stuck recordStuckError
+	switch m := strings.ToLower(err.Error()); {
+	case errors.As(err, &stuck):
+		info.Setup = driver.SetupTrustRecord
+		info.Detail = recordStuckDetail(stuck.udid)
+	case strings.Contains(m, "userdenied"):
 		info.Detail = trustDeniedDetail
 	}
 	return info

@@ -6,22 +6,27 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	goios "github.com/danielpaulus/go-ios/ios"
+	"github.com/danielpaulus/go-ios/ios/appservice"
 	"github.com/danielpaulus/go-ios/ios/installationproxy"
 	"github.com/danielpaulus/go-ios/ios/testmanagerd"
 )
 
-// The WebDriverAgent runner is a UI test bundle inside an app whose bundle
-// id ends in ".xctrunner" (Xcode names it after the test target:
-// <prefix>.WebDriverAgentRunner.xctrunner). The person builds and installs
-// it once with their own signing team (see docs/notes/ios.md); Pinky finds
-// it on the phone and starts its test through testmanagerd, the way Xcode's
-// "Test" does, every time it opens the phone.
+// The WebDriverAgent runner is a UI test bundle inside an app: Pinky's
+// iPhone app, which desktop Pinky builds with the bundle in its PlugIns
+// (wdaHostKey), or a runner app whose bundle id ends in ".xctrunner"
+// (Xcode names it after the test target:
+// <prefix>.WebDriverAgentRunner.xctrunner), Pinky Helper among them. The
+// person installs it once with their own signing team (see
+// docs/notes/ios.md); Pinky finds it on the phone and starts its test
+// through testmanagerd, the way Xcode's "Test" does, every time it opens
+// the phone.
 
 // wdaTestBundle is the runner's test bundle.
 const wdaTestBundle = "WebDriverAgentRunner.xctest"
@@ -63,44 +68,110 @@ type wdaRunner struct {
 	// AppID is its application identifier, "<team>.<bundle id>", from
 	// the entitlements it was signed with; "" when unknown.
 	AppID string
+	// Path is the app's folder on the phone, where its processes run
+	// from; "" when unknown.
+	Path string
 }
 
 // findRunnerApp finds the WebDriverAgent runner installed on the phone;
 // its BundleID is "" when there is none.
 func findRunnerApp(e goios.DeviceEntry) (wdaRunner, error) {
-	conn, err := installationproxy.New(e)
+	apps, err := userApps(e)
 	if err != nil {
-		return wdaRunner{}, fmt.Errorf("installation proxy: %w", err)
-	}
-	defer conn.Close()
-	apps, err := conn.BrowseUserApps()
-	if err != nil {
-		return wdaRunner{}, fmt.Errorf("list apps: %w", err)
+		return wdaRunner{}, err
 	}
 	return pickRunnerApp(apps), nil
 }
 
-// pickWDARunner chooses the runner among the installed apps: a test runner
-// named after WebDriverAgent. Pinky's own build wins over others.
+// userApps lists the apps the person installed on the phone.
+func userApps(e goios.DeviceEntry) ([]installationproxy.AppInfo, error) {
+	conn, err := installationproxy.New(e)
+	if err != nil {
+		return nil, fmt.Errorf("installation proxy: %w", err)
+	}
+	defer conn.Close()
+	apps, err := conn.BrowseUserApps()
+	if err != nil {
+		return nil, fmt.Errorf("list apps: %w", err)
+	}
+	return apps, nil
+}
+
+// pickHelperApp is the helper among the installed apps, which an install
+// replaces: a runner as pickRunnerApp chooses one, but never Pinky's app
+// hosting WebDriverAgent, whose id a helper must not take. With only that app
+// there, the result names no bundle id but keeps the app's team, the one
+// to sign with.
+func pickHelperApp(apps []installationproxy.AppInfo) wdaRunner {
+	var helpers []installationproxy.AppInfo
+	for _, a := range apps {
+		if !wdaHost(a) {
+			helpers = append(helpers, a)
+		}
+	}
+	if h := pickRunnerApp(helpers); h.BundleID != "" {
+		return h
+	}
+	return wdaRunner{AppID: pickRunnerApp(apps).AppID}
+}
+
+// pickWDARunner chooses the runner among the installed apps: Pinky's
+// iPhone app hosting WebDriverAgent, or a test runner named after
+// WebDriverAgent. Pinky's own build wins over others.
 func pickWDARunner(apps []installationproxy.AppInfo) string { return pickRunnerApp(apps).BundleID }
 
+// wdaHostKey marks Pinky's iPhone app built with WebDriverAgent's test
+// bundle in its PlugIns (ios/build.sh, PINKY_WDA): the app hosts the test
+// as the runner would (docs/notes/iphone-app.md, "Hosting WebDriverAgent").
+const wdaHostKey = "PinkyWebDriverAgentHost"
+
+// wdaHost reports whether an installed app is Pinky's app hosting
+// WebDriverAgent.
+func wdaHost(a installationproxy.AppInfo) bool {
+	switch v := a[wdaHostKey].(type) {
+	case bool:
+		return v
+	case uint64:
+		return v != 0
+	case int64:
+		return v != 0
+	}
+	return false
+}
+
+// pickRunnerApp chooses as pickWDARunner does: Pinky's app hosting
+// WebDriverAgent first, then Pinky Helper, then another runner. A phone
+// keeps the helper it had when Pinky's app comes, and Pinky uses the app.
 func pickRunnerApp(apps []installationproxy.AppInfo) wdaRunner {
 	var best wdaRunner
+	rank := 0
 	for _, a := range apps {
 		id, _ := a["CFBundleIdentifier"].(string)
-		if !strings.HasSuffix(id, ".xctrunner") {
+		r := 0
+		switch {
+		case wdaHost(a):
+			r = 3
+		case !strings.HasSuffix(id, ".xctrunner"):
 			continue
-		}
-		name, _ := a["CFBundleName"].(string)
-		exe, _ := a["CFBundleExecutable"].(string)
-		if !strings.Contains(strings.ToLower(id+" "+name+" "+exe), "webdriveragentrunner") {
-			continue
-		}
-		if best.BundleID == "" || strings.Contains(strings.ToLower(id), "pinky") {
-			best = wdaRunner{BundleID: id}
-			if ent, ok := a["Entitlements"].(map[string]any); ok {
-				best.AppID, _ = ent["application-identifier"].(string)
+		default:
+			name, _ := a["CFBundleName"].(string)
+			exe, _ := a["CFBundleExecutable"].(string)
+			if !strings.Contains(strings.ToLower(id+" "+name+" "+exe), "webdriveragentrunner") {
+				continue
 			}
+			r = 1
+			if strings.Contains(strings.ToLower(id), "pinky") {
+				r = 2
+			}
+		}
+		if r < rank || r == rank && r != 2 {
+			continue
+		}
+		rank = r
+		best = wdaRunner{BundleID: id}
+		best.Path, _ = a["Path"].(string)
+		if ent, ok := a["Entitlements"].(map[string]any); ok {
+			best.AppID, _ = ent["application-identifier"].(string)
 		}
 	}
 	return best
@@ -115,18 +186,28 @@ type wdaRun struct {
 	done   chan struct{}
 	log    *runnerLog
 
+	// What stop needs to make sure the runner ended on the phone: the
+	// entry the run went through (the tunnel's), the phone's own entry
+	// to open another tunnel when that one is gone, and the runner app.
+	entry, base goios.DeviceEntry
+	app         wdaRunner
+	logger      *slog.Logger // what stop did; nil: nothing
+	ended       func()       // called once stop saw the runner gone; nil: none
+	stopOnce    sync.Once
+
 	mu  sync.Mutex
 	err error
 }
 
 // startWDA starts the runner's test, WDA listening on bind. entry must
 // reach the phone's testmanagerd: the plain usbmuxd entry below iOS 17, the
-// tunnel's entry from 17.4. The run lasts until stop, or until the test
-// ends on the phone (the person closed the runner, the phone locked for
-// long, a reboot).
-func startWDA(entry goios.DeviceEntry, bundleID, bind string) *wdaRun {
+// tunnel's entry from 17.4; base is the phone's usbmuxd entry. The run
+// lasts until stop, or until the test ends on the phone (the person closed
+// the runner, a reboot).
+func startWDA(entry, base goios.DeviceEntry, app wdaRunner, bind string) *wdaRun {
+	bundleID := app.BundleID
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}}
+	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}, entry: entry, base: base, app: app}
 	go func() {
 		defer close(r.done)
 		dir, err := os.MkdirTemp("", "pinky-wda-")
@@ -163,13 +244,141 @@ func (r *wdaRun) alive() (bool, error) {
 	}
 }
 
-// stop ends the run and waits a little for the phone to let go of it.
+// A runner left on the phone is the suspect when the phone stops locking
+// by itself (see "The helper's runner and auto-lock" in docs/notes/ios.md).
+// Ending the run does not make sure the runner ends: go-ios kills it
+// through appservice once its context is cancelled, but over Wi-Fi that
+// request can take longer than Pinky waited (requests took up to 25 s
+// there), the tunnel it goes through was closed right after, and a run
+// that ended with its connection (the phone left the network, the tunnel
+// failed) sends no kill at all. So stop also looks for the runner's
+// processes and kills them, through another tunnel when the run's is gone.
+
+// wdaStopWait is how long stop gives go-ios to end the run itself.
+const wdaStopWait = 5 * time.Second
+
+// wdaEndTimeout bounds making sure the runner ended.
+const wdaEndTimeout = 30 * time.Second
+
+// stop ends the run and the runner on the phone. It returns once the
+// runner is gone, or after wdaEndTimeout.
 func (r *wdaRun) stop() {
-	r.cancel()
-	select {
-	case <-r.done:
-	case <-time.After(5 * time.Second):
+	r.stopOnce.Do(func() {
+		r.cancel()
+		select {
+		case <-r.done:
+		case <-time.After(wdaStopWait):
+		}
+		if r.app.Path == "" {
+			return
+		}
+		if endHelper(r.entry, r.base, r.app.Path, r.logger) && r.ended != nil {
+			r.ended()
+		}
+	})
+}
+
+// endHelper makes sure the runner from the app at appPath is gone from
+// the phone, for up to wdaEndTimeout, logs what it did to logger, and
+// reports whether the runner is gone.
+func endHelper(entry, base goios.DeviceEntry, appPath string, logger *slog.Logger) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), wdaEndTimeout)
+	defer cancel()
+	killed, err := endRunner(ctx, entry, base, appPath)
+	lg := logTo(logger)
+	switch {
+	case err != nil:
+		lg.Warn("iphone: could not make sure WDA ended", "device", base.Properties.SerialNumber, "killed", killed, "err", err)
+	case killed > 0:
+		lg.Info("iphone: ended the WDA run left running", "device", base.Properties.SerialNumber, "killed", killed)
 	}
+	return err == nil
+}
+
+// runnerProcs lists and kills processes on a phone (appservice, iOS 17+).
+type runnerProcs interface {
+	ListProcesses() ([]appservice.Process, error)
+	KillProcess(pid int) error
+	Close() error
+}
+
+// Seams for tests.
+var (
+	openRunnerProcs = func(e goios.DeviceEntry) (runnerProcs, error) { return appservice.New(e) }
+	dialRunnerLink  = func(ctx context.Context, base goios.DeviceEntry) (goios.DeviceEntry, func(), error) {
+		l, err := dialLinkEntry(ctx, base)
+		if err != nil {
+			return goios.DeviceEntry{}, nil, err
+		}
+		return l.entry, func() { l.Close() }, nil
+	}
+	runnerRecheck = 300 * time.Millisecond
+)
+
+// endRunner kills every process running from the app at appPath and
+// returns once none is left, with how many it killed. It goes through
+// entry, or through a new tunnel from base when entry no longer reaches
+// the phone.
+func endRunner(ctx context.Context, entry, base goios.DeviceEntry, appPath string) (int, error) {
+	var pc runnerProcs
+	err := within(ctx, func() (err error) {
+		pc, err = openRunnerProcs(entry)
+		return err
+	})
+	if err != nil {
+		if base.Properties.SerialNumber == "" {
+			return 0, err
+		}
+		e, closeLink, lerr := dialRunnerLink(ctx, base)
+		if lerr != nil {
+			return 0, errors.Join(err, lerr)
+		}
+		defer closeLink()
+		if err = within(ctx, func() (err error) {
+			pc, err = openRunnerProcs(e)
+			return err
+		}); err != nil {
+			return 0, err
+		}
+	}
+	defer pc.Close()
+	killed := 0
+	for {
+		var list []appservice.Process
+		if err := within(ctx, func() (err error) {
+			list, err = pc.ListProcesses()
+			return err
+		}); err != nil {
+			return killed, fmt.Errorf("list processes: %w", err)
+		}
+		pids := runnerPids(list, appPath)
+		if len(pids) == 0 {
+			return killed, nil
+		}
+		for _, pid := range pids {
+			if within(ctx, func() error { return pc.KillProcess(pid) }) == nil {
+				killed++
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return killed, fmt.Errorf("WDA still runs: %w", ctx.Err())
+		case <-time.After(runnerRecheck):
+		}
+	}
+}
+
+// runnerPids picks the processes that run from the app at appPath.
+// appservice gives their executables as file URLs.
+func runnerPids(list []appservice.Process, appPath string) []int {
+	var pids []int
+	for _, p := range list {
+		exe := strings.TrimPrefix(p.Path, "file://")
+		if inBundle(exe, strings.TrimSuffix(appPath, "/")) {
+			pids = append(pids, p.Pid)
+		}
+	}
+	return pids
 }
 
 // asking reports whether the phone waits for its passcode to allow

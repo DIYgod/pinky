@@ -44,6 +44,10 @@ const (
 	StateScrollable = "scrollable"
 	StateEditable   = "editable"
 	StatePassword   = "password"
+	// StateNotInScreenshot marks an element the screenshot, and so the
+	// person watching in Pinky, does not show: the app draws it in a layer
+	// the system leaves out of screenshots and mirroring.
+	StateNotInScreenshot = "not_in_screenshot"
 )
 
 // Normalized roles. Drivers map platform classes onto these.
@@ -76,6 +80,12 @@ type Element struct {
 	Path string
 	// ID is the platform's resource id or accessibility identifier, if any.
 	ID string
+	// Content is, for a text field, the text typed into it as Label shows
+	// it: all of Label, or its end after ", " (iOS reads a field as its name
+	// and then its value). Empty when Label shows no typed text, as for an
+	// empty field that shows its hint. The policy judges what a field is by
+	// its name, not by what someone wrote in it. It is never shown to agents.
+	Content string
 	// Masked is set when Pinky masked a one-time code in Label (policy);
 	// pictures of the screen cover Bounds. It is never shown to agents.
 	Masked bool
@@ -187,10 +197,18 @@ type Screen struct {
 	App           App
 	Orientation   string // "portrait" or "landscape"
 	Keyboard      bool
-	Locked        bool
-	Elements      []Element
-	Events        []Event
-	CapturedAt    time.Time
+	// KeyboardFrame is where the on-screen keyboard lies, when Keyboard
+	// is set and the driver can tell; empty otherwise. Touches there go to
+	// the keyboard, not to the elements of the app under it.
+	KeyboardFrame Rect
+	// Covered lists other parts of the screen where system windows lie
+	// over the app and take touches, such as the status and navigation
+	// bars, when the driver can tell.
+	Covered    []Rect
+	Locked     bool
+	Elements   []Element
+	Events     []Event
+	CapturedAt time.Time
 }
 
 // Find returns the element with the given ref.

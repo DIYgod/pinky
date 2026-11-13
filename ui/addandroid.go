@@ -101,7 +101,7 @@ func (a *app) addAndroid(c *mg.Context) {
 	a.brandPicker(c, d)
 	// adb that does not work keeps any phone from showing up: say so first.
 	if h := a.androidHost(c); h.Missing != "" {
-		if words := hostWords(h.Missing); words != "" {
+		if words := hostWords(h.Missing, h.Detail); words != "" {
 			guideProblem(c, words, h.Detail)
 		}
 	}
@@ -173,7 +173,7 @@ func (a *app) brandPicker(c *mg.Context, d *gateway.DeviceView) {
 	p := pal(c)
 	st := &a.droid
 	mg.Column(c).Gap(8).Children(func() {
-		mg.Text(c, locales.AddAndroidBrandQuestion()).FontSize(13).FontWeight(600)
+		mg.Text(c, locales.AddAndroidBrandQuestion()).FontSize(fsSmall).FontWeight(fwSemibold)
 		mg.Row(c).Gap(6).Wrap().Role(mg.RoleRadioGroup).Label(locales.AddAndroidBrandQuestion()).Children(func() {
 			for _, b := range brands() {
 				opt := mg.RadioBase(c.Key(b.id), &st.brand, b.id).Padding(5, 11).Radius(14).AlignItems(mg.Center).Label(b.name())
@@ -186,7 +186,7 @@ func (a *app) brandPicker(c *mg.Context, d *gateway.DeviceView) {
 					border = p.ink3
 				}
 				opt.Border(1, border).Background(bg).Children(func() {
-					mg.Text(c, b.name()).FontSize(13).FontWeight(500).TextColor(ink)
+					mg.Text(c, b.name()).FontSize(fsSmall).FontWeight(fwMedium).TextColor(ink)
 				})
 			}
 		})
@@ -198,11 +198,11 @@ func (a *app) brandPicker(c *mg.Context, d *gateway.DeviceView) {
 				}
 				mg.Row(c).Gap(6).AlignItems(mg.Start).Children(func() {
 					mg.Icon(c, icCheck).FontSize(13).TextColor(p.green).Margin(2, 0, 0, 0)
-					mg.Text(c, msg).FontSize(12.5).TextColor(p.ink2).Grow(1).MinWidth(0)
+					mg.Text(c, msg).FontSize(fsSmall).TextColor(p.ink2).Grow(1).MinWidth(0)
 				})
 			}
 		}
-		mg.Text(c, locales.AddAndroidNamesDiffer()).FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, locales.AddAndroidNamesDiffer()).FontSize(fsCaption).TextColor(p.ink3)
 	})
 }
 
@@ -223,12 +223,12 @@ func switchList(c *mg.Context, sw []brandSwitch) {
 					if w.off {
 						name = locales.AddAndroidTurnOff(w.name)
 					}
-					mg.Text(c, name).FontSize(13.5).FontWeight(600)
+					mg.Text(c, name).FontSize(fsBody).FontWeight(fwSemibold)
 					if w.path != "" {
 						menuPath(c, w.path, "")
 					}
 					if w.why != "" {
-						mg.Text(c, w.why).FontSize(12.5).TextColor(p.ink2).LineHeight(1.4)
+						mg.Text(c, w.why).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
 					}
 				})
 			})
@@ -291,7 +291,7 @@ func allowSketch(c *mg.Context, always, allow string) {
 	p := pal(c)
 	mg.Column(c).Width(268).Padding(14, 16, 10, 16).Radius(16).Background(p.panel).Border(1, p.line2).Gap(8).Margin(2, 0, 2, 0).
 		Role(mg.RoleImage).Label(locales.AddAndroidSketchLabel()).Children(func() {
-		mg.Text(c, locales.AddAndroidSketchTitle()).FontSize(14).FontWeight(650)
+		mg.Text(c, locales.AddAndroidSketchTitle()).FontSize(fsBody).FontWeight(fwSemibold)
 		mg.Column(c).Gap(4).Children(func() {
 			mg.Box(c).Height(6).Width(212).Radius(3).Background(p.bg3)
 			mg.Box(c).Height(6).Width(150).Radius(3).Background(p.bg3)
@@ -300,12 +300,12 @@ func allowSketch(c *mg.Context, always, allow string) {
 			mg.Box(c).Size(15, 15).Radius(4).Background(p.accent).Center().Shrink(0).Children(func() {
 				mg.Icon(c, icCheck).FontSize(11).TextColor(p.white)
 			})
-			mg.Text(c, always).FontSize(12.5).Grow(1).MinWidth(0)
+			mg.Text(c, always).FontSize(fsSmall).Grow(1).MinWidth(0)
 		})
 		mg.Row(c).Gap(18).Justify(mg.End).AlignItems(mg.Center).Children(func() {
-			mg.Text(c, locales.AddAndroidSketchCancel()).FontSize(13).TextColor(p.ink3)
+			mg.Text(c, locales.AddAndroidSketchCancel()).FontSize(fsSmall).TextColor(p.ink3)
 			mg.Box(c).Padding(3, 10).Radius(8).Border(2, p.brand).Children(func() {
-				mg.Text(c, allow).FontSize(13).FontWeight(700).TextColor(p.accentInk)
+				mg.Text(c, allow).FontSize(fsSmall).FontWeight(fwBold).TextColor(p.accentInk)
 			})
 		})
 	})

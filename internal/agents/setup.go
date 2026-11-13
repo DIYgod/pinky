@@ -336,3 +336,44 @@ func (s *Setup) said(err error) error {
 	}
 	return &shownError{msg: s.tilde(err.Error()), err: err}
 }
+
+// RefreshSkills rewrites every copy of Pinky's skill that an older Pinky
+// installed with this Pinky's text, so agents read the guide of the Pinky
+// they start without the person connecting them again. It changes only
+// Pinky's own copies: a folder without one, or with someone else's
+// SKILL.md, stays as it is, and a folder several agents read is written
+// once. It returns the files it rewrote, and what went wrong with others.
+func (s *Setup) RefreshSkills(ctx context.Context) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.Skill == "" {
+		return nil, nil
+	}
+	var done []string
+	var errs []error
+	seen := map[string]bool{}
+	for _, a := range catalog {
+		if ctx.Err() != nil {
+			errs = append(errs, ctx.Err())
+			break
+		}
+		if a.skills == nil {
+			continue
+		}
+		dir := a.skills(s.Env)
+		if dir == "" || seen[dir] {
+			continue
+		}
+		seen[dir] = true
+		if readSkill(dir, s.Skill) != skillOld {
+			continue
+		}
+		file := skillFile(dir)
+		if err := writeFile(file, []byte(s.Skill)); err != nil {
+			errs = append(errs, s.said(err))
+			continue
+		}
+		done = append(done, file)
+	}
+	return done, errors.Join(errs...)
+}

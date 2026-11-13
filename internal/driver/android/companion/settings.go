@@ -7,11 +7,17 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/driver"
 )
 
 // settingKey is the only setting Pinky changes on a phone, and only its own
 // entry in it.
 const settingKey = "enabled_accessibility_services"
+
+// startWait is how long Enable and TurnOn wait for the service to answer;
+// tests shorten it.
+var startWait = 10 * time.Second
 
 // restoreState remembers the setting as Enable found it.
 type restoreState struct {
@@ -20,35 +26,54 @@ type restoreState struct {
 	list  []string // its components
 }
 
+// IgnoredDetail is the Detail of the error Enable and TurnOn return on a
+// phone that takes their change to enabled_accessibility_services without
+// an error and does not keep Pinky's entry: vivo's OriginOS 6 (issue #94).
+const IgnoredDetail = "the phone took the change to " + settingKey + " without an error but did not keep Pinky's entry in it, " +
+	"so it does not let Pinky turn the service on over USB debugging; the person can turn on Pinky in the phone's accessibility settings by hand"
+
+// settingIgnored is the error of Enable and TurnOn when the phone did not
+// keep their change.
+func settingIgnored() error {
+	return &driver.CompanionStartError{Reason: driver.CompanionStartSettingIgnored, Detail: IgnoredDetail}
+}
+
 // Enable turns the companion's accessibility service on for a task and
 // waits until it answers. It reads enabled_accessibility_services, adds
 // only Pinky's own service and keeps every other entry. If the service was
 // already on (the person enabled it, or an earlier run did not clean up),
 // the setting is left alone and Disable will not turn it off.
 //
-// If the service does not answer within 10 seconds, Enable restores the
-// setting itself and returns the error.
+// It reads the setting back after changing it: a phone that did not keep
+// Pinky's entry (vivo's OriginOS 6 takes the change without an error and
+// keeps nothing) fails at once with a *driver.CompanionStartError whose
+// Reason is driver.CompanionStartSettingIgnored. If the service does not
+// answer within 10 seconds, Enable restores the setting itself and
+// returns the error.
 func (c *Client) Enable(ctx context.Context) error {
 	c.setMu.Lock()
 	defer c.setMu.Unlock()
 	wrote := false
+	var err error
 	if c.restore == nil {
-		raw, unset, err := c.readSetting(ctx)
-		if err != nil {
-			return err
+		raw, unset, rerr := c.readSetting(ctx)
+		if rerr != nil {
+			return rerr
 		}
 		list := parseServices(raw)
 		if !slices.ContainsFunc(list, c.isOurs) {
 			st := &restoreState{raw: raw, unset: unset, list: list}
-			value := strings.Join(append(slices.Clone(list), c.app.Component()), ":")
-			if err := c.writeSetting(ctx, value, false); err != nil {
+			if err := c.writeSetting(ctx, c.withOurs(list), false); err != nil {
 				return err
 			}
 			c.restore = st
 			wrote = true
+			err = c.kept(ctx)
 		}
 	}
-	err := c.waitReady(ctx, 10*time.Second)
+	if err == nil {
+		err = c.waitReady(ctx, startWait)
+	}
 	if err != nil && wrote {
 		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
@@ -106,8 +131,9 @@ func (c *Client) restoreLocked(ctx context.Context) error {
 // client's Install button): it adds only Pinky's entry to
 // enabled_accessibility_services, keeps every other entry, waits until
 // the service answers, and stops the app's idle backstop (idle_disable_ms
-// 0), which would otherwise turn the service off after three minutes
-// without a connection. Unlike Enable, a later Disable leaves it on.
+// 0), which would otherwise turn the service off after a minute without a
+// connection. Unlike Enable, a later Disable leaves it on. Like Enable, it
+// fails at once on a phone that does not keep its change.
 func (c *Client) TurnOn(ctx context.Context) error {
 	if err := c.turnOn(ctx); err != nil {
 		return err
@@ -125,12 +151,35 @@ func (c *Client) turnOn(ctx context.Context) error {
 	}
 	list := parseServices(raw)
 	if !slices.ContainsFunc(list, c.isOurs) {
-		value := strings.Join(append(slices.Clone(list), c.app.Component()), ":")
-		if err := c.writeSetting(ctx, value, false); err != nil {
+		if err := c.writeSetting(ctx, c.withOurs(list), false); err != nil {
+			return err
+		}
+		if err := c.kept(ctx); err != nil {
 			return err
 		}
 	}
-	return c.waitReady(ctx, 10*time.Second)
+	return c.waitReady(ctx, startWait)
+}
+
+// withOurs is the setting's value for list with Pinky's entry added.
+func (c *Client) withOurs(list []string) string {
+	return strings.Join(append(slices.Clone(list), c.app.Component()), ":")
+}
+
+// kept reads the setting back after Pinky added its entry, and returns
+// settingIgnored when the entry is not there: some phones take the change
+// without an error and keep nothing of it (vivo's OriginOS 6, issue #94),
+// and waiting for a service that cannot come on would only end in a
+// timeout and a probe that blames the service.
+func (c *Client) kept(ctx context.Context) error {
+	raw, _, err := c.readSetting(ctx)
+	if err != nil {
+		return err
+	}
+	if !slices.ContainsFunc(parseServices(raw), c.isOurs) {
+		return settingIgnored()
+	}
+	return nil
 }
 
 // KeepEnabled makes Disable leave the service on: another client turned
@@ -206,12 +255,15 @@ func (c *Client) writeSetting(ctx context.Context, value string, unset bool) err
 }
 
 // waitReady pings until the service answers. Android binds the service a
-// moment after the setting changes.
+// moment after the setting changes. When it has not answered after max,
+// the error is a *driver.CompanionStartError that says what the phone
+// shows; it does not wrap context.DeadlineExceeded, which callers take for
+// their own time running out.
 func (c *Client) waitReady(ctx context.Context, max time.Duration) error {
-	ctx, cancel := context.WithTimeout(ctx, max)
+	wctx, cancel := context.WithTimeout(ctx, max)
 	defer cancel()
 	for {
-		pctx, pcancel := context.WithTimeout(ctx, 2*time.Second)
+		pctx, pcancel := context.WithTimeout(wctx, 2*time.Second)
 		_, err := c.Ping(pctx)
 		pcancel()
 		if err == nil {
@@ -221,8 +273,11 @@ func (c *Client) waitReady(ctx context.Context, max time.Duration) error {
 			return err
 		}
 		select {
-		case <-ctx.Done():
-			return fmt.Errorf("companion did not start within %s: %w", max, err)
+		case <-wctx.Done():
+			if ctx.Err() != nil {
+				return fmt.Errorf("companion did not start: %w", ctx.Err())
+			}
+			return c.startError(ctx, max)
 		case <-time.After(150 * time.Millisecond):
 		}
 	}

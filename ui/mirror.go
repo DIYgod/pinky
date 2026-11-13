@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -28,13 +29,15 @@ import (
 type mirror struct {
 	a       *app
 	id      string
-	agent   bool // the display an agent works on in the background, which takes no input
+	agent   bool   // the display an agent works on in the background, which takes no input
+	task    string // an agent's display: the task it belongs to
+	ownTask string // an agent's display: a task on the phone's own screen (gateway.ErrOwnScreen), not asked for again
 	gen     int
 	cancel  context.CancelFunc
 	player  *video.Player
 	bitmap  *mg.Bitmap
 	frame   *video.Frame // the picture the bitmap shows
-	state   string       // "connecting", "playing", "failed"
+	state   string       // "connecting", "playing", "failed", "still" (held: no stream, the last picture kept)
 	opening bool         // a try to open the stream is under way
 	err     error
 	retry   time.Time
@@ -46,8 +49,11 @@ type mirror struct {
 	// then has the player's next picture wake the windows (wake). The
 	// player hands over no picture the same as the one before, so the
 	// pictures a phone goes on sending after its screen stops wake nothing.
-	shownAt time.Time // the frame that took the last new picture (Painter.Now)
-	asleep  atomic.Bool
+	shownAt  time.Time // the frame that took the last new picture (Painter.Now)
+	openedAt time.Time // when the stream was last opened
+	firstAt  time.Time // when this stream's first picture came, zero before it
+	holdDue  bool      // a build is asked for once the picture may be held (stillFor)
+	asleep   atomic.Bool
 
 	picW, picH int     // the stream's picture size the right way up: the device's pixels
 	turn       int     // quarter turns clockwise that put the picture upright (driver.Packet.Turn)
@@ -59,11 +65,15 @@ type mirror struct {
 	scrollAt  screen.Point // where its finger started
 	scrollPos [2]float64   // where its finger is
 	scrollSeq int
+	wheel     *wheelGlide  // a mouse wheel's notches gliding the finger (mirrorwheel.go)
+	wheelSent [2]float64   // how far the finger has moved along wheel
+	wheelTick bool         // wheel's finger is gliding, a tick to come
 	pinch     *mirrorPinch // two fingers are down (mirrorpinch.go)
 	compose   string       // an input method's composition
 }
 
-// mirrorFor returns the phone's mirror, opening its stream if needed.
+// mirrorFor returns the phone's mirror, opening its stream if needed: a
+// still opens it again, showing its picture until the stream's first.
 func (a *app) mirrorFor(id string) *mirror {
 	m := a.mirrors[id]
 	if m == nil {
@@ -72,19 +82,79 @@ func (a *app) mirrorFor(id string) *mirror {
 		m.open()
 	}
 	m.used = a.buildSeq
+	if m.state == "still" {
+		m.open()
+	}
 	if m.state == "failed" && !m.opening && time.Now().After(m.retry) && a.videoErr == nil {
 		m.open()
 	}
 	return m
 }
 
-// sweepMirrors closes the mirrors this build did not show.
+// stillAfter is how long a tile that shows a still waits after its
+// stream's first picture before it lets the stream go: a screen that was
+// changing as the stream opened settles meanwhile.
+const stillAfter = time.Second
+
+// stillGiveUp is how long a tile that holds a picture waits for its
+// reopened stream's first before it keeps the picture it has.
+const stillGiveUp = 10 * time.Second
+
+// stillFor returns the phone's mirror for a tile that shows the phone's
+// last picture rather than its live screen (tileStill): a mirror that
+// already has a picture holds it and lets its stream go; one without opens
+// its stream for a picture first. A stream nobody watches lets an iPhone
+// stop its display stream, and with it screen sharing, and lock.
+func (a *app) stillFor(id string) *mirror {
+	if m := a.mirrors[id]; m != nil && m.state == "still" {
+		m.used = a.buildSeq
+		return m
+	}
+	m := a.mirrorFor(id)
+	if m.bitmap == nil {
+		return m
+	}
+	// A still opened again (its page, a task) whose stream fails or sends
+	// no new picture keeps the one it has.
+	since, wait := m.firstAt, stillAfter
+	if since.IsZero() {
+		since, wait = m.openedAt, stillGiveUp
+	}
+	if wait -= time.Since(since); wait > 0 && m.state != "failed" {
+		if !m.holdDue {
+			m.holdDue = true
+			gen := m.gen
+			time.AfterFunc(wait, func() {
+				a.post(func() {
+					if m.gen == gen {
+						m.holdDue = false
+					}
+				})
+			})
+		}
+		return m
+	}
+	m.hold()
+	return m
+}
+
+// sweepMirrors lets go of the mirrors this build did not show. A phone's
+// own mirror that has a picture holds it, so that All phones shows it
+// again without opening the stream for it; agents' displays, and phones
+// gone or offline, close.
 func (a *app) sweepMirrors() {
 	for id, m := range a.mirrors {
-		if m.used != a.buildSeq {
-			m.close()
-			delete(a.mirrors, id)
+		if m.used == a.buildSeq {
+			continue
 		}
+		if d := a.device(m.id); !m.agent && m.bitmap != nil && d != nil && d.Info.State == driver.StateOnline && d.Status != gateway.DeviceOffline {
+			if m.state != "still" {
+				m.hold()
+			}
+			continue
+		}
+		m.close()
+		delete(a.mirrors, id)
 	}
 }
 
@@ -119,9 +189,15 @@ func (m *mirror) open() {
 		m.state, m.err = "connecting", nil
 	}
 	m.opening = true
-	a := m.a
+	m.openedAt, m.firstAt, m.holdDue = time.Now(), time.Time{}, false
+	a, task := m.a, m.task
 	go func() {
 		logf("pinky: mirror %s: opening the stream (gen %d, agent %v)", m.id, gen, m.agent)
+		if m.agent {
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: opening the stream", m.id), "agent", true)
+		} else {
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: opening the stream", m.id))
+		}
 		var s driver.Stream
 		var err error
 		if m.agent {
@@ -140,7 +216,13 @@ func (m *mirror) open() {
 				s.Close()
 			}
 		}
-		logf("pinky: mirror %s: stream opened (gen %d): %v", m.id, gen, err)
+		if err != nil {
+			logf("pinky: mirror %s: could not open the stream (gen %d): %v", m.id, gen, err)
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: could not open the stream", m.id), "err", err)
+		} else {
+			logf("pinky: mirror %s: stream opened (gen %d)", m.id, gen)
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: stream opened", m.id))
+		}
 		a.post(func() {
 			logf("pinky: mirror %s: posted (gen %d, closed %v, current gen %d)", m.id, gen, m.closed, m.gen)
 			if m.closed || m.gen != gen {
@@ -151,13 +233,21 @@ func (m *mirror) open() {
 			}
 			m.opening = false
 			if err != nil {
+				const wait = 3 * time.Second
 				m.state, m.err = "failed", err
-				m.retry = time.Now().Add(3 * time.Second)
+				m.retry = time.Now().Add(wait)
 				if errors.Is(err, video.ErrNotFound) {
 					a.videoErr = err
+					m.logFailed(err, 0) // no retry: the decoder is missing
+					return
+				}
+				if m.agent && errors.Is(err, gateway.ErrOwnScreen) {
+					m.ownTask = task
+					m.logFailed(err, 0) // no retry during this task (agentMirrorFor)
 					return
 				}
 				m.retryLater()
+				m.logFailed(err, wait)
 				return
 			}
 			m.player, m.state = p, "playing"
@@ -165,14 +255,34 @@ func (m *mirror) open() {
 				<-p.Done()
 				a.post(func() {
 					if m.player == p && !m.closed {
-						m.state, m.err = "failed", p.Err()
-						m.retry = time.Now().Add(2 * time.Second)
-						m.retryLater()
+						m.ended(p.Err())
 					}
 				})
 			}()
 		})
 	}()
+}
+
+// ended records that the mirror's stream ended after it played, and writes
+// it to the log: the mirror tries again in two seconds.
+func (m *mirror) ended(err error) {
+	const wait = 2 * time.Second
+	m.state, m.err = "failed", err
+	m.retry = time.Now().Add(wait)
+	m.logFailed(err, wait)
+	m.retryLater()
+}
+
+// logFailed writes that the mirror's stream failed, with the error and how
+// long the mirror waits before it tries again: the line that shows an
+// unstable picture in the person's log. No wait means the mirror will not
+// try again.
+func (m *mirror) logFailed(err error, wait time.Duration) {
+	args := []any{"err", err}
+	if wait > 0 {
+		args = append(args, "retry_in", wait)
+	}
+	m.a.logInfo(fmt.Sprintf("pinky: mirror %s: stream failed", m.id), args...)
 }
 
 // retryLater opens the stream again once its retry is due, whether or not
@@ -221,8 +331,27 @@ func (m *mirror) wake() {
 	}
 }
 
+// hold lets the mirror's stream go and keeps its picture: a still, until
+// mirrorFor opens the stream again. A stream still opening is dropped.
+func (m *mirror) hold() {
+	logf("pinky: mirror %s: holding its picture", m.id)
+	m.a.logInfo(fmt.Sprintf("pinky: mirror %s: holding its picture", m.id))
+	m.gen++
+	if m.cancel != nil {
+		m.cancel()
+		m.cancel = nil
+	}
+	if p := m.player; p != nil {
+		m.player = nil
+		go p.Close()
+	}
+	m.state, m.err, m.opening, m.holdDue = "still", nil, false, false
+	m.asleep.Store(false)
+}
+
 func (m *mirror) close() {
 	logf("pinky: mirror %s: closed", m.id)
+	m.a.logInfo(fmt.Sprintf("pinky: mirror %s: closed", m.id))
 	m.closed = true
 	if m.cancel != nil {
 		m.cancel()
@@ -344,6 +473,10 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 	// person uses the phone's screen.
 	locked := a.isLocked(d) && !m.agent
 	step, kind, outline := overlayStep(t)
+	var way shotMarks
+	if outline && kind == stepWait {
+		way = a.waitingWay(t, step)
+	}
 	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
 	switch {
 	case m.agent:
@@ -361,6 +494,12 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 					// The view was built before the first picture, with
 					// the Connecting overlay; painting does not build it
 					// again, and a still screen sends nothing else.
+					a.post(func() {})
+				}
+				if m.firstAt.IsZero() {
+					// A tile waiting to hold its picture (stillFor) waits
+					// from now.
+					m.firstAt, m.holdDue = time.Now(), false
 					a.post(func() {})
 				}
 				m.bitmap = showPlanes(m.bitmap, f.YUV)
@@ -384,7 +523,9 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 				pt.AnimationFrameRate(60)
 			}
 		}
-		if m.bitmap != nil && m.state == "playing" {
+		// A still, or a still opening its stream again, shows the picture
+		// it holds.
+		if m.bitmap != nil && (m.state == "playing" || m.state == "still" || m.state == "connecting") {
 			pt.Clip(r, radius, func() { drawTurned(pt, m.bitmap, r, m.turn) })
 		}
 		if outline && !locked && m.picW > 0 {
@@ -392,7 +533,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			// an iPhone differ from the picture's by about 1%, so an
 			// outline at the edge may reach a little past it.
 			pt.Clip(r, radius, func() {
-				drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
+				drawOverlay(pt, r, p, step, kind, way, float32(m.picW), float32(m.picH), tile)
 			})
 		}
 		if !tile {
@@ -425,20 +566,20 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 				if tile {
 					label = locales.MirrorLockedTile()
 				}
-				mg.Text(c, label).FontSize(14).FontWeight(600).NoWrap()
+				mg.Text(c, label).FontSize(fsBody).FontWeight(fwSemibold).NoWrap()
 			})
-		case m.state == "connecting" || (m.state == "playing" && m.bitmap == nil):
+		case (m.state == "connecting" || m.state == "playing") && m.bitmap == nil:
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(10).PassThrough().Children(func() {
 				spinner(c)
 				if !tile {
-					mg.Text(c, locales.MirrorConnecting()).FontSize(13).TextColor(hex("#a3a3ad"))
+					mg.Text(c, locales.MirrorConnecting()).FontSize(fsSmall).TextColor(hex("#a3a3ad"))
 				}
 			})
 		case m.state == "failed":
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(8).Padding(20).PassThrough().Children(func() {
 				mg.Icon(c, icAlert).FontSize(22).TextColor(hex("#f7a74e"))
 				if !tile {
-					mg.Text(c, mirrorError(m.err)).FontSize(12.5).TextColor(hex("#d0d0d8")).TextAlign(mg.Center).MaxWidth(240)
+					mg.Text(c, mirrorError(m.err)).FontSize(fsSmall).TextColor(hex("#d0d0d8")).TextAlign(mg.Center).MaxWidth(240)
 				}
 			})
 		}
@@ -470,9 +611,27 @@ func mirrorError(err error) string {
 	return locales.MirrorNoPicture(msg)
 }
 
+// waitingWay is how the finger of the step that waits for the person
+// would move (a swipe's, a drag's or a pinch's way), from the step's
+// approval: the step itself keeps only its target and first point. It is
+// empty for other steps.
+func (a *app) waitingWay(t *gateway.TaskView, s gateway.StepView) shotMarks {
+	for _, n := range a.needs {
+		if n.Kind != gateway.NeedApproval || n.TaskID != t.ID || !(n.Created.Equal(s.At) || n.Target == s.Target) {
+			continue
+		}
+		if m := marksOf(n); m.swipe() {
+			return m
+		}
+	}
+	return shotMarks{}
+}
+
 // drawOverlay outlines the step's target and, while the agent touches,
-// draws the touch with two ripples, as the prototype does.
-func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind stepKind, pw, ph float32, tile bool) {
+// draws the touch with two ripples, as the prototype does. A step that
+// waits for the person to allow a swipe, a drag or a pinch also shows the
+// finger's way (way), as its approval card does.
+func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind stepKind, way shotMarks, pw, ph float32, tile bool) {
 	sx, sy := r.W/pw, r.H/ph
 	if !s.Target.Empty() {
 		box := mg.Rect{
@@ -484,6 +643,18 @@ func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind
 			width = 1.5
 		}
 		pt.Stroke(box, p.ovl, min(16, box.H/2), width)
+	}
+	if way.swipe() {
+		at := func(q screen.Point) mg.Point { return mg.Point{X: r.X + float32(q.X)*sx, Y: r.Y + float32(q.Y)*sy} }
+		var route []mg.Point
+		for _, q := range way.route() {
+			route = append(route, at(q))
+		}
+		halo := mg.RGBA(255, 255, 255, 0.92)
+		drawArrow(pt, route, tile, p.ovl, halo)
+		if way.pinch() {
+			drawArrow(pt, []mg.Point{at(way.point2), at(way.to2)}, tile, p.ovl, halo)
+		}
 	}
 	if kind != stepNow || s.Point == (screen.Point{}) {
 		return
@@ -536,7 +707,8 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 	liftScroll := func() {
 		if m.scrolling {
 			m.scrolling = false
-			touch(driver.TouchUp, screen.Point{X: clampInt(int(m.scrollPos[0]), 0, m.picW-1), Y: clampInt(int(m.scrollPos[1]), 0, m.picH-1)})
+			m.wheel, m.wheelTick = nil, false
+			touch(driver.TouchUp, m.scrollPoint())
 		}
 	}
 	switch ev.Kind {
@@ -645,32 +817,25 @@ func (m *mirror) toDevice(x, y float32) screen.Point {
 
 // mirrorScroll turns a wheel or touchpad scroll into a finger dragging the
 // content: down where the pointer is, moving against the scroll, and up
-// once the scrolling stops.
+// once the scrolling stops. A touchpad's scroll moves the finger as it
+// comes, and its momentum keeps it moving; a mouse wheel's notches glide
+// it (mirrorWheel).
 func (a *app) mirrorScroll(m *mirror, id string, ev mg.InputEvent, toDevice func(x, y float32) screen.Point, touch func(driver.TouchAction, screen.Point)) {
+	if !ev.Precise {
+		a.mirrorWheel(m, ev, toDevice, touch)
+		return
+	}
 	sx := float64(m.picW) / float64(m.boxW)
 	sy := float64(m.picH) / float64(m.boxH)
-	dx, dy := -float64(ev.DX)*sx, -float64(ev.DY)*sy
-	if !ev.Precise {
-		dx, dy = dx*2.5, dy*2.5 // a wheel's notch moves the content further than a touchpad's pixels
+	if m.wheel != nil {
+		// A touchpad after a wheel: the finger goes on from where the
+		// wheel's notches put it.
+		off, _ := m.wheel.at(time.Now().Add(time.Hour))
+		m.wheelMove(off, touch)
+		m.wheel, m.wheelTick = nil, false
 	}
-	if !m.scrolling {
-		m.scrolling = true
-		m.scrollAt = toDevice(ev.X, ev.Y)
-		m.scrollPos = [2]float64{float64(m.scrollAt.X), float64(m.scrollAt.Y)}
-		touch(driver.TouchDown, m.scrollAt)
-	}
-	nx, ny := m.scrollPos[0]+dx, m.scrollPos[1]+dy
-	out := nx < 0 || ny < 0 || nx >= float64(m.picW) || ny >= float64(m.picH)
-	if out {
-		// The finger reached the edge: lift it and start again.
-		last := screen.Point{X: clampInt(int(m.scrollPos[0]), 0, m.picW-1), Y: clampInt(int(m.scrollPos[1]), 0, m.picH-1)}
-		touch(driver.TouchUp, last)
-		touch(driver.TouchDown, m.scrollAt)
-		nx, ny = float64(m.scrollAt.X)+dx, float64(m.scrollAt.Y)+dy
-	}
-	m.scrollPos = [2]float64{nx, ny}
-	pos := screen.Point{X: clampInt(int(nx), 0, m.picW-1), Y: clampInt(int(ny), 0, m.picH-1)}
-	touch(driver.TouchMove, pos)
+	m.scrollStart(toDevice(ev.X, ev.Y), touch)
+	pos := m.scrollBy(-float64(ev.DX)*sx, -float64(ev.DY)*sy, touch)
 	m.scrollSeq++
 	seq := m.scrollSeq
 	time.AfterFunc(140*time.Millisecond, func() {
@@ -681,6 +846,105 @@ func (a *app) mirrorScroll(m *mirror, id string, ev mg.InputEvent, toDevice func
 			}
 		})
 	})
+}
+
+// mirrorWheel glides the scrolling finger by a mouse wheel's notches
+// (mirrorwheel.go): a move every wheelTick while they move it, then up, at
+// once when the wheel was spinning so that the phone flings, or after
+// wheelHold at rest.
+func (a *app) mirrorWheel(m *mirror, ev mg.InputEvent, toDevice func(x, y float32) screen.Point, touch func(driver.TouchAction, screen.Point)) {
+	d := float64(m.boxH) * wheelNotch
+	dx := -wheelNotches(ev.DX, runtime.GOOS) * d * float64(m.picW) / float64(m.boxW)
+	dy := -wheelNotches(ev.DY, runtime.GOOS) * d * float64(m.picH) / float64(m.boxH)
+	if dx == 0 && dy == 0 {
+		return
+	}
+	m.scrollStart(toDevice(ev.X, ev.Y), touch)
+	if m.wheel == nil {
+		m.wheel = &wheelGlide{}
+		m.wheelSent = [2]float64{}
+	}
+	m.wheel.add(time.Now(), dx, dy)
+	m.scrollSeq++ // no lift at rest: the finger moves on
+	if m.wheelTick {
+		return // the running tick takes the notch along
+	}
+	m.wheelTick = true
+	g := m.wheel
+	lift := func(pos screen.Point) {
+		m.scrolling = false
+		m.wheel, m.wheelTick = nil, false
+		touch(driver.TouchUp, pos)
+	}
+	var tick func()
+	tick = func() {
+		if m.wheel != g || !m.scrolling {
+			return // lifted meanwhile
+		}
+		off, moving := g.at(time.Now())
+		pos := m.wheelMove(off, touch)
+		if moving {
+			time.AfterFunc(wheelTick, func() { a.post(tick) })
+			return
+		}
+		m.wheelTick = false
+		if g.spinning() {
+			lift(pos) // moving still: the phone flings
+			return
+		}
+		seq := m.scrollSeq
+		time.AfterFunc(wheelHold, func() {
+			a.post(func() {
+				if m.scrollSeq == seq && m.scrolling && m.wheel == g {
+					lift(pos)
+				}
+			})
+		})
+	}
+	tick()
+}
+
+// wheelMove moves the wheel's finger to off from where its notches began
+// and returns where it is.
+func (m *mirror) wheelMove(off [2]float64, touch func(driver.TouchAction, screen.Point)) screen.Point {
+	dx, dy := off[0]-m.wheelSent[0], off[1]-m.wheelSent[1]
+	m.wheelSent = off
+	if dx == 0 && dy == 0 {
+		return m.scrollPoint()
+	}
+	return m.scrollBy(dx, dy, touch)
+}
+
+// scrollStart puts the scrolling finger down at p unless it is down.
+func (m *mirror) scrollStart(p screen.Point, touch func(driver.TouchAction, screen.Point)) {
+	if m.scrolling {
+		return
+	}
+	m.scrolling = true
+	m.scrollAt = p
+	m.scrollPos = [2]float64{float64(p.X), float64(p.Y)}
+	touch(driver.TouchDown, p)
+}
+
+// scrollBy moves the scrolling finger by dx, dy device pixels and returns
+// where it is.
+func (m *mirror) scrollBy(dx, dy float64, touch func(driver.TouchAction, screen.Point)) screen.Point {
+	nx, ny := m.scrollPos[0]+dx, m.scrollPos[1]+dy
+	if nx < 0 || ny < 0 || nx >= float64(m.picW) || ny >= float64(m.picH) {
+		// The finger reached the edge: lift it and start again.
+		touch(driver.TouchUp, m.scrollPoint())
+		touch(driver.TouchDown, m.scrollAt)
+		nx, ny = float64(m.scrollAt.X)+dx, float64(m.scrollAt.Y)+dy
+	}
+	m.scrollPos = [2]float64{nx, ny}
+	pos := m.scrollPoint()
+	touch(driver.TouchMove, pos)
+	return pos
+}
+
+// scrollPoint is where the scrolling finger is, on the screen.
+func (m *mirror) scrollPoint() screen.Point {
+	return screen.Point{X: clampInt(int(m.scrollPos[0]), 0, m.picW-1), Y: clampInt(int(m.scrollPos[1]), 0, m.picH-1)}
 }
 
 // driverKey maps the keys that type no text.

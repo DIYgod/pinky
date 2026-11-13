@@ -30,6 +30,10 @@ func runChild(mode, dir, process string) {
 	switch mode {
 	case "panic":
 		crashHere()
+	case "panic-deferred":
+		// As the app and the daemon end the capture.
+		defer func() { cr.Exit(recover()) }()
+		crashHere()
 	case "fatal":
 		// A fatal error the runtime cannot recover from, on one goroutine.
 		// Racing map writes, used before, now and then made two threads
@@ -72,7 +76,7 @@ func child(t *testing.T, mode, dir, process string) *exec.Cmd {
 func runChildTo(t *testing.T, mode, dir, process string) {
 	t.Helper()
 	out, _ := child(t, mode, dir, process).CombinedOutput()
-	if mode == "panic" && !strings.Contains(string(out), "boom") {
+	if strings.HasPrefix(mode, "panic") && !strings.Contains(string(out), "boom") {
 		t.Fatalf("the child did not panic:\n%s", out)
 	}
 }
@@ -134,6 +138,35 @@ func TestCrashBecomesAReport(t *testing.T) {
 	// The next start finds nothing new.
 	if again := capture(t, dir); len(again.Found()) != 0 || len(again.Unclean()) != 0 {
 		t.Fatalf("found again: %+v %v", again.Found(), again.Unclean())
+	}
+}
+
+// A panic runs the deferred calls of the process's function: Exit keeps
+// the crash file that a deferred Stop removed, and the report has the
+// first panic's message and stack.
+func TestPanicThroughExitBecomesAReport(t *testing.T) {
+	dir := t.TempDir()
+	runChildTo(t, "panic-deferred", dir, "app")
+	cr := capture(t, dir)
+	found := cr.Found()
+	if len(found) != 1 {
+		t.Fatalf("found %d reports, want 1; unclean %v", len(found), cr.Unclean())
+	}
+	r := found[0]
+	if !strings.HasPrefix(r.Reason, "panic: boom: cannot read ~") {
+		t.Fatalf("reason %q", r.Reason)
+	}
+	if !strings.Contains(r.Stack, "crashHere") {
+		t.Fatalf("the stack misses the first panic:\n%s", r.Stack)
+	}
+}
+
+func TestExitWithoutAPanicStops(t *testing.T) {
+	dir := t.TempDir()
+	cr := CaptureCrashes(CrashOptions{Dir: dir, Process: "app", Version: "1.2.4"})
+	cr.Exit(nil)
+	if entries, _ := os.ReadDir(filepath.Join(dir, "crashes")); len(entries) != 0 {
+		t.Fatalf("a clean exit left %v", entries)
 	}
 }
 

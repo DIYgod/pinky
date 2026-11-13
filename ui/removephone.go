@@ -109,14 +109,14 @@ func (a *app) removeDialog(c *mg.Context) {
 	}
 	p := pal(c)
 	title := locales.RemovePhoneTitle(st.name)
-	mg.Modal(c.Key("remove-phone"), &st.open, func() {
+	sheet(c.Key("remove-phone"), &st.open, func() {
 		mg.Column(c).Width(480).Gap(14).Label(title).Children(func() {
-			mg.Text(c, title).FontSize(17).FontWeight(650).Role(mg.RoleHeading)
+			mg.Text(c, title).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
 			mg.Column(c).Gap(6).Children(func() {
 				bullet := func(text string) {
 					mg.Row(c).Gap(8).AlignItems(mg.Start).Children(func() {
-						mg.Text(c, "•").FontSize(13.5).TextColor(p.ink3)
-						mg.Text(c, text).FontSize(13.5).TextColor(p.ink2).Grow(1).MinWidth(0)
+						mg.Text(c, "•").FontSize(fsSmall).TextColor(p.ink3)
+						mg.Text(c, text).FontSize(fsSmall).TextColor(p.ink2).Grow(1).MinWidth(0)
 					})
 				}
 				bullet(locales.RemovePhoneGoesList())
@@ -128,7 +128,7 @@ func (a *app) removeDialog(c *mg.Context) {
 			mg.Column(c).Gap(4).Children(func() {
 				mg.Checkbox(c.Key("remove-history"), &st.history, locales.RemovePhoneHistory()).Disabled(st.busy)
 				if !st.history {
-					mg.Text(c, locales.RemovePhoneHistoryStays()).FontSize(12.5).TextColor(p.ink3).Padding(0, 0, 0, 26)
+					mg.Text(c, locales.RemovePhoneHistoryStays()).FontSize(fsCaption).TextColor(p.ink3).Padding(0, 0, 0, 26)
 				}
 			})
 			notes := st.notes
@@ -137,11 +137,11 @@ func (a *app) removeDialog(c *mg.Context) {
 			}
 			mg.Column(c).Gap(6).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
 				for _, note := range notes {
-					mg.Text(c, note).FontSize(13).TextColor(p.ink2)
+					mg.Text(c, note).FontSize(fsSmall).TextColor(p.ink2)
 				}
 			})
 			if st.err != "" {
-				mg.Text(c, st.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+				mg.Text(c, st.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			}
 			mg.Row(c).Gap(8).Justify(mg.End).AlignItems(mg.Center).Children(func() {
 				if st.busy {
@@ -228,7 +228,9 @@ func (a *app) forgetPhone(id string, history bool) {
 	delete(comp.loading, id)
 	delete(comp.installing, id)
 	delete(comp.err, id)
+	delete(comp.failure, id)
 	delete(comp.later, id)
+	a.forgetRefused(id)
 	conn := &a.conn // Settings › Phones' connection choice, read again should it come back
 	delete(conn.got, id)
 	delete(conn.at, id)

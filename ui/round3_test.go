@@ -148,6 +148,7 @@ func TestUnlockErrors(t *testing.T) {
 		{errors.Join(errors.New("no pad"), driver.ErrPINNotEntered), "Pinky couldn't get to Mi 10 Pro's passcode screen, so it entered nothing."},
 		{secret.ErrNotFound, "No PIN is saved for Mi 10 Pro."},
 		{fmt.Errorf("wrapped: %w", secret.ErrMicrosoftAccount), "To unlock Mi 10 Pro, type your Microsoft account password"},
+		{fmt.Errorf("refused: %w", secret.ErrAccountRestricted), "Windows wouldn't check your password, so Mi 10 Pro wasn't unlocked."},
 		{secret.ErrUnsupported, notAvailableHere},
 		{gateway.ErrNoUnlock, "Unlocking from this computer isn't available."},
 		{driver.ErrOffline, "Mi 10 Pro is offline."},
@@ -226,6 +227,7 @@ func TestPairByQRCodeFails(t *testing.T) {
 		{driver.ErrPairNotListening, "The phone stopped waiting to pair, as it does when it leaves the scanning screen.", true},
 		{driver.ErrPairUnreachable, "The phone showed up on the network, but Pinky couldn't connect to it.", false},
 		{driver.ErrPairOldTool, "The adb server running on this computer is too old to pair phones over Wi-Fi.", false},
+		{driver.ErrPairNoNetwork, "This computer's adb server can't reach phones on your network, though Pinky can.", false},
 	} {
 		ta.waitFor(t, "the QR code", func() bool { tt.Frame(); return ta.add.pair.code != nil && ta.add.pair.state == "waiting" })
 		ta.api.FailPairing(fmt.Errorf("android: pairing with 192.168.1.42:37123 failed: %w (adb: pairing failed: Wrong password or connection was dropped.)", c.why))
@@ -338,12 +340,12 @@ func TestCompanionInstallCard(t *testing.T) {
 	tt := mg.NewTester(ta.view, 1280, 820)
 	ta.waitFor(t, "the companion state", func() bool { tt.Frame(); return ta.comp.state["pixel-9"] == driver.CompanionMissing })
 	tt.Frame()
-	for _, want := range []string{"Install Pinky Companion", "faster and more steadily", "type without using its clipboard", "If the phone asks, allow the install.", "Not now"} {
+	for _, want := range []string{"Install Pinky on the phone", "faster and more steadily", "type without using its clipboard", "If the phone asks, allow the install.", "Not now"} {
 		if !hasText(tt, want) {
 			t.Errorf("no %q in %q", want, tt.Texts())
 		}
 	}
-	if err := tt.Click("Install Pinky Companion on Pixel 9"); err != nil {
+	if err := tt.Click("Install Pinky on Pixel 9"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
@@ -355,12 +357,12 @@ func TestCompanionInstallCard(t *testing.T) {
 		t.Errorf("installs: %v", got)
 	}
 	tt.Frame()
-	if hasText(tt, "Install Pinky Companion") {
+	if hasText(tt, "Install Pinky on the phone") {
 		t.Errorf("the card stays after the install: %q", tt.Texts())
 	}
 	ta.page, ta.set.sec = pageSettings, secPhones
 	tt.Frame()
-	if !hasText(tt, "Pinky Companion turns on only while an agent works") {
+	if !hasText(tt, "Pinky on the phone turns on only while an agent works") {
 		t.Errorf("Settings › Phones: %q", tt.Texts())
 	}
 }
@@ -369,11 +371,11 @@ func TestCompanionNotNow(t *testing.T) {
 	ta := newTestApp(t, fakeapi.Companion)
 	ta.sync()
 	tt := mg.NewTester(ta.view, 1280, 820)
-	ta.waitFor(t, "the card", func() bool { tt.Frame(); return hasText(tt, "Install Pinky Companion") })
+	ta.waitFor(t, "the card", func() bool { tt.Frame(); return hasText(tt, "Install Pinky on the phone") })
 	if err := tt.Click("Not now"); err != nil {
 		t.Fatal(err)
 	}
-	if hasText(tt, "Install Pinky Companion") || len(ta.api.Installs()) != 0 {
+	if hasText(tt, "Install Pinky on the phone") || len(ta.api.Installs()) != 0 {
 		t.Errorf("after Not now: %q", tt.Texts())
 	}
 }
@@ -448,6 +450,39 @@ func TestAgentScreenInMirror(t *testing.T) {
 	tt.Frame()
 	if _, ok := tt.Find("Pixel 9 screen, live"); !ok || hasText(tt, "Phone's screen") {
 		t.Errorf("in control, the mirror does not show the phone's screen: %q", tt.Texts())
+	}
+}
+
+// TestAgentScreenOwnScreen stops asking for the agent's display while the
+// task works on the phone's own screen, where none opens, and asks again
+// for the next task.
+func TestAgentScreenOwnScreen(t *testing.T) {
+	ta := newTestApp(t, fakeapi.Background)
+	ta.waitFor(t, "the task", func() bool { return len(ta.tasks) == 1 && running(ta.tasks[0].State) })
+	tt := mg.NewTester(ta.view, 1280, 820)
+	task := ta.tasks[0].ID
+	am := ta.mirrors["agent:pixel-9"]
+	if am == nil || am.task != task {
+		t.Fatalf("agent mirror %+v", am)
+	}
+	// Tests have no video, which stops every mirror from asking again.
+	ta.videoErr = nil
+	gen := am.gen
+	own := fmt.Errorf("no agent works on a background display of Pixel 9: %w (%w)", gateway.ErrOwnScreen, driver.ErrNotFound)
+	am.state, am.err, am.retry, am.ownTask = "failed", own, time.Now().Add(-time.Second), task
+	tt.Frame()
+	tt.Frame()
+	if am.gen != gen || am.opening {
+		t.Fatal("the mirror asked again for a display the task does not have")
+	}
+	if _, ok := tt.Find("Pixel 9 screen, live"); !ok {
+		t.Errorf("the phone's own screen does not show: %q", tt.Texts())
+	}
+	// The next task may have a display.
+	am.ownTask = "an earlier task"
+	tt.Frame()
+	if am.gen == gen {
+		t.Fatal("the mirror does not ask again for the next task's display")
 	}
 }
 
@@ -724,8 +759,8 @@ func TestLockCardOffersPIN(t *testing.T) {
 
 // TestRefusedPINIsNotRetried keeps Unlock from trying a PIN the phone
 // refused again, which could lock the person out, until the phone is
-// unlocked on it or the PIN changes; a PIN that was never entered may be
-// tried again.
+// unlocked on it or the PIN changes, unless the person clicks Try again;
+// a PIN that was never entered may be tried again.
 func TestRefusedPINIsNotRetried(t *testing.T) {
 	ta := newTestApp(t, fakeapi.OnePhone)
 	ta.waitFor(t, "the phones and the keychain probe", func() bool { return ta.pin.ready && len(ta.devices) > 0 })
@@ -742,9 +777,18 @@ func TestRefusedPINIsNotRetried(t *testing.T) {
 	if label, _ := unlockWords(); hasText(tt, label) {
 		t.Errorf("Unlock offered again after the phone refused the PIN: %q", tt.Texts())
 	}
-	if !hasText(tt, "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone. If its PIN changed, update it in Settings › Phones.") {
+	if !hasText(tt, "The saved PIN didn't unlock it, so Pinky won't try it again by itself. Unlock it on the phone. If you're sure the PIN is right, click Try again; if it changed, update it in Settings › Phones.") {
 		t.Errorf("the card does not say why: %q", tt.Texts())
 	}
+	if !hasText(tt, "Try again") {
+		t.Fatalf("no Try again on the card: %q", tt.Texts())
+	}
+	if err := tt.Click("Try the saved PIN on " + d.Info.Name + " again"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "Try again to unlock the phone", func() bool {
+		return !ta.pin.unlocking[d.Info.ID] && !ta.pin.wrong[d.Info.ID]
+	})
 	if msg := unlockError(fmt.Errorf("unlock: the passcode pad did not appear: %w", driver.ErrPINNotEntered), "iPhone"); !strings.Contains(msg, "entered nothing") {
 		t.Errorf("a PIN that was never entered: %q", msg)
 	}
@@ -794,6 +838,13 @@ func TestPairingStuck(t *testing.T) {
 	set(driver.PairingProgress{}, 0)
 	tt := mg.NewTester(ta.view, 1280, 820)
 	tt.Frame()
+	// The note sits under the QR code, at the bottom of the scrolling card,
+	// and with Linux's taller fonts its buttons are below the fold: scroll
+	// down to them as a person would.
+	toNote := func() {
+		tt.Scroll(640, 400, 0, 2000)
+		tt.Frame()
+	}
 	if hasText(tt, "The phone hasn't shown up on the network yet") {
 		t.Fatal("the note shows at once")
 	}
@@ -830,6 +881,7 @@ func TestPairingStuck(t *testing.T) {
 		openURL = func(_ *mg.Context, u string, done func(error)) { opened = u; done(nil) }
 		t.Cleanup(func() { openURL = saved })
 		tt.Frame()
+		toNote()
 		if err := tt.Click("Open Local Network settings"); err != nil {
 			t.Fatal(err)
 		}
@@ -857,6 +909,7 @@ func TestPairingStuck(t *testing.T) {
 	// The note's button goes to the pairing-code form.
 	set(driver.PairingProgress{}, 31*time.Second)
 	tt.Frame()
+	toNote()
 	if err := tt.Click("Pair with a code instead"); err != nil {
 		t.Fatal(err)
 	}

@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 
@@ -120,11 +121,11 @@ func TestTapPoint(t *testing.T) {
 		return screen.Element{}
 	}
 	// A button at the middle of the backdrop: nothing lies on it.
-	if p, want := tapPoint(s, find(s, "Attachment View")), (screen.Point{X: 540, Y: 1200}); p != want {
+	if p, want := tapPoint(s, find(s, "Attachment View"), driver.IOS), (screen.Point{X: 540, Y: 1200}); p != want {
 		t.Errorf("Attachment View: %v, want its centre %v", p, want)
 	}
 	// The backdrop: below the menu, clear of the New Note button under it.
-	p := tapPoint(s, find(s, "Dismiss context menu"))
+	p := tapPoint(s, find(s, "Dismiss context menu"), driver.IOS)
 	if onMenu(s, p) || find(s, "New Note").Bounds.Contains(p) || p.Y < 1700 {
 		t.Errorf("backdrop: %v", p)
 	}
@@ -136,7 +137,7 @@ func TestTapPoint(t *testing.T) {
 		{Role: screen.RoleSwitch, Label: "Wi-Fi", Bounds: screen.Rect{X: 900, Y: 330, W: 140, H: 80}, Source: screen.SourceTree},
 	}}
 	screen.NewRefs().Assign(row)
-	if p, want := tapPoint(row, row.Elements[0]), row.Elements[0].Bounds.Center(); p != want {
+	if p, want := tapPoint(row, row.Elements[0], driver.IOS), row.Elements[0].Bounds.Center(); p != want {
 		t.Errorf("a row with its label: %v, want %v", p, want)
 	}
 	// A card with another control at its centre is tapped beside it.
@@ -145,7 +146,7 @@ func TestTapPoint(t *testing.T) {
 		{Role: screen.RoleButton, Label: "Add to cart", Bounds: screen.Rect{X: 340, Y: 550, W: 400, H: 100}, Source: screen.SourceTree},
 	}}
 	screen.NewRefs().Assign(card)
-	if p := tapPoint(card, card.Elements[0]); card.Elements[1].Bounds.Contains(p) || !card.Elements[0].Bounds.Contains(p) {
+	if p := tapPoint(card, card.Elements[0], driver.IOS); card.Elements[1].Bounds.Contains(p) || !card.Elements[0].Bounds.Contains(p) {
 		t.Errorf("a card: %v", p)
 	}
 	// A list is tapped at its centre, whatever lies there.
@@ -154,7 +155,7 @@ func TestTapPoint(t *testing.T) {
 		{Role: screen.RoleButton, Label: "Groceries", Bounds: screen.Rect{X: 0, Y: 1150, W: 1080, H: 140}, Source: screen.SourceTree},
 	}}
 	screen.NewRefs().Assign(list)
-	if p, want := tapPoint(list, list.Elements[0]), list.Elements[0].Bounds.Center(); p != want {
+	if p, want := tapPoint(list, list.Elements[0], driver.IOS), list.Elements[0].Bounds.Center(); p != want {
 		t.Errorf("a list: %v, want %v", p, want)
 	}
 	// Covered all over: the centre, as before.
@@ -163,7 +164,98 @@ func TestTapPoint(t *testing.T) {
 		{Role: screen.RoleOther, Label: "", Bounds: screen.Rect{X: 0, Y: 0, W: 1080, H: 2399}, Source: screen.SourceTree},
 	}}
 	screen.NewRefs().Assign(full)
-	if p, want := tapPoint(full, full.Elements[0]), full.Elements[0].Bounds.Center(); p != want {
+	if p, want := tapPoint(full, full.Elements[0], driver.IOS), full.Elements[0].Bounds.Center(); p != want {
 		t.Errorf("covered all over: %v, want %v", p, want)
+	}
+}
+
+// GitHub issue #51: an iPhone switch whose frame covers its row is tapped on
+// the switch, not on its label at the row's centre.
+func TestTapPointSwitchRow(t *testing.T) {
+	tree := func(w, h int, els ...screen.Element) *screen.Screen {
+		s := &screen.Screen{Width: w, Height: h, Elements: els}
+		for i := range s.Elements {
+			s.Elements[i].Source = screen.SourceTree
+		}
+		screen.NewRefs().Assign(s)
+		return s
+	}
+	// Settings on iOS 26 (iPhone 17e Simulator): the row's switch, its
+	// label, and the switch itself, unlabelled.
+	settings := tree(1170, 2532,
+		screen.Element{Role: screen.RoleSwitch, Label: "Haptic Feedback", Bounds: screen.Rect{X: 96, Y: 1239, W: 978, H: 87}},
+		screen.Element{Role: screen.RoleButton, Label: "Haptic Feedback", Bounds: screen.Rect{X: 96, Y: 1248, W: 387, H: 66}},
+		screen.Element{Role: screen.RoleSwitch, Bounds: screen.Rect{X: 891, Y: 1239, W: 189, H: 87}},
+	)
+	knob := settings.Elements[2].Bounds
+	if p, want := tapPoint(settings, settings.Elements[0], driver.IOS), knob.Center(); p != want {
+		t.Errorf("row with its switch: %v, want %v", p, want)
+	}
+	if p, want := tapPoint(settings, settings.Elements[2], driver.IOS), knob.Center(); p != want {
+		t.Errorf("the switch itself: %v, want %v", p, want)
+	}
+	if p, want := tapPoint(settings, settings.Elements[0], driver.Android), settings.Elements[0].Bounds.Center(); p != want {
+		t.Errorf("Android row: %v, want its centre %v", p, want)
+	}
+
+	// The row alone, as the reporter's Airplane Mode (iPhone, 3x): the
+	// switch lies at the trailing end.
+	airplane := tree(1179, 2556,
+		screen.Element{Role: screen.RoleSwitch, Label: "Airplane Mode", Bounds: screen.Rect{X: 60, Y: 570, W: 1059, H: 135}},
+	)
+	sw := screen.Rect{X: 1179 - 60 - 51*3 - 16*3, Y: 570, W: 51 * 3, H: 135} // 16 pt in from the row's end
+	if p := tapPoint(airplane, airplane.Elements[0], driver.IOS); !sw.Contains(p) {
+		t.Errorf("row alone: %v, not on the switch %v", p, sw)
+	}
+	// Right to left: the label is in the right half, the switch at the left.
+	rtl := tree(1179, 2556,
+		screen.Element{Role: screen.RoleSwitch, Label: "وضع الطيران", Bounds: screen.Rect{X: 60, Y: 570, W: 1059, H: 135}},
+		screen.Element{Role: screen.RoleText, Label: "وضع الطيران", Bounds: screen.Rect{X: 800, Y: 600, W: 270, H: 70}},
+	)
+	sw = screen.Rect{X: 60 + 16*3, Y: 570, W: 51 * 3, H: 135}
+	if p := tapPoint(rtl, rtl.Elements[0], driver.IOS); !sw.Contains(p) {
+		t.Errorf("right to left: %v, not on the switch %v", p, sw)
+	}
+	// An iPhone at 2x (iPhone SE, 750 pixels across).
+	se := tree(750, 1334,
+		screen.Element{Role: screen.RoleSwitch, Label: "Wi-Fi", Bounds: screen.Rect{X: 0, Y: 400, W: 750, H: 88}},
+	)
+	sw = screen.Rect{X: 750 - 51*2 - 16*2, Y: 400, W: 51 * 2, H: 88}
+	if p := tapPoint(se, se.Elements[0], driver.IOS); !sw.Contains(p) {
+		t.Errorf("2x row: %v, not on the switch %v", p, sw)
+	}
+	// A switch shaped like one is tapped at its centre.
+	small := tree(1179, 2556,
+		screen.Element{Role: screen.RoleSwitch, Label: "Alarm", Bounds: screen.Rect{X: 900, Y: 600, W: 189, H: 93}},
+	)
+	if p, want := tapPoint(small, small.Elements[0], driver.IOS), small.Elements[0].Bounds.Center(); p != want {
+		t.Errorf("a switch: %v, want its centre %v", p, want)
+	}
+}
+
+func TestUnflipped(t *testing.T) {
+	off := screen.Element{Ref: 7, Role: screen.RoleSwitch, Label: "Wi-Fi"}
+	on := off
+	on.States = []string{screen.StateChecked}
+	tap := Action{Tool: "tap", Ref: 7}
+	after := func(e screen.Element) *screen.Screen { return &screen.Screen{Elements: []screen.Element{e}} }
+	if n := unflipped(tap, &prep{target: &off}, after(off)); !strings.Contains(n, "[7] is still off") {
+		t.Errorf("unchanged: %q", n)
+	}
+	if n := unflipped(tap, &prep{target: &on}, after(on)); !strings.Contains(n, "[7] is still on") {
+		t.Errorf("unchanged on: %q", n)
+	}
+	if n := unflipped(tap, &prep{target: &off}, after(on)); n != "" {
+		t.Errorf("flipped: %q", n)
+	}
+	if n := unflipped(tap, &prep{target: &off}, &screen.Screen{}); n != "" {
+		t.Errorf("gone: %q", n)
+	}
+	button := screen.Element{Ref: 7, Role: screen.RoleButton, Label: "OK"}
+	if n := unflipped(tap, &prep{target: &button}, after(button)); n != "" {
+		t.Errorf("a button: %q", n)
+	}
+	if n := unflipped(Action{Tool: "tap", Point: &screen.Point{}}, &prep{target: &off}, after(off)); n != "" {
+		t.Errorf("by x and y: %q", n)
 	}
 }

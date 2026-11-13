@@ -34,13 +34,38 @@ type device struct {
 	// moving is set while the phone moves between its cable and Wi-Fi
 	// (wifi.go): until then calls wait for it to be back.
 	moving time.Time
+	// taskWay is the connection a task moved the phone to without saving
+	// it (taskconn.go), "" while it runs the person's choice; switching is
+	// the way it is moving to now, and switchBack puts it back after the
+	// task.
+	taskWay, switching string
+	// helper: an iPhone or iPad has the WebDriverAgent helper installed,
+	// as checkHelper found when it last came online (helperneed.go).
+	helper     bool
+	switchBack *time.Timer
 	// closing is closed once the last session's Close returned, so the
 	// next one does not start while it stops.
-	closing      chan struct{}
-	removed      bool // the person removed it (remove.go); a new device takes its place if it comes back
+	closing chan struct{}
+	removed bool // the person removed it (remove.go); a new device takes its place if it comes back
+	// pauseAway is set while the person paused it (pause.go) once it was
+	// seen away from its cable: plugging it in from then on resumes it.
+	pauseAway bool
+	// capturing is what the client last heard of whether the phone sends
+	// its screen to Pinky (pollCapture).
+	capturing bool
+	vitals    vitalsState // battery and storage, read when asked (vitals.go)
+
 	offlineSince time.Time
 	offlineWhy   string
-	lease        *lease
+	// openErr is why the last Open failed, nil once it opened: a task
+	// that moved the phone tells the agent the real reason (taskconn.go).
+	openErr error
+	lease   *lease
+	// leaseGen counts leases started and ended on the device, and
+	// leaseEnded is when the last one ended: the approvals page refuses an
+	// answer from this phone's browser across any lease (webapproval).
+	leaseGen   uint64
+	leaseEnded time.Time
 	// person is true while the person is in control (took over). It belongs
 	// to the device, not the lease: only HandBack clears it, so an agent
 	// cannot get control back by starting another task.
@@ -51,6 +76,9 @@ type device struct {
 	// agent works on the phone. workSent: dev was told at all.
 	working, workSent bool
 	locked            bool
+	// busy is who holds the phone while the agent's task waits for it:
+	// Pinky on the phone, or another computer (onphone.go).
+	busy *driver.BusyError
 	// settleDue is when the wait after the last input would have ended
 	// had it run its whole SettleMax: set before the input goes out,
 	// cleared once the screen is seen to settle. The next action waits for
@@ -63,6 +91,10 @@ type device struct {
 	// result, already filtered by the policy.
 	events []screen.Event
 	last   *screen.Screen // the last raw observation
+	// treeless is the app whose screen OCR read while its tree stayed
+	// sparse for all of treeWait (awaitTree): its reads are not waited
+	// for again until another app shows a sparse tree.
+	treeless screen.App
 	// ocr is set once a read with OCR returned OCR lines: the phone's
 	// driver reads text from the pixels (iPhone), so a tap on text that
 	// only OCR sees is checked against it (ocrForVerdict).
@@ -246,6 +278,10 @@ type lease struct {
 	changes []change
 	// recorded is set once the task's recording started (video.go).
 	recorded bool
+	// readLists holds where each partial phone_read_list stopped, under
+	// the opaque id its continuation carries (read_list.go). They go with
+	// the lease, so a continuation never outlives its task or phone.
+	readLists map[string]*readCursor
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -293,7 +329,8 @@ const (
 	OutcomeExpired      = "expired"      // idle too long
 	OutcomeDisconnected = "disconnected" // the agent's session closed
 	OutcomeOffline      = "offline"      // the phone did not come back in time
-	OutcomeReplaced     = "replaced"     // the agent started another task on the device
+	OutcomeReplaced     = "replaced"     // the agent started another task on the device; only in history from before phone_connect refused that (shared.go)
+	OutcomePaused       = "paused"       // the person paused Pinky's connection to the phone (pause.go)
 )
 
 // stateForOutcome maps how a task ended to its card state. An agent that
@@ -303,7 +340,7 @@ func stateForOutcome(o string) TaskState {
 	switch o {
 	case OutcomeDone, OutcomeReplaced, OutcomeDisconnected, OutcomeExpired, "partial":
 		return TaskDone
-	case OutcomeStopped:
+	case OutcomeStopped, OutcomePaused:
 		return TaskStopped
 	}
 	return TaskFailed

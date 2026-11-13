@@ -71,8 +71,8 @@ func (a *app) addPhonePage(c *mg.Context) {
 	mg.Row(c).Height(32).Shrink(0).Background(p.bg2).DragWindow()
 	// Steps taller than the window scroll inside the card.
 	_, h := c.Size()
-	mg.Column(c).Grow(1).Center().Padding(0, 24, 32, 24).Background(p.bg2).Children(func() {
-		card := mg.Scroll(c).FillWidth().MaxWidth(470).MaxHeight(max(h-64, 240)).Padding(32).Radius(16).Background(p.panel).Border(1, p.line).Gap(18).Label(locales.AddPhoneLabel())
+	mg.Column(c).Grow(1).Center().Padding(0, sp6, sp8, sp6).Background(p.bg2).Children(func() {
+		card := mg.Scroll(c).FillWidth().MaxWidth(480).MaxHeight(max(h-64, 240)).Padding(sp8).Radius(rSheet).Background(p.panel).Border(1, p.line).Gap(sp5).Label(locales.AddPhoneLabel())
 		shadow(c, card).Children(func() {
 			mg.Row(c).MinHeight(22).AlignItems(mg.Center).Margin(0, 0, -6, 0).Children(func() {
 				if s.step != "choose" && linkButton(c, locales.AddPhoneBack()).Clicked() {
@@ -110,24 +110,24 @@ func (a *app) addPhonePage(c *mg.Context) {
 func heading(c *mg.Context, title, desc string) {
 	p := pal(c)
 	mg.Column(c).Children(func() {
-		mg.Text(c, title).FontSize(22).FontWeight(650).Role(mg.RoleHeading)
-		mg.Text(c, desc).FontSize(14).TextColor(p.ink2).Margin(6, 0, 0, 0)
+		mg.Text(c, title).FontSize(fsTitle2).FontWeight(fwSemibold).Role(mg.RoleHeading)
+		mg.Text(c, desc).FontSize(fsBody).LineHeight(1.5).TextColor(p.ink2).Margin(6, 0, 0, 0)
 	})
 }
 
 // statusBox is the prototype's role=status line.
 func statusBox(c *mg.Context, fn func()) {
 	p := pal(c)
-	mg.Row(c).Gap(10).Padding(12, 14).Radius(10).Background(p.bg2).AlignItems(mg.Center).Role(mg.RoleStatus).Children(fn)
+	mg.Row(c).Gap(10).Padding(sp3, 14).Radius(rControl).Background(p.bg2).AlignItems(mg.Center).Role(mg.RoleStatus).Children(fn)
 }
 
 func (a *app) addChoose(c *mg.Context) {
 	p := pal(c)
 	s := &a.add
 	heading(c, locales.AddPhoneChooseTitle(), locales.AddPhoneChooseDetail())
-	mg.Grid(c).Columns(2).Gap(12).Children(func() {
+	mg.Grid(c).Columns(2).Gap(sp3).Children(func() {
 		choice := func(ic *mg.SVG, title, desc, step string) {
-			b := mg.ButtonBase(c.Key(step)).Padding(20, 18).Radius(12).Gap(4).AlignItems(mg.Start).Column().Label(title)
+			b := mg.ButtonBase(c.Key(step)).Padding(sp4).Radius(rCard).Gap(sp1).AlignItems(mg.Start).Justify(mg.Start).Column().Label(title)
 			border := p.line2
 			if b.Hovered() {
 				border = p.accent
@@ -138,9 +138,9 @@ func (a *app) addChoose(c *mg.Context) {
 				s.snapshot(a)
 			}
 			b.Border(1, border).Background(p.panel).Children(func() {
-				mg.Icon(c, ic).FontSize(26).TextColor(p.ink2).Margin(0, 0, 8, 0)
-				mg.Text(c, title).FontSize(16).FontWeight(650)
-				mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+				tileIcon(c, ic).Margin(0, 0, sp2, 0)
+				mg.Text(c, title).FontSize(fsHeadline).FontWeight(fwSemibold)
+				mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 			})
 		}
 		choice(icAndroid, "Android", locales.AddPhoneChooseAndroid(), "android")
@@ -154,7 +154,7 @@ func (a *app) addChoose(c *mg.Context) {
 	if guideOS == "darwin" {
 		desc = locales.AddPhoneChooseVirtualMac()
 	}
-	b := mg.ButtonBase(c.Key("virtual")).Padding(14, 18).Radius(12).Gap(14).AlignItems(mg.Center).Label(title)
+	b := mg.ButtonBase(c.Key("virtual")).Padding(sp3, sp4).Radius(rCard).Gap(sp3).AlignItems(mg.Center).Label(title)
 	border := p.line2
 	if b.Hovered() {
 		border = p.accent
@@ -165,12 +165,21 @@ func (a *app) addChoose(c *mg.Context) {
 		s.snapshot(a)
 	}
 	b.Border(1, border).Background(p.panel).Children(func() {
-		mg.Icon(c, icMonitor).FontSize(22).TextColor(p.ink2).Shrink(0)
+		tileIcon(c, icMonitor)
 		mg.Column(c).Gap(2).Grow(1).MinWidth(0).AlignItems(mg.Start).Children(func() {
-			mg.Text(c, title).FontSize(15).FontWeight(650)
-			mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, title).FontSize(fsHeadline).FontWeight(fwSemibold)
+			mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 		})
 	})
+}
+
+// tileIcon is the icon of a choice of Add phone, on a square of its own
+// so that the choices' titles line up whatever the icon's shape.
+func tileIcon(c *mg.Context, ic *mg.SVG) mg.Element {
+	p := pal(c)
+	b := mg.Box(c).Size(36, 36).Radius(rControl).Background(p.bg3).Center().Shrink(0)
+	b.Children(func() { mg.Icon(c, ic).FontSize(20).TextColor(p.ink2) })
+	return b
 }
 
 func (a *app) addQR(c *mg.Context) {
@@ -202,7 +211,7 @@ func (a *app) addQR(c *mg.Context) {
 			mg.Column(c).Size(208, 208).Center().Gap(8).Padding(16).Children(func() {
 				if st.state == "failed" {
 					mg.Icon(c, icAlert).FontSize(26).TextColor(hex("#975800"))
-					mg.Text(c, locales.PairingNoCode()).FontSize(13).TextColor(hex("#5b5b64"))
+					mg.Text(c, locales.PairingNoCode()).FontSize(fsSmall).TextColor(hex("#5b5b64"))
 				} else {
 					spinner(c)
 				}
@@ -212,7 +221,7 @@ func (a *app) addQR(c *mg.Context) {
 	if canPair && !st.form && st.state == "failed" {
 		// Why it failed, with what to do next under it: the code where it
 		// may help, and a new QR code.
-		mg.Column(c).Gap(10).Padding(12, 14).Radius(10).Background(p.bg2).Role(mg.RoleStatus).Children(func() {
+		mg.Column(c).Gap(10).Padding(sp3, 14).Radius(rControl).Background(p.bg2).Role(mg.RoleStatus).Children(func() {
 			mg.Row(c).Gap(10).AlignItems(mg.Start).Children(func() {
 				mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot).Shrink(0)
 				mg.Text(c, st.err).Grow(1).MinWidth(0)
@@ -252,7 +261,7 @@ func (a *app) addQR(c *mg.Context) {
 	if d := s.fresh(a, driver.Android); d != nil && d.Info.State == driver.StateOnline {
 		statusBox(c, func() {
 			dot(c, p.green, false)
-			mg.Text(c, locales.AddPhoneFound(d.Info.Name)).FontWeight(600)
+			mg.Text(c, locales.AddPhoneFound(d.Info.Name)).FontWeight(fwSemibold)
 		})
 		mg.Row(c).Children(func() {
 			if button(c, locales.AddPhoneDone(), btnOpt{kind: btnPrimary}).Clicked() {
@@ -291,7 +300,7 @@ func (a *app) pairCodeForm(c *mg.Context) {
 	st := &a.add.pair
 	mg.Column(c).Gap(12).Children(func() {
 		field := func(label string) {
-			mg.Text(c, label).FontSize(13).FontWeight(600)
+			mg.Text(c, label).FontSize(fsSmall).FontWeight(fwSemibold)
 		}
 		var addr, code mg.Element
 		mg.Column(c).Gap(6).Children(func() {
@@ -312,11 +321,11 @@ func (a *app) pairCodeForm(c *mg.Context) {
 			}
 			if st.formBusy {
 				spinner(c)
-				mg.Text(c, locales.PairingBusy()).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, locales.PairingBusy()).FontSize(fsSmall).TextColor(p.ink2)
 			}
 		})
 		if st.formErr != "" {
-			mg.Text(c, st.formErr).FontSize(13.5).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, st.formErr).FontSize(fsBody).TextColor(p.red).Role(mg.RoleStatus)
 		}
 	})
 }
@@ -330,7 +339,7 @@ func (a *app) pairConnectForm(c *mg.Context) {
 	mg.Column(c).Gap(12).Children(func() {
 		var addr mg.Element
 		mg.Column(c).Gap(6).Children(func() {
-			mg.Text(c, locales.PairingAddrField()).FontSize(13).FontWeight(600)
+			mg.Text(c, locales.PairingAddrField()).FontSize(fsSmall).FontWeight(fwSemibold)
 			addr = mg.TextInput(c.Key("connect-addr"), &st.connAddr).Placeholder("192.168.1.20:41234").Label(locales.PairingAddrField()).AutoFocus()
 		})
 		mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
@@ -340,11 +349,11 @@ func (a *app) pairConnectForm(c *mg.Context) {
 			}
 			if st.formBusy {
 				spinner(c)
-				mg.Text(c, locales.PairingConnectBusy()).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, locales.PairingConnectBusy()).FontSize(fsSmall).TextColor(p.ink2)
 			}
 		})
 		if st.formErr != "" {
-			mg.Text(c, st.formErr).FontSize(13.5).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, st.formErr).FontSize(fsBody).TextColor(p.red).Role(mg.RoleStatus)
 		}
 	})
 }
@@ -364,10 +373,10 @@ func (a *app) addIPhone(c *mg.Context) {
 			mg.Text(c, strings.TrimSpace(locales.AddPhoneFoundIOS(d.Info.Name, d.Info.OSVersion)))
 		})
 	}
-	mg.Column(c).Padding(16, 18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(10).Children(func() {
-		mg.Text(c, locales.AddPhoneOlderTitle()).FontSize(15).FontWeight(650)
+	mg.Column(c).Padding(sp4, 18).Radius(rCard).Background(p.amberTint).Border(1, p.amberLine).Gap(10).Children(func() {
+		mg.Text(c, locales.AddPhoneOlderTitle()).FontSize(fsHeadline).FontWeight(fwSemibold)
 		opt := func(key, title, desc string) {
-			b := mg.ButtonBase(c.Key(key)).Column().Gap(3).AlignItems(mg.Start).Padding(12, 14).Radius(10).Background(p.panel).Label(title)
+			b := mg.ButtonBase(c.Key(key)).Column().Gap(3).AlignItems(mg.Start).Padding(sp3, 14).Radius(rControl).Background(p.panel).Label(title)
 			border := p.line2
 			if b.Hovered() || s.oldPick == key {
 				border = p.accent
@@ -377,17 +386,36 @@ func (a *app) addIPhone(c *mg.Context) {
 				s.oldPick = key
 			}
 			b.Border(1, border).Children(func() {
-				mg.Text(c, title).FontWeight(650)
-				mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, title).FontWeight(fwSemibold)
+				mg.Text(c, desc).FontSize(fsSmall).TextColor(p.ink2)
 			})
 		}
 		opt("helper", locales.AddPhoneOlderHelper(), locales.AddPhoneOlderHelperDetail())
 		opt("mirror", locales.AddPhoneOlderMirroring(), locales.AddPhoneOlderMirroringDetail())
 	})
-	if s.oldPick != "" {
-		mg.Text(c, locales.AddPhoneOlderNotYet()).FontSize(13.5).TextColor(p.ink2)
-	} else {
-		mg.Text(c, locales.AddPhoneOlderUpdate()).FontSize(13.5).TextColor(p.ink2).Margin(-6, 0, 0, 0)
+	switch s.oldPick {
+	case "":
+		mg.Text(c, locales.AddPhoneOlderUpdate()).FontSize(fsSmall).TextColor(p.ink2).Margin(-6, 0, 0, 0)
+	case "mirror":
+		mg.Text(c, locales.AddPhoneOlderMirrorNotYet()).FontSize(fsSmall).TextColor(p.ink2)
+	default:
+		// The helper, installed from here on a Mac with Xcode: on the
+		// iPhone Pinky found, else on the one Xcode finds; once it is
+		// installed, the steps follow the phone. An install begun before
+		// Pinky found the phone keeps its place.
+		id, name := "", locales.HelperThisIPhone()
+		if d != nil && a.helper.runs[""] == nil {
+			id, name = d.Info.ID, d.Info.Name
+		}
+		done := func() { s.old, s.oldPick = false, "" }
+		if !a.helperInstall(c, id, name, helperOpt{note: true, done: done}) {
+			mg.Text(c, locales.AddPhoneOlderHelperHow()).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
+			mg.Row(c).Children(func() {
+				if linkButton(c, locales.CheckHelperHow()).Clicked() {
+					openURL(c, helperDocs, func(error) {})
+				}
+			})
+		}
 	}
 }
 

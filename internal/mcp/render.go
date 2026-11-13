@@ -61,6 +61,14 @@ func StatusLine(res *gateway.Result) string {
 	if res.Setup != "" {
 		parts = append(parts, "setup: "+res.Setup)
 	}
+	if res.Scan != nil {
+		parts = append(parts, fmt.Sprintf("pages: %d", res.Scan.Pages))
+		parts = append(parts, "stop: "+res.Scan.Stop)
+		parts = append(parts, fmt.Sprintf("complete: %v", res.Scan.Complete))
+		if res.Scan.Truncated {
+			parts = append(parts, "partial: true")
+		}
+	}
 	if !res.Full && res.Screen != nil && len(res.Diff) == 0 && len(res.Steps) == 0 && !res.Early {
 		// After a read that settle_ms made early, the action may not have
 		// shown yet: "no change" could make the agent repeat it.
@@ -115,6 +123,9 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 			line(fmt.Sprintf("%s · %s · %s · %s", f.Path, gateway.SizeText(f.Size), f.ModTime.Format("2006-01-02 15:04"), f.Where))
 		}
 	}
+	if a := res.About; a != nil {
+		aboutLines(a, line)
+	}
 	for _, sw := range res.Switches {
 		switch {
 		case sw.Unsupported != "":
@@ -141,12 +152,55 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 			line(l)
 		}
 	}
+	if res.Scan != nil {
+		for _, page := range res.Scan.Sections {
+			line(fmt.Sprintf("screen %d", page.Number))
+			for _, content := range page.Lines {
+				line("- " + content)
+			}
+		}
+		if res.Scan.Continuation != "" {
+			line("continuation: " + res.Scan.Continuation)
+		}
+	}
 	switch {
 	case res.Screen == nil:
 	case res.Full:
 		line(res.Screen.Render())
 	case len(res.Diff) > 0:
 		line(strings.Join(res.Diff, "\n"))
+	}
+}
+
+// aboutLines are the phone in a phone_device read: "phone: Pixel 8 ·
+// Android 16", "battery: 64%, charging", "storage: 87.7 GB free of 128 GB".
+func aboutLines(a *gateway.PhoneAbout, line func(string)) {
+	var parts []string
+	for _, s := range []string{a.Model, a.OS} {
+		if s != "" {
+			parts = append(parts, s)
+		}
+	}
+	if len(parts) > 0 {
+		line("phone: " + strings.Join(parts, " · "))
+	}
+	if b := a.Battery; b != nil {
+		s := fmt.Sprintf("%d%%", b.Level)
+		switch {
+		case b.Charging:
+			s += ", charging"
+		case b.Full && b.Plugged:
+			s += ", full, plugged in"
+		case b.Plugged:
+			s += ", plugged in, not charging"
+		}
+		if b.TempC > 0 {
+			s += fmt.Sprintf(", %.0f °C", b.TempC)
+		}
+		line("battery: " + s)
+	}
+	if st := a.Storage; st != nil {
+		line(fmt.Sprintf("storage: %s free of %s", gateway.StorageText(st.Free), gateway.StorageText(st.Total)))
 	}
 }
 

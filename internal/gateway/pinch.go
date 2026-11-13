@@ -139,8 +139,11 @@ func (a Action) checkPinch() *Result {
 // a.Ref, a.Point, or the middle of the screen, with the fingers inside the
 // element and clear of the screen's edges. The rules judge it as a swipe.
 func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*screen.Element, *Result)) *Result {
-	area := pinchArea(cur.Width, cur.Height)
-	c := area.Center()
+	// The fingers keep clear of the keyboard and the system bars too. raw
+	// is the room without them, to tell what leaves too little of it.
+	raw := pinchArea(cur.Width, cur.Height)
+	area, cut := clearPart(cur, raw)
+	c, rawC := area.Center(), raw.Center()
 	where := "the middle of the screen"
 	switch {
 	case a.Ref > 0:
@@ -149,14 +152,19 @@ func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*scre
 			return res
 		}
 		p.target = e
-		area = intersect(area, e.Bounds)
-		c = area.Center()
+		raw = intersect(raw, e.Bounds)
+		area, cut = clearPart(cur, raw)
+		c, rawC = area.Center(), raw.Center()
 		where = fmt.Sprintf("[%d]", a.Ref)
+		if area.Empty() && !raw.Empty() {
+			cover := coverName(cut)
+			return errResult(ErrInvalidArgument, "[%d] lies under %s, which would take the fingers. Nothing was done. %s.", a.Ref, cover, hideKeyboard(cover))
+		}
 	case a.Point != nil:
 		if a.Point.X < 0 || a.Point.Y < 0 || (cur.Width > 0 && a.Point.X >= cur.Width) || (cur.Height > 0 && a.Point.Y >= cur.Height) {
 			return errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
 		}
-		c = *a.Point
+		c, rawC = *a.Point, *a.Point
 		p.target = hitTest(cur, c)
 		where = fmt.Sprintf("%d,%d", c.X, c.Y)
 	default:
@@ -167,6 +175,14 @@ func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*scre
 		dur = time.Duration(a.DurationMS) * time.Millisecond
 	}
 	g, ok := pinchGesture(area, c, a.pinchScale(), a.Rotation, dur)
+	if !ok && len(cut) > 0 {
+		// The keyboard or a bar is to blame only when there would be room
+		// without it; else the place is too small or too near the edges.
+		if _, fits := pinchGesture(raw, rawC, a.pinchScale(), a.Rotation, dur); fits {
+			cover := coverName(cut)
+			return errResult(ErrInvalidArgument, "There is no room for two fingers around %s clear of %s. Nothing was done. %s.", where, cover, hideKeyboard(cover))
+		}
+	}
 	if !ok {
 		return errResult(ErrInvalidArgument, "There is no room for two fingers around %s, which is too small or too close to the screen's edges. Nothing was done. Pinch around a larger element or nearer the middle of the screen.", where)
 	}
@@ -179,22 +195,27 @@ func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*scre
 }
 
 // describePinch says a pinch for history: "Zoomed in on “Map”", "Zoomed
-// out", "Turned “Photo” with two fingers". label is the target's, in
-// quotes, or empty.
-func describePinch(a Action, label string) string {
+// out", "Turned “Photo” with two fingers"; or, when ask is set, in the
+// imperative for an approval's title: "Zoom in on “Map”". label is the
+// target's, in quotes, or empty.
+func describePinch(a Action, label string, ask bool) string {
+	zoomed, turned := "Zoomed", "Turned"
+	if ask {
+		zoomed, turned = "Zoom", "Turn"
+	}
 	switch s := a.pinchScale(); {
 	case s > 1 && label != "":
-		return "Zoomed in on " + label
+		return zoomed + " in on " + label
 	case s > 1:
-		return "Zoomed in"
+		return zoomed + " in"
 	case s < 1 && label != "":
-		return "Zoomed out on " + label
+		return zoomed + " out on " + label
 	case s < 1:
-		return "Zoomed out"
+		return zoomed + " out"
 	case label != "":
-		return "Turned " + label + " with two fingers"
+		return turned + " " + label + " with two fingers"
 	}
-	return "Turned with two fingers"
+	return turned + " with two fingers"
 }
 
 // Touch2 is Touch for two fingers at once, for the person's pinch on the
@@ -202,12 +223,25 @@ func describePinch(a Action, label string) string {
 // TouchUp lifts both. The person's input pauses the agent. A phone that
 // cannot take two fingers returns driver.ErrUnsupported.
 func (g *Gateway) Touch2(deviceID string, a driver.TouchAction, p, q screen.Point) error {
-	_, dev, err := g.personInput(deviceID)
+	if d, err := g.device(deviceID); err == nil {
+		g.mu.Lock()
+		switching := d.switching != ""
+		g.mu.Unlock()
+		if switching {
+			return nil // lost while the phone moves to the helper (helperneed.go)
+		}
+	}
+	d, dev, err := g.personInput(deviceID)
 	if err != nil {
 		return err
 	}
 	m, ok := dev.(driver.MultiToucher)
 	if !ok {
+		// An iPhone or iPad over CoreDevice moves to the helper, which
+		// has a second finger; this gesture is lost (helperneed.go).
+		if g.personPinchHelper(d, a) {
+			return nil
+		}
 		return fmt.Errorf("pinching: %w", driver.ErrUnsupported)
 	}
 	ctx, cancel := context.WithTimeout(g.ctx, 10*time.Second)

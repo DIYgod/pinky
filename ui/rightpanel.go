@@ -14,12 +14,12 @@ import (
 // rightPanel is the column of Needs you and Tasks.
 func (a *app) rightPanel(c *mg.Context) {
 	p := pal(c)
-	mg.Scroll(c).Width(rightPanelWidth).Shrink(0).BorderWidth(0, 0, 0, 1).BorderColor(p.line).Background(p.panel).
-		Padding(20, 16).Gap(24).Label(locales.NeedsAndTasksLabel()).Children(func() {
+	mg.Scroll(c).Width(rightPanelWidth).Shrink(0).BorderWidth(0, 0, 0, 1).BorderColor(p.line).Background(p.wing).
+		Padding(sp5, sp4).Gap(sp6).Label(locales.NeedsAndTasksLabel()).Children(func() {
 		if len(a.needs) > 0 {
 			mg.Column(c).Label(locales.NeedsSection()).Children(func() {
 				sectionLabel(c, locales.NeedsSection())
-				mg.Column(c).Gap(10).Children(func() {
+				mg.Column(c).Gap(sp3).Children(func() {
 					for _, n := range a.needs {
 						a.needCard(c.Key("need-"+n.ID), n, false)
 					}
@@ -32,15 +32,20 @@ func (a *app) rightPanel(c *mg.Context) {
 		if d := a.device(a.sel); d != nil && d.Features.Companion {
 			a.companionCard(c, *d)
 		}
+		if d := a.device(a.sel); d != nil {
+			a.phoneTasksCard(c, *d)
+		}
 		mg.Column(c).Label(locales.TasksSection()).Children(func() {
 			sectionLabel(c, locales.TasksSection())
-			mg.Column(c).Gap(8).Children(func() { a.taskList(c) })
+			mg.Column(c).Gap(8).Children(func() {
+				a.askBox(c)
+				a.taskList(c)
+			})
 		})
 	})
 }
 
 func (a *app) taskList(c *mg.Context) {
-	p := pal(c)
 	shown := 0
 	// The selected phone's task first, expanded, then the others' running
 	// tasks, one row each.
@@ -62,40 +67,60 @@ func (a *app) taskList(c *mg.Context) {
 		shown++
 	}
 	if shown == 0 {
-		mg.Column(c).Padding(10, 2).Gap(6).Children(func() {
-			if a.opt.AgentSetup != nil && a.setup.loaded && !a.agentsConnected() {
-				mg.Text(c, locales.TasksNoAgent()).FontSize(14).TextColor(p.ink2)
-				if linkButton(c, locales.ConnectTitle()).AlignSelf(mg.Start).Clicked() {
-					a.page, a.set.sec = pageSettings, secAgents
-				}
-				return
+		noAgent := a.opt.AgentSetup != nil && a.setup.loaded && !a.agentsConnected()
+		ic, text := icInbox, locales.TasksNone()
+		if noAgent {
+			ic, text = icPlug, locales.TasksNoAgent()
+		}
+		emptyWell(c, ic, text, func() {
+			if noAgent && linkButton(c, locales.ConnectTitle()).Clicked() {
+				a.page, a.set.sec = pageSettings, secAgents
 			}
-			mg.Text(c, locales.TasksNone()).FontSize(14).TextColor(p.ink2)
 		})
 	}
+}
+
+// emptyWell is what a list says when it has nothing to list: a soft well
+// on the wings' gray with an icon in a ring, a line or two of words kept
+// narrow enough to break evenly, and what extra shows, such as a link to
+// do something about it.
+func emptyWell(c *mg.Context, ic *mg.SVG, text string, extra func()) {
+	p := pal(c)
+	mg.Column(c).Padding(sp6, sp5).Gap(sp3).Radius(rCard).Background(p.ink.Alpha(0.035)).AlignItems(mg.Center).Children(func() {
+		mg.Box(c).Size(40, 40).Radius(20).Background(p.card).Border(1, p.line).Justify(mg.Center).AlignItems(mg.Center).Children(func() {
+			mg.Icon(c, ic).FontSize(18).TextColor(p.ink3)
+		})
+		mg.Text(c, text).FontSize(fsSmall).LineHeight(1.5).TextColor(p.ink2).TextAlign(mg.Center).MaxWidth(220)
+		if extra != nil {
+			extra()
+		}
+	})
 }
 
 // needCard is the prototype's .ncard, for an approval, a handoff or an
 // unlock. In the floating panel (floating true) it has no outer card.
 func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 	p := pal(c)
-	card := mg.Column(c).Padding(14).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(2)
+	card := mg.Column(c).Padding(14).Radius(rCard).Background(p.amberTint).Border(1, p.amberLine).Gap(2)
+	card = raised(c, card)
 	card.Children(func() {
 		needEyebrow(c, n)
-		mg.Text(c, needTitle(n)).FontSize(16).FontWeight(650).Margin(6, 0, 0, 0)
+		mg.Text(c, needTitle(n)).FontSize(fsHeadline).FontWeight(fwSemibold).LineHeight(1.35).Margin(6, 0, 0, 0)
 		detail := needDetail(n)
 		if newAgentNeed(n) {
 			_, picker := a.api.(agentScoper)
 			detail = agentRequestDetail(n, picker)
 		}
 		if detail != "" {
-			mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2)
+			mg.Text(c, detail).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 		}
 		switch {
 		case n.Kind == gateway.NeedUnlock:
 			a.unlockControls(c, n)
 		case n.Kind == gateway.NeedHandoff:
 			a.handoffControls(c, n)
+		case n.Kind == gateway.NeedSetup:
+			// Done on the phone; the card goes once it is ready.
 		case newAgentNeed(n):
 			a.agentRequestControls(c, n)
 		case n.Unblock:
@@ -141,7 +166,7 @@ func needEyebrow(c *mg.Context, n gateway.NeedView) {
 	}
 	mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 		dot(c, p.amberDot, false)
-		mg.Text(c, text).FontSize(12.5).FontWeight(600).TextColor(p.amber).SingleLine()
+		mg.Text(c, text).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.amber).SingleLine()
 	})
 }
 
@@ -164,9 +189,9 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 	setup := d != nil && d.Status == gateway.DeviceNeedsSetup
 	switch {
 	case setup:
-		mg.Text(c, locales.NeedsHandoffSetup(agent)).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, locales.NeedsHandoffSetup(agent)).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case holding && !locked:
-		mg.Text(c, locales.NeedsHandoffInControl(agent)).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, locales.NeedsHandoffInControl(agent)).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case locked && a.canUnlockHere(n.DeviceID):
 		a.unlockButton(c, n.DeviceID).Margin(12, 0, 0, 0).FillWidth()
 		// Unlocking hands the phone back only when unlocking is all the
@@ -175,19 +200,22 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 		if n.EndsOnUnlock {
 			how = locales.NeedsHandoffLockedHere(agent)
 		}
-		mg.Text(c, how).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, how).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case locked:
 		mg.Text(c, locales.NeedsHandoffLocked(a.unlockElsewhere(n.DeviceID, locales.NeedsThenClickDone()))).
-			FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+			FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		if a.canRetryUnlock(n.DeviceID) {
+			a.retryButton(c, n.DeviceID).Margin(8, 0, 0, 0).FillWidth()
+		}
 		if d := a.device(n.DeviceID); d != nil && a.pinMissing(*d) {
 			mg.Column(c).Margin(8, 0, 0, 0).Gap(8).Children(func() { a.pinForm(c, *d, "card") })
 		}
 	default:
-		mg.Text(c, locales.NeedsHandoffHowTo()).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, locales.NeedsHandoffHowTo()).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	}
 	noting := a.noting[n.ID]
 	if noting {
-		mg.Text(c, locales.NeedsNoteFor(agent)).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
+		mg.Text(c, locales.NeedsNoteFor(agent)).FontSize(fsSmall).FontWeight(fwSemibold).Margin(10, 0, 0, 0)
 		note := a.notes[n.ID]
 		mg.TextArea(c.Key("hnote-"+n.ID), &note).Label(locales.NeedsNoteFor(agent)).Placeholder(locales.NeedsHandoffNotePlaceholder()).
 			Lines(2, 4).Margin(6, 0, 0, 0).AutoFocus()
@@ -232,9 +260,9 @@ func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
 	}
 	if _, ok := a.api.(agentScoper); ok {
 		if n.ReadOnly {
-			mg.Text(c, locales.NeedsAgentAskedReadOnly(agentOf(n))).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+			mg.Text(c, locales.NeedsAgentAskedReadOnly(agentOf(n))).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 		}
-		mg.Text(c, locales.NeedsLetAgent(agentOf(n))).FontSize(13).FontWeight(600).Margin(12, 0, 6, 0)
+		mg.Text(c, locales.NeedsLetAgent(agentOf(n))).FontSize(fsSmall).FontWeight(fwSemibold).Margin(12, 0, 6, 0)
 		scope = a.scopePicker(c, n.ID, locales.NeedsLetAgent(agentOf(n)), scope)
 	}
 	noApps := scope.Mode == gateway.ScopeApps && len(scope.Apps) == 0
@@ -259,7 +287,7 @@ func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
 func (a *app) unblockControls(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	mg.Text(c, locales.NeedsUnblockHow(nonEmpty(n.App, locales.PanelThisApp()), ruleName(n.Rule), agentOf(n))).
-		FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {
 		if button(c, locales.NeedsDeny(), btnOpt{}).Clicked() {
 			a.decide(n, gateway.Deny, "")
@@ -276,7 +304,7 @@ func (a *app) approvalControls(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	noting := a.noting[n.ID]
 	if noting {
-		mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
+		mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(fsSmall).FontWeight(fwSemibold).Margin(10, 0, 0, 0)
 		note, ok := a.notes[n.ID]
 		if !ok {
 			note = ""
@@ -390,11 +418,11 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 	d := a.device(t.DeviceID)
 	status, col, live := a.taskStatus(c, t)
 	run := running(t.State)
-	mg.Column(c).Padding(14).Radius(12).Border(1, p.line).Background(p.panel).Children(func() {
-		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-			mg.Row(c).Grow(1).MinWidth(0).Gap(8).AlignItems(mg.Center).Children(func() {
+	card(c, mg.Column(c).Padding(14)).Children(func() {
+		mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
+			mg.Row(c).Grow(1).MinWidth(0).Gap(sp2).AlignItems(mg.Center).Children(func() {
 				dot(c, col, live)
-				mg.Text(c, status).FontSize(13).TextColor(p.ink2).SingleLine()
+				mg.Text(c, status).FontSize(fsCaption).FontWeight(fwMedium).TextColor(p.ink2).SingleLine()
 			})
 			// Not while the phone is not open: offline, or waiting for a step.
 			canTake := run && t.State != gateway.TaskPaused && d != nil && !a.isLocked(*d) && d.Status != gateway.DeviceInControl &&
@@ -406,7 +434,7 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 				a.stop(t.DeviceID)
 			}
 		})
-		mg.Text(c, t.Title).FontSize(16).FontWeight(650).LineHeight(1.3).Margin(8, 0, 0, 0)
+		mg.Text(c, t.Title).FontSize(fsHeadline).FontWeight(fwSemibold).LineHeight(1.35).Margin(10, 0, 2, 0)
 		meta := []string{}
 		if t.Agent != "" {
 			meta = append(meta, t.Agent)
@@ -415,7 +443,7 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 			meta = append(meta, locales.TasksReadOnly())
 		}
 		meta = append(meta, t.DeviceName, elapsed(taskDuration(t, c.Now())))
-		mg.Text(c, strings.Join(meta, " · ")).FontSize(13).TextColor(p.ink2)
+		mg.Text(c, strings.Join(meta, " · ")).FontSize(fsCaption).TextColor(p.ink2).FontFeatures("tnum")
 		if run {
 			c.After(time.Second) // the elapsed time ticks
 		}
@@ -429,8 +457,8 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 			mg.Row(c).Margin(12, 0, 0, 0).Padding(10, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).
 				Gap(10).AlignItems(mg.Center).Children(func() {
 				mg.Column(c).Grow(1).Children(func() {
-					mg.Text(c, locales.TasksDetails()).FontWeight(500)
-					mg.Text(c, locales.TasksDeveloperModeOn()).FontSize(12.5).TextColor(p.ink2)
+					mg.Text(c, locales.TasksDetails()).FontWeight(fwMedium)
+					mg.Text(c, locales.TasksDeveloperModeOn()).FontSize(fsCaption).TextColor(p.ink2)
 				})
 				on := a.details[t.ID]
 				if toggle(c.Key("details-"+t.ID), &on, locales.TasksShowTechnicalDetails()).Changed() {
@@ -446,9 +474,9 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 	p := pal(c)
 	from := max(0, len(t.Steps)-last)
-	mg.Column(c).Gap(10).Margin(14, 0, 0, 0).Role(mg.RoleList).Children(func() {
+	mg.Column(c).Gap(sp2).Margin(14, 0, 0, 0).Padding(sp3, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).Role(mg.RoleList).Children(func() {
 		if from > 0 {
-			mg.Text(c, locales.TasksEarlierSteps(from)).FontSize(12.5).TextColor(p.ink3).Padding(0, 0, 0, 28)
+			mg.Text(c, locales.TasksEarlierSteps(from)).FontSize(fsCaption).TextColor(p.ink3).Padding(0, 0, 0, 28)
 		}
 		for i := from; i < len(t.Steps); i++ {
 			s := t.Steps[i]
@@ -459,10 +487,10 @@ func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 			mg.Column(c.Key(i)).Gap(8).Role(mg.RoleListItem).Children(func() {
 				var row mg.Element
 				if shot {
-					row = mg.ButtonBase(c).Radius(6).Gap(10).AlignItems(mg.Start).Justify(mg.Start).
+					row = mg.ButtonBase(c).Radius(rSmall).Gap(10).AlignItems(mg.Start).Justify(mg.Start).
 						Label(locales.TasksStepWithShot(text)).Expanded(open)
-					if row.Hovered() {
-						row.Background(p.bg2)
+					if row.Hovered() || open {
+						row.Background(p.bg3)
 					}
 					if row.Clicked() {
 						a.previews[key] = !open
@@ -471,36 +499,41 @@ func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 					row = mg.Row(c).Gap(10).AlignItems(mg.Start)
 				}
 				row.Children(func() {
-					mg.Box(c).Size(18, 20).Shrink(0).Center().Children(func() {
+					mg.Box(c).Size(18, 19).Shrink(0).Center().Children(func() {
 						switch kind {
 						case stepWait:
 							dot(c, p.amberDot, false)
 						case stepNow:
 							dot(c, p.green, true)
 						case stepYou:
-							mg.Icon(c, icPerson).FontSize(16).TextColor(p.ink2)
+							mg.Icon(c, icPerson).FontSize(15).TextColor(p.ink2)
 						default:
-							mg.Icon(c, icCheck).FontSize(16).TextColor(p.ink3)
+							mg.Icon(c, icCheck).FontSize(15).TextColor(p.ink3)
 						}
 					})
 					mg.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
-						tx := mg.Text(c, text).FontSize(14)
+						tx := mg.Text(c, text).FontSize(fsSmall).LineHeight(1.45)
 						switch kind {
 						case stepWait:
-							tx.TextColor(p.amber).FontWeight(600)
+							tx.TextColor(p.amber).FontWeight(fwSemibold)
 						case stepNow:
-							tx.FontWeight(600)
+							tx.FontWeight(fwSemibold)
 						case stepYou:
 							if i == len(t.Steps)-1 && running(t.State) {
-								tx.FontWeight(600)
+								tx.FontWeight(fwSemibold)
 							}
 						}
 						if sub != "" {
-							mg.Text(c, sub).FontSize(13).TextColor(p.ink2)
+							mg.Text(c, sub).FontSize(fsCaption).TextColor(p.ink2)
 						}
 					})
 					if shot {
-						mg.Icon(c, icCamera).FontSize(14).TextColor(p.ink3).Margin(3, 0, 0, 0).Shrink(0)
+						// Hidden until the row is pointed at or focused: most
+						// steps have one, and a camera on each is noise.
+						cam := mg.Icon(c, icCamera).FontSize(13).TextColor(p.ink3).Margin(3, 2, 0, 0).Shrink(0)
+						if !row.Hovered() && !row.Focused() && !open {
+							cam.Opacity(0)
+						}
 					}
 				})
 				if open {
@@ -541,7 +574,7 @@ func techList(c *mg.Context, t gateway.TaskView) {
 			})
 		}
 		if n == 0 {
-			mg.Text(c, locales.TasksNoToolCalls()).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, locales.TasksNoToolCalls()).FontSize(fsSmall).TextColor(p.ink2)
 		}
 	})
 }
@@ -549,10 +582,11 @@ func techList(c *mg.Context, t gateway.TaskView) {
 // taskRow is a collapsed task, the prototype's .trow.
 func (a *app) taskRow(c *mg.Context, t gateway.TaskView, d gateway.DeviceView) {
 	p := pal(c)
-	row := mg.ButtonBase(c).Padding(10, 12).Radius(10).Border(1, p.line).Background(p.panel).Gap(10).AlignItems(mg.Center).Justify(mg.Start).
+	row := mg.ButtonBase(c).MinHeight(40).Padding(sp2, sp3).Radius(rControl).Border(1, p.line).Background(p.card).Gap(10).AlignItems(mg.Center).Justify(mg.Start).
 		Label(locales.PhoneShow(d.Info.Name))
+	row = raised(c, row)
 	if row.Hovered() {
-		row.Background(p.bg2)
+		row.Background(p.bg3)
 	}
 	if row.Clicked() {
 		a.selectPhone(d.Info.ID)
@@ -560,9 +594,9 @@ func (a *app) taskRow(c *mg.Context, t gateway.TaskView, d gateway.DeviceView) {
 	row.Children(func() {
 		statusDot(c, d)
 		mg.RichText(c,
-			mg.Span{Text: d.Info.Name, Weight: 600, Size: 13.5},
-			mg.Span{Text: " · " + t.Title, Size: 13.5},
+			mg.Span{Text: d.Info.Name, Weight: fwSemibold, Size: fsSmall},
+			mg.Span{Text: " · " + t.Title, Size: fsSmall},
 		).Grow(1).MinWidth(0).SingleLine()
-		mg.Text(c, a.stepWord(t, d)).FontSize(12.5).TextColor(p.ink3).Shrink(0)
+		mg.Text(c, a.stepWord(t, d)).FontSize(fsCaption).TextColor(p.ink3).Shrink(0)
 	})
 }

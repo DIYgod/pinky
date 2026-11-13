@@ -10,13 +10,27 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
+	"github.com/DIYgod/pinky/internal/driver/android/companion"
 )
 
+// bundledCompanion is the companion APK Pinky installs and its build, 0
+// when the APK's version can't be read.
+func bundledCompanion() (string, int, error) {
+	apk, err := android.FindCompanionAPK()
+	if err != nil {
+		return "", 0, err
+	}
+	_, v, err := companion.APKVersion(apk)
+	if err != nil {
+		return apk, 0, nil
+	}
+	return apk, v.Code, nil
+}
+
 // runCompanion is `pinky companion install [phone]`: it installs or updates
-// the Android companion app, which reads the screen much faster than
-// uiautomator. Pinky never installs it on its own; with Update
-// automatically on, the app updates an installed one while the phone is
-// free (docs/notes/updates.md).
+// Pinky on the phone, which reads the screen much faster than uiautomator.
+// Pinky never installs it on its own; with Update automatically on, the app
+// updates an installed one while the phone is free (docs/notes/updates.md).
 func runCompanion(args []string) error {
 	if len(args) == 0 || args[0] != "install" {
 		return errors.New("usage: pinky companion install [phone id or name]")
@@ -52,11 +66,11 @@ func runCompanion(args []string) error {
 	}
 	switch {
 	case !res.Installed:
-		fmt.Printf("%s already has this companion build, and its service comes on.\n", info.Name)
+		fmt.Printf("%s already has this build of Pinky, and its service comes on.\n", info.Name)
 	case res.Replaced:
-		fmt.Printf("Replaced the companion on %s, which was signed with another key, and checked that its service comes on.\n", info.Name)
+		fmt.Printf("Replaced Pinky on %s, which was signed with another key, and checked that its service comes on.\n", info.Name)
 	default:
-		fmt.Printf("Installed the companion on %s and checked that its service comes on.\n", info.Name)
+		fmt.Printf("Installed Pinky on %s and checked that its service comes on.\n", info.Name)
 	}
 	fmt.Println("Pinky turns the service on only while an agent works on the phone, and off again afterwards.")
 	return nil

@@ -98,7 +98,7 @@ func init() {
 		gateway.StatusStopped, gateway.StatusLocked, gateway.StatusNeedsSetup} {
 		knownStatuses[string(s)] = true
 	}
-	for _, e := range []gateway.ErrorCode{gateway.ErrDeviceOffline, gateway.ErrLeaseHeld, gateway.ErrScopeDenied,
+	for _, e := range []gateway.ErrorCode{gateway.ErrDeviceOffline, gateway.ErrDevicePaused, gateway.ErrLeaseHeld, gateway.ErrScopeDenied,
 		gateway.ErrNotFound, gateway.ErrUnsupported, gateway.ErrInvalidArgument, gateway.ErrInternal} {
 		knownStatuses["error."+string(e)] = true
 	}

@@ -165,7 +165,11 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 	}
 	switch req.Method {
 	case "version":
-		return map[string]any{"version": s.Version, "protocol": Protocol, "trusted": s.Trusted}, nil
+		v := map[string]any{"version": s.Version, "protocol": Protocol, "trusted": s.Trusted}
+		if s.Kind != "" {
+			v["kind"] = s.Kind
+		}
+		return v, nil
 	case "devices":
 		return g.Devices(), nil
 	case "tasks":
@@ -236,6 +240,12 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 			s.Quit()
 		}()
 		return nil, nil
+	case "show":
+		if s.Show == nil {
+			return nil, &RPCError{Code: CodeMethod, Message: "this gateway has no window to show"}
+		}
+		s.Show()
+		return nil, nil
 	case "wipe_history":
 		if err := trusted(); err != nil {
 			return nil, err
@@ -268,7 +278,7 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 
 // Dial connects to the gateway's socket.
 func Dial(d Dirs) (net.Conn, error) {
-	return net.DialTimeout("unix", d.Socket(), 2*time.Second)
+	return dialSocket(d, 2*time.Second)
 }
 
 // Greet sends the hello line and reads the reply. It returns a reader that

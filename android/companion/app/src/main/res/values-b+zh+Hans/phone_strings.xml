@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- values/phone_strings.xml in Simplified Chinese, worded as desktop
+     Pinky's zh-Hans.json. -->
+<resources>
+    <string name="phone_settings">设置</string>
+    <string name="phone_save">保存</string>
+    <string name="phone_cancel">取消</string>
+    <string name="phone_off_body">Pinky 要通过无障碍服务在这台手机上操作。请在无障碍设置中找到 Pinky 并开启。</string>
+    <string name="phone_open_accessibility">打开无障碍设置</string>
+    <string name="phone_restricted">如果 Android 提示这项设置受限，请打开“应用信息”，点按 ⋮，选择“允许受限制的设置”，然后再试一次。</string>
+    <string name="phone_app_info">应用信息</string>
+    <string name="phone_core_starting">正在启动 Pinky…</string>
+    <string name="phone_core_failed">Pinky 无法在这台手机上启动。</string>
+    <string name="phone_no_core_title">这台手机无法独立执行任务</string>
+    <string name="phone_no_core_body">Pinky 只能在 64 位 ARM 处理器的手机上独立执行任务。在这台手机上，Pinky 需要配合电脑使用：把手机连接到运行 Pinky 的电脑，电脑上的智能体就能操作它。</string>
+    <string name="phone_core_failed_hint">请重启手机，然后再打开 Pinky。如果还是不行，请重新安装 Pinky。</string>
+    <string name="phone_setup_title">设置 Pinky</string>
+    <string name="phone_setup_service">在无障碍设置中开启 Pinky</string>
+    <string name="phone_setup_model_step">选择 AI 模型并添加 API 密钥</string>
+    <string name="phone_setup_model_body">Pinky 用你选择并付费的模型来思考：通过 Anthropic 的 API 使用 Claude，或通过兼容 OpenAI 的服务使用其他模型。</string>
+    <string name="phone_task_footer">Pinky 会离开这个界面，到其他 App 里操作。你可以随时旁观、在它询问时回答，也可以随时停止它。</string>
+    <string name="phone_setup">Pinky 可以借助你选择的 AI 模型，自己在手机上完成简单的任务。</string>
+    <string name="phone_setup_key">添加 API 密钥</string>
+    <string name="phone_setup_model">选择模型</string>
+
+    <string name="phone_computer_title">电脑上的 Pinky 正在使用这台手机</string>
+    <string name="phone_computer_detail">它完成后，你就可以在这里开始任务。</string>
+
+    <string name="phone_task_hint">要 Pinky 在这台手机上做什么？</string>
+    <string name="phone_start">开始</string>
+    <string name="phone_task_limit">每个任务最多 %1$s</string>
+    <string name="phone_task_working">Pinky 正在处理</string>
+    <string name="phone_waiting_for">等你处理：%1$s</string>
+    <string name="phone_waiting_hint">请在屏幕底部的卡片上回答。</string>
+    <string name="phone_stop">停止</string>
+    <string name="phone_dismiss">关闭</string>
+    <string name="phone_task_steps">步骤</string>
+    <string name="phone_activity">活动</string>
+
+    <string name="phone_history_all">显示全部</string>
+    <string name="phone_history_more">显示更多</string>
+    <string name="phone_history_empty">还没有已结束的任务。</string>
+    <string name="phone_history_failed">无法载入活动。</string>
+    <string name="phone_history_gone">活动里已经没有这个任务了。</string>
+    <string name="phone_today">今天</string>
+    <string name="phone_yesterday">昨天</string>
+
+    <string name="phone_end_done">已完成</string>
+    <string name="phone_end_stopped">已停止</string>
+    <string name="phone_end_failed">未能完成</string>
+    <string name="phone_end_not_started">未能开始</string>
+    <string name="phone_end_line">%1$s：%2$s</string>
+    <plurals name="phone_limit_steps">
+        <item quantity="other">已达到 %1$d 步的上限。</item>
+    </plurals>
+    <plurals name="phone_limit_minutes">
+        <item quantity="other">已达到 %1$d 分钟的上限。</item>
+    </plurals>
+    <string name="phone_limit_cost">已达到 %1$s 的上限。</string>
+    <plurals name="phone_limit_tokens">
+        <item quantity="other">已达到 %1$s 个 token 的上限。</item>
+    </plurals>
+    <string name="phone_refused">模型拒绝了这个任务。</string>
+    <string name="phone_no_key">还没有保存 API 密钥。请在“设置”中添加。</string>
+    <string name="phone_bad_key">服务没有接受这个 API 密钥。请在“设置”中检查。</string>
+
+    <string name="phone_err_no_device">Pinky 还没有开启。请在无障碍设置中开启。</string>
+    <string name="phone_err_no_model">请先在“设置”中选择模型。</string>
+    <string name="phone_err_busy">Pinky 已经在处理一个任务。</string>
+    <string name="phone_err_computer">电脑上的 Pinky 正在使用这台手机。等它完成后再试。</string>
+    <string name="phone_err_start">无法开始任务，请再试一次。</string>
+    <string name="phone_err_key_lost">已保存的 API 密钥无法读取了。请在“设置”中重新添加。</string>
+
+    <plurals name="phone_steps">
+        <item quantity="other">%1$d 步</item>
+    </plurals>
+    <plurals name="phone_minutes">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
+    <plurals name="phone_tokens">
+        <item quantity="other">%1$s 个 token</item>
+    </plurals>
+    <string name="phone_dollars">%1$s 美元</string>
+    <string name="phone_time_seconds">%1$d 秒</string>
+    <string name="phone_time_minutes">%1$d 分 %2$s 秒</string>
+    <string name="phone_time_hours">%1$d 小时 %2$s 分</string>
+
+    <string name="phone_pill_working">正在处理 · %1$s</string>
+    <string name="phone_pill_starting">正在开始</string>
+    <string name="phone_pill_waiting">等你处理</string>
+    <string name="phone_pill_computer">电脑正在使用这台手机</string>
+    <string name="phone_close">关闭</string>
+    <string name="phone_asks">Pinky 想确认</string>
+    <string name="phone_rule">规则：%1$s</string>
+    <string name="phone_deadline">%1$d 秒内不回答就会拒绝</string>
+    <string name="phone_deny">拒绝</string>
+    <string name="phone_allow_task">在此任务中允许</string>
+    <string name="phone_allow_once">允许</string>
+    <string name="phone_decline">拒绝</string>
+    <string name="phone_hand_back">完成</string>
+    <string name="phone_err_answer">无法发送你的回答，请再试一次。</string>
+
+    <string name="phone_section_model">AI 模型</string>
+    <string name="phone_service">服务</string>
+    <string name="phone_service_desc">通过 Anthropic 的 API 使用 Claude，或通过兼容 OpenAI 的服务使用其他模型。两者各用各的密钥。</string>
+    <string name="phone_service_anthropic">Anthropic 兼容 API</string>
+    <string name="phone_service_openai">OpenAI 兼容 API</string>
+    <string name="phone_key">API 密钥</string>
+    <string name="phone_key_saved">已保存</string>
+    <string name="phone_key_add">添加</string>
+    <string name="phone_key_desc">加密保存在这台手机上，只发送给该服务。</string>
+    <string name="phone_key_change">更改 API 密钥</string>
+    <string name="phone_key_remove">移除 API 密钥</string>
+    <string name="phone_key_hint">粘贴 API 密钥</string>
+    <string name="phone_key_saved_toast">已保存 API 密钥</string>
+    <string name="phone_key_removed_toast">已移除 API 密钥</string>
+    <string name="phone_key_err_save">无法保存密钥，请再试一次。</string>
+    <string name="phone_model">模型</string>
+    <string name="phone_model_claude_desc">Opus 能力最强，Sonnet 和 Haiku 更便宜。</string>
+    <string name="phone_model_desc">填写服务给出的模型名称。这个模型需要能看图并调用工具。</string>
+    <string name="phone_model_none">未设置</string>
+    <string name="phone_model_hint">模型名称</string>
+    <string name="phone_url">API 地址</string>
+    <string name="phone_url_default">默认</string>
+    <string name="phone_url_desc_anthropic">使用 Anthropic 官方 API 时保持默认，也可以填写兼容服务的地址。</string>
+    <string name="phone_url_desc_openai">服务的 OpenAI 兼容 API 地址，例如 https://…/v1。默认是 OpenAI 官方地址。</string>
+    <string name="phone_url_err">请输入以 https:// 或 http:// 开头的地址。</string>
+
+    <string name="phone_section_limits">上限</string>
+    <string name="phone_steps_limit">每个任务的步数上限</string>
+    <string name="phone_steps_limit_desc">Pinky 在手机上的每个操作算一步。</string>
+    <string name="phone_time_limit">每个任务的时长上限</string>
+    <string name="phone_time_limit_desc">等你操作或审批的时间不计算在内。</string>
+    <string name="phone_cost_limit">每个任务的费用上限</string>
+    <string name="phone_cost_limit_desc">按服务报告的用量和 Anthropic 的价格计算。</string>
+    <string name="phone_cost_limit_desc_tokens">Pinky 不知道这个模型的价格，所以按每百万 token 1 美元计算。</string>
+
+    <string name="phone_section_ask">Pinky 应在何时询问你？</string>
+    <string name="phone_preset_commits">在付款、发送消息和删除前询问</string>
+    <string name="phone_preset_commits_desc">在打电话、更改账户和安装应用前也会询问。</string>
+    <string name="phone_preset_payments">仅在付款前询问</string>
+    <string name="phone_preset_payments_desc">发送消息和删除会直接进行，不会询问。</string>
+    <string name="phone_preset_every">在每个操作前都询问</string>
+    <string name="phone_preset_every_desc">速度较慢，但每次点按都会先让你过目。</string>
+    <string name="phone_preset_core_down">开启 Pinky 后才能更改。</string>
+
+    <string name="phone_section_phone">这台手机</string>
+    <string name="phone_accessibility">无障碍服务</string>
+    <string name="phone_on">已开启</string>
+    <string name="phone_off">已关闭</string>
+    <string name="phone_accessibility_desc">Pinky 通过这项服务读取屏幕并进行操作。</string>
+    <string name="phone_app_info_desc">Pinky 的耗电和受限制的设置。</string>
+    <string name="phone_battery_title">让 Pinky 保持运行</string>
+    <string name="phone_battery_body">在较长的任务中，Android 可能会在后台停止 Pinky。请允许 Pinky 不受限制地使用电池。</string>
+    <string name="phone_battery_allow">允许</string>
+    <string name="phone_autostart_body">这台手机还会停止没有开启自启动的应用。请为 Pinky 开启自启动。</string>
+    <string name="phone_autostart_open">打开自启动设置</string>
+    <string name="phone_battery">电池</string>
+    <string name="phone_battery_unrestricted">不受限制</string>
+    <string name="phone_battery_optimized">已优化</string>
+    <string name="phone_battery_desc">设为不受限制后，Pinky 在较长的任务中也能保持运行。</string>
+    <string name="phone_autostart">自启动</string>
+    <string name="phone_autostart_desc">这台手机停止 Pinky 后，允许它重新启动。</string>
+    <string name="phone_section_about">关于</string>
+    <string name="phone_version">版本</string>
+    <string name="phone_update_check">检查更新</string>
+    <string name="phone_update_checking">正在检查…</string>
+    <string name="phone_update_current">Pinky 已是最新版本。</string>
+    <string name="phone_update_available">新版本：Pinky %1$s</string>
+    <string name="phone_update_download">下载</string>
+    <string name="phone_update_later">稍后</string>
+    <string name="phone_update_failed">无法检查更新，请稍后再试。</string>
+    <string name="phone_update_offline">无法检查更新。请检查网络连接，然后再试一次。</string>
+    <string name="phone_update_dev">开发版不会更新。</string>
+    <string name="phone_update_downloading">正在下载更新…</string>
+    <string name="phone_update_download_offline">无法下载更新。请检查网络连接，然后再试一次。</string>
+    <string name="phone_update_mismatch">下载的文件与 Pinky 的正式版本不符，Pinky 没有安装它。请稍后再试。</string>
+    <string name="phone_update_install_failed">无法安装更新，请稍后再试。</string>
+
+    <string name="phone_step_waiting">等你确认：%1$s</string>
+    <string name="phone_step_answered">你已回应：%1$s</string>
+    <string name="phone_step_denied">你拒绝了：%1$s</string>
+    <string name="phone_step_declined">你拒绝了</string>
+    <string name="phone_step_said_no">你没有同意：%1$s</string>
+    <string name="phone_step_handed_back">你交还了手机</string>
+    <string name="phone_step_agreed">你同意了：%1$s</string>
+    <string name="phone_step_asked">请求：“%1$s”</string>
+    <string name="phone_step_took_over">未执行：你接管了手机</string>
+    <string name="phone_step_in_control">未执行：当时由你操作</string>
+    <string name="phone_step_stopped">未执行：已停止</string>
+    <string name="phone_step_stale">未执行：等待期间屏幕变了</string>
+    <string name="phone_step_maybe">可能已执行</string>
+    <string name="phone_step_not_used">已允许，但 Pinky 没有回来执行</string>
+    <string name="phone_step_locked">手机当时已锁定</string>
+    <string name="phone_step_offline">手机离线了</string>
+    <string name="phone_step_needs_setup">手机需要先完成设置</string>
+    <string name="phone_step_failed">失败：%1$s</string>
+    <string name="phone_code_lease_held">手机正被其他任务占用</string>
+    <string name="phone_code_scope_denied">超出允许范围</string>
+    <string name="phone_code_not_found">没有找到</string>
+    <string name="phone_code_unsupported">不支持</string>
+    <string name="phone_code_invalid_argument">参数无效</string>
+    <string name="phone_code_internal">内部错误</string>
+</resources>

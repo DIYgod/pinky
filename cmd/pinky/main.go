@@ -5,6 +5,7 @@
 //	pinky daemon     gateway only, no UI
 //	pinky mcp        stdio MCP server for agents; forwards to the gateway
 //	pinky devices    list connected phones
+//	pinky helper     install the WebDriverAgent helper on an iPhone
 //	pinky token      print the agent token, for agents that connect over HTTP
 //	pinky quit       quit the running Pinky
 //	pinky update     install a newer version of Pinky
@@ -23,12 +24,14 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/driver/ios"
 )
 
 // version is set at build time with -ldflags "-X main.version=...".
 var version = "0.0.0-dev"
 
 func main() {
+	ios.PinkyVersion = version // the iPhone app kit of this release
 	cmd := "app"
 	args := os.Args[1:]
 	if len(args) > 0 && (!strings.HasPrefix(args[0], "-") || isCommandFlag(args[0])) {
@@ -50,6 +53,8 @@ func main() {
 		err = runDevices(args)
 	case "companion":
 		err = runCompanion(args)
+	case "helper":
+		err = runHelper(args)
 	case "needs":
 		err = runNeeds(args)
 	case "decide":
@@ -100,7 +105,13 @@ Commands:
             gateway when none is running
   devices   list connected phones
   companion install [phone]
-            install or update the Android companion app
+            install or update Pinky on the phone, Pinky's app for Android phones
+  helper install [--team ID] [--bundle-id ID] [--local-signing]
+                 [--helper-only] [phone]
+            build Pinky on the iPhone, Pinky's app for the iPhone, with
+            WebDriverAgent in it, with Xcode and install it on the phone
+            (--helper-only: the older Pinky Helper); run it again when its
+            signature runs out (macOS)
   token     print the agent token, which agents connecting over HTTP send
   quit      quit the running Pinky (the app or the daemon)
   update [--check]

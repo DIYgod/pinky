@@ -55,52 +55,47 @@ func (s Settings) clone() Settings {
 func (a *app) settingsPage(c *mg.Context) {
 	p := pal(c)
 	s := &a.set
-	pageHeader(c, func() { mg.Text(c, locales.SettingsPageTitle()).FontSize(17).FontWeight(650) })
+	pageHeader(c, func() { pageTitle(c, locales.SettingsPageTitle()) })
 	mg.Row(c).Grow(1).MinHeight(0).AlignItems(mg.Stretch).Children(func() {
-		mg.Column(c).Width(200).Shrink(0).Padding(16, 12).Gap(2).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
+		mg.Column(c).Width(200).Shrink(0).Padding(sp3, 10).Gap(2).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
 			Role(mg.RoleTabList).Label(locales.SettingsSectionsLabel()).Children(func() {
-			tab := func(sec settingsSection, name string, needs bool) {
+			tab := func(sec settingsSection, ic *mg.SVG, name string, needs bool) {
 				on := s.sec == sec
-				b := mg.ButtonBase(c.Key(sec)).Height(36).Padding(0, 12).Radius(8).Gap(8).AlignItems(mg.Center).Justify(mg.Start).
+				b := mg.ButtonBase(c.Key(sec)).Height(32).Padding(0, 10, 0, rowInset).Radius(rControl).Gap(10).AlignItems(mg.Center).Justify(mg.Start).
 					Role(mg.RoleTab).Selected(on).Label(name)
-				col := p.ink2
 				switch {
 				case on:
-					b.Background(p.bg3)
+					b.Background(p.sel)
 					selectionMark(c, b)
-					col = p.ink
 				case b.Hovered():
-					b.Background(p.bg2)
-					col = p.ink
+					b.Background(p.bg3)
 				}
 				if b.Clicked() {
 					s.sec = sec
 				}
-				b.TextColor(col).Children(func() {
-					t := mg.Text(c, name).FontSize(14).Grow(1)
-					if on {
-						t.FontWeight(600)
-					}
+				b.TextColor(navInk(c, b, on)).Children(func() {
+					mg.Icon(c, ic).FontSize(16)
+					mg.Text(c, name).FontSize(fsBody).Grow(1)
 					if needs {
 						dot(c, p.amberDot, false).Label(locales.SettingsNeedsYou())
 					}
 				})
 			}
-			tab(secPhones, locales.SettingsSectionPhones(), false)
+			tab(secPhones, icAndroid, locales.SettingsSectionPhones(), false)
 			agentsWait := false
 			for _, n := range a.needs {
 				agentsWait = agentsWait || newAgentNeed(n)
 			}
-			tab(secAgents, locales.SettingsSectionAgents(), agentsWait)
-			tab(secSafety, locales.SettingsSectionSafety(), len(a.files.list) > 0)
-			tab(secPrivacy, locales.SettingsSectionPrivacy(), false)
-			tab(secAdvanced, locales.SettingsSectionAdvanced(), false)
+			tab(secAgents, icPlug, locales.SettingsSectionAgents(), agentsWait)
+			tab(secSafety, icShield, locales.SettingsSectionSafety(), len(a.files.list) > 0)
+			tab(secPrivacy, icEyeOff, locales.SettingsSectionPrivacy(), false)
+			tab(secAdvanced, icSliders, locales.SettingsSectionAdvanced(), false)
 			a.feedbackLink(c)
 		})
 		a.watchFileProblems(c)
 		a.watchGatewaySettings(c)
-		mg.Scroll(c).Grow(1).MinWidth(0).Padding(24, 40).Children(func() {
-			mg.Column(c).MaxWidth(640).Gap(22).Children(func() {
+		mg.Scroll(c).Grow(1).MinWidth(0).Padding(28, 40).Children(func() {
+			mg.Column(c).MaxWidth(640).Gap(28).Children(func() {
 				switch s.sec {
 				case secPhones:
 					a.settingsPhones(c)
@@ -120,9 +115,44 @@ func (a *app) settingsPage(c *mg.Context) {
 
 func settingsTitle(c *mg.Context, title, desc string) {
 	p := pal(c)
-	mg.Column(c).Children(func() {
-		mg.Text(c, title).FontSize(20).FontWeight(650).Role(mg.RoleHeading)
-		mg.Text(c, desc).FontSize(13.5).TextColor(p.ink2).Margin(4, 0, 0, 0)
+	mg.Column(c).Margin(0, 0, -sp1, 0).Children(func() {
+		mg.Text(c, title).FontSize(fsTitle2).FontWeight(fwSemibold).Role(mg.RoleHeading)
+		mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.45).TextColor(p.ink2).Margin(6, 0, 0, 0)
+	})
+}
+
+// settingsHeading is the heading of a group of settings, with what it is
+// for under it.
+func settingsHeading(c *mg.Context, title, desc string) mg.Element {
+	p := pal(c)
+	return mg.Column(c).Gap(3).Children(func() {
+		mg.Text(c, title).FontSize(fsHeadline).FontWeight(fwSemibold)
+		if desc != "" {
+			mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.45).TextColor(p.ink2)
+		}
+	})
+}
+
+// subHeading names a part of a group of settings, as Your rules and
+// Built-in rules do under Rules, with what it is for under it.
+func subHeading(c *mg.Context, title, desc string) mg.Element {
+	p := pal(c)
+	return mg.Column(c).Gap(2).Margin(sp1, 0, 0, 0).Children(func() {
+		mg.Text(c, title).FontSize(fsSmall).FontWeight(fwSemibold).TextColor(p.ink2)
+		if desc != "" {
+			mg.Text(c, desc).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink3)
+		}
+	})
+}
+
+// rowWords are the title and description of a setting's row.
+func rowWords(c *mg.Context, words mg.Element, title, desc string) {
+	p := pal(c)
+	words.Grow(1).MinWidth(0).Gap(2).Children(func() {
+		mg.Text(c, title).FontWeight(fwMedium)
+		if desc != "" {
+			mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
+		}
 	})
 }
 
@@ -140,24 +170,15 @@ func (a *app) toggleRow(c *mg.Context, key, title, desc string, last bool, on *b
 // toggleRowFor is toggleRow for a choice the gateway keeps rather than the
 // settings file.
 func (a *app) toggleRowFor(c *mg.Context, key, title, desc string, last bool, on *bool) bool {
-	p := pal(c)
 	changed := false
-	r := mg.Row(c.Key(key)).Gap(16).Padding(10, 0).AlignItems(mg.Center)
-	if !last {
-		r.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
-	}
+	r := groupRow(c, mg.Row(c.Key(key)).Gap(sp4).AlignItems(mg.Center), last)
 	r.Children(func() {
-		words := mg.Column(c).Grow(1).MinWidth(0).Gap(2).Cursor(mg.CursorPointer)
+		words := mg.Column(c).Cursor(mg.CursorPointer)
 		if words.Clicked() {
 			*on = !*on
 			changed = true
 		}
-		words.Children(func() {
-			mg.Text(c, title).FontWeight(600)
-			if desc != "" {
-				mg.Text(c, desc).FontSize(13.5).TextColor(p.ink2)
-			}
-		})
+		rowWords(c, words, title, desc)
 		if toggle(c.Key(key+"-switch"), on, title).Changed() {
 			changed = true
 		}
@@ -168,18 +189,9 @@ func (a *app) toggleRowFor(c *mg.Context, key, title, desc string, last bool, on
 // settingRow is the prototype's .trow in Settings: a label and a
 // description, with a control at the end.
 func settingRow(c *mg.Context, title, desc string, last bool, control func()) {
-	p := pal(c)
-	r := mg.Row(c).Gap(16).Padding(10, 0).AlignItems(mg.Center)
-	if !last {
-		r.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
-	}
+	r := groupRow(c, mg.Row(c).Gap(sp4).AlignItems(mg.Center), last)
 	r.Children(func() {
-		mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-			mg.Text(c, title).FontWeight(600)
-			if desc != "" {
-				mg.Text(c, desc).FontSize(13.5).TextColor(p.ink2)
-			}
-		})
+		rowWords(c, mg.Column(c), title, desc)
 		if control != nil {
 			control()
 		}
@@ -191,69 +203,66 @@ func (a *app) settingsSafety(c *mg.Context) {
 	st := &a.settings
 	settingsTitle(c, locales.SettingsSectionSafety(), locales.SettingsSafetyIntro())
 	a.fileProblemNotes(c)
-	a.offWhile(c, rulesYAML).Gap(8).Label(locales.SettingsSafetyAskGroup()).Children(func() {
-		mg.Text(c, locales.SettingsSafetyAskTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
+	a.offWhile(c, rulesYAML).Gap(10).Label(locales.SettingsSafetyAskGroup()).Children(func() {
+		settingsHeading(c, locales.SettingsSafetyAskTitle(), "")
 		presets := []struct{ title, desc string }{
 			{locales.SettingsSafetyPresetCommits(), locales.SettingsSafetyPresetCommitsDesc()},
 			{locales.SettingsSafetyPresetPayments(), locales.SettingsSafetyPresetPaymentsDesc()},
 			{locales.SettingsSafetyPresetEvery(), locales.SettingsSafetyPresetEveryDesc()},
 		}
-		mg.Column(c).Gap(8).Role(mg.RoleRadioGroup).Label(locales.SettingsSafetyAskTitle()).Children(func() {
+		group(c).Role(mg.RoleRadioGroup).Label(locales.SettingsSafetyAskTitle()).Children(func() {
 			for i, pr := range presets {
 				v := i + 1
-				opt := mg.RadioBase(c.Key(v), &st.Preset, v).Gap(12).Padding(10, 14).Radius(10).AlignItems(mg.Start).FillWidth()
+				opt := mg.RadioBase(c.Key(v), &st.Preset, v).Gap(sp3).AlignItems(mg.Start).FillWidth()
+				opt = groupRow(c, opt, v == len(presets))
 				on := st.Preset == v
-				border := p.line
-				if on {
-					border = p.accent
-					opt.Shadow(0, 0, 0, 1, p.accent)
-				} else if opt.Hovered() {
-					border = p.line2
+				if opt.Hovered() && !on {
+					opt.Background(p.bg3.Alpha(0.5))
 				}
 				if opt.Changed() {
 					a.changed()
 				}
-				opt.Border(1, border).Background(p.panel).Children(func() {
-					rb := mg.Box(c).Size(16, 16).Radius(8).Margin(2, 0, 0, 0).Shrink(0).Background(p.panel)
+				opt.Children(func() {
+					rb := mg.Box(c).Size(18, 18).Radius(9).Margin(1, 0, 0, 0).Shrink(0).Background(p.panel)
 					if on {
-						rb.Border(5, p.accentBtn)
+						rb.Border(5.5, p.accentBtn)
 					} else {
 						rb.Border(1.5, p.line2)
 					}
-					mg.Column(c).Gap(2).Grow(1).MinWidth(0).Children(func() {
-						mg.Text(c, pr.title).FontWeight(600)
-						mg.Text(c, pr.desc).FontSize(13.5).TextColor(p.ink2)
-					})
+					rowWords(c, mg.Column(c), pr.title, pr.desc)
 				})
 			}
 		})
 	})
-	a.offWhile(c, appsYAML).Gap(8).Label(locales.SettingsSafetyBlockedApps()).Children(func() {
-		mg.Row(c).Gap(12).AlignItems(mg.End).Children(func() {
-			mg.Column(c).Grow(1).Children(func() {
-				mg.Text(c, locales.SettingsSafetyBlockedApps()).FontSize(15).FontWeight(650)
-				mg.Text(c, locales.SettingsSafetyBlockedIntro()).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
-			})
-			if button(c, locales.SettingsSafetyAddApp(), btnOpt{}).Clicked() {
+	a.offWhile(c, appsYAML).Gap(10).Label(locales.SettingsSafetyBlockedApps()).Children(func() {
+		mg.Row(c).Gap(sp3).AlignItems(mg.End).Children(func() {
+			settingsHeading(c, locales.SettingsSafetyBlockedApps(), locales.SettingsSafetyBlockedIntro()).Grow(1).MinWidth(0)
+			if button(c, locales.SettingsSafetyAddApp(), btnOpt{small: true, icon: icPlus}).Clicked() {
 				a.set.adding = !a.set.adding
 			}
 		})
 		if a.set.adding {
 			a.addBlockedApp(c)
 		}
-		mg.Column(c).Children(func() {
+		if len(st.BlockedApps) == 0 {
+			return
+		}
+		group(c).Children(func() {
 			for i, b := range st.BlockedApps {
-				i, b := i, b
-				mg.Row(c.Key("b-"+b.Name)).Gap(12).Padding(7, 0).AlignItems(mg.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
-					appIcon(c, b.Name, 28, 8, 13, blockedColor(b.Name))
-					mg.Text(c, b.Name).Grow(1)
-					mg.Text(c, blockedKind(b.Kind)).FontSize(13.5).TextColor(p.ink2)
-					rm := mg.ButtonBase(c).Size(26, 26).Radius(6).Center().Label(locales.SettingsSafetyUnblockApp(b.Name)).Tooltip(locales.SettingsSafetyUnblock())
+				b := b
+				// Two apps may share a name (Trust Bank's iPhone app and Trust
+				// Wallet's Android app): the id tells their rows apart.
+				row := mg.Row(c.Key("b-" + b.ID + "\x00" + b.Name)).Gap(sp3).AlignItems(mg.Center)
+				groupRow(c, row, i == len(st.BlockedApps)-1).Padding(sp2, sp3, sp2, sp4).Children(func() {
+					appIcon(c, b.Name, 28, 7, 13, blockedColor(b.Name))
+					mg.Text(c, b.Name).FontWeight(fwMedium).Grow(1)
+					mg.Text(c, blockedKind(b.Kind)).FontSize(fsSmall).TextColor(p.ink2)
+					rm := mg.ButtonBase(c).Size(26, 26).Radius(rSmall).Center().Label(locales.SettingsSafetyUnblockApp(b.Name)).Tooltip(locales.SettingsSafetyUnblock())
 					if rm.Hovered() {
 						rm.Background(p.bg3)
 					}
 					if rm.Clicked() {
-						st.BlockedApps = append(st.BlockedApps[:i:i], st.BlockedApps[i+1:]...)
+						st.BlockedApps = withoutBlocked(st.BlockedApps, b)
 						a.changed()
 					}
 					rm.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(14) })
@@ -262,7 +271,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 		})
 	})
 	a.alwaysAllowed(c)
-	mg.Column(c).Label(locales.SettingsSafetyProtections()).Children(func() {
+	group(c).Label(locales.SettingsSafetyProtections()).Children(func() {
 		a.offWhile(c, rulesYAML).Children(func() {
 			if a.toggleRow(c, "ro", locales.SettingsSafetyReadOnly(), locales.SettingsSafetyReadOnlyDesc(), false, &st.ReadOnly) {
 				a.applyReadOnly(st.ReadOnly)
@@ -285,6 +294,18 @@ func (a *app) settingsSafety(c *mg.Context) {
 		})
 	})
 	a.rulesSection(c)
+}
+
+// withoutBlocked returns list without the row of b, the same app by id
+// and name; other apps of that name stay.
+func withoutBlocked(list []BlockedApp, b BlockedApp) []BlockedApp {
+	out := make([]BlockedApp, 0, len(list))
+	for _, x := range list {
+		if x.ID != b.ID || x.Name != b.Name {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 // blockedKinds name the kinds of blocked apps, which the settings keep in
@@ -328,44 +349,39 @@ func blockedColor(name string) string {
 func (a *app) settingsPhones(c *mg.Context) {
 	p := pal(c)
 	settingsTitle(c, locales.SettingsSectionPhones(), locales.SettingsPhonesIntro())
-	mg.Column(c).Label(locales.SettingsSectionPhones()).Children(func() {
+	mg.Column(c).Gap(sp4).Label(locales.SettingsSectionPhones()).Children(func() {
 		if len(a.devices) == 0 {
-			mg.Text(c, locales.SettingsPhonesNone()).TextColor(p.ink2).Padding(10, 0)
+			group(c).Children(func() {
+				groupRow(c, mg.Row(c).AlignItems(mg.Center), true).Children(func() {
+					mg.Text(c, locales.SettingsPhonesNone()).FontSize(fsSmall).TextColor(p.ink2)
+				})
+			})
 		}
-		for i, d := range a.devices {
+		for _, d := range a.devices {
 			d := d
-			last := i == len(a.devices)-1
-			box := mg.Column(c.Key(d.Info.ID)).Padding(10, 0).Gap(4).Label(d.Info.Name)
-			if !last {
-				box.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
-			}
-			box.Children(func() {
+			// Each phone is a group: its name and state, then what can be
+			// set for it, then Checkup and Remove at its foot.
+			group(c.Key(d.Info.ID)).Label(d.Info.Name).Children(func() {
 				if foundOnWiFi(d) {
 					// Found on Wi-Fi: nothing to set until the person says
 					// it is theirs (wifi.go).
-					mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
-						mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-							mg.Text(c, d.Info.Name).FontWeight(600)
-							line := locales.SettingsPhonesFound()
-							if l := foundLine(d); l != "" {
-								line = l + " · " + line
-							}
-							mg.Text(c, line).FontSize(13.5).TextColor(p.ink2)
-						})
+					groupRow(c, mg.Row(c).Gap(sp4).AlignItems(mg.Center), true).Children(func() {
+						line := locales.SettingsPhonesFound()
+						if l := foundLine(d); l != "" {
+							line = l + " · " + line
+						}
+						phoneHead(c, d, line)
 						a.foundButtons(c, d, true)
 					})
 					return
 				}
-				mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
-					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-						mg.Text(c, d.Info.Name).FontWeight(600)
-						line := osLine(d)
-						if cl := companionLine(a.companionFor(d)); cl != "" {
-							line += " · " + cl
-						}
-						mg.Text(c, line).FontSize(13.5).TextColor(p.ink2)
-					})
-					mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
+				groupRow(c, mg.Row(c).Gap(sp4).AlignItems(mg.Center), false).Children(func() {
+					line := osLine(d)
+					if cl := companionLine(a.companionFor(d)); cl != "" {
+						line += " · " + cl
+					}
+					phoneHead(c, d, line)
+					mg.Row(c).Gap(6).AlignItems(mg.Center).Shrink(0).Children(func() {
 						word := locales.SettingsPhonesConnected()
 						switch {
 						case d.Status == gateway.DeviceConnecting:
@@ -380,47 +396,69 @@ func (a *app) settingsPhones(c *mg.Context) {
 						default:
 							dot(c, p.green, false)
 						}
-						mg.Text(c, word).FontSize(13).TextColor(p.ink2)
+						mg.Text(c, word).FontSize(fsSmall).TextColor(p.ink2)
 					})
-					if a.canRemove() && quietButton(c.Key("remove-"+d.Info.ID), locales.RemovePhoneButton()).
-						Label(locales.RemovePhoneButtonLabel(d.Info.Name)).Clicked() {
-						a.askRemove(d)
-					}
 				})
 				// Unlocking from this computer: the phone's PIN. A saved one
 				// can be removed even with unlocking turned off.
 				if a.pin.saved[d.Info.ID] || (d.Features.Unlock && a.settings.UnlockFromComputer) {
-					mg.Column(c).Gap(6).Padding(6, 0, 0, 0).Children(func() {
-						mg.Text(c, locales.SettingsUnlockFromComputer()).FontSize(13.5).FontWeight(600)
+					groupRow(c, mg.Column(c).Gap(sp2).Justify(mg.Center), false).Children(func() {
+						mg.Text(c, locales.SettingsUnlockFromComputer()).FontWeight(fwMedium)
 						a.pinForm(c, d, "settings")
 					})
 				}
 				if d.Features.Background {
-					a.backgroundRow(c, d, true)
+					a.backgroundRow(c, d, false)
 				}
 				a.connectionRows(c, d)
 				a.awayRow(c, d)
 				a.phoneWiFiRow(c, d)
-				mg.Row(c).Padding(4, 0, 0, 0).Children(func() {
-					if linkButton(c, locales.PhoneCheckup()).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
+				a.phoneTasksRow(c, d)
+				mg.Row(c).Padding(sp2, sp4).Gap(sp2).AlignItems(mg.Center).Justify(mg.End).Children(func() {
+					if button(c, locales.PhoneCheckup(), btnOpt{small: true}).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
 						a.openCheckup(d)
+					}
+					if a.canRemove() && button(c.Key("remove-"+d.Info.ID), locales.RemovePhoneButton(), btnOpt{small: true}).
+						Label(locales.RemovePhoneButtonLabel(d.Info.Name)).Clicked() {
+						a.askRemove(d)
 					}
 				})
 			})
 		}
 	})
 	mg.Row(c).Children(func() {
-		if button(c, locales.SettingsPhonesAdd(), btnOpt{}).Clicked() {
+		if button(c, locales.SettingsPhonesAdd(), btnOpt{icon: icPlus}).Clicked() {
 			a.page = pageAddPhone
 			a.add.reset(a)
 		}
 	})
-	mg.Column(c).Label(locales.SettingsPhonesWiFi()).Children(func() {
-		if a.toggleRow(c, "ios-wifi", locales.SettingsPhonesWiFi(), locales.SettingsPhonesWiFiDesc(), true, &a.settings.IOSWiFi) {
+	keepAwake := a.awayKeepAwakeShown(c)
+	group(c).Children(func() {
+		if a.toggleRow(c, "ios-wifi", locales.SettingsPhonesWiFi(), locales.SettingsPhonesWiFiDesc(), !keepAwake, &a.settings.IOSWiFi) {
 			a.applyWiFi(a.settings.IOSWiFi)
 		}
+		if keepAwake {
+			a.awayKeepAwakeRow(c)
+		}
 	})
-	a.awayKeepAwakeRow(c)
+	a.webMirrorSettings(c)
+}
+
+// phoneHead is the head of a phone's group in Settings › Phones: its
+// kind's picture, its name, and a line on how it is connected.
+func phoneHead(c *mg.Context, d gateway.DeviceView, line string) {
+	p := pal(c)
+	ic := icAndroid
+	if d.Info.Platform == driver.IOS {
+		ic = icIphone
+	}
+	mg.Box(c).Size(36, 36).Radius(rControl).Background(p.bg3).Shrink(0).Justify(mg.Center).AlignItems(mg.Center).Children(func() {
+		mg.Icon(c, ic).FontSize(20).TextColor(p.ink2)
+	})
+	mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+		mg.Text(c, d.Info.Name).FontSize(fsHeadline).FontWeight(fwSemibold)
+		mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink2)
+	})
 }
 
 // agentsState is Settings › Agents': the gateway's agents and the scopes
@@ -492,7 +530,7 @@ func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scop
 	mg.Select(c.Key("scope-"+key), &choice, labels).Label(label).MaxWidth(360)
 	scope := gateway.Scope{Mode: scopeOf(choice)}
 	st.choice[key] = string(scope.Mode)
-	mg.Text(c, scopeHint(scope.Mode)).FontSize(12.5).TextColor(pal(c).ink2).MaxWidth(360).Margin(4, 0, 0, 0)
+	mg.Text(c, scopeHint(scope.Mode)).FontSize(fsSmall).TextColor(pal(c).ink2).MaxWidth(360).Margin(4, 0, 0, 0)
 	if scope.Mode == gateway.ScopeApps {
 		apps := st.apps[key]
 		mg.TextInput(c.Key("apps-"+key), &apps).Placeholder(locales.SettingsAgentsAppsPlaceholder()).Label(locales.SettingsAgentsApps()).MaxWidth(360)
@@ -535,16 +573,16 @@ func (a *app) settingsAgents(c *mg.Context) {
 			continue
 		}
 		n := n
-		mg.Column(c.Key("req-"+n.ID)).Padding(18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(10).
+		mg.Column(c.Key("req-"+n.ID)).Padding(sp4, sp5).Radius(rCard).Background(p.amberTint).Border(1, p.amberLine).Gap(sp3).
 			Label(locales.SettingsAgentsRequest()).Children(func() {
-			mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
+			mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
 				dot(c, p.amberDot, false)
-				mg.Text(c, locales.SettingsNeedsYou()).FontSize(13).FontWeight(600).TextColor(p.amber)
+				mg.Text(c, locales.SettingsNeedsYou()).FontSize(fsSmall).FontWeight(fwSemibold).TextColor(p.amber)
 			})
-			mg.Column(c).Children(func() {
-				mg.Text(c, needTitle(n)).FontSize(16).FontWeight(650)
+			mg.Column(c).Gap(sp1).Children(func() {
+				mg.Text(c, needTitle(n)).FontSize(fsHeadline).FontWeight(fwSemibold)
 				if d := agentRequestDetail(n, canScope); d != "" {
-					mg.Text(c, d).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
+					mg.Text(c, d).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 				}
 			})
 			a.agentRequestControls(c, n)
@@ -597,7 +635,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 		}
 		sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 	}
-	mg.Column(c).Label(locales.SettingsAgentsList()).Children(func() {
+	group(c).Label(locales.SettingsAgentsList()).Children(func() {
 		if len(rows) == 0 {
 			none := locales.SettingsAgentsNone()
 			for _, st := range a.setup.list {
@@ -605,33 +643,32 @@ func (a *app) settingsAgents(c *mg.Context) {
 					none = locales.SettingsAgentsNoneYet()
 				}
 			}
-			mg.Text(c, none).TextColor(p.ink2).Padding(10, 0)
+			groupRow(c, mg.Row(c).AlignItems(mg.Center), true).Children(func() {
+				mg.Text(c, none).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
+			})
 		}
 		for i, r := range rows {
 			r := r
 			last := i == len(rows)-1
-			box := mg.Column(c.Key("agent-"+r.name)).Padding(10, 0).Gap(10)
-			if !last {
-				box.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
-			}
+			box := groupRow(c, mg.Column(c.Key("agent-"+r.name)).Gap(sp3).Justify(mg.Center), last)
 			box.Children(func() {
-				mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
-					appIcon(c, r.name, 28, 8, 13, "#5450d6")
+				mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
+					appIcon(c, r.name, 32, rControl, 14, "#5450d6")
 					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-						mg.Text(c, r.name).FontWeight(600)
-						mg.Text(c, r.line).FontSize(13.5).TextColor(p.ink2)
+						mg.Text(c, r.name).FontWeight(fwMedium)
+						mg.Text(c, r.line).FontSize(fsSmall).TextColor(p.ink2)
 					})
-					mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
+					mg.Row(c).Gap(6).AlignItems(mg.Center).Shrink(0).Children(func() {
 						switch r.state {
 						case "working":
 							dot(c, p.green, false)
-							mg.Text(c, locales.SettingsAgentsWorking()).FontSize(13).TextColor(p.ink2)
+							mg.Text(c, locales.SettingsAgentsWorking()).FontSize(fsSmall).TextColor(p.ink2)
 						case "waiting":
 							dot(c, p.amberDot, false)
-							mg.Text(c, locales.SettingsAgentsWaiting()).FontSize(13).TextColor(p.ink2)
+							mg.Text(c, locales.SettingsAgentsWaiting()).FontSize(fsSmall).TextColor(p.ink2)
 						default:
 							dot(c, p.ink3, false)
-							mg.Text(c, locales.SettingsAgentsAllowed()).FontSize(13).TextColor(p.ink2)
+							mg.Text(c, locales.SettingsAgentsAllowed()).FontSize(fsSmall).TextColor(p.ink2)
 						}
 					})
 					if canScope && r.known && r.state != "waiting" {
@@ -639,7 +676,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 						if st.editing == r.name {
 							label = locales.SettingsClose()
 						}
-						if button(c, label, btnOpt{}).Label(locales.SettingsAgentsChangeLabel(r.name)).Clicked() {
+						if button(c, label, btnOpt{small: true}).Label(locales.SettingsAgentsChangeLabel(r.name)).Clicked() {
 							if st.editing == r.name {
 								st.editing = ""
 							} else {
@@ -668,9 +705,18 @@ func (a *app) settingsAgents(c *mg.Context) {
 		}
 	})
 	if !canList {
-		mg.Text(c, locales.SettingsAgentsUnlisted()).FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, locales.SettingsAgentsUnlisted()).FontSize(fsCaption).TextColor(p.ink3)
 	}
-	a.connectAgents(c)
+	// Until an agent has connected, the list says to connect one below,
+	// and Connect an agent comes right there, before Ask Pinky, which
+	// would fill the window and leave it out of sight.
+	if len(rows) == 0 {
+		a.connectAgents(c)
+		a.askSettings(c)
+	} else {
+		a.askSettings(c)
+		a.connectAgents(c)
+	}
 	a.remoteAgents(c)
 }
 
@@ -706,7 +752,7 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 	p := pal(c)
 	st := &a.settings
 	settingsTitle(c, locales.SettingsSectionPrivacy(), locales.SettingsPrivacyIntro())
-	mg.Column(c).Label(locales.SettingsSectionPrivacy()).Children(func() {
+	group(c).Label(locales.SettingsSectionPrivacy()).Children(func() {
 		settingRow(c, locales.SettingsPrivacyKeep(), locales.SettingsPrivacyKeepDesc(), false, func() {
 			choices := keepChoices(st.KeepDays)
 			labels := make([]string, len(choices))
@@ -775,8 +821,9 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 	p := pal(c)
 	st := &a.settings
 	settingsTitle(c, locales.SettingsSectionAdvanced(), locales.SettingsAdvancedIntro())
-	mg.Column(c).Label(locales.SettingsSectionAdvanced()).Children(func() {
+	group(c).Label(locales.SettingsSectionAdvanced()).Children(func() {
 		a.languageRow(c)
+		a.toggleRow(c, "stop-adb", locales.SettingsAdvancedStopAdb(), locales.SettingsAdvancedStopAdbDesc(), false, &st.StopADBOnQuit)
 		a.toggleRow(c, "dev", locales.SettingsAdvancedDevMode(), locales.SettingsAdvancedDevModeDesc(), false, &st.DeveloperMode)
 		if st.DeveloperMode {
 			var parts []string
@@ -814,8 +861,8 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 				}()
 			}
 		})
-		a.fileProblemNotes(c)
 	})
+	a.fileProblemNotes(c)
 	a.settingsUpdates(c)
 	_ = p
 }

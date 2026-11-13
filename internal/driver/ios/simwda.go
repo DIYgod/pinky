@@ -144,6 +144,8 @@ func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *htt
 		"-scheme", "WebDriverAgentRunner",
 		"-destination", "generic/platform=iOS Simulator",
 		"-derivedDataPath", dd,
+		"SYMROOT="+filepath.Join(dd, "Build", "Products"),
+		"OBJROOT="+filepath.Join(dd, "Build", "Intermediates.noindex"),
 		"CODE_SIGNING_ALLOWED=NO", "ARCHS="+arch)
 	cmd.Env = x.env()
 	cmd.Stdout = io.MultiWriter(out, tail)

@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/DIYgod/pinky"
@@ -28,4 +31,26 @@ func agentSetup(dirs api.Dirs) *agents.Setup {
 		s.Bundle.Tools = agents.BundleTools(tools)
 	}
 	return s
+}
+
+// refreshSkills brings the copies of Pinky's skill that an older Pinky
+// installed in agents up to this Pinky's text, as the app or the daemon
+// starts: Pinky updates often, and agents should read the guide of the
+// Pinky they start. Builds from source (version …-dev) and a Pinky in a
+// folder of its own (PINKY_HOME: tests, a second copy) leave them alone, so
+// a branch's draft of the guide does not replace the released one.
+func refreshSkills(log *slog.Logger) {
+	if strings.HasSuffix(version, "-dev") || os.Getenv(api.HomeEnv) != "" {
+		return
+	}
+	s := &agents.Setup{Env: agents.SystemEnv(), Skill: pinky.Skill}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	files, err := s.RefreshSkills(ctx)
+	for _, f := range files {
+		log.Info("agents: updated Pinky's skill", "file", f)
+	}
+	if err != nil {
+		log.Warn("agents: update Pinky's skill", "err", err)
+	}
 }

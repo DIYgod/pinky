@@ -136,9 +136,9 @@ func (a *app) virtualSection(c *mg.Context, vp driver.VirtualPhones) {
 	mg.Column(c).Gap(8).Label(title).Children(func() {
 		sectionLabel(c, title).Margin(0)
 		if msg := virtualMissing(vp); msg != "" {
-			mg.Row(c).Gap(10).Padding(12, 14).Radius(10).Background(p.bg2).AlignItems(mg.Start).Role(mg.RoleStatus).Children(func() {
+			mg.Row(c).Gap(10).Padding(sp3, 14).Radius(rControl).Background(p.bg2).AlignItems(mg.Start).Role(mg.RoleStatus).Children(func() {
 				mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot).Shrink(0).Margin(1, 0, 0, 0)
-				mg.Text(c, msg).FontSize(13.5).Grow(1).MinWidth(0)
+				mg.Text(c, msg).FontSize(fsBody).Grow(1).MinWidth(0)
 			})
 			return
 		}
@@ -147,7 +147,7 @@ func (a *app) virtualSection(c *mg.Context, vp driver.VirtualPhones) {
 		if more {
 			phones = phones[:virtualRows]
 		}
-		mg.Column(c).Radius(10).Border(1, p.line).Children(func() {
+		mg.Column(c).Radius(rCard).Background(p.group).Border(1, p.line).Clip().Children(func() {
 			for i, v := range phones {
 				a.virtualRow(c.Key(v.ID), vp.Platform, v, i == 0)
 			}
@@ -159,7 +159,7 @@ func (a *app) virtualSection(c *mg.Context, vp driver.VirtualPhones) {
 			st.all[vp.Platform] = true
 		}
 		if vp.Platform == driver.IOS {
-			mg.Text(c, locales.AddVirtualHelperNote()).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, locales.AddVirtualHelperNote()).FontSize(fsSmall).TextColor(p.ink2)
 		}
 	})
 }
@@ -210,9 +210,12 @@ func (a *app) virtualRow(c *mg.Context, pf driver.Platform, v driver.VirtualPhon
 		started && v.Running && !inPinky && time.Since(act.done) < virtualBoot
 	stopping := act != nil && act.op == "stop" && waiting
 
-	row := mg.Row(c).Gap(12).Padding(10, 12).AlignItems(mg.Center).Role(mg.RoleListItem).Label(v.Name)
+	row := mg.Row(c).Gap(sp3).Padding(10, sp4).MinHeight(52).AlignItems(mg.Center).Role(mg.RoleListItem).Label(v.Name)
 	if !first {
-		row.BorderWidth(1, 0, 0, 0).BorderColor(p.line)
+		// The line between rows is inset from both sides, as a group's.
+		row.DrawOver(func(pt *mg.Painter, r mg.Rect) {
+			pt.Fill(mg.Rect{X: r.X + sp4, Y: r.Y, W: r.W - 2*sp4, H: 1}, p.line, 0)
+		})
 	}
 	row.Children(func() {
 		ic := icAndroid
@@ -221,20 +224,20 @@ func (a *app) virtualRow(c *mg.Context, pf driver.Platform, v driver.VirtualPhon
 		}
 		mg.Icon(c, ic).FontSize(20).TextColor(p.ink2).Shrink(0)
 		mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-			mg.Text(c, v.Name).FontWeight(600)
+			mg.Text(c, v.Name).FontWeight(fwSemibold)
 			mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 				if v.Running {
 					dot(c, p.green, false)
 				}
-				mg.Text(c, virtualLine(pf, v)).FontSize(12.5).TextColor(p.ink2)
+				mg.Text(c, virtualLine(pf, v)).FontSize(fsSmall).TextColor(p.ink2)
 			})
 			switch {
 			case v.Unavailable != "" && !v.Running:
-				mg.Text(c, locales.AddVirtualCantStart(v.Unavailable)).FontSize(12.5).TextColor(p.amber)
+				mg.Text(c, locales.AddVirtualCantStart(v.Unavailable)).FontSize(fsSmall).TextColor(p.amber)
 			case act != nil && act.err != "":
-				mg.Text(c, act.err).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
+				mg.Text(c, act.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			case v.Failed != "" && !starting:
-				mg.Text(c, locales.AddVirtualStartFailed(v.Name, v.Failed)).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
+				mg.Text(c, locales.AddVirtualStartFailed(v.Name, v.Failed)).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			}
 		})
 		mg.Row(c).Gap(10).AlignItems(mg.Center).Shrink(0).Children(func() {
@@ -243,7 +246,7 @@ func (a *app) virtualRow(c *mg.Context, pf driver.Platform, v driver.VirtualPhon
 				spinner(c)
 			case starting:
 				spinner(c)
-				mg.Text(c, locales.AddVirtualStarting()).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.AddVirtualStarting()).FontSize(fsSmall).TextColor(p.ink2)
 			case inPinky:
 				if quietButton(c, locales.AddVirtualShutDown()).Clicked() {
 					a.virtualAct(pf, v, "stop")
@@ -362,7 +365,7 @@ func (a *app) startVirtualButton(c *mg.Context, d gateway.DeviceView) {
 		if starting {
 			mg.Row(c).Gap(8).AlignItems(mg.Center).Role(mg.RoleStatus).Children(func() {
 				spinner(c)
-				mg.Text(c, locales.AddVirtualStarting()).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, locales.AddVirtualStarting()).FontSize(fsSmall).TextColor(p.ink2)
 			})
 			if l := a.launcher(); l != nil {
 				a.pollVirtual(c, l)
@@ -375,9 +378,9 @@ func (a *app) startVirtualButton(c *mg.Context, d gateway.DeviceView) {
 		}
 		switch {
 		case act != nil && act.err != "":
-			mg.Text(c, act.err).FontSize(13).TextColor(p.red).TextAlign(mg.Center).Role(mg.RoleStatus)
+			mg.Text(c, act.err).FontSize(fsSmall).TextColor(p.red).TextAlign(mg.Center).Role(mg.RoleStatus)
 		case failed != "":
-			mg.Text(c, locales.AddVirtualStartFailed(d.Info.Name, failed)).FontSize(13).TextColor(p.red).TextAlign(mg.Center).Role(mg.RoleStatus)
+			mg.Text(c, locales.AddVirtualStartFailed(d.Info.Name, failed)).FontSize(fsSmall).TextColor(p.red).TextAlign(mg.Center).Role(mg.RoleStatus)
 		}
 	})
 }

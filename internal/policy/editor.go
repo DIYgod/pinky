@@ -147,6 +147,11 @@ func (e *Engine) dropExemptionsLocked(gone map[string]bool) {
 	}
 	kept := e.file.AlwaysAllow[:0:0]
 	for _, x := range e.file.AlwaysAllow {
+		if x.standing() {
+			// Not a rule's: the gateway's own approvals.
+			kept = append(kept, x)
+			continue
+		}
 		if gone[x.Rule] {
 			continue
 		}

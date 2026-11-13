@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -210,7 +211,11 @@ type hidSession struct {
 	mu       sync.Mutex
 	touch    *xpcLink
 	buttons  *xpcLink
-	keyboard uint64 // registered keyboard service id, 0 if none
+	keyboard uint64   // registered keyboard service id, 0 if none
+	kb       *xpcLink // the connection that registered it; nil if none
+	spare    *xpcLink // a connection dialed ahead for the next keyboard
+	dialing  bool     // a spare is being dialed
+	closed   bool
 	down     bool
 	last     [2]uint16
 	held     *[2]uint64 // a button held down: usage page and usage
@@ -276,6 +281,25 @@ func (h *hidSession) touchLocked(down bool, x, y uint16) error {
 
 // button presses a hardware button by HID usage and holds it for hold.
 func (h *hidSession) button(ctx context.Context, page, usage uint64, hold time.Duration) error {
+	_, err := h.buttonListen(ctx, page, usage, hold, 0)
+	return err
+}
+
+// buttonAnswer is what the phone answered to a button press that Pinky
+// listened for (buttonListen).
+type buttonAnswer struct {
+	Replied bool
+	Reply   string // the reply, shortened for the log
+	Err     error  // the phone said the press failed (hidReplyError)
+}
+
+// buttonListen is button that, when listen is above zero, asks the phone
+// to answer the press and waits up to listen from the press for that
+// answer. dtuhidd hands an Indigo button to "the main screen button
+// service" and, when it finds none (its log: "No main screen button
+// service found for button event"), drops the press; whether it says so
+// in a reply is not known, so no answer is not a failure.
+func (h *hidSession) buttonListen(ctx context.Context, page, usage uint64, hold, listen time.Duration) (buttonAnswer, error) {
 	h.mu.Lock()
 	if h.buttons != nil && !h.buttons.alive() {
 		h.buttons.Close()
@@ -285,31 +309,140 @@ func (h *hidSession) button(ctx context.Context, page, usage uint64, hold time.D
 		b, err := dialXPC(h.entry, indigoHIDService)
 		if err != nil {
 			h.mu.Unlock()
-			return err
+			return buttonAnswer{}, err
 		}
 		h.buttons = b
 	}
 	b := h.buttons
-	if err := b.send(buttonEvent(page, usage, buttonDown), false); err != nil {
+	if listen > 0 {
+		drainReplies(b.replies)
+	}
+	start := time.Now()
+	if err := b.send(buttonEvent(page, usage, buttonDown), listen > 0); err != nil {
 		h.mu.Unlock()
-		return err
+		return buttonAnswer{}, err
 	}
 	h.held = &[2]uint64{page, usage}
 	h.mu.Unlock()
-	t := time.NewTimer(hold)
-	defer t.Stop()
-	select {
-	case <-t.C:
-	case <-ctx.Done():
+	var replies <-chan map[string]any
+	if listen > 0 {
+		replies = b.replies
+	}
+	reply, replied := holdAndListen(ctx, replies, hold)
+	if replied { // the button stays down for its whole hold
+		holdAndListen(ctx, nil, hold-time.Since(start))
 	}
 	// The release goes out even when ctx ended: a held button must come up.
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.held == nil {
-		return nil // Close released it
+	var err error
+	if h.held != nil { // else Close released it
+		h.held = nil
+		err = b.send(buttonEvent(page, usage, buttonUp), false)
 	}
-	h.held = nil
-	return b.send(buttonEvent(page, usage, buttonUp), false)
+	h.mu.Unlock()
+	if listen > 0 && !replied {
+		reply, replied = holdAndListen(ctx, replies, listen-time.Since(start))
+	}
+	var ans buttonAnswer
+	if replied {
+		ans = buttonAnswer{Replied: true, Reply: shortReply(reply), Err: hidReplyError(reply)}
+	}
+	return ans, err
+}
+
+// holdAndListen waits for d, or until ctx ends, and returns the first
+// message from replies in that time (a nil replies listens to nothing).
+func holdAndListen(ctx context.Context, replies <-chan map[string]any, d time.Duration) (map[string]any, bool) {
+	if d <= 0 {
+		select {
+		case r := <-replies:
+			return r, true
+		default:
+			return nil, false
+		}
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case r := <-replies:
+		return r, true
+	case <-t.C:
+	case <-ctx.Done():
+	}
+	return nil, false
+}
+
+// drainReplies drops the replies to earlier messages.
+func drainReplies(replies chan map[string]any) {
+	for {
+		select {
+		case <-replies:
+		default:
+			return
+		}
+	}
+}
+
+// hidReplyError is the failure a reply of a HID service reports, nil when
+// it reports none. The HID services' replies are not documented: an error
+// may come as "error" (as the keyboard's registration answers) or as
+// CoreDevice's "CoreDevice.error", at the top or in the payload, or as a
+// message type that names an error.
+func hidReplyError(m map[string]any) error {
+	if m == nil {
+		return nil
+	}
+	for _, k := range []string{"error", "CoreDevice.error"} {
+		if e, ok := m[k]; ok && e != nil {
+			if em, ok := e.(map[string]any); ok {
+				return decodeCoreDeviceError(em)
+			}
+			return fmt.Errorf("the phone answered: %v", e)
+		}
+	}
+	if p, ok := m["payload"].(map[string]any); ok {
+		if err := hidReplyError(p); err != nil {
+			return err
+		}
+	}
+	if mt, _ := m["messageType"].(string); strings.Contains(strings.ToLower(mt), "error") {
+		return fmt.Errorf("the phone answered %s: %s", mt, shortReply(m))
+	}
+	return nil
+}
+
+// shortReply is a reply as the log shows it.
+func shortReply(m map[string]any) string {
+	s := fmt.Sprintf("%v", m)
+	if len(s) > 400 {
+		s = s[:400] + "…"
+	}
+	return s
+}
+
+// probeHIDServices asks the universal HID service, on a connection of its
+// own, which HID services it knows (dtuhidd's log calls the answer
+// "connectedServiceDescriptors returning serviceIDs"). The request's shape
+// is a guess after the service's other requests ("send", "createService");
+// the answer, or that none came, is only for the log: a phone with two
+// screens may list a touchscreen for each.
+func probeHIDServices(ctx context.Context, entry goios.DeviceEntry) (string, error) {
+	l, err := dialXPC(entry, universalHIDService)
+	if err != nil {
+		return "", err
+	}
+	defer l.Close()
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	r, err := l.request(ctx, map[string]any{
+		"featureIdentifier": featureUniversalHID,
+		"messageType":       "Request",
+		"payload":           map[string]any{"connectedServiceDescriptors": map[string]any{}},
+	})
+	if err != nil {
+		return "", err
+	}
+	return shortReply(r), hidReplyError(r)
 }
 
 func buttonEvent(page, usage, state uint64) map[string]any {
@@ -324,14 +457,32 @@ func buttonEvent(page, usage, state uint64) map[string]any {
 	}
 }
 
-// ensureKeyboard registers a virtual keyboard with the device, once per
-// session. While it is attached iOS treats the phone as having a hardware
-// keyboard and hides the on-screen one.
+// ensureKeyboard registers a virtual keyboard with the device, unless one
+// is registered already. While it is attached iOS treats the phone as
+// having a hardware keyboard and hides the on-screen one, for the person
+// too (GitHub issue #65), so callers drop it again once their keys are done
+// (dropKeyboard). Nothing removes a registered service but closing the
+// connection that registered it, so the keyboard gets a connection of its
+// own, apart from touches: the touch connection when a second one cannot
+// be dialed.
 func (h *hidSession) ensureKeyboard(ctx context.Context) (uint64, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.keyboard != 0 {
+	if h.keyboard != 0 && h.kb != nil && h.kb.alive() {
 		return h.keyboard, nil
+	}
+	h.forgetKeyboardLocked()
+	l := h.spare
+	h.spare = nil
+	if l != nil && !l.alive() {
+		l.Close()
+		l = nil
+	}
+	if l == nil {
+		var err error
+		if l, err = dialXPC(h.entry, universalHIDService); err != nil {
+			l = h.touch
+		}
 	}
 	usagePage, usage := int64(1), int64(6)
 	storage := map[string]any{
@@ -370,29 +521,93 @@ func (h *hidSession) ensureKeyboard(ctx context.Context) (uint64, error) {
 			},
 		},
 	}
+	fail := func(err error) (uint64, error) {
+		if l != h.touch {
+			l.Close()
+		}
+		return 0, err
+	}
 	rctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	resp, err := h.touch.request(rctx, req)
+	resp, err := l.request(rctx, req)
 	cancel()
 	if err != nil {
-		return 0, fmt.Errorf("register keyboard: %w", err)
+		return fail(fmt.Errorf("register keyboard: %w", err))
 	}
 	id := surfaceKeyboard
 	if v := toInt64(resp["serviceID"]); v != 0 {
 		id = uint64(v)
 	}
 	if e, ok := resp["error"]; ok {
-		return 0, fmt.Errorf("register keyboard: %v", e)
+		return fail(fmt.Errorf("register keyboard: %v", e))
 	}
 	// iOS attaches the keyboard asynchronously and nothing reports when it
 	// is done; a Shift sent too early stays latched.
 	time.Sleep(300 * time.Millisecond)
-	h.keyboard = id
+	h.keyboard, h.kb = id, l
 	return id, nil
+}
+
+// forgetKeyboardLocked lets go of a keyboard whose connection dropped (iOS
+// removed it with the connection). Callers hold mu.
+func (h *hidSession) forgetKeyboardLocked() {
+	if h.kb != nil && !h.kb.alive() {
+		if h.kb != h.touch {
+			h.kb.Close()
+		}
+		h.keyboard, h.kb = 0, nil
+	}
 }
 
 // keys sends one keyboard report with the given usages held.
 func (h *hidSession) keys(id uint64, usages []uint8) error {
-	return h.touch.send(universalReport(id, keyboardReport(usages, hidTimestamp())), false)
+	h.mu.Lock()
+	l := h.kb
+	h.mu.Unlock()
+	if l == nil {
+		return errors.New("virtual keyboard: not registered")
+	}
+	return l.send(universalReport(id, keyboardReport(usages, hidTimestamp())), false)
+}
+
+// dropKeyboard removes the virtual keyboard, so that iOS shows its
+// on-screen keyboard again, and dials a connection for the next one in the
+// background, which saves the next key the handshake. A keyboard
+// registered on the touch connection goes with that connection, which the
+// device reconnects at the next input (Device.live); not while a contact
+// is down.
+func (h *hidSession) dropKeyboard() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.keyboard == 0 || h.kb == nil {
+		return nil
+	}
+	if h.kb == h.touch && h.down {
+		return nil
+	}
+	err := h.kb.send(universalReport(h.keyboard, keyboardReport(nil, hidTimestamp())), false)
+	err = errors.Join(err, h.kb.Close())
+	h.keyboard, h.kb = 0, nil
+	if !h.closed && h.spare == nil && !h.dialing && h.touch.alive() {
+		h.dialing = true
+		go h.dialSpare()
+	}
+	return err
+}
+
+// dialSpare dials the connection the next keyboard registers on.
+func (h *hidSession) dialSpare() {
+	l, err := dialXPC(h.entry, universalHIDService)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.dialing = false
+	if err != nil {
+		return
+	}
+	if h.closed || h.spare != nil {
+		l.Close()
+		return
+	}
+	h.spare = l
 }
 
 // Close lifts a held contact and closes the connections.
@@ -403,8 +618,17 @@ func (h *hidSession) Close() error {
 	if h.down {
 		errs = append(errs, h.touchLocked(false, h.last[0], h.last[1]))
 	}
-	if h.keyboard != 0 {
-		errs = append(errs, h.touch.send(universalReport(h.keyboard, keyboardReport(nil, hidTimestamp())), false))
+	h.closed = true
+	if h.keyboard != 0 && h.kb != nil {
+		errs = append(errs, h.kb.send(universalReport(h.keyboard, keyboardReport(nil, hidTimestamp())), false))
+		if h.kb != h.touch {
+			errs = append(errs, h.kb.Close())
+		}
+		h.keyboard, h.kb = 0, nil
+	}
+	if h.spare != nil {
+		h.spare.Close()
+		h.spare = nil
 	}
 	if h.held != nil && h.buttons != nil {
 		errs = append(errs, h.buttons.send(buttonEvent(h.held[0], h.held[1], buttonUp), false))

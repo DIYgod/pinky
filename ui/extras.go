@@ -73,6 +73,12 @@ type (
 		CompanionState(ctx context.Context, deviceID string) (driver.CompanionState, error)
 		InstallCompanion(ctx context.Context, deviceID string) error
 	}
+	// helperInstaller installs the iPhone helper from the window, on a Mac
+	// with Xcode (helper.go).
+	helperInstaller interface {
+		CanInstallHelper() bool
+		InstallHelper(ctx context.Context, deviceID, team string, progress func(driver.HelperStep)) error
+	}
 	backgroundSetter interface {
 		SetBackground(deviceID string, on bool) error
 		Background(deviceID string) bool
@@ -202,33 +208,42 @@ func (a *app) shotScale(deviceID string, e *mediaEntry) float32 {
 func (a *app) shotView(c *mg.Context, t gateway.TaskView, s gateway.StepView, h float32) mg.Element {
 	p := pal(c)
 	e, loading := a.stepShot(s)
+	// A thumbnail's corners are a phone's at its size.
+	rad := float32(10)
+	if h < 120 {
+		rad = 5
+	}
 	if e == nil {
+		if loading {
+			c.After(150 * time.Millisecond)
+		}
 		w := h * 9 / 19.5
-		box := mg.Box(c).Size(w, h).Shrink(0).Radius(10).Border(1, p.line2).Background(p.bg3).Center()
+		// A thumbnail is too narrow for words, which Chinese would stack a
+		// character a line: it shows the sketch an agent's step has where
+		// there is no picture.
+		if w < 60 {
+			return stepThumb(c, appColor(nonEmpty(appOf(t), t.Title)), h)
+		}
+		box := mg.Box(c).Size(w, h).Shrink(0).Radius(rad).Border(1, p.line2).Background(p.bg2).Center()
 		box.Children(func() {
 			msg := locales.ShotNone()
 			if loading {
 				msg = locales.ShotLoading()
-				c.After(150 * time.Millisecond)
 			}
-			// A thumbnail is too narrow for words, which Chinese would
-			// stack a character a line.
-			if w >= 60 {
-				mg.Text(c, msg).FontSize(12).TextColor(p.ink3).TextAlign(mg.Center)
-			}
+			mg.Text(c, msg).FontSize(fsCaption).TextColor(p.ink3).TextAlign(mg.Center)
 		})
 		return box
 	}
 	w := h * float32(e.w) / float32(e.h)
 	k := a.shotScale(t.DeviceID, e)
-	box := mg.Box(c).Size(w, h).Shrink(0).Radius(10).Border(1, p.line2).Clip().Background(hex("#000000")).
+	box := mg.Box(c).Size(w, h).Shrink(0).Radius(rad).Border(1, p.line2).Clip().Background(hex("#000000")).
 		Label(locales.ShotLabel(t.DeviceName))
 	box.Draw(func(pt *mg.Painter, r mg.Rect) {
-		pt.Clip(r, 10, func() {
+		pt.Clip(r, rad, func() {
 			pt.Image(e.bitmap, r, mg.Contain)
 			// Thumbnails are too small for the outline to say anything.
 			if k > 0 && !s.Target.Empty() && h >= 120 {
-				drawOverlay(pt, r, p, s, stepDone, float32(e.w)/k, float32(e.h)/k, true)
+				drawOverlay(pt, r, p, s, stepDone, shotMarks{}, float32(e.w)/k, float32(e.h)/k, true)
 			}
 		})
 	})
@@ -315,6 +330,8 @@ func stepDisplay(t gateway.TaskView, i int) (text, sub string, kind stepKind) {
 		sub = locales.StepPhoneOffline()
 	case "device_needs_setup":
 		sub = locales.StepPhoneNeedsSetup()
+	case "device_busy":
+		sub = locales.StepPhoneBusy()
 	case "lease_held", "scope_denied", "not_found", "unsupported", "invalid_argument", "internal":
 		sub = locales.StepFailedCode(failureName(s.Status))
 	}

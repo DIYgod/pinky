@@ -36,8 +36,9 @@ type pinState struct {
 	unlocking map[string]bool // phones being unlocked
 	later     map[string]bool // phones whose lock card the person put off
 	// wrong holds phones whose saved PIN the phone refused. Pinky does not
-	// try it again until the phone is seen unlocked or the PIN changes:
-	// phones lock out, or erase themselves, after repeated wrong PINs.
+	// try it again by itself until the phone is seen unlocked or the PIN
+	// changes: phones lock out, or erase themselves, after repeated wrong
+	// PINs. The person can still try it once more with Try again.
 	wrong map[string]bool
 }
 
@@ -95,13 +96,23 @@ func (a *app) loadPINs() {
 	}()
 }
 
-// canUnlockHere reports whether the phone can be unlocked from this
-// computer: its driver can, a PIN is saved and the setting is on.
-func (a *app) canUnlockHere(id string) bool {
+// unlockReady reports whether this computer could unlock the phone: its
+// driver can, a PIN is saved and the setting is on.
+func (a *app) unlockReady(id string) bool {
 	d := a.device(id)
 	st := &a.pin
-	return d != nil && d.Features.Unlock && a.settings.UnlockFromComputer && st.ready && st.supported && st.saved[id] && !st.wrong[id]
+	return d != nil && d.Features.Unlock && a.settings.UnlockFromComputer && st.ready && st.supported && st.saved[id]
 }
+
+// canUnlockHere reports whether to offer Unlock: this computer could
+// unlock the phone and the phone has not refused its saved PIN.
+func (a *app) canUnlockHere(id string) bool { return a.unlockReady(id) && !a.pin.wrong[id] }
+
+// canRetryUnlock reports whether to offer Try again: the phone refused its
+// saved PIN, which Pinky enters again only when the person asks. A PIN
+// that was entered right can still be refused, say when the phone asked
+// for a fingerprint first.
+func (a *app) canRetryUnlock(id string) bool { return a.pin.wrong[id] && a.unlockReady(id) }
 
 // unlock enters the phone's saved PIN, after Touch ID, and says in plain
 // words what went wrong.
@@ -118,7 +129,10 @@ func (a *app) unlock(id string) {
 		err := a.api.Unlock(id)
 		a.post(func() {
 			delete(a.pin.unlocking, id)
-			if errors.Is(err, driver.ErrLocked) {
+			switch {
+			case err == nil:
+				delete(a.pin.wrong, id)
+			case errors.Is(err, driver.ErrLocked):
 				a.pin.wrong[id] = true
 			}
 			if msg := unlockError(err, name); msg != "" {
@@ -141,6 +155,8 @@ func unlockError(err error, name string) string {
 		return locales.UnlockErrNoPIN(name)
 	case errors.Is(err, secret.ErrMicrosoftAccount):
 		return locales.UnlockErrMicrosoftAccount(name)
+	case errors.Is(err, secret.ErrAccountRestricted):
+		return locales.UnlockErrAccountRestricted(name)
 	case errors.Is(err, secret.ErrUnsupported):
 		return locales.UnlockNotAvailable()
 	case errors.Is(err, gateway.ErrNoUnlock):
@@ -168,19 +184,41 @@ func (a *app) unlockButton(c *mg.Context, id string) mg.Element {
 	return b
 }
 
+// retryButton is Try again, which enters the saved PIN once more after the
+// phone refused it, after Touch ID like Unlock.
+func (a *app) retryButton(c *mg.Context, id string) mg.Element {
+	name := id
+	if d := a.device(id); d != nil {
+		name = d.Info.Name
+	}
+	label := locales.UnlockTryAgain()
+	busy := a.pin.unlocking[id]
+	if busy {
+		label = locales.UnlockBusy()
+	}
+	b := button(c, label, btnOpt{icon: icTouchID}).Label(locales.UnlockTryAgainLabel(name)).Disabled(busy)
+	if b.Clicked() {
+		a.unlock(id)
+	}
+	return b
+}
+
 // unlockControls are the unlock card's: the Unlock button when the phone
 // can be unlocked from here, the PIN form when only its PIN is missing,
-// else why it cannot.
+// else why it cannot, with Try again when the phone refused its PIN.
 func (a *app) unlockControls(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	if a.canUnlockHere(n.DeviceID) {
 		a.unlockButton(c, n.DeviceID).Margin(12, 0, 0, 0).FillWidth()
 		_, keep := unlockWords()
-		mg.Text(c, locales.UnlockOrOnPhone()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
-		mg.Text(c, keep).FontSize(12).TextColor(p.ink3).TextAlign(mg.Center).Margin(6, 0, 0, 0)
+		mg.Text(c, locales.UnlockOrOnPhone()).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
+		mg.Text(c, keep).FontSize(fsCaption).TextColor(p.ink3).TextAlign(mg.Center).Margin(6, 0, 0, 0)
 		return
 	}
-	mg.Text(c, a.unlockElsewhere(n.DeviceID, "")).FontSize(13).TextColor(p.ink2).Margin(10, 0, 0, 0)
+	mg.Text(c, a.unlockElsewhere(n.DeviceID, "")).FontSize(fsSmall).TextColor(p.ink2).Margin(10, 0, 0, 0)
+	if a.canRetryUnlock(n.DeviceID) {
+		a.retryButton(c, n.DeviceID).Margin(10, 0, 0, 0).FillWidth()
+	}
 	if d := a.device(n.DeviceID); d != nil && a.pinMissing(*d) {
 		mg.Column(c).Margin(10, 0, 0, 0).Gap(8).Children(func() { a.pinForm(c, *d, "card") })
 	}
@@ -228,7 +266,7 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 		return
 	}
 	if !st.supported {
-		mg.Text(c, locales.UnlockNotAvailable()).FontSize(13).TextColor(p.ink2)
+		mg.Text(c, locales.UnlockNotAvailable()).FontSize(fsSmall).TextColor(p.ink2)
 		return
 	}
 	open := st.editing == id && st.where == where
@@ -251,14 +289,14 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 			}
 		})
 		if st.err != "" {
-			mg.Text(c, st.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, st.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 		}
-		mg.Text(c, keep).FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, keep).FontSize(fsCaption).TextColor(p.ink3)
 	case st.saved[id]:
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Wrap().Children(func() {
 			mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, icLock).FontSize(14).TextColor(p.ink2)
-				mg.Text(c, locales.PinSaved()).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, locales.PinSaved()).FontSize(fsSmall).TextColor(p.ink2)
 			})
 			if linkButton(c, locales.PinChange()).Label(locales.PinChangeLabel(name)).Clicked() {
 				st.editing, st.where, st.value, st.err = id, where, "", ""
@@ -342,20 +380,23 @@ func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
 		Label(locales.UnlockLocked(d.Info.Name)).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icLock).FontSize(16).TextColor(p.ink2)
-			mg.Text(c, locales.UnlockLocked(d.Info.Name)).FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
+			mg.Text(c, locales.UnlockLocked(d.Info.Name)).FontSize(fsHeadline).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 		})
 		if wrong {
-			mg.Text(c, a.unlockElsewhere(id, "")).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			mg.Text(c, a.unlockElsewhere(id, "")).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
+			if a.canRetryUnlock(id) {
+				a.retryButton(c, id).Margin(4, 0, 0, 0).FillWidth()
+			}
 			return
 		}
 		if canUnlock {
-			mg.Text(c, locales.UnlockFromHere()).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			mg.Text(c, locales.UnlockFromHere()).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
 			a.unlockButton(c, id).Margin(4, 0, 0, 0).FillWidth()
-			mg.Text(c, keep).FontSize(12).TextColor(p.ink3)
+			mg.Text(c, keep).FontSize(fsCaption).TextColor(p.ink3)
 			return
 		}
 		mg.Text(c, unlockPitch()).
-			FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
 		mg.Column(c).Gap(8).Margin(4, 0, 0, 0).Children(func() { a.pinForm(c, d, "lock") })
 		if a.pin.editing != id {
 			if quietButton(c, locales.UnlockNotNow()).Label(locales.UnlockNotNowLabel(d.Info.Name)).Clicked() {

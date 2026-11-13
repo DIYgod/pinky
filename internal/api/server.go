@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"runtime"
 	"sync"
 	"time"
 
@@ -45,6 +44,12 @@ type HelloReply struct {
 	Trusted bool   `json:"trusted,omitempty"`
 }
 
+// What can host a gateway (Server.Kind).
+const (
+	KindApp    = "app"
+	KindDaemon = "daemon"
+)
+
 // RunningError means another gateway already runs for this user.
 type RunningError struct{ PID string }
 
@@ -58,9 +63,9 @@ func (e *RunningError) Error() string {
 // Listener is the gateway's socket, held together with its lock.
 type Listener struct {
 	net.Listener
-	lock *os.File
-	path string
-	once sync.Once
+	lock    *os.File
+	cleanup func()
+	once    sync.Once
 }
 
 // Listen takes the per-user lock and listens on the socket.
@@ -72,29 +77,20 @@ func Listen(d Dirs) (*Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	path := d.Socket()
 	// The lock is in the data folder, so holding it does not make a socket
 	// here stale: a gateway on other data, or an older Pinky whose lock was
 	// next to its socket, may answer on it. Leave that one alone.
-	if c, err := net.DialTimeout("unix", path, time.Second); err == nil {
+	if c, err := dialSocket(d, time.Second); err == nil {
 		c.Close()
 		lk.Close()
 		return nil, &RunningError{}
 	}
-	_ = os.Remove(path)
-	ln, err := net.Listen("unix", path)
+	ln, cleanup, err := listenSocket(d)
 	if err != nil {
 		lk.Close()
 		return nil, err
 	}
-	if runtime.GOOS != "windows" {
-		if err := os.Chmod(path, 0o600); err != nil {
-			ln.Close()
-			lk.Close()
-			return nil, err
-		}
-	}
-	return &Listener{Listener: ln, lock: lk, path: path}, nil
+	return &Listener{Listener: ln, lock: lk, cleanup: cleanup}, nil
 }
 
 // Close stops listening, removes the socket and releases the lock.
@@ -102,7 +98,7 @@ func (l *Listener) Close() error {
 	var err error
 	l.once.Do(func() {
 		err = l.Listener.Close()
-		os.Remove(l.path)
+		l.cleanup()
 		l.lock.Close()
 	})
 	return err
@@ -124,6 +120,12 @@ type Server struct {
 	// calls it over the socket. Windows has no signal to end a daemon, and
 	// scripts use it to end the app.
 	Quit func()
+	// Kind says what hosts the gateway, KindApp or KindDaemon; the version
+	// method reports it, so that the app can take over from a daemon.
+	Kind string
+	// Show, when set, brings the app's window to the front: the show method
+	// calls it when the person opens Pinky while it already runs.
+	Show func()
 
 	wg sync.WaitGroup
 }

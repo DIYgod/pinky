@@ -272,7 +272,7 @@ func TestProviderHelperExpiry(t *testing.T) {
 	for way, inspect := range ways {
 		got := inspect(ctx, e, base)
 		if got.State != driver.StateNeedsSetup || got.Setup != driver.SetupInstallHelper || !got.HelperExpires.Equal(exp) ||
-			!strings.Contains(got.Detail, "ran out on") || !strings.Contains(got.Detail, "Install it again from Xcode") {
+			!strings.Contains(got.Detail, "ran out on") || !strings.Contains(got.Detail, "Install it again on a Mac with Xcode") {
 			t.Errorf("%s, ran out: %+v", way, got)
 		}
 	}

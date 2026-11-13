@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
 	"os"
 	"runtime"
 	"slices"
@@ -18,6 +19,7 @@ import (
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/internal/telemetry"
 	"github.com/DIYgod/pinky/internal/update"
@@ -41,6 +43,11 @@ type Options struct {
 	Menus []*mygo.MenuItem
 	// OnReady runs on the main thread once the main window exists.
 	OnReady func(main *mygo.Window)
+	// BindShow receives, at start, a function that brings the main window
+	// to the front, as when the person opens Pinky again while it runs in
+	// the menu bar or tray. It may be called from any goroutine, also
+	// before the window exists.
+	BindShow func(show func())
 	// Settings are the Safety, Privacy and Advanced choices to start with;
 	// nil is the defaults. gateway.API has no settings methods yet, so the
 	// client keeps them and reports each change through OnSettings, with
@@ -91,6 +98,42 @@ type Options struct {
 	// sidebar's card while no agent can reach Pinky; nil shows only the
 	// commands to add an agent by hand.
 	AgentSetup AgentSetup
+	// CompanionAPK finds the Android companion APK that Pinky installs and
+	// its build (versionCode, 0 when unknown). A phone that refuses
+	// installs over USB gets a link that shows it in Finder or the file
+	// manager, to install by hand, and Pinky tries a refused build again
+	// by itself only once a newer one comes; nil leaves the link out.
+	CompanionAPK func() (path string, build int, err error)
+	// RemoteTailnet says how agents on the person's tailnet reach remote
+	// agents listening at addr (Settings › Agents › Remote agents); nil
+	// leaves that out.
+	RemoteTailnet func(ctx context.Context, addr string) RemoteTailnet
+	// WebMirror shows the phones in a web browser (Settings › Phones ›
+	// Web mirror); nil leaves it out.
+	WebMirror WebMirror
+	// WebApprovals answers approvals in a browser on the person's phone,
+	// through the web mirror (Settings › Phones › Web mirror); nil leaves
+	// it out.
+	WebApprovals WebApprovals
+	// Log writes what the client does to the app's log: the log the
+	// person's feedback carries, and the one whoever fixes a broken live
+	// picture goes on. nil writes nothing, as before.
+	Log *slog.Logger
+	// Pilot runs Ask Pinky, Pinky's own agent (a *pilot.Runner): the box
+	// at the top of Tasks and its part of Settings › Agents. nil leaves
+	// them out.
+	Pilot Pilot
+}
+
+// Pilot runs Pinky's own agent, one task a phone at a time, as
+// pilot.Runner does. The client calls it on the main thread: each call
+// returns at once.
+type Pilot interface {
+	Start(cfg pilot.Config, device, task string) error
+	Stop(device string)
+	StopAll()
+	Status(device string) (pilot.Status, bool)
+	Dismiss(device string)
 }
 
 // Settings are what the Settings screen changes.
@@ -107,6 +150,16 @@ type Settings struct {
 	// that cannot start `pinky mcp`; each request needs the agent token.
 	RemoteAgents bool
 	RemoteAddr   string
+	// WebMirror shows the phones' screens in a web browser, on this
+	// computer and through Tailscale; each viewer needs the mirror's token.
+	WebMirror bool
+	// WebMirrorControl lets pages opened with the mirror's control token
+	// use the phone: taps, drags, Back and Home, as on the window mirror.
+	WebMirrorControl bool
+	// WebApprovals lets phones the person added answer approvals in a
+	// browser, through the web mirror and Tailscale, each answer confirmed
+	// with the phone's passkey (internal/webapproval). Off by default.
+	WebApprovals bool
 	// UsageStats shares anonymous usage statistics and crash reports
 	// (docs/TELEMETRY.md).
 	UsageStats bool
@@ -119,6 +172,40 @@ type Settings struct {
 	// IOSWiFi uses iPhones and iPads over Wi-Fi when this computer reaches
 	// them there (gateway.SetWiFi); off, only on a cable.
 	IOSWiFi bool
+	// StopADBOnQuit stops, when Pinky quits, the adb server that runs the
+	// adb that comes with Pinky, unless another program uses it
+	// (adb.Client.StopPinkyADB); not when Pinky quits for an update.
+	StopADBOnQuit bool
+	// AskPinky shows the box at the top of Tasks that gives Pinky's own
+	// agent a task (Options.Pilot).
+	AskPinky bool
+	// PilotProvider is the API Pinky's own agent reaches its model
+	// through, pilot.Anthropic or pilot.OpenAI. Each keeps its own model
+	// and address, so switching back finds them; empty ones are the
+	// defaults (pilot.Config.Normalize). The API keys are in the system's
+	// keychain (secret.ModelKeyAccount), never here.
+	PilotProvider       string
+	PilotAnthropicModel string
+	PilotAnthropicURL   string
+	PilotOpenAIModel    string
+	PilotOpenAIURL      string
+	// The limits of each task: steps, minutes (time spent waiting for the
+	// person aside) and US dollars.
+	PilotMaxSteps   int
+	PilotMaxMinutes int
+	PilotMaxCost    float64
+}
+
+// PilotConfig is the pilot.Config of the settings.
+func (s Settings) PilotConfig() pilot.Config {
+	cfg := pilot.Config{
+		Provider: s.PilotProvider, Model: s.PilotAnthropicModel, BaseURL: s.PilotAnthropicURL,
+		MaxSteps: s.PilotMaxSteps, MaxTime: time.Duration(s.PilotMaxMinutes) * time.Minute, MaxCost: s.PilotMaxCost,
+	}
+	if s.PilotProvider == pilot.OpenAI {
+		cfg.Model, cfg.BaseURL = s.PilotOpenAIModel, s.PilotOpenAIURL
+	}
+	return cfg.Normalize()
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -152,6 +239,10 @@ func DefaultSettings() Settings {
 		AutoUpdate:    true,
 		KeepAwakeAway: true,
 		IOSWiFi:       true,
+		StopADBOnQuit: true,
+		AskPinky:      true,
+		PilotProvider: pilot.Anthropic,
+		PilotMaxSteps: pilot.DefaultMaxSteps, PilotMaxMinutes: int(pilot.DefaultMaxTime / time.Minute), PilotMaxCost: pilot.DefaultMaxCost,
 	}
 }
 
@@ -260,12 +351,19 @@ type app struct {
 	comp      companionState // the Android companion app, per phone
 	bg        bgState        // background displays, per phone
 	conn      connState      // iPhones: how Pinky connects, per phone
+	helper    helperState    // iPhones: installing the helper from the window (helper.go)
+	tasksTip  tasksTipState  // the card about tasks on the phone itself (phonetasks.go)
 	rec       recState       // task recordings in Activity
 	remote    remoteState    // Settings › Agents › Remote agents
+	webMirror webMirrorState // Settings › Phones › Web mirror
 	setup     setupState     // Settings › Agents › Connect an agent, and the sidebar's card
 	upd       updateState    // new versions of Pinky and the companion app
 	tn        tailnetState   // phones away from this computer's network, through Tailscale
 	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
+	ask       askState       // Ask Pinky: the box at the top of Tasks, and its settings (ask.go)
+	rotate    rotateState    // Rotate in ⋯ under the mirror (rotate.go)
+
+	vit phoneVitalsState // phones' battery and storage (vitals.go)
 
 	awake   func(on bool) // keeps the computer awake while agent tasks run; tests replace it
 	awakeOn bool
@@ -281,6 +379,9 @@ type app struct {
 // thread, as MyGo's App.Run does.
 func Run(api gateway.API, opt Options) error {
 	a := newApp(api, opt)
+	if opt.BindShow != nil {
+		opt.BindShow(func() { a.post(a.showMain) })
+	}
 	if !mygo.App.IsPackaged() {
 		// A packaged app keeps the name its bundle was built with.
 		mygo.App.SetName("Pinky")
@@ -323,7 +424,7 @@ func newApp(api gateway.API, opt Options) *app {
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
 	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
-		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
+		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, failure: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
 	a.rec = recState{views: map[string]*recEntry{}}
 	a.control = map[string]controlText{}
@@ -366,9 +467,12 @@ func (a *app) ready() {
 	a.main = mygo.NewWindow(mygo.WindowOptions{
 		Title: "Pinky", Width: 1280, Height: 820, MinWidth: 960, MinHeight: 620,
 		StateKey: "main", TitleBarStyle: mygo.TitleBarHidden, Hidden: a.opt.Hidden,
-		TrafficLightPosition: &mygo.Point{X: 18, Y: 17},
+		TrafficLightPosition: &mygo.Point{X: 18, Y: 19},
 		BackgroundColor:      "light-dark(#f7f7f8, #212125)",
-		Content:              mg.View(a.view),
+		// The sidebar shows the desktop through, blurred, on macOS and
+		// Windows 11 (Mica); elsewhere it is the wings' gray.
+		Vibrancy: mygo.VibrancySidebar,
+		Content:  mg.View(a.view),
 	})
 	a.postMu.Lock()
 	a.postWin = a.main
@@ -684,6 +788,9 @@ func (a *app) setNeeds(n []gateway.NeedView) {
 	sort.SliceStable(n, func(i, j int) bool { return n[i].Created.Before(n[j].Created) })
 	// A handoff on a locked phone shows as one card, with the unlock
 	// button in it, rather than as a handoff and an unlock card.
+	// So does a handoff on a phone that waits for the person to do a step
+	// on it (the passcode before the helper starts): the agent asked for
+	// that step in its own words.
 	a.unlocks = map[string]bool{}
 	handoff := map[string]bool{}
 	for _, x := range n {
@@ -696,7 +803,7 @@ func (a *app) setNeeds(n []gateway.NeedView) {
 	}
 	shown := n[:0:0]
 	for _, x := range n {
-		if x.Kind != gateway.NeedUnlock || !handoff[x.DeviceID] {
+		if (x.Kind != gateway.NeedUnlock && x.Kind != gateway.NeedSetup) || !handoff[x.DeviceID] {
 			shown = append(shown, x)
 		}
 	}
@@ -769,11 +876,11 @@ func (a *app) taskOf(deviceID string) *gateway.TaskView {
 }
 
 // approvals are the needs the floating panel shows: approvals and
-// handoffs, everything but unlocks.
+// handoffs, everything but unlocks and steps on the phone.
 func (a *app) approvals() []gateway.NeedView {
 	var out []gateway.NeedView
 	for _, n := range a.needs {
-		if n.Kind != gateway.NeedUnlock {
+		if inPanel(n) {
 			out = append(out, n)
 		}
 	}
@@ -853,14 +960,28 @@ func (a *app) handBack(id string) {
 	a.call(id, locales.CallHandBack(), func() error { return a.api.HandBack(id, "") })
 }
 
+// stop stops the task on a phone. Pinky's own agent stops after the
+// gateway's task: a task whose agent just goes away counts as done.
 func (a *app) stop(id string) {
-	a.call(id, locales.CallStop(), func() error { return a.api.Stop(id) })
+	a.call(id, locales.CallStop(), func() error {
+		err := a.api.Stop(id)
+		if a.opt.Pilot != nil {
+			a.opt.Pilot.Stop(id)
+		}
+		return err
+	})
 }
 
 // stopAll is the emergency stop, from the sidebar, the flyout and the
 // global shortcut.
 func (a *app) stopAll() {
-	a.call("", locales.CallStopAll(), a.api.StopAll)
+	a.call("", locales.CallStopAll(), func() error {
+		err := a.api.StopAll()
+		if a.opt.Pilot != nil {
+			a.opt.Pilot.StopAll()
+		}
+		return err
+	})
 }
 
 func (a *app) showMain() {
@@ -894,6 +1015,13 @@ func (a *app) regularApp() {
 	a.shownOnce = true
 }
 
+// inPanel reports whether the floating panel shows a need: a card to
+// answer. An unlock card or a step on the phone (NeedSetup) is done at the
+// phone, so a click on its row or notification opens that phone instead.
+func inPanel(n gateway.NeedView) bool {
+	return n.Kind != gateway.NeedUnlock && n.Kind != gateway.NeedSetup
+}
+
 // openNeed brings the main window up at the phone a need is about.
 func (a *app) openNeed(id string) {
 	for _, n := range a.needs {
@@ -921,7 +1049,7 @@ func (a *app) notify(n gateway.NeedView) {
 	}
 	nt := mygo.NewNotification(mygo.NotificationOptions{ID: n.ID, Group: "needs", Title: title, Subtitle: sub, Body: needDetail(n)})
 	nt.OnClick(func() {
-		if n.Kind != gateway.NeedUnlock {
+		if inPanel(n) {
 			a.showPanel(true)
 		} else {
 			a.openNeed(n.ID)
@@ -1000,4 +1128,14 @@ func logf(format string, args ...any) {
 	if os.Getenv("PINKY_UI_DEBUG") != "" {
 		log.Printf(format, args...)
 	}
+}
+
+// logInfo writes one line to the app's log, when it has one: the log the
+// person's feedback carries, and the one whoever fixes a broken live
+// picture goes on. The chatty traces stay in logf, behind PINKY_UI_DEBUG.
+func (a *app) logInfo(msg string, args ...any) {
+	if a.opt.Log == nil {
+		return
+	}
+	a.opt.Log.Info(msg, args...)
 }

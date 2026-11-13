@@ -148,13 +148,13 @@ func (a *app) connectionRows(c *mg.Context, d gateway.DeviceView) {
 	if s.busy[id] {
 		chosen = s.chosen[id]
 	}
-	mg.Column(c.Key("conn-"+id)).Gap(8).Padding(6, 0, 4, 0).Children(func() {
-		mg.Text(c, locales.ConnectionTitle()).FontSize(13.5).FontWeight(600)
-		mg.Column(c).Gap(8).Role(mg.RoleRadioGroup).Label(locales.ConnectionTitle()).Children(func() {
+	groupRow(c, mg.Column(c.Key("conn-"+id)).Gap(sp2), false).Children(func() {
+		mg.Text(c, locales.ConnectionTitle()).FontWeight(fwMedium)
+		mg.Column(c).Gap(sp2).Role(mg.RoleRadioGroup).Label(locales.ConnectionTitle()).Children(func() {
 			for _, w := range got.Ways {
 				w := w
 				pick := chosen
-				opt := mg.RadioBase(c.Key("conn-"+id+"-"+w.ID), &pick, w.ID).Gap(12).Padding(10, 14).Radius(10).AlignItems(mg.Start).FillWidth().Label(connectionTitle(w.ID))
+				opt := mg.RadioBase(c.Key("conn-"+id+"-"+w.ID), &pick, w.ID).Gap(sp3).Padding(10, 14).Radius(rControl + 2).AlignItems(mg.Start).FillWidth().Label(connectionTitle(w.ID))
 				on := chosen == w.ID
 				border := p.line
 				if on {
@@ -178,10 +178,10 @@ func (a *app) connectionRows(c *mg.Context, d gateway.DeviceView) {
 						if now := connectionShort(got.Current); w.ID == driver.ConnectionAuto && now != "" && got.Chosen == driver.ConnectionAuto {
 							title = locales.ConnectionAutoNow(now)
 						}
-						mg.Text(c, title).FontWeight(600)
-						mg.Text(c, connectionDesc(w.ID)).FontSize(13.5).TextColor(p.ink2)
+						mg.Text(c, title).FontWeight(fwMedium)
+						mg.Text(c, connectionDesc(w.ID)).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 						if !w.Available {
-							mg.Text(c, connectionReason(w, d)).FontSize(13.5).TextColor(p.amber)
+							mg.Text(c, connectionReason(w, d)).FontSize(fsSmall).LineHeight(1.4).TextColor(p.amber)
 						}
 					})
 				})

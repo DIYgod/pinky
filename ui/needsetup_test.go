@@ -216,7 +216,7 @@ func TestIPhonePasscodeStep(t *testing.T) {
 	ta.api.ConnectIPhone()
 	ta.waitFor(t, "the iPhone", func() bool { return len(ta.devices) > 1 })
 	id := ta.iphoneView(t).Info.ID
-	const detail = "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone."
+	const detail = "Enter the passcode on the iPhone: iOS asks for it now and then before Pinky on the iPhone can control the phone."
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupPasscode, Detail: detail})
 	ta.sync()
 	for _, lang := range testLanguages() {
@@ -253,6 +253,71 @@ func TestIPhonePasscodeStep(t *testing.T) {
 		tt.Frame()
 		tt.Frame()
 		if !hasText(tt, want) || hasText(tt, locales.AddPhoneIPhoneStuck()) || hasText(tt, locales.AddPhoneIPhoneRetrying()) {
+			t.Errorf("%s: Add phone › iPhone: %q", lang, tt.Texts())
+		}
+		english("Add phone")
+	}
+}
+
+// TestIPhoneMediaInUseStep: while iOS will not mirror an iPhone because an
+// app on it uses the camera or microphone, the phone's page, its sidebar
+// row, the checkup and Add phone › iPhone say why and what to do, in the
+// person's language, and that Pinky connects by itself: no step to set up,
+// nothing to fix in Pinky.
+func TestIPhoneMediaInUseStep(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, HoldSetup: true})
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the iPhone", func() bool { return len(ta.devices) > 1 })
+	id := ta.iphoneView(t).Info.ID
+	const detail = "An app on the iPhone is using the camera or microphone, and iOS does not allow mirroring the screen then."
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupMediaInUse, Detail: detail})
+	ta.sync()
+	for _, lang := range testLanguages() {
+		tt := mg.NewTester(ta.view, 1280, 820)
+		inLanguage(t, lang, tt)
+		name := ta.iphoneView(t).Info.Name
+		title, text, note := locales.MediaInUseTitle(), locales.MediaInUseDetail(name), locales.MediaInUseNote()
+		english := func(where string) {
+			t.Helper()
+			if lang != "en" && hasText(tt, detail) {
+				t.Errorf("%s: %s shows the driver's English: %q", lang, where, tt.Texts())
+			}
+		}
+
+		ta.chk.showing = ""
+		ta.selectPhone(id)
+		tt.Frame()
+		tt.Frame()
+		if !hasText(tt, title) || !hasText(tt, text) || !hasText(tt, note) {
+			t.Errorf("%s: the phone's page: %q", lang, tt.Texts())
+		}
+		// Not a step to set up, nor one Pinky could fix or show steps for.
+		if hasText(tt, locales.PhoneNeedsSetup(name)) || hasText(tt, locales.PhoneCheckupFix()) || hasText(tt, locales.PhoneSetUpIPhone()) {
+			t.Errorf("%s: the phone's page offers a fix: %q", lang, tt.Texts())
+		}
+		if _, ok := tt.Find(locales.SidebarPhoneRow(name, locales.GwStatusMediaInUse())); !ok && lang != "en" {
+			t.Errorf("%s: the sidebar: %q", lang, tt.Texts())
+		}
+		if _, ok := tt.Find(locales.SidebarPhoneRow(name, "Camera or microphone in use")); !ok && lang == "en" {
+			t.Errorf("%s: the sidebar: %q", lang, tt.Texts())
+		}
+		english("the phone's page")
+
+		ta.openCheckup(ta.iphoneView(t))
+		ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf(id); return r != nil && r.have && !r.running })
+		if !hasText(tt, title) || !hasText(tt, text) || !hasText(tt, note) {
+			t.Errorf("%s: the checkup: %q", lang, tt.Texts())
+		}
+		english("the checkup")
+		ta.chk.showing = ""
+
+		ta.page = pageAddPhone
+		ta.add.reset(ta.app)
+		ta.add.step, ta.add.focus = "iphone", id
+		tt.Frame()
+		tt.Frame()
+		if !hasText(tt, title) || !hasText(tt, text) || !hasText(tt, note) ||
+			hasText(tt, locales.AddPhoneIPhoneStuck()) || hasText(tt, locales.AddPhoneIPhoneRetrying()) {
 			t.Errorf("%s: Add phone › iPhone: %q", lang, tt.Texts())
 		}
 		english("Add phone")
@@ -377,5 +442,38 @@ func TestIPhoneConnectionStep(t *testing.T) {
 		tt.Frame()
 		check("Add phone › iPhone", hasText(tt, want) && !hasText(tt, locales.AddPhoneIPhoneStuck()) && !hasText(tt, locales.AddPhoneIPhoneRetrying()))
 		toSettings("Add phone › iPhone")
+	}
+}
+
+// TestPasscodeStepCard shows the card Pinky opens by itself while a task
+// waits for the person to enter an iPhone's passcode for the helper: in
+// the person's language, without buttons, outside the floating panel,
+// and hidden behind the agent's own handoff for that phone.
+func TestPasscodeStepCard(t *testing.T) {
+	step := gateway.NeedView{ID: "setup:iphone", Kind: gateway.NeedSetup, DeviceID: "iphone", DeviceName: "iPhone 13 mini",
+		Agent: "Claude Code", Title: "Enter the passcode on iPhone 13 mini",
+		Detail:  "iOS asks for it on the phone before Pinky on the iPhone can control it, and stops asking after a while. Claude Code is waiting · Bookkeeping",
+		Created: time.Now()}
+	ta := shotApp(t, step)
+	if len(ta.approvals()) != 0 {
+		t.Errorf("the floating panel shows the step: %+v", ta.approvals())
+	}
+	tt := mg.NewTester(ta.rightPanel, 320, 820)
+	for _, lang := range testLanguages() {
+		inLanguage(t, lang, tt)
+		tt.Frame()
+		if !hasText(tt, locales.GwSetupPasscodeTitle("iPhone 13 mini")) || !hasText(tt, locales.GwSetupPasscodeDetail("Claude Code", "Bookkeeping")) {
+			t.Errorf("%s: the card lacks its words: %q", lang, tt.Texts())
+		}
+		if _, ok := tt.Find(locales.NeedsAllow()); ok {
+			t.Errorf("%s: the step card has Allow", lang)
+		}
+	}
+	inLanguage(t, "en", tt)
+	handoff := gateway.NeedView{ID: "h-1", Kind: gateway.NeedHandoff, DeviceID: "iphone", DeviceName: "iPhone 13 mini",
+		Title: "Please enter your passcode on the iPhone", Created: time.Now()}
+	ta.setNeeds([]gateway.NeedView{step, handoff})
+	if len(ta.needs) != 1 || ta.needs[0].ID != "h-1" {
+		t.Errorf("needs with the agent's handoff: %+v", ta.needs)
 	}
 }

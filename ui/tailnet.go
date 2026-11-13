@@ -128,7 +128,7 @@ func (a *app) addTailnet(c *mg.Context) {
 		guideRow(c, 1, locales.TailnetStepHere(), here, func() { a.tailnetHere(c, st) })
 		if running {
 			// Done shows what it is connected to.
-			mg.Text(c, locales.TailnetHereRunning(st.Tailnet, st.Self)).FontSize(12.5).TextColor(p.ink3).Margin(-8, 0, 0, 36)
+			mg.Text(c, locales.TailnetHereRunning(st.Tailnet, st.Self)).FontSize(fsCaption).TextColor(p.ink3).Margin(-8, 0, 0, 36)
 		}
 		guideRow(c, 2, locales.TailnetStepPhone(), phone, func() {
 			guideText(c, locales.TailnetPhoneSteps())
@@ -207,7 +207,7 @@ func (a *app) tailnetPhoneRow(c *mg.Context, ph driver.TailnetPhone) {
 				hollowDot(c)
 			}
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-				mg.Text(c, name).FontWeight(600)
+				mg.Text(c, name).FontWeight(fwSemibold)
 				line := ph.Addr + " · " + locales.TailnetPhoneOffline()
 				switch {
 				case ph.Connected && ph.Relayed:
@@ -217,7 +217,7 @@ func (a *app) tailnetPhoneRow(c *mg.Context, ph driver.TailnetPhone) {
 				case ph.Online:
 					line = ph.Addr + " · " + locales.TailnetPhoneOnline()
 				}
-				mg.Text(c, line).FontSize(12.5).TextColor(p.ink2)
+				mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink2)
 			})
 			switch {
 			case s.connecting[ph.Addr]:
@@ -310,6 +310,8 @@ func tailnetError(err error, name string) string {
 	switch {
 	case errors.Is(err, driver.ErrNotListening):
 		return locales.TailnetNotListening(name)
+	case errors.Is(err, driver.ErrPairNoNetwork):
+		return locales.PairingErrNoNetwork()
 	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(msg, "timed out") || strings.Contains(msg, "timeout") ||
 		strings.Contains(msg, "no route") || strings.Contains(msg, "unreachable"):
 		return locales.TailnetUnreachable(name)
@@ -413,13 +415,13 @@ func (a *app) awayRow(c *mg.Context, d gateway.DeviceView) {
 			}
 		}
 	}
-	mg.Column(c).Gap(4).Padding(6, 0, 0, 0).Children(func() {
-		mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+	groupRow(c, mg.Column(c).Gap(sp1).Justify(mg.Center), false).Children(func() {
+		mg.Row(c).Gap(sp4).AlignItems(mg.Center).Children(func() {
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-				mg.Text(c, locales.AwayTitle()).FontSize(13.5).FontWeight(600)
-				mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.AwayTitle()).FontWeight(fwMedium)
+				mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 				if note != "" {
-					mg.Text(c, note).FontSize(12.5).TextColor(p.ink3)
+					mg.Text(c, note).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink3)
 				}
 			})
 			if s.awayBusy[id] {
@@ -429,7 +431,7 @@ func (a *app) awayRow(c *mg.Context, d gateway.DeviceView) {
 			}
 		})
 		if msg := s.awayErr[id]; msg != "" {
-			mg.Text(c, msg).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, msg).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 		}
 	})
 }
@@ -478,13 +480,13 @@ func (a *app) awayDialog(c *mg.Context) {
 	}
 	p := pal(c)
 	title := locales.AwayDialogTitle(s.askName)
-	mg.Modal(c.Key("away-dialog"), &s.askOpen, func() {
+	sheet(c.Key("away-dialog"), &s.askOpen, func() {
 		mg.Column(c).Width(480).Gap(14).Label(title).Children(func() {
-			mg.Text(c, title).FontSize(17).FontWeight(650).Role(mg.RoleHeading)
-			mg.Text(c, locales.AwayDialogWhat()).FontSize(13.5).TextColor(p.ink2)
+			mg.Text(c, title).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
+			mg.Text(c, locales.AwayDialogWhat()).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Column(c).Gap(6).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
 				for _, note := range []string{locales.AwayDialogExposure(), locales.AwayDialogUntil(), locales.AwayDialogDrop()} {
-					mg.Text(c, note).FontSize(13).TextColor(p.ink2)
+					mg.Text(c, note).FontSize(fsSmall).TextColor(p.ink2)
 				}
 			})
 			mg.Row(c).Gap(8).Justify(mg.End).AlignItems(mg.Center).Children(func() {
@@ -522,13 +524,16 @@ func (a *app) setAwayAwake(on bool) {
 	a.awayAwake(on)
 }
 
-// awayKeepAwakeRow is Settings › Phones' Keep this computer awake for
-// phones away, shown once Tailscale is on this computer.
-func (a *app) awayKeepAwakeRow(c *mg.Context) {
+// awayKeepAwakeShown reports whether Settings › Phones shows Keep this
+// computer awake for phones away: once Tailscale is on this computer.
+func (a *app) awayKeepAwakeShown(c *mg.Context) bool {
 	st, have := a.tailnetStatus(c)
-	if !have || st.State == driver.TailnetNotInstalled {
-		return
-	}
+	return have && st.State != driver.TailnetNotInstalled
+}
+
+// awayKeepAwakeRow is Settings › Phones' Keep this computer awake for
+// phones away, the last row of its group.
+func (a *app) awayKeepAwakeRow(c *mg.Context) {
 	if a.toggleRow(c, "away-awake", locales.AwayKeepAwake(), locales.AwayKeepAwakeDesc(), true, &a.settings.KeepAwakeAway) {
 		a.setAwayAwake(a.settings.KeepAwakeAway && a.anyAway())
 	}

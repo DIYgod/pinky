@@ -98,6 +98,9 @@ func (d *Device) Key(ctx context.Context, k driver.Key) error {
 func (d *Device) key(ctx context.Context, k driver.Key) error {
 	switch k {
 	case driver.KeyHome:
+		if d.multi() {
+			return d.homeMulti(ctx)
+		}
 		d.inputMu.Lock()
 		defer d.inputMu.Unlock()
 		h, err := d.waitInput(ctx)
@@ -118,7 +121,24 @@ func (d *Device) key(ctx context.Context, k driver.Key) error {
 	}
 	d.inputMu.Lock()
 	defer d.inputMu.Unlock()
+	defer d.releaseKeyboard()
 	return d.pressKeys(ctx, []keyStroke{{usage: u}})
+}
+
+// releaseKeyboard removes the virtual keyboard once a call's keys are
+// done: while it is attached, iOS hides the on-screen keyboard from the
+// person and from apps that wait for it (GitHub issue #65). The next key
+// registers it again. Callers hold inputMu.
+func (d *Device) releaseKeyboard() {
+	d.mu.Lock()
+	h := d.hid
+	d.mu.Unlock()
+	if h == nil {
+		return
+	}
+	if err := h.dropKeyboard(); err != nil {
+		d.log.Debug("iphone: removing the virtual keyboard", "device", d.info.ID, "err", err)
+	}
 }
 
 type keyStroke struct {

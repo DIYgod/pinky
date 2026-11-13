@@ -17,6 +17,7 @@ var deviceTables = []struct{ table, column string }{
 	{"devices", "id"},
 	{"device_settings", "device_id"},
 	{"device_connections", "device_id"},
+	{"paused_devices", "device_id"},
 }
 
 // ForgetDevice deletes the phone's record and its settings: whether agents
@@ -50,6 +51,27 @@ func (s *Store) SetDeviceRemoved(ctx context.Context, deviceID string, removed b
 	_, err := s.db.ExecContext(ctx, `INSERT INTO removed_devices (device_id, removed_at) VALUES (?, ?)
 		ON CONFLICT(device_id) DO UPDATE SET removed_at=excluded.removed_at`, deviceID, ms(time.Now()))
 	return err
+}
+
+// SetDevicePaused records that the person paused Pinky's connection to the
+// phone, or, with paused false, that they resumed it.
+func (s *Store) SetDevicePaused(ctx context.Context, deviceID string, paused bool) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !paused {
+		_, err := s.db.ExecContext(ctx, `DELETE FROM paused_devices WHERE device_id = ?`, deviceID)
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO paused_devices (device_id, paused_at) VALUES (?, ?)
+		ON CONFLICT(device_id) DO UPDATE SET paused_at=excluded.paused_at`, deviceID, ms(time.Now()))
+	return err
+}
+
+// PausedDevices returns the phones the person paused and has not resumed.
+func (s *Store) PausedDevices(ctx context.Context) ([]string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.strings(ctx, `SELECT device_id FROM paused_devices ORDER BY paused_at, device_id`)
 }
 
 // RemovedDevices returns the phones the person removed and has not added

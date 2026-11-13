@@ -15,13 +15,13 @@ import (
 const crashTest = "dev.pinky.crashtest"
 
 // newLogsGateway runs a gateway on a fake Android phone with the test app
-// Crash Test, a finance app, Pinky Companion and Settings installed.
+// Crash Test, a finance app, Pinky (Pinky on the phone) and Settings installed.
 func newLogsGateway(t *testing.T) (*Gateway, *fake.Device) {
 	t.Helper()
 	dev := fake.NewDevice("pixel", "Pixel 9")
 	dev.AddApp(driver.App{ID: crashTest, Name: "Crash Test"})
 	dev.AddApp(driver.App{ID: "com.example.mybank", Name: "My Bank"})
-	dev.AddApp(driver.App{ID: "app.pinky.companion", Name: "Pinky Companion"})
+	dev.AddApp(driver.App{ID: "app.pinky.companion", Name: "Pinky"})
 	dev.AddApp(driver.App{ID: "com.example.notes", Name: "Notes Two"})
 	pol := testPolicy(t)
 	pol.AddApps(policy.CatFinance, policy.CategoryEntries{IDs: []string{"com.example.mybank"}})
@@ -53,7 +53,7 @@ func TestPhoneLogsAsks(t *testing.T) {
 	done := make(chan *Result, 1)
 	go func() { done <- s.Logs(ctx, LogsRequest{App: "Crash Test"}) }()
 	n := waitNeedKind(t, g, NeedApproval)
-	if n.Rule != policy.RuleAppLogs || n.Title != "Read the logs of Crash Test?" || !n.AllowTask || n.AlwaysAllow {
+	if n.Rule != policy.RuleAppLogs || n.Title != "Read the logs of Crash Test?" || !n.AllowTask || !n.AlwaysAllow {
 		t.Fatalf("approval %+v", n)
 	}
 	if err := g.Decide(n.ID, Deny, ""); err != nil {
@@ -86,6 +86,12 @@ func TestPhoneLogsAsks(t *testing.T) {
 	if !strings.Contains(res.Log, "before the task") || strings.Count(res.Log, "\n") != 0 {
 		t.Fatalf("filtered log %q", res.Log)
 	}
+	// kind "logs", as the tool's schema names it (#90).
+	res = s.Logs(ctx, LogsRequest{App: "Crash Test", Kind: " Logs ", Since: "3h", Filter: "before"})
+	mustStatus(t, res, StatusSettled)
+	if !strings.Contains(res.Log, "before the task") {
+		t.Fatalf("kind logs: %+v", res)
+	}
 	dev.AddCrash(crashTest, driver.CrashReport{Time: now.Add(time.Millisecond), Kind: "crash", Process: crashTest, PID: 4321,
 		Summary: "java.lang.IllegalStateException: Crash button", Text: "at dev.pinky.crashtest.Main.onClick(Main.java:42)"})
 	res = s.Logs(ctx, LogsRequest{App: "Crash Test", Kind: "crashes"})
@@ -109,7 +115,7 @@ func TestPhoneLogsAsks(t *testing.T) {
 		}
 	}
 	want := []string{"Waiting for you: Read the logs of Crash Test", "Waiting for you: Read the logs of Crash Test",
-		"Read 2 log lines of Crash Test", "Read 1 log line of Crash Test", "Read 1 crash report of Crash Test"}
+		"Read 2 log lines of Crash Test", "Read 1 log line of Crash Test", "Read 1 log line of Crash Test", "Read 1 crash report of Crash Test"}
 	if strings.Join(texts, "|") != strings.Join(want, "|") {
 		t.Fatalf("steps %q, want %q", texts, want)
 	}
@@ -153,7 +159,7 @@ func TestPhoneLogsRefused(t *testing.T) {
 	dev.SetDevBuild(crashTest, true)
 	dev.SetDevBuild("app.pinky.companion", true)
 	s, _ := connect(t, g, "Look around")
-	for app, rule := range map[string]string{"My Bank": "Finance apps", "Settings": policy.RuleAppLogs, "Pinky Companion": policy.RuleAppLogs} {
+	for app, rule := range map[string]string{"My Bank": "Finance apps", "Settings": policy.RuleAppLogs, "Pinky": policy.RulePinkyApps} {
 		res := s.Logs(ctx, LogsRequest{App: app})
 		if res.Status != StatusBlocked || res.Rule != rule || res.Log != "" {
 			t.Errorf("%s: %+v", app, res)
@@ -314,17 +320,22 @@ func TestLinesResultListening(t *testing.T) {
 func TestParseSince(t *testing.T) {
 	now := time.Date(2026, 11, 9, 15, 4, 5, 0, time.Local)
 	task := now.Add(-time.Hour)
+	// Times that name their own zone, taken from now: a fixed one is after
+	// now where the clocks are far enough ahead of its zone (06:00 UTC in
+	// Sydney), and parseSince refuses a time in the future.
+	utc := now.Add(-9 * time.Hour).UTC()
+	plus8 := now.Add(-time.Hour).In(time.FixedZone("", 8*3600))
 	for in, want := range map[string]time.Time{
-		"":                          task,
-		"10m":                       now.Add(-10 * time.Minute),
-		"-90s":                      now.Add(-90 * time.Second),
-		"2d":                        now.AddDate(0, 0, -2),
-		"14:05":                     time.Date(2026, 11, 9, 14, 5, 0, 0, time.Local),
-		"16:00:30":                  time.Date(2026, 11, 8, 16, 0, 30, 0, time.Local),
-		"2026-11-09 09:30":          time.Date(2026, 11, 9, 9, 30, 0, 0, time.Local),
-		"2026-11-08":                time.Date(2026, 11, 8, 0, 0, 0, 0, time.Local),
-		"2026-11-09T06:00:00Z":      time.Date(2026, 11, 9, 6, 0, 0, 0, time.UTC),
-		"2026-11-09T14:00:00+08:00": time.Date(2026, 11, 9, 14, 0, 0, 0, time.FixedZone("", 8*3600)),
+		"":                         task,
+		"10m":                      now.Add(-10 * time.Minute),
+		"-90s":                     now.Add(-90 * time.Second),
+		"2d":                       now.AddDate(0, 0, -2),
+		"14:05":                    time.Date(2026, 11, 9, 14, 5, 0, 0, time.Local),
+		"16:00:30":                 time.Date(2026, 11, 8, 16, 0, 30, 0, time.Local),
+		"2026-11-09 09:30":         time.Date(2026, 11, 9, 9, 30, 0, 0, time.Local),
+		"2026-11-08":               time.Date(2026, 11, 8, 0, 0, 0, 0, time.Local),
+		utc.Format(time.RFC3339):   utc,
+		plus8.Format(time.RFC3339): plus8,
 	} {
 		got, err := parseSince(in, now, task)
 		if err != nil || !got.Equal(want) {
