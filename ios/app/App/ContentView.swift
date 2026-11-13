@@ -41,6 +41,7 @@ struct ContentView: View {
                 if !m.recent.isEmpty { activity }
             }
             .navigationTitle(Text(verbatim: "Pinky"))
+            .modifier(TitleWithMark())
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showActivity = true } label: { Label("Activity", systemImage: "clock.arrow.circlepath") }
