@@ -69,35 +69,6 @@ func mirrorSize(files []mirrorFile) int64 {
 	return n
 }
 
-// DiskImageMirrorReady checks the pinned mirror already stored in dir. A
-// local development build can skip the download only when every file still
-// matches its pinned size and digest, including the source metadata.
-func DiskImageMirrorReady(dir string) bool {
-	root := filepath.Join(dir, mirrorFolder)
-	b, err := os.ReadFile(filepath.Join(root, "version.plist"))
-	if err != nil {
-		return false
-	}
-	var version struct {
-		ProductBuildVersion string
-		SourceCommit        string
-	}
-	if _, err := plist.Unmarshal(b, &version); err != nil || version.ProductBuildVersion != mirrorBuild || version.SourceCommit != mirrorCommit {
-		return false
-	}
-	for _, f := range mirrorFiles {
-		b, err := os.ReadFile(filepath.Join(root, "Restore", filepath.FromSlash(f.to)))
-		if err != nil || int64(len(b)) != f.size {
-			return false
-		}
-		digest := sha256.Sum256(b)
-		if hex.EncodeToString(digest[:]) != f.sha256 {
-			return false
-		}
-	}
-	return true
-}
-
 // DiskImageMirror implements driver.DiskImageDownloader.
 func (p *Provider) DiskImageMirror() driver.DiskImageMirror {
 	return driver.DiskImageMirror{Name: mirrorName, Image: mirrorXcode + " (" + mirrorBuild + ")", Size: mirrorSize(mirrorFiles)}

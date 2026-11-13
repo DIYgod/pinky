@@ -77,8 +77,11 @@ ifeq ($(UNAME),Darwin)
 	ADB="$(if $(wildcard $(ADB)/BUILD.txt),$(ADB))" SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 endif
 
-# Local Windows development: prepare the pinned developer disk image, build
-# Pinky.exe, then put the verified FFmpeg 9 DLLs beside it. Released packages
+# Local Windows development: build Pinky.exe with MyGo. When
+# build/ffmpeg-windows/bin holds the LGPL FFmpeg 9 DLLs
+# (scripts/ffmpeg.sh build/ffmpeg-windows windows-amd64 makes them), the
+# script stages them through MyGo's resources so the build carries them
+# beside Pinky.exe, then removes the temporary resources. Released packages
 # use scripts/dist.sh and its separately built LGPL FFmpeg instead.
 windows-dev:
 	sh scripts/windows-dev.sh
