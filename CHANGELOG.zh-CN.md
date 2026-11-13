@@ -2,6 +2,11 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在有两块屏的 iPhone 上，按「主屏幕」和上滑都没让画面变化时，Pinky 会告诉智能体可能没有生效，不再报告成功。
+- 在有两块屏的 iPhone 上，连续几次点击都没让画面变化时，即使之前的点击生效过，也会报告为不确定。
+
 ## 2026.1113.5 (2026-11-13)
 
 - 「交给 Pinky」和手机上的 Pinky 现在能通过 Google AI Studio 的 OpenAI 兼容接口使用 Gemini 模型了，之前第一步之后的每一步都会被拒绝。
