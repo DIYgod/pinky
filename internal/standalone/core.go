@@ -30,6 +30,7 @@ import (
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/schedule"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -91,6 +92,13 @@ type Core struct {
 
 	runMu sync.Mutex
 	runs  []runRecord // how the agent ended each task, oldest first (history.go)
+
+	// The scheduled tasks (schedules.go); notices are those to tell the
+	// person of, under mu.
+	sched     *schedule.Store
+	sc        *schedule.Scheduler
+	notices   []Notice
+	noticeSeq int64
 }
 
 // Errors of the control commands.
@@ -139,6 +147,11 @@ func New(o Options) (*Core, error) {
 	c := &Core{opt: o, log: o.Log, G: g, MCP: mcp.New(g, o.Version), ctx: ctx, cancel: cancel,
 		subs: map[chan struct{}]struct{}{}}
 	c.loadRuns()
+	if err := c.openSchedules(); err != nil {
+		cancel()
+		g.Close()
+		return nil, err
+	}
 	popt := o.Pilot
 	popt.Server, popt.Version, popt.Notify = c.MCP, o.Version, c.changed
 	if popt.Usage == nil {
@@ -170,6 +183,7 @@ func New(o Options) (*Core, error) {
 // Close stops the task and the gateway.
 func (c *Core) Close() {
 	c.cancel()
+	c.sc.Close()
 	c.pilot.Close()
 	c.G.Close()
 }
@@ -263,7 +277,10 @@ func (r StartRequest) Config() pilot.Config {
 // first, so Start fails with ErrComputer while Pinky on a computer uses it;
 // the checks that need no phone come before, so that a mistake in the form
 // claims nothing.
-func (c *Core) Start(r StartRequest) error {
+func (c *Core) Start(r StartRequest) error { return c.start(r, nil) }
+
+// start starts a task the person starts, or a scheduled one.
+func (c *Core) start(r StartRequest, sched *pilot.Scheduled) error {
 	d, ok := c.device()
 	if !ok || d.Info.State != driver.StateOnline {
 		return ErrNoDevice
@@ -306,7 +323,13 @@ func (c *Core) Start(r StartRequest) error {
 	c.run++
 	run := c.run
 	c.mu.Unlock()
-	if err := c.pilot.StartWith(cfg, d.Info.ID, task, r.extra()); err != nil {
+	var err error
+	if sched != nil {
+		err = c.pilot.StartScheduled(cfg, d.Info.ID, task, *sched)
+	} else {
+		err = c.pilot.StartWith(cfg, d.Info.ID, task, r.extra())
+	}
+	if err != nil {
 		c.endedLocked(run)
 		return err
 	}

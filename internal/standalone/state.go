@@ -22,6 +22,8 @@ type State struct {
 	// Background says tasks run on a background display, which the
 	// floating window shows (the video command).
 	Background bool `json:"background,omitempty"`
+	// Notices are scheduled runs to tell the person of (schedules.go).
+	Notices []Notice `json:"notices,omitempty"`
 }
 
 // ComputerState is Pinky on a computer while it holds the phone: the
@@ -85,6 +87,10 @@ type AgentState struct {
 	// whole task's; the limits count anew each time.
 	Continuable bool `json:"continuable,omitempty"`
 	Continues   int  `json:"continues,omitempty"`
+	// Scheduled says a schedule started the task, and Unattended that
+	// nobody pressed Run now: the app notifies the person of what it asks.
+	Scheduled  bool `json:"scheduled,omitempty"`
+	Unattended bool `json:"unattended,omitempty"`
 }
 
 // Message is a message of the person's to the agent.
@@ -186,6 +192,7 @@ func (c *Core) State() State {
 		}
 		st.Needs = append(st.Needs, need)
 	}
+	st.Notices = c.pendingNotices()
 	return st
 }
 
@@ -199,6 +206,9 @@ func agentState(s pilot.Status) *AgentState {
 		TokenLimit: s.Config.TokenLimit(), Continuable: s.Continuable, Continues: s.Continues}
 	for _, m := range s.Pending {
 		a.Pending = append(a.Pending, Message{ID: m.ID, Text: m.Text, MS: m.At.UnixMilli()})
+	}
+	if s.Scheduled != nil {
+		a.Scheduled, a.Unattended = true, s.Scheduled.Unattended
 	}
 	if !s.Running() && a.Summary == "" {
 		a.Summary = pilot.Describe(s)

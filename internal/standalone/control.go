@@ -13,6 +13,7 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/schedule"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -37,6 +38,7 @@ import (
 //	{"cmd":"steer","id":"m1","text":"..."}              → {"ok":true}  (EditMessage; empty text withdraws)
 //	{"cmd":"withdraw","id":"m1"}                        → {"ok":true}  (Withdraw)
 //	{"cmd":"continue","text":"...","key":"..."}         → {"ok":true}  (Continue the task that ended)
+//	{"cmd":"schedule_…"} / {"cmd":"notice_seen"}        → the scheduled tasks (schedules.go)
 //
 // A message waits in the state's agent.pending until the model reads it;
 // steer with its id or withdraw then fail with the code read. Once a task
@@ -81,6 +83,14 @@ type request struct {
 	// usage: the first day, 2006-01-02; empty for all.
 	Since string `json:"since"`
 	StartRequest
+	// The schedules' commands (schedules.go): a schedule to save or
+	// preview, whether to pause the one named by ID, the phone's time
+	// zone, what the app knows of the phone, and a notice shown.
+	Schedule *schedule.Schedule `json:"schedule"`
+	Paused   bool               `json:"paused"`
+	Zone     string             `json:"zone"`
+	Notice   int64              `json:"notice"`
+	PhoneNow
 }
 
 type reply struct {
@@ -96,6 +106,10 @@ type reply struct {
 	Check *pilot.CheckResult `json:"check,omitempty"`
 	// Usage answers the usage command; an empty list is [].
 	Usage *[]pilot.UsageRow `json:"usage,omitempty"`
+	// The schedules' commands (schedules.go).
+	Schedules []schedule.Schedule `json:"schedules,omitempty"`
+	NextMS    int64               `json:"next_ms,omitempty"`
+	Upcoming  []int64             `json:"upcoming,omitempty"`
 }
 
 // maxLine bounds a command: pilot.MaxImages pictures in base64, and room
@@ -281,6 +295,9 @@ func (c *Core) handle(r request) reply {
 			rows = []pilot.UsageRow{}
 		}
 		return reply{OK: true, Usage: &rows}
+	case "schedules", "schedule_save", "schedule_preview", "schedule_delete", "schedule_pause", "schedule_run",
+		"schedule_due", "notice_seen":
+		return c.schedule(r)
 	default:
 		err = fmt.Errorf("unknown command %q", r.Cmd)
 	}
