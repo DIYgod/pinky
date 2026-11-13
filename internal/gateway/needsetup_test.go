@@ -409,6 +409,57 @@ func TestEmulatorForgotten(t *testing.T) {
 	waitOnline(t, g, "emulator-5554")
 }
 
+// avdProvider is a stepProvider that starts virtual phones, as Add phone's
+// Start does for an AVD.
+type avdProvider struct{ *stepProvider }
+
+func (avdProvider) VirtualPhones(context.Context) (driver.VirtualPhones, error) {
+	return driver.VirtualPhones{Platform: driver.Android}, nil
+}
+func (avdProvider) StartVirtual(context.Context, string) error { return nil }
+func (avdProvider) StopVirtual(context.Context, string) error  { return nil }
+
+// TestEmulatorKept: a gone emulator that has something to keep stays,
+// offline: one with a setting of its own (read-only), and one whose AVD
+// Pinky started in this run, which runs again as the same phone.
+func TestEmulatorKept(t *testing.T) {
+	saved := emulatorGrace
+	emulatorGrace = 50 * time.Millisecond
+	t.Cleanup(func() { emulatorGrace = saved })
+	cases := []struct {
+		name  string
+		setup func(t *testing.T, g *Gateway)
+	}{
+		{"read-only", func(t *testing.T, g *Gateway) {
+			if err := g.Policy().SetReadOnly("emulator-5554", true); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"started by Pinky", func(t *testing.T, g *Gateway) {
+			if err := g.StartVirtual(context.Background(), driver.Android, "Pixel_9"); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := &stepProvider{dev: demo.NewDevice("emulator-5554", "Pixel 9", driver.Android)}
+			emu := driver.Info{ID: "emulator-5554", Platform: driver.Android, Name: "Pixel 9",
+				Connection: "usb", Backend: "scrcpy", State: driver.StateOnline, Virtual: true, VirtualID: "Pixel_9"}
+			p.list(&emu)
+			g := stepGateway(t, avdProvider{p})
+			waitOnline(t, g, "emulator-5554")
+			c.setup(t, g)
+			p.list(nil)
+			viewUntil(t, g, "emulator-5554", "offline", func(v DeviceView) bool { return v.Status == DeviceOffline })
+			time.Sleep(300 * time.Millisecond)
+			if len(g.Devices()) != 1 {
+				t.Errorf("an emulator with something to keep left the list")
+			}
+		})
+	}
+}
+
 // TestAgentWorkingAfterSetup: an agent connected while the phone waited for
 // a step. Once the gateway opens the phone, its driver hears that an agent
 // works on it (driver.WorkWatcher), so Pinky on the phone comes on for the

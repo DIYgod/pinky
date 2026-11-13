@@ -129,6 +129,7 @@ type Gateway struct {
 	known      map[string]bool           // phones that are the person's, which providers may open over Wi-Fi (wifi.go)
 	names      map[string]history.Device // what the history store calls the phones Pinky has seen (wifi.go)
 	chosen     map[string]string         // the connection the person chose per phone, none for Automatic (connection.go)
+	started    map[string]bool           // virtual phones started with StartVirtual in this run, by platform and VirtualID (virtual.go)
 	wifiOn     bool                      // the providers use phones over Wi-Fi (SetWiFi)
 	keepDays   int                       // history retention; 0 keeps everything
 	prune      chan struct{}             // asks the retention loop to run now
@@ -164,6 +165,7 @@ func New(o Options) (*Gateway, error) {
 		known:      map[string]bool{},
 		names:      map[string]history.Device{},
 		chosen:     map[string]string{},
+		started:    map[string]bool{},
 		prune:      make(chan struct{}, 1),
 	}
 	if g.policy == nil {
@@ -382,11 +384,13 @@ func (g *Gateway) discover(ctx context.Context) {
 				delete(g.devices, id)
 				left = append(left, id)
 				g.log.Info("device forgotten", "device", id, "why", "never opened, and no longer listed")
-			case emulator(d.info) && !d.opening && d.lease == nil && now.Sub(d.unlistedAt) >= emulatorGrace:
-				// An emulator that went away: its next run is likely
-				// another phone (emulatorGrace).
+			case emulator(d.info) && !d.opening && d.lease == nil && now.Sub(d.unlistedAt) >= emulatorGrace && !g.keepEmulatorLocked(d):
+				// An emulator that went away, with nothing to keep for
+				// it: its next run is likely another phone
+				// (emulatorGrace).
 				d.removed = true
 				g.dropSettingsLocked(id)
+				forgetTaskWay(d)
 				forgot = append(forgot, id)
 				left = append(left, id)
 				g.log.Info("device forgotten", "device", id, "why", "an emulator, no longer listed")
@@ -428,6 +432,21 @@ var emulatorGrace = 10 * time.Minute
 // Simulator keeps its UDID from run to run and stays.
 func emulator(info driver.Info) bool {
 	return info.Virtual && info.Platform == driver.Android
+}
+
+// keepEmulatorLocked reports whether a gone emulator stays on the list
+// all the same: Pinky started its AVD in this run, which runs again on the
+// same port and so as the same phone (Add phone's Start), or the person
+// gave it settings of its own (agents on a background display or not, a
+// connection, read-only). Its saved PIN is the client's, which forgetting
+// does not delete. The caller holds g.mu.
+func (g *Gateway) keepEmulatorLocked(d *device) bool {
+	if d.info.VirtualID != "" && g.started[virtualKey(d.info.Platform, d.info.VirtualID)] {
+		return true
+	}
+	_, background := g.background[d.id]
+	_, chosen := g.chosen[d.id]
+	return background || chosen || g.policy.ReadOnly(d.id)
 }
 
 // unlisted marks a phone its provider no longer lists, and that the
