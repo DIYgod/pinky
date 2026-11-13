@@ -105,7 +105,7 @@ class TaskActivity : Activity() {
         secrets = Secrets(this)
         hasCore = Core.available(this)
         val col = look.column()
-        val header = look.header(getString(R.string.app_name))
+        val header = look.header(getString(R.string.app_name), mark = true)
         header.addView(
             look.iconButton(R.drawable.ic_activity, getString(R.string.phone_activity)) {
                 startActivity(Intent(this, HistoryActivity::class.java))
