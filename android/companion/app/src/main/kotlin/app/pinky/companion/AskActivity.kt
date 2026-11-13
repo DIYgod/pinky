@@ -234,7 +234,7 @@ class AskActivity : Activity() {
     /** Why a task cannot start from here now, or null when it can. */
     private fun whyNot(): String? {
         if (!Core.available(this) || !look.serviceOn()) return getString(R.string.phone_err_no_device)
-        if (!secrets.has(settings.provider)) return getString(R.string.phone_no_key)
+        if (!settings.keyOptional() && !secrets.has(settings.keyName())) return getString(R.string.phone_no_key)
         if (settings.model().isEmpty()) return getString(R.string.phone_err_no_model)
         val st = state
         if (st == null) {
@@ -369,13 +369,17 @@ class AskActivity : Activity() {
         }
         starting = true
         render()
-        val provider = settings.provider
+        val id = settings.service
+        val name = settings.keyName(id)
+        val optional = settings.keyOptional(id)
         val app = applicationContext
         val sharedNow = shared
         val imagesNow = images.toList()
         CoreClient.background {
-            val key = secrets.load(provider)
-            if (key == null) {
+            // As TaskActivity: a service that needs no key starts without
+            // one, unless a saved key can no longer be read.
+            val key = secrets.load(name)
+            if (key == null && !(optional && !secrets.has(name))) {
                 main.post {
                     starting = false
                     note.say(getString(R.string.phone_err_key_lost))
@@ -383,7 +387,7 @@ class AskActivity : Activity() {
                 }
                 return@background
             }
-            val req = settings.startRequest(task, key, provider)
+            val req = settings.startRequest(task, key.orEmpty(), id)
             if (mode == Mode.SCREEN) req.put("screen", true)
             if (sharedNow.isNotEmpty()) req.put("shared", sharedNow)
             if (imagesNow.isNotEmpty()) {
