@@ -9692,6 +9692,14 @@
   "@settingsSafetyHideCodesDesc": {
     "description": "Settings › Safety: the line under Hide codes from agents. Screenshots are the ones agents get and the ones Activity keeps; recordings are the screen recordings of tasks, which are not covered."
   },
+  "settingsSafetyVirtualCredentials": "Allow passwords on virtual phones",
+  "@settingsSafetyVirtualCredentials": {
+    "description": "Settings › Safety: the switch that lets agents type passwords and one-time codes on virtual phones (emulators and Simulators on this computer). Off by default."
+  },
+  "settingsSafetyVirtualCredentialsDesc": "Agents may type passwords and one-time codes on emulators and Simulators on this computer, to test sign-ins with test accounts. On phones they never can.",
+  "@settingsSafetyVirtualCredentialsDesc": {
+    "description": "Settings › Safety: the line under Allow passwords on virtual phones. Phones means real phones, as opposed to virtual ones."
+  },
   "settingsSafetyIntro": "Pinky checks every action before it reaches the phone. Agents can't change these settings.",
   "@settingsSafetyIntro": {
     "description": "Settings › Safety: the line under the page title."

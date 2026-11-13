@@ -194,9 +194,12 @@ func (e *Engine) Evaluate(in Input) Verdict {
 	kinds := detect(in, cats)
 	system := contains(cats, CatSystem)
 
-	if in.Op == OpType && IsCredentialField(in.Target) {
-		return Verdict{Decision: Deny, Rule: RuleCredentials, Kinds: kinds,
-			Reason: "Pinky never types into password or one-time-code fields; call phone_handoff so the person can fill it."}
+	if in.Op == OpType && IsCredentialField(in.Target) && !(in.Virtual && e.file.VirtualCredentials) {
+		reason := "Pinky never types into password or one-time-code fields; call phone_handoff so the person can fill it."
+		if in.Virtual {
+			reason += " On a virtual phone the person may allow it in Pinky's Settings › Safety."
+		}
+		return Verdict{Decision: Deny, Rule: RuleCredentials, Kinds: kinds, Reason: reason}
 	}
 	if in.Op == OpLaunch && in.LaunchURL {
 		if why, refused := LinkRefused(in.Link); refused {

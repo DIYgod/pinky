@@ -1603,6 +1603,8 @@
   "settingsSafetyBlockedIntro": "智能体无法打开这些应用，看不到它们的画面，也读不到它们的通知。",
   "settingsSafetyHideCodes": "对智能体隐藏验证码",
   "settingsSafetyHideCodesDesc": "屏幕上和通知里的一次性验证码会在智能体读到之前被打码，截图里也会被遮住。录屏里的验证码不遮，所以只有你允许，智能体才拿得到录屏。",
+  "settingsSafetyVirtualCredentials": "允许在虚拟手机上输入密码",
+  "settingsSafetyVirtualCredentialsDesc": "智能体可以在这台电脑上的模拟器里输入密码和一次性验证码，方便用测试账号测试登录。在真机上始终不行。",
   "settingsSafetyIntro": "Pinky 会在每个操作到达手机前进行检查。智能体无法更改这些设置。",
   "settingsSafetyKindBanking": "银行",
   "settingsSafetyKindBrowsers": "浏览器",

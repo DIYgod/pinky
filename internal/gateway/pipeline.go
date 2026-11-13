@@ -785,9 +785,10 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	readOnly := l.readOnly
 	fgAllowed := allowsLocked(l, fg)
 	prov := d.provider // discovery sets it again under g.mu
+	virtual := d.info.Virtual
 	g.mu.Unlock()
 	p.input = policy.Input{Device: d.id, App: fg, Screen: cur, TaskApps: apps, LongPress: a.LongPress,
-		ReadOnly: scope.Mode == ScopeReadOnly || readOnly, AllowBlocked: fgAllowed}
+		ReadOnly: scope.Mode == ScopeReadOnly || readOnly, AllowBlocked: fgAllowed, Virtual: virtual}
 	if scope.Mode == ScopeApps {
 		p.input.ScopeApps = scope.Apps
 	}
@@ -838,7 +839,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			p.target = hitTest(cur, p.point)
 		}
 		p.hasPt = true
-		if pad, ok := policy.HiddenKeypad(cur); ok && pad.Contains(p.point) {
+		if pad, ok := policy.HiddenKeypad(cur); ok && pad.Contains(p.point) && !g.policy.CredentialTypingAllowed(virtual) {
 			// The app's own passcode keypad, which the person watching
 			// cannot see: a tap on it enters their passcode.
 			p.input.Target = p.target
@@ -863,7 +864,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			p.target, p.point, p.hasPt = e, e.Bounds.Center(), true
 		} else if f, ok := cur.Focused(); ok {
 			p.target = &f
-		} else if credentialOnScreen(cur) {
+		} else if credentialOnScreen(cur) && !g.policy.CredentialTypingAllowed(virtual) {
 			// The focused field is unknown and might be the password field.
 			return p, &Result{Status: StatusBlocked, Rule: policy.RuleCredentials,
 				Message: "This screen has a password or code field and Pinky cannot tell which field has focus. Nothing was done. Pass ref to type into a specific field, or call phone_handoff for credentials."}

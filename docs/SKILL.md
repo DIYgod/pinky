@@ -139,7 +139,7 @@ For a simple task where only the outcome matters (set an alarm, look something u
 
 ## Things you must not do
 
-- Never type passwords or one-time codes; Pinky refuses (`rule: credentials`). Call `phone_handoff { reason: "Please sign in to Dinely" }` and wait.
+- Never type passwords or one-time codes; Pinky refuses (`rule: credentials`). Call `phone_handoff { reason: "Please sign in to Dinely" }` and wait. The one exception is a virtual phone (an emulator or a Simulator) when the person turned on "Allow passwords on virtual phones" in Settings › Safety: there type the ones your task gives you, never guessed ones.
 - A result that says your tool definitions come from an older Pinky means Pinky updated while your MCP connection stayed open: arguments it added since may not reach it. Tell the person, and ask them to restart Pinky's MCP server (or start a new session) when the task needs them.
 - Never retry an `uncertain` action without observing first.
 - Never try to reach the phone another way (adb, scripts) to get around a refusal.

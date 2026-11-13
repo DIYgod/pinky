@@ -293,7 +293,8 @@ func (a *app) settingsSafety(c *mg.Context) {
 			a.toggleRow(c, "unlock", locales.SettingsUnlockFromComputer(), desc, false, &st.UnlockFromComputer)
 		}
 		a.offWhile(c, rulesYAML).Children(func() {
-			a.toggleRow(c, "codes", locales.SettingsSafetyHideCodes(), locales.SettingsSafetyHideCodesDesc(), true, &st.HideCodes)
+			a.toggleRow(c, "codes", locales.SettingsSafetyHideCodes(), locales.SettingsSafetyHideCodesDesc(), false, &st.HideCodes)
+			a.toggleRow(c, "virtual-credentials", locales.SettingsSafetyVirtualCredentials(), locales.SettingsSafetyVirtualCredentialsDesc(), true, &st.VirtualCredentials)
 		})
 	})
 	a.rulesSection(c)
