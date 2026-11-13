@@ -44,6 +44,11 @@ struct AgentState: Decodable, Equatable {
     var model: String
     /// The service the task's model is at; continue needs its key.
     var provider: String?
+    /// The task's model service, the name its key is saved under
+    /// (pilot.KeyName) and whether it needs one: the key continue sends.
+    var service: String?
+    var key_name: String?
+    var key_optional: Bool?
     var running: Bool
     var end: String?
     var summary: String?

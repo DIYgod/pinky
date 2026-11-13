@@ -111,6 +111,21 @@ enum Demo {
         }
     }
 
+    /// What the model used: today, yesterday and five days ago.
+    static var usage: [UsageRow] {
+        guard hasKey else { return [] }
+        return [
+            UsageRow(day: UsageRow.day(back: 0), service: "anthropic", model: "claude-opus-5-5", requests: 9,
+                     input: 36_500, output: 1_900, cache_read: 2_600, cost: 0.2153),
+            UsageRow(day: UsageRow.day(back: 1), service: "anthropic", model: "claude-opus-5-5", requests: 14,
+                     input: 58_200, output: 3_100, cost: 0.3685),
+            UsageRow(day: UsageRow.day(back: 1), service: "deepseek", model: "deepseek-flash", requests: 6,
+                     input: 22_400, output: 900, cost: 0.0068),
+            UsageRow(day: UsageRow.day(back: 5), service: "ollama", model: "qwen3-vl", requests: 3,
+                     input: 9_800, output: 400, unpriced: 10_200),
+        ]
+    }
+
     private static var history: [PastTask] {
         let rows: [(String, String, String, Int64, Int, Double, Int)] = [
             (w("Work out 12 × 34 in Calculator", "用计算器算 12 × 34"), "done", "done", 12, 6, 0.05, 19),

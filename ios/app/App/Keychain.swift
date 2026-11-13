@@ -32,8 +32,11 @@ enum Keychain {
         return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
     }
 
-    /// The account of a provider's API key.
-    static func keyAccount(_ provider: String) -> String { "key." + provider }
+    /// The account of a model service's API key, by the name it is saved
+    /// under (ModelService.keyName, pilot.KeyName): the service's id, or
+    /// the API's name for the custom entries, as keys were named before
+    /// there were services.
+    static func keyAccount(_ keyName: String) -> String { "key." + keyName }
 }
 
 /// The pairing with this iPhone's remotepairingd: {"udid", "pairing"

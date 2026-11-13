@@ -6,11 +6,12 @@ import SwiftUI
 /// steps and the latest Activity; Activity and Settings in the toolbar.
 struct ContentView: View {
     @EnvironmentObject var m: AppModel
-    // Read here so that the screen follows what Settings changes.
-    @AppStorage("provider") private var provider = TaskSettings.anthropic
-    @AppStorage("model") private var model = ""
-    @AppStorage("baseURL") private var baseURL = ""
+    // Read here so that the screen follows what Settings changes; the
+    // model and address are kept per service, so closing Settings counts
+    // as a change too (settingsRev).
+    @AppStorage("service") private var service = ""
     @AppStorage("maxCost") private var maxCost = 0.0
+    @State private var settingsRev = 0
     @State private var text = ""
     /// The message for Pinky while a task runs, or to continue it.
     @State private var message = ""
@@ -52,8 +53,11 @@ struct ContentView: View {
                 }
             }
             .navigationDestination(isPresented: $showActivity) { ActivityView() }
-            .sheet(isPresented: $showSettings, onDismiss: readKey) { SettingsView().environmentObject(m) }
-            .onAppear(perform: readKey)
+            .sheet(isPresented: $showSettings, onDismiss: settingsClosed) { SettingsView().environmentObject(m) }
+            .onAppear {
+                readKey()
+                Task { await m.loadUsage() }
+            }
             .animation(.default, value: m.state)
         }
         .tint(.pinkyAccent)
@@ -74,8 +78,15 @@ struct ContentView: View {
         return setUp && st.computer == nil && a.continuable == true ? a : nil
     }
 
+    private func settingsClosed() {
+        readKey()
+        settingsRev += 1
+    }
+
+    /// Whether the service's key is saved, or the service needs none.
     private func readKey() {
-        hasKey = !(Keychain.get(Keychain.keyAccount(provider)) ?? "").isEmpty
+        _ = service
+        hasKey = TaskSettings.keyReady
         #if DEBUG
         if m.demo { hasKey = Demo.hasKey }
         #endif
@@ -176,6 +187,9 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: modelLabel).font(.footnote.weight(.medium)).foregroundStyle(.secondary)
                     Text(verbatim: limitLine).font(.footnote).foregroundStyle(.tertiary)
+                    if let today = usageToday {
+                        Text(verbatim: today).font(.footnote.monospacedDigit()).foregroundStyle(.tertiary)
+                    }
                 }
                 Spacer()
                 Button {
@@ -200,13 +214,21 @@ struct ContentView: View {
 
     // Read with the stored settings, so that SwiftUI redraws when they change.
     private var modelLabel: String {
-        _ = (provider, model, baseURL)
+        _ = (service, settingsRev)
         return TaskSettings.modelLabel
     }
 
     private var limitLine: String {
-        _ = (provider, model, maxCost)
+        _ = (service, maxCost, settingsRev)
         return TaskSettings.limitLine
+    }
+
+    /// What the model used today, "Today: 41,000 tokens · US$0.012"; nil
+    /// when nothing.
+    private var usageToday: String? {
+        let t = UsageRow.total(m.usage, since: UsageRow.day(back: 0))
+        guard t.tokens > 0 else { return nil }
+        return String(localized: "Today: \(L.amount(t))", comment: "Under the task box: what the model used today")
     }
 
     // MARK: Activity

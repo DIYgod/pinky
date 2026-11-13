@@ -1,6 +1,29 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ (%@)" : {
+      "comment" : "A service and its region in Settings: Kimi (China)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (%2$@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@（%2$@）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@（%2$@）"
+          }
+        }
+      }
+    },
     "%@ tokens" : {
       "comment" : "A number of tokens a model read and wrote",
       "localizations" : {
@@ -127,6 +150,53 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld 分钟"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld requests" : {
+      "comment" : "How many requests a model got on a day, in Settings › Usage",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld request"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld requests"
+                }
+              }
+            }
+          }
+        },
+        "ja" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 回のリクエスト"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld 次请求"
                 }
               }
             }
@@ -342,6 +412,22 @@
         }
       }
     },
+    "Add an API key first." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先に API キーを追加してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先添加 API 密钥。"
+          }
+        }
+      }
+    },
     "Add or change instructions…" : {
       "localizations" : {
         "ja" : {
@@ -535,6 +621,71 @@
         }
       }
     },
+    "Check" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检查"
+          }
+        }
+      }
+    },
+    "Check Again" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度確認"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次检查"
+          }
+        }
+      }
+    },
+    "Checking…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認しています…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在检查…"
+          }
+        }
+      }
+    },
+    "China" : {
+      "comment" : "A service's address for mainland China, after its name in Settings",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中国本土"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "国内"
+          }
+        }
+      }
+    },
     "Choose a model" : {
       "localizations" : {
         "ja" : {
@@ -547,6 +698,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择模型"
+          }
+        }
+      }
+    },
+    "Choose a model first." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先にモデルを選んでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先选择模型。"
           }
         }
       }
@@ -584,22 +751,6 @@
         }
       }
     },
-    "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anthropic の API で Claude を使うか、OpenAI 互換のサービスでほかのモデルを使います。キーはそれぞれ別です。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通过 Anthropic 的 API 使用 Claude，或通过兼容 OpenAI 的服务使用其他模型。两者各用各的密钥。"
-          }
-        }
-      }
-    },
     "Connecting to this iPhone…" : {
       "comment" : "Phone not ready",
       "localizations" : {
@@ -629,22 +780,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续"
-          }
-        }
-      }
-    },
-    "Cost is counted from what the service reports, at Anthropic's prices." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "費用は、サービスが報告する使用量と Anthropic の料金から計算します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "费用按服务报告的用量和 Anthropic 的价格计算。"
           }
         }
       }
@@ -728,6 +863,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未能开始"
+          }
+        }
+      }
+    },
+    "Counted from what the service reports, at the prices it publishes." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスが報告する使用量と、公開されている料金から計算します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按服务报告的用量和它公布的价格计算。"
           }
         }
       }
@@ -876,6 +1027,71 @@
         }
       }
     },
+    "International" : {
+      "comment" : "A service's international address, after its name in Settings",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "国際"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "国际"
+          }
+        }
+      }
+    },
+    "Last 30 days" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去 30 日間"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 30 天"
+          }
+        }
+      }
+    },
+    "Last 7 days" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "過去 7 日間"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 7 天"
+          }
+        }
+      }
+    },
+    "Leave it for Anthropic's API, or give the address of a service compatible with it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anthropic の API ならそのままにし、互換サービスを使うときはそのアドレスを入力します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 Anthropic 官方 API 时保持默认，也可以填写兼容服务的地址。"
+          }
+        }
+      }
+    },
     "Limits" : {
       "localizations" : {
         "ja" : {
@@ -956,6 +1172,22 @@
         }
       }
     },
+    "Models that read images and use tools, as Pinky needs. Choose Other… for another model of the service." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を読めてツールを使える、Pinky に向いたモデルです。サービスのほかのモデルを使うには「その他…」を選びます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这些模型都能看图并调用工具，正是 Pinky 需要的。要用这个服务的其他模型，请选“其他…”。"
+          }
+        }
+      }
+    },
     "Next message for Pinky" : {
       "localizations" : {
         "ja" : {
@@ -1021,6 +1253,22 @@
         }
       }
     },
+    "Nothing yet." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有用量。"
+          }
+        }
+      }
+    },
     "Off" : {
       "localizations" : {
         "ja" : {
@@ -1049,6 +1297,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已开启"
+          }
+        }
+      }
+    },
+    "Only if you set one up on the server. The key is kept in this iPhone's Keychain and sent only to the service." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーでキーを設定した場合だけ必要です。キーはこの iPhone のキーチェーンに保存され、サービスにだけ送られます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只在服务器设置了密钥时需要。密钥保存在这台 iPhone 的钥匙串中，只发送给该服务。"
           }
         }
       }
@@ -1098,6 +1362,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Opus 能力最强，Sonnet 和 Haiku 更便宜。"
+          }
+        }
+      }
+    },
+    "Other…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他…"
           }
         }
       }
@@ -1261,6 +1541,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 无法开始配对。请确认 Wi-Fi 已打开，并且允许 Pinky 访问本地网络。"
+          }
+        }
+      }
+    },
+    "Pinky couldn't reach the API address. Check it, and that the service or server is running." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky が API アドレスに接続できませんでした。アドレスと、サービスやサーバーが動いているか確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 连不上这个 API 地址。请检查地址，并确认服务或服务器正在运行。"
           }
         }
       }
@@ -1804,6 +2100,22 @@
         }
       }
     },
+    "Sends the model one tiny request to see that it answers and uses tools. Pinky does it when you save a key, model or address." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルに小さなリクエストを 1 つ送り、応答してツールを使えるか確かめます。キー、モデル、アドレスを保存すると Pinky が自動で確認します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向模型发送一个很小的请求，看它能否回应并调用工具。保存密钥、模型或地址后，Pinky 会自动检查。"
+          }
+        }
+      }
+    },
     "Service" : {
       "localizations" : {
         "ja" : {
@@ -2078,6 +2390,22 @@
         }
       }
     },
+    "The address answered, but not as an API Pinky knows. Check the API address." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アドレスは応答しましたが、Pinky が扱える API ではありません。API アドレスを確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个地址有回应，但不是 Pinky 认识的 API。请检查 API 地址。"
+          }
+        }
+      }
+    },
     "The address of the service's OpenAI-compatible API, such as https://…/v1. OpenAI's own by default." : {
       "localizations" : {
         "ja" : {
@@ -2126,6 +2454,39 @@
         }
       }
     },
+    "The model answered and used a tool, in %@ s." : {
+      "comment" : "A check of the model went well; seconds",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルが応答し、ツールを使いました（%@ 秒）。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型已回应并调用了工具，用时 %@ 秒。"
+          }
+        }
+      }
+    },
+    "The model answered but didn't use a tool. Pinky works through tools, so choose a model that uses them." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルは応答しましたが、ツールを使いませんでした。Pinky はツールで操作するので、ツールを使えるモデルを選んでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "模型回应了，但没有调用工具。Pinky 要靠工具操作手机，请换一个支持工具调用的模型。"
+          }
+        }
+      }
+    },
     "The model declined this task." : {
       "comment" : "Why a task did not finish",
       "localizations" : {
@@ -2159,6 +2520,38 @@
         }
       }
     },
+    "The name of a model the server runs. It must read images and use tools." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーで動かしているモデルの名前。画像を読めて、ツールを使えるモデルが必要です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "填写服务器上运行的模型名称。这个模型需要能看图并调用工具。"
+          }
+        }
+      }
+    },
+    "The server's address. On iPhone, give the address of the computer that runs it on your network, such as http://192.168.1.10:11434/v1." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバーのアドレスです。iPhone では、同じネットワークでサーバーを動かしているパソコンのアドレスを入力します（例: http://192.168.1.10:11434/v1）。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器的地址。在 iPhone 上，请填写同一网络中运行它的电脑的地址，例如 http://192.168.1.10:11434/v1。"
+          }
+        }
+      }
+    },
     "The service didn't accept the API key. Check it in Settings." : {
       "comment" : "Why a task did not start",
       "localizations" : {
@@ -2172,6 +2565,135 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务没有接受这个 API 密钥。请在「设置」中检查。"
+          }
+        }
+      }
+    },
+    "The service didn't accept the API key. Check that it is a key of this service." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスが API キーを受け付けませんでした。このサービスのキーか確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务没有接受这个 API 密钥。请确认它是这个服务的密钥。"
+          }
+        }
+      }
+    },
+    "The service doesn't know this model or address. Check the model's name and the API address." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスがこのモデルかアドレスを見つけられません。モデル名と API アドレスを確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务找不到这个模型或地址。请检查模型名称和 API 地址。"
+          }
+        }
+      }
+    },
+    "The service is busy or limited the request. Try again in a moment." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスが混み合っているか、リクエストを制限しました。少し待ってからもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务繁忙或限制了请求。请稍后再试。"
+          }
+        }
+      }
+    },
+    "The service refused the request." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスがリクエストを拒否しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务拒绝了这个请求。"
+          }
+        }
+      }
+    },
+    "The service said: %@" : {
+      "comment" : "Under a failed check: the service's own words",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サービスの応答: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务返回：%@"
+          }
+        }
+      }
+    },
+    "The service says the account has no credit left. Top it up on the service's site." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントの残高がないとサービスが返しました。サービスのサイトでチャージしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务表示账户余额不足。请在服务的网站上充值。"
+          }
+        }
+      }
+    },
+    "The service's own address by default. Change it only to go through another address, such as a proxy." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既定ではサービス公式のアドレスです。プロキシなど別のアドレスを経由するときだけ変更します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认是服务的官方地址。只有要经由其他地址（例如代理）时才需要更改。"
+          }
+        }
+      }
+    },
+    "The tokens Pinky's own agent used, as the services reported them, and what they cost where Pinky knows the prices. Kept on this iPhone only." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 自身のエージェントが使ったトークン（サービスの報告どおり）と、料金がわかる分の費用です。この iPhone にだけ保存されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 自己的智能体用掉的 token（以服务报告的为准），以及已知价格部分的费用。只保存在这台 iPhone 上。"
           }
         }
       }
@@ -2288,6 +2810,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天"
+          }
+        }
+      }
+    },
+    "Today: %@" : {
+      "comment" : "Under the task box: what the model used today",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天：%@"
           }
         }
       }
@@ -2472,6 +3011,22 @@
         }
       }
     },
+    "Usage" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用量"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用量"
+          }
+        }
+      }
+    },
     "VPN" : {
       "localizations" : {
         "ja" : {
@@ -2581,6 +3136,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 应在何时询问你？"
+          }
+        }
+      }
+    },
+    "Who runs the model. Each service keeps its own API key, model and address." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルを動かすサービスです。API キー、モデル、アドレスはサービスごとに保存されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择运行模型的服务。每个服务各自保存 API 密钥、模型和地址。"
           }
         }
       }

@@ -70,12 +70,12 @@ To host WebDriverAgent for Pinky on a computer, as desktop Pinky's install build
 
 The core logs to the unified log with the prefix `pinky` (connection attempts and why they failed, slow or failed screen reads, and with `heartbeat_s` a heartbeat with memory), which a Mac reads with the device's syslog. It never logs a task's text, the model's key or what is on the screen.
 
-A debug build also starts a task from launch arguments once the phone is ready, so a test needs no typing. The key comes in the launch environment and stays in memory; never put it in a file. The `--` keeps devicectl from reading the app's arguments as its own. `-pinkyHeartbeat 1` has the core log its memory every second. `-pinkyForgetPairing YES` drops the pairing the app keeps in its Keychain, which outlives deleting the app, so the app starts unpaired (for trying pairing on the phone); pairing logs its steps with the prefix `pinky pairing`.
+A debug build also starts a task from launch arguments once the phone is ready, so a test needs no typing. The key comes in the launch environment and stays in memory; never put it in a file. The `--` keeps devicectl from reading the app's arguments as its own. `-service <id>` picks a model service by its ID (`docs/notes/model-services.md`), or `-provider` with `-baseURL` names one as settings did before there were services; `-model` and `-baseURL` override the service's for the run. `-pinkyHeartbeat 1` has the core log its memory every second. `-pinkyForgetPairing YES` drops the pairing the app keeps in its Keychain, which outlives deleting the app, so the app starts unpaired (for trying pairing on the phone); pairing logs its steps with the prefix `pinky pairing`.
 
 ```sh
 xcrun devicectl device process launch --device <udid> \
   --environment-variables '{"PINKY_MODEL_KEY":"…"}' \
-  <id> -- -pinkyTask "…" -provider anthropic -model <model> -baseURL <url>
+  <id> -- -pinkyTask "…" -service deepseek -model <model>
 ```
 
 The task starts only at the app's launch. If Pinky is running, end the app first by its process id (`xcrun devicectl device info processes`, then `xcrun devicectl device process terminate --pid <pid>`). The new app keeps the tunnel that is up, with the options it was started with. To start the tunnel again (for `-pinkyHeartbeat`, say), end the tunnel extension (`PinkyTunnel`) by its process id as well and launch about 8 s later. `--terminate-existing` ends both and launches at once: the new app still finds the VPN on and does not start it, and iOS then gives up on the dead extension.
