@@ -49,6 +49,21 @@
     <string name="phone_task_steps">Steps</string>
     <string name="phone_activity">Activity</string>
 
+    <!-- The task screen: the person's messages to Pinky while a task runs
+         (steer), and going on with a task that ended (continue). -->
+    <string name="phone_steer_label">Message for Pinky</string>
+    <string name="phone_steer_hint">Add or change instructions…</string>
+    <string name="phone_steer_send">Send</string>
+    <string name="phone_steer_pending">Pinky reads this at its next step</string>
+    <string name="phone_steer_edit">Edit</string>
+    <string name="phone_steer_withdraw">Withdraw</string>
+    <string name="phone_steer_read">Pinky has already read it.</string>
+    <string name="phone_continue_label">Next message for Pinky</string>
+    <string name="phone_continue_hint">Tell Pinky what to do next…</string>
+    <string name="phone_continue">Continue</string>
+    <string name="phone_steer_failed">Couldn\'t send: %1$s</string>
+    <string name="phone_continue_unread">Pinky didn\'t read these before the task ended. Continue to send them.</string>
+
     <!-- The history: Activity on the task screen, HistoryActivity and
          PastTaskActivity (desktop: activity*, day*). -->
     <string name="phone_history_all">Show all</string>

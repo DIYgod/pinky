@@ -17,6 +17,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -81,6 +82,23 @@ class TaskActivity : Activity() {
     private lateinit var runHint: TextView
     private lateinit var stopButton: TextView
     private lateinit var endCard: EndCard
+    // The person's messages to the running task (steer), and going on with
+    // the task that ended (continue): Steering.
+    private lateinit var steerBox: View
+    private lateinit var steerPending: LinearLayout
+    private lateinit var steerInput: EditText
+    private lateinit var steerSend: TextView
+    private lateinit var steerError: TextView
+    private lateinit var continueBox: View
+    private lateinit var continueUnread: TextView
+    private lateinit var continuePending: LinearLayout
+    private lateinit var continueInput: EditText
+    private lateinit var continueButton: TextView
+    private lateinit var continueError: TextView
+    private var sending = false // a steer on its way
+    private var continuing = false // a continue on its way
+    private var pendingShown: List<Steering.Message>? = null // what steerPending lists
+    private var unreadShown: List<Steering.Message>? = null // what continuePending lists
     private lateinit var askBox: View
     private lateinit var input: EditText
     private lateinit var modelLine: TextView
@@ -120,8 +138,10 @@ class TaskActivity : Activity() {
         col.addView(batteryCard(), look.below(12))
         col.addView(computerCard(), look.below(12))
         col.addView(runCard(), look.below(12))
+        col.addView(steerBox(), look.below(12))
         endCard = EndCard(this, look) { dismiss() }
         col.addView(endCard.view, look.below(12))
+        col.addView(continueBox(), look.below(12))
         col.addView(askBox(), look.below(12))
         error = look.text("", Look.SMALL, look.red).apply { setPadding(look.dp(4), look.dp(8), look.dp(4), 0) }
         error.say("")
@@ -198,8 +218,8 @@ class TaskActivity : Activity() {
             // A phone the core does not run on: Pinky works there with a
             // computer, and this screen says only that.
             for (v in listOf(
-                updateCard, coreCard, setupCard, batteryCard, computerCard, runCard, endCard.view,
-                askBox, error, stepsHeading, steps.group, historyHeading, historyGroup,
+                updateCard, coreCard, setupCard, batteryCard, computerCard, runCard, steerBox, endCard.view,
+                continueBox, askBox, error, stepsHeading, steps.group, historyHeading, historyGroup,
             )) v.shown(false)
             return
         }
@@ -268,8 +288,32 @@ class TaskActivity : Activity() {
             look.enable(stopButton, true)
         }
 
+        // While it runs, the person's messages that wait for the model, and
+        // a field for another.
+        val pending = Steering.pending(agent)
+        steerBox.shown(running)
+        if (running) {
+            showPending(steerPending, pending, editable = true)
+        } else {
+            steerError.say("")
+        }
+        updateSend()
+
         endCard.view.shown(agent != null && !running)
         if (agent != null && !running) endCard.show(agent)
+
+        // Once it ended, it may go on: with the messages it did not read,
+        // and a new one.
+        val continuable = ready && setUp && Steering.continuable(agent)
+        continueBox.shown(continuable)
+        if (continuable) {
+            continueUnread.shown(pending.isNotEmpty())
+            continuePending.shown(pending.isNotEmpty())
+            showPending(continuePending, pending, editable = false)
+        } else {
+            continueError.say("")
+        }
+        updateContinue()
 
         askBox.shown(ready && setUp && !running)
         askFooter.shown(ready && setUp && !running && agent == null)
@@ -354,6 +398,185 @@ class TaskActivity : Activity() {
             Log.w(TAG, "the core refused the task [${e.code}]: ${e.message}")
             getString(R.string.phone_err_start)
         }
+    }
+
+    // The person's messages to Pinky (Steering).
+
+    private fun updateSend() {
+        look.enable(steerSend, Steering.canSend(steerInput.text, sending))
+    }
+
+    private fun updateContinue() {
+        val computer = state?.optJSONObject("computer") != null
+        val pending = Steering.pending(state?.optJSONObject("agent")).size
+        look.enable(continueButton, Steering.canContinue(continueInput.text, pending, continuing, computer))
+    }
+
+    /** Sends the field's message to the running task; the model reads it at its next step. */
+    private fun sendSteer() {
+        val text = steerInput.text.toString().trim()
+        if (!Steering.canSend(text, sending)) return
+        sending = true
+        steerError.say("")
+        updateSend()
+        CoreClient.background {
+            val failed = try {
+                CoreClient.call(CoreClient.cmd("steer", "text" to text))
+                null
+            } catch (e: Exception) {
+                e
+            }
+            main.post { sent(text, failed) }
+        }
+    }
+
+    private fun sent(text: String, failed: Exception?) {
+        sending = false
+        when {
+            failed == null -> steerInput.setText("")
+            failed is CoreClient.Refused && Steering.refusal(failed.code) == Steering.Refusal.ENDED -> {
+                // The task ended meanwhile: the words go on with it instead.
+                steerInput.setText("")
+                val moved = Steering.joined(continueInput.text.toString(), text)
+                continueInput.setText(moved)
+                continueInput.setSelection(moved.length)
+            }
+            else -> steerError.say(messageError(failed))
+        }
+        render()
+    }
+
+    /** Changes a message the model has not read; empty text withdraws it. */
+    private fun editMessage(m: Steering.Message) {
+        look.edit(
+            getString(R.string.phone_steer_edit), "", m.text, getString(R.string.phone_steer_hint), Look.Field.TEXT,
+        ) { text ->
+            messageCommand(CoreClient.cmd("steer", "id" to m.id, "text" to text.trim()))
+        }
+    }
+
+    private fun withdrawMessage(m: Steering.Message) {
+        messageCommand(CoreClient.cmd("withdraw", "id" to m.id))
+    }
+
+    private fun messageCommand(req: JSONObject) {
+        steerError.say("")
+        CoreClient.send(req) { err ->
+            if (err != null) main.post { steerError.say(messageError(err)) }
+        }
+    }
+
+    /** What the screen says when steer, an edit or withdraw failed; "" for nothing. */
+    private fun messageError(e: Exception): String {
+        if (e !is CoreClient.Refused) {
+            Log.w(TAG, "could not send the message", e)
+            return getString(R.string.phone_steer_failed, e.message ?: e.toString())
+        }
+        return when (Steering.refusal(e.code)) {
+            Steering.Refusal.READ -> getString(R.string.phone_steer_read)
+            // Withdrawn already, nothing typed, or the task ended: the state
+            // shows what became of it.
+            Steering.Refusal.GONE, Steering.Refusal.EMPTY, Steering.Refusal.ENDED -> ""
+            Steering.Refusal.FAILED -> {
+                Log.w(TAG, "the core refused the message [${e.code}]: ${e.message}")
+                getString(R.string.phone_steer_failed, e.message.orEmpty())
+            }
+        }
+    }
+
+    /**
+     * Goes on with the task that ended, with the field's message and those
+     * it did not read. Like Start, it hands the core the key again.
+     */
+    private fun continueTask() {
+        val text = continueInput.text.toString().trim()
+        val computer = state?.optJSONObject("computer") != null
+        val pending = Steering.pending(state?.optJSONObject("agent")).size
+        if (!Steering.canContinue(text, pending, continuing, computer)) return
+        continuing = true
+        continueError.say("")
+        updateContinue()
+        // The key of the service the task runs on, which Settings may have
+        // changed since.
+        val provider = state?.optJSONObject("agent")?.optString("provider").orEmpty().ifEmpty { settings.provider }
+        CoreClient.background {
+            val why = try {
+                val key = secrets.load(provider)
+                when {
+                    key != null -> {
+                        CoreClient.call(CoreClient.cmd("continue", "text" to text, "key" to key))
+                        null
+                    }
+                    secrets.has(provider) -> getString(R.string.phone_err_key_lost)
+                    else -> getString(R.string.phone_no_key)
+                }
+            } catch (e: CoreClient.Refused) {
+                continueRefused(e)
+            } catch (e: Exception) {
+                Log.w(TAG, "could not continue the task", e)
+                getString(R.string.phone_steer_failed, e.message ?: e.toString())
+            }
+            main.post { continued(why) }
+        }
+    }
+
+    private fun continued(why: String?) {
+        continuing = false
+        if (why == null) {
+            continueInput.setText("")
+            // As after Start: the agent goes on in the app the person was
+            // in, and the Working pill follows it there.
+            moveTaskToBack(true)
+        } else {
+            continueError.say(why)
+        }
+        render()
+    }
+
+    private fun continueRefused(e: CoreClient.Refused): String = when (e.code) {
+        // As Start says them.
+        "no_device", "no_key", "no_model", "busy", "computer" -> startError(e)
+        "empty" -> "" // Continue waits for a message; nothing to say.
+        else -> {
+            Log.w(TAG, "the core refused to continue [${e.code}]: ${e.message}")
+            getString(R.string.phone_steer_failed, e.message.orEmpty())
+        }
+    }
+
+    /**
+     * Lists messages in group, one row each with its text, and while the
+     * task runs the note that the model has not read it yet and Edit and
+     * Withdraw. The rows are made again only when the messages changed.
+     */
+    private fun showPending(group: LinearLayout, messages: List<Steering.Message>, editable: Boolean) {
+        val shown = if (editable) pendingShown else unreadShown
+        if (shown == messages) return
+        if (editable) pendingShown = messages else unreadShown = messages
+        group.removeAllViews()
+        group.shown(messages.isNotEmpty())
+        for (m in messages) look.addRow(group, pendingRow(m, editable))
+    }
+
+    private fun pendingRow(m: Steering.Message, editable: Boolean): View {
+        val v = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(look.dp(16), look.dp(12), look.dp(16), if (editable) look.dp(4) else look.dp(12))
+        }
+        v.addView(look.text(m.text, Look.BODY, look.ink), look.matchWrap())
+        if (editable) {
+            v.addView(
+                look.text(getString(R.string.phone_steer_pending), Look.SMALL, look.ink3).apply { setPadding(0, look.dp(2), 0, 0) },
+                look.matchWrap(),
+            )
+            v.addView(
+                look.buttons(
+                    look.button(getString(R.string.phone_steer_edit), Look.Kind.PLAIN) { editMessage(m) },
+                    look.button(getString(R.string.phone_steer_withdraw), Look.Kind.PLAIN) { withdrawMessage(m) },
+                ).apply { setPadding(0, look.dp(2), 0, 0) },
+                look.matchWrap(),
+            )
+        }
+        return v
     }
 
     private fun stop() {
@@ -608,6 +831,97 @@ class TaskActivity : Activity() {
         for (v in listOf(runTask, runUsage, runWaiting, runHint)) c.addView(v, look.matchWrap())
         runCard = c
         return c
+    }
+
+    // While a task runs: the messages the model has not read, then a line
+    // for another and Send.
+    private fun steerBox(): View {
+        steerPending = look.group()
+        steerPending.shown(false)
+        steerInput = messageField(
+            R.id.steer_input, R.string.phone_steer_label, R.string.phone_steer_hint, EditorInfo.IME_ACTION_SEND,
+            { sendSteer() },
+        ) {
+            steerError.say("")
+            updateSend()
+        }
+        steerSend = look.button(getString(R.string.phone_steer_send), Look.Kind.PRIMARY) { sendSteer() }
+        steerError = look.text("", Look.SMALL, look.red).apply { setPadding(look.dp(4), look.dp(8), look.dp(4), 0) }
+        steerError.say("")
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        box.addView(steerPending, look.matchWrap())
+        box.addView(fieldRow(steerInput, steerSend), look.below(8))
+        box.addView(steerError, look.matchWrap())
+        steerBox = box
+        return box
+    }
+
+    // Once a task ended and may go on: the messages it did not read, then a
+    // line for the next and Continue. The task box below still starts a
+    // new task.
+    private fun continueBox(): View {
+        continueUnread = look.text(getString(R.string.phone_continue_unread), Look.SMALL, look.ink2).apply {
+            setPadding(look.dp(4), 0, look.dp(4), look.dp(8))
+        }
+        continuePending = look.group()
+        continuePending.shown(false)
+        continueInput = messageField(
+            R.id.continue_input, R.string.phone_continue_label, R.string.phone_continue_hint, EditorInfo.IME_ACTION_GO,
+            { continueTask() },
+        ) {
+            continueError.say("")
+            updateContinue()
+        }
+        continueButton = look.button(getString(R.string.phone_continue), Look.Kind.PRIMARY) { continueTask() }
+        continueError = look.text("", Look.SMALL, look.red).apply { setPadding(look.dp(4), look.dp(8), look.dp(4), 0) }
+        continueError.say("")
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        box.addView(continueUnread, look.matchWrap())
+        box.addView(continuePending, look.matchWrap())
+        box.addView(fieldRow(continueInput, continueButton), look.below(8))
+        box.addView(continueError, look.matchWrap())
+        continueBox = box
+        return box
+    }
+
+    /** A one-line field for a message to Pinky, which sends with the keyboard's action (and Enter) too. */
+    private fun messageField(id: Int, label: Int, hint: Int, action: Int, onSend: () -> Unit, onChange: () -> Unit): EditText =
+        EditText(this).apply {
+            // Keeps what the person typed when the screen is made again.
+            this.id = id
+            contentDescription = getString(label)
+            this.hint = getString(hint)
+            setTextColor(look.ink)
+            setHintTextColor(look.ink3)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, Look.BODY)
+            isSingleLine = true
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            imeOptions = action
+            background = look.rounded(look.groupBg, 14)
+            setPadding(look.dp(14), look.dp(10), look.dp(14), look.dp(10))
+            minHeight = look.dp(44)
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) = onChange()
+            })
+            setOnEditorActionListener { _, actionId, ev ->
+                val enter = ev != null && ev.keyCode == KeyEvent.KEYCODE_ENTER
+                if (actionId != action && !enter) return@setOnEditorActionListener false
+                if (!enter || ev?.action == KeyEvent.ACTION_DOWN) onSend()
+                true
+            }
+        }
+
+    private fun fieldRow(field: EditText, button: View): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(field, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addView(
+            button,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { marginStart = look.dp(8) },
+        )
     }
 
     private fun askBox(): View {

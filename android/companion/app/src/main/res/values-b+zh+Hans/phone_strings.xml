@@ -38,6 +38,19 @@
     <string name="phone_task_steps">步骤</string>
     <string name="phone_activity">活动</string>
 
+    <string name="phone_steer_label">给 Pinky 的消息</string>
+    <string name="phone_steer_hint">补充或修改要求…</string>
+    <string name="phone_steer_send">发送</string>
+    <string name="phone_steer_pending">Pinky 会在下一步读到</string>
+    <string name="phone_steer_edit">编辑</string>
+    <string name="phone_steer_withdraw">撤回</string>
+    <string name="phone_steer_read">Pinky 已经读到了这条消息。</string>
+    <string name="phone_continue_label">给 Pinky 的下一条消息</string>
+    <string name="phone_continue_hint">告诉 Pinky 接下来做什么…</string>
+    <string name="phone_continue">继续</string>
+    <string name="phone_steer_failed">发送失败：%1$s</string>
+    <string name="phone_continue_unread">任务结束前 Pinky 没读到这些消息。继续任务即可发送。</string>
+
     <string name="phone_history_all">显示全部</string>
     <string name="phone_history_more">显示更多</string>
     <string name="phone_history_empty">还没有已结束的任务。</string>

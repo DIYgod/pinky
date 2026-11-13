@@ -39,6 +39,19 @@
     <string name="phone_task_steps">操作内容</string>
     <string name="phone_activity">アクティビティ</string>
 
+    <string name="phone_steer_label">Pinky へのメッセージ</string>
+    <string name="phone_steer_hint">指示を追加・変更…</string>
+    <string name="phone_steer_send">送信</string>
+    <string name="phone_steer_pending">Pinky は次のステップで読みます</string>
+    <string name="phone_steer_edit">編集</string>
+    <string name="phone_steer_withdraw">取り消す</string>
+    <string name="phone_steer_read">Pinky はもう読みました。</string>
+    <string name="phone_continue_label">Pinky への次のメッセージ</string>
+    <string name="phone_continue_hint">次にやることを Pinky に伝える…</string>
+    <string name="phone_continue">続ける</string>
+    <string name="phone_steer_failed">送信できませんでした：%1$s</string>
+    <string name="phone_continue_unread">タスクが終わる前に Pinky はこれを読みませんでした。続けると送信されます。</string>
+
     <string name="phone_history_all">すべて表示</string>
     <string name="phone_history_more">さらに表示</string>
     <string name="phone_history_empty">完了したタスクはまだありません。</string>
