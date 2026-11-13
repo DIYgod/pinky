@@ -17,4 +17,16 @@
         <item name="android:windowLightStatusBar">@bool/pinky_light_bars</item>
         <item name="android:windowLightNavigationBar">@bool/pinky_light_bars</item>
     </style>
+
+    <!-- The ask panel (AskActivity): a card over the app in front, which
+         shows through. No window animations, so that the panel is gone
+         quickly before a task about the screen reads it. -->
+    <style name="Theme.Pinky.Ask" parent="Theme.Pinky.Screen">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

@@ -23,16 +23,24 @@ class OwnUI(private val service: PinkyAccessibilityService) {
     @Volatile
     private var overlays: List<Rect> = emptyList()
 
+    // Where Pinky's floating button is (QuickEntry), the same way.
+    @Volatile
+    private var bubble: List<Rect> = emptyList()
+
     fun setOverlays(rects: List<Rect>) {
         overlays = rects.map { Rect(it) }
     }
 
     fun overlayRects(): List<Rect> = overlays
 
+    fun setBubble(rects: List<Rect>) {
+        bubble = rects.map { Rect(it) }
+    }
+
     /** Throws when a point lands on Pinky's own controls; does nothing otherwise. */
     fun check(points: List<Point>, display: Int) {
         if (display == 0) {
-            val o = overlays
+            val o = overlays + bubble
             for (p in points) {
                 if (o.any { it.contains(p.x, p.y) }) throw RequestError("own_ui", REFUSAL)
             }
@@ -76,7 +84,7 @@ class OwnUI(private val service: PinkyAccessibilityService) {
 
     companion object {
         const val REFUSAL =
-            "the point is on Pinky's own controls (an approval, the Working pill or Pinky's screen); " +
+            "the point is on Pinky's own controls (an approval, the Working pill, its floating button or Pinky's screen); " +
                 "agents can never press them"
     }
 }

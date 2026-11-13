@@ -30,6 +30,12 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Voice input in Pinky's task boxes: Android's own speech
+             recognizer, which records in its app and gives Pinky the text
+             (no microphone permission here). -->
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
     </queries>
 
     <application
@@ -115,6 +121,73 @@
             android:enabled="@bool/on_phone_ui"
             android:exported="false"
             android:process=":ui" />
+
+        <!-- The ask panel over the app in front (AskActivity): a question
+             about the screen from the floating button (QuickEntry), a new
+             task from a Quick Settings tile. Only Pinky opens it; its own
+             task, so that it neither clears nor shows Pinky's screen. -->
+        <activity
+            android:name=".AskActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:enabled="@bool/on_phone_ui"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:process=":ui"
+            android:taskAffinity="${applicationId}.ask"
+            android:theme="@style/Theme.Pinky.Ask"
+            android:windowSoftInputMode="adjustResize|stateVisible" />
+
+        <!-- Share to Pinky from other apps: text, links and pictures go
+             with a task (AskActivity, which tells this alias apart). -->
+        <activity-alias
+            android:name=".ShareToPinky"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:targetActivity=".AskActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Quick Settings tiles: a new task, and the floating button on
+             or off (QuickTiles.kt). -->
+        <service
+            android:name=".AskTileService"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_pinky"
+            android:label="@string/phone_tile_task"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:process=":ui">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".BubbleTileService"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_bubble"
+            android:label="@string/phone_tile_bubble"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:process=":ui">
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
         <!-- Hears how an update from Pinky's releases went (UpdateInstall). -->
         <receiver

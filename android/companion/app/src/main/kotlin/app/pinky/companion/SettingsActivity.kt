@@ -64,6 +64,7 @@ class SettingsActivity : Activity() {
     private lateinit var accessibilityRow: Look.Row
     private lateinit var batteryRow: Look.Row
     private lateinit var backgroundRow: Look.Row
+    private lateinit var floatingRow: Look.Row
     private lateinit var updateRow: Look.Row
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,7 +116,11 @@ class SettingsActivity : Activity() {
         backgroundRow = look.row(getString(R.string.phone_bg_title), desc = getString(R.string.phone_bg_row_desc)) {
             look.open(Intent(this, BackgroundActivity::class.java))
         }
-        val phoneRows = mutableListOf(accessibilityRow.view, batteryRow.view, backgroundRow.view)
+        floatingRow = look.row(getString(R.string.phone_floating), desc = getString(R.string.phone_floating_desc)) {
+            QuickAccess.setBubble(this, !QuickAccess.bubbleOn(this))
+            render()
+        }
+        val phoneRows = mutableListOf(accessibilityRow.view, batteryRow.view, backgroundRow.view, floatingRow.view)
         // Only on phones whose vendor adds the switch; whether it is on cannot be read.
         if (Battery.hasAutostart()) {
             phoneRows += look.row(getString(R.string.phone_autostart), desc = getString(R.string.phone_autostart_desc)) {
@@ -242,6 +247,7 @@ class SettingsActivity : Activity() {
         presetNote.shown(known && !coreUp)
 
         accessibilityRow.value.say(getString(if (look.serviceOn()) R.string.phone_on else R.string.phone_off))
+        floatingRow.value.say(getString(if (QuickAccess.bubbleOn(this)) R.string.phone_on else R.string.phone_off))
         val unrestricted = Battery.unrestricted(this)
         batteryRow.value.say(getString(if (unrestricted) R.string.phone_battery_unrestricted else R.string.phone_battery_optimized))
         batteryRow.value.setTextColor(if (unrestricted) look.ink3 else look.accent)

@@ -310,4 +310,27 @@
     <string name="phone_bg_window_smaller">縮小</string>
     <string name="phone_bg_take_over">引き継ぐ</string>
     <string name="phone_bg_hand_back">返す</string>
+
+    <!-- Quick ways to Pinky (QuickEntry, AskActivity, QuickTiles.kt). -->
+    <string name="phone_bubble">Pinky フローティングボタン</string>
+    <string name="phone_floating">フローティングボタン</string>
+    <string name="phone_floating_desc">ほかのアプリの上に Pinky のボタンを表示します。タップで Pinky を開き、ダブルタップで画面について質問、長押しで音声入力。Pinky の作業中は隠れます。</string>
+    <string name="phone_tile_task">Pinky タスク</string>
+    <string name="phone_tile_bubble">Pinky ボタン</string>
+    <string name="phone_ask">質問</string>
+    <string name="phone_ask_open">Pinky を開く</string>
+    <string name="phone_ask_not_ready">このスマホの Pinky はまだ準備ができていません。Pinky を開いて理由を確認してください。</string>
+    <string name="phone_ask_screen_title">この画面について質問</string>
+    <string name="phone_ask_screen_note">Pinky はいつもどおりにこの画面を読み取ります。ブロックしたアプリや隠したコードは見えないままです。画面の内容はあなた自身のモデルにだけ送られます。</string>
+    <string name="phone_ask_screen_hint">何を知りたいですか？空のままなら画面を説明します。</string>
+    <string name="phone_ask_screen_default">画面に表示されている内容を説明して。</string>
+    <string name="phone_ask_share_title">Pinky に共有</string>
+    <string name="phone_ask_share_hint">Pinky に何をしてほしいですか？空のままなら内容を説明します。</string>
+    <string name="phone_ask_share_default">共有した内容について教えて。</string>
+    <string name="phone_ask_task_title">新しいタスク</string>
+    <string name="phone_ask_first_pictures">タスクに付くのは最初の %1$d 枚の画像だけです。</string>
+    <string name="phone_ask_nothing">Pinky が使えるものは共有されませんでした（テキスト、リンク、画像のみ）。</string>
+    <string name="phone_ask_picture_failed">読み込めない画像がありました。</string>
+    <string name="phone_voice">音声入力</string>
+    <string name="phone_voice_none">このスマホには音声認識がありません。</string>
 </resources>

@@ -50,6 +50,9 @@ class PinkyAccessibilityService : AccessibilityService() {
 
     /** Pinky's pill and approval card, while on-phone mode is on. */
     var overlays: Overlays? = null
+
+    // Pinky's floating button, when the person turned it on (QuickEntry).
+    private var quickEntry: QuickEntry? = null
         private set
 
     /**
@@ -122,6 +125,7 @@ class PinkyAccessibilityService : AccessibilityService() {
             event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         ) {
             overlays?.windowsChanged()
+            quickEntry?.windowsChanged()
         }
     }
 
@@ -205,11 +209,14 @@ class PinkyAccessibilityService : AccessibilityService() {
     private fun startOnPhone() {
         Core.start(this)
         if (overlays == null) overlays = Overlays(this).also { it.start() }
+        if (quickEntry == null) quickEntry = QuickEntry(this).also { it.start() }
     }
 
     private fun stopOnPhone() {
         overlays?.stop()
         overlays = null
+        quickEntry?.stop()
+        quickEntry = null
     }
 
     /**

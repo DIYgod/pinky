@@ -393,6 +393,28 @@ class TaskActivity : Activity() {
         render()
     }
 
+    private fun listen() {
+        try {
+            @Suppress("DEPRECATION")
+            startActivityForResult(QuickAccess.voiceIntent(), REQ_VOICE)
+        } catch (e: Exception) {
+            Log.w(TAG, "no speech recognizer", e)
+            error.say(getString(R.string.phone_voice_none))
+        }
+    }
+
+    @Deprecated("Activity's own; Pinky's screens need no AndroidX")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQ_VOICE || resultCode != RESULT_OK) return
+        val heard = QuickAccess.heard(data)
+        if (heard.isEmpty()) return
+        val before = input.text.toString().trimEnd()
+        input.setText(if (before.isEmpty()) heard else "$before $heard")
+        input.setSelection(input.text.length)
+    }
+
     private fun startError(e: CoreClient.Refused): String = when (e.code) {
         "no_device" -> getString(R.string.phone_err_no_device)
         "no_key" -> getString(R.string.phone_no_key)
@@ -990,6 +1012,10 @@ class TaskActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(look.dp(4), look.dp(10), 0, 0)
             addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            // Voice input: Android's own speech recognizer.
+            if (QuickAccess.voiceAvailable(this@TaskActivity)) {
+                addView(look.iconButton(R.drawable.ic_mic, getString(R.string.phone_voice)) { listen() })
+            }
             addView(startButton)
         }
         askFooter = look.note(getString(R.string.phone_task_footer))
@@ -1005,5 +1031,6 @@ class TaskActivity : Activity() {
         private const val TAG = "PinkyScreens"
         private const val CORE_GRACE_MS = 3_000L
         private const val RECENT = 5 // the tasks Activity lists
+        private const val REQ_VOICE = 1
     }
 }

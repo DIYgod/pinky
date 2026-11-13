@@ -347,4 +347,27 @@
     <string name="phone_bg_window_smaller">Smaller</string>
     <string name="phone_bg_take_over">Take over</string>
     <string name="phone_bg_hand_back">Hand back</string>
+
+    <!-- Quick ways to Pinky (QuickEntry, AskActivity, QuickTiles.kt). -->
+    <string name="phone_bubble">Pinky floating button</string>
+    <string name="phone_floating">Floating button</string>
+    <string name="phone_floating_desc">A Pinky button over other apps. Tap to open Pinky, double-tap to ask about the screen, touch and hold to speak. It hides while Pinky works.</string>
+    <string name="phone_tile_task">Pinky task</string>
+    <string name="phone_tile_bubble">Pinky button</string>
+    <string name="phone_ask">Ask</string>
+    <string name="phone_ask_open">Open Pinky</string>
+    <string name="phone_ask_not_ready">Pinky isn\'t ready on this phone yet. Open Pinky to see why.</string>
+    <string name="phone_ask_screen_title">Ask about this screen</string>
+    <string name="phone_ask_screen_note">Pinky reads this screen as it reads any, so blocked apps and hidden codes stay hidden, and sends it only to your own model.</string>
+    <string name="phone_ask_screen_hint">What do you want to know? Leave it empty to have the screen explained.</string>
+    <string name="phone_ask_screen_default">Explain what my screen shows.</string>
+    <string name="phone_ask_share_title">Share to Pinky</string>
+    <string name="phone_ask_share_hint">What should Pinky do with it? Leave it empty to have it explained.</string>
+    <string name="phone_ask_share_default">Tell me about what I shared.</string>
+    <string name="phone_ask_task_title">New task</string>
+    <string name="phone_ask_first_pictures">Only the first %1$d pictures go with the task.</string>
+    <string name="phone_ask_nothing">Nothing Pinky can use was shared: only text, links and pictures.</string>
+    <string name="phone_ask_picture_failed">A picture couldn\'t be read.</string>
+    <string name="phone_voice">Speak</string>
+    <string name="phone_voice_none">This phone has no speech recognition.</string>
 </resources>

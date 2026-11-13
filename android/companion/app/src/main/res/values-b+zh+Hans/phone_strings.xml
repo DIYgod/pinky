@@ -309,4 +309,27 @@
     <string name="phone_bg_window_smaller">缩小</string>
     <string name="phone_bg_take_over">接管</string>
     <string name="phone_bg_hand_back">交还</string>
+
+    <!-- Quick ways to Pinky (QuickEntry, AskActivity, QuickTiles.kt). -->
+    <string name="phone_bubble">Pinky 悬浮按钮</string>
+    <string name="phone_floating">悬浮按钮</string>
+    <string name="phone_floating_desc">在其他 App 上方显示一个 Pinky 按钮。轻点打开 Pinky，双击询问当前屏幕，长按说话。Pinky 工作时会隐藏。</string>
+    <string name="phone_tile_task">Pinky 任务</string>
+    <string name="phone_tile_bubble">Pinky 按钮</string>
+    <string name="phone_ask">提问</string>
+    <string name="phone_ask_open">打开 Pinky</string>
+    <string name="phone_ask_not_ready">Pinky 在这台手机上还没准备好。打开 Pinky 查看原因。</string>
+    <string name="phone_ask_screen_title">询问这个屏幕</string>
+    <string name="phone_ask_screen_note">Pinky 像平时一样读取这个屏幕：被屏蔽的 App 和隐藏的验证码依然不可见。屏幕内容只发给你自己的模型。</string>
+    <string name="phone_ask_screen_hint">想知道什么？留空则让 Pinky 解释这个屏幕。</string>
+    <string name="phone_ask_screen_default">解释一下我屏幕上显示的内容。</string>
+    <string name="phone_ask_share_title">分享给 Pinky</string>
+    <string name="phone_ask_share_hint">要 Pinky 用它做什么？留空则让 Pinky 解释它。</string>
+    <string name="phone_ask_share_default">说说我分享的内容。</string>
+    <string name="phone_ask_task_title">新任务</string>
+    <string name="phone_ask_first_pictures">只有前 %1$d 张图片会随任务发送。</string>
+    <string name="phone_ask_nothing">分享的内容 Pinky 用不了：只支持文字、链接和图片。</string>
+    <string name="phone_ask_picture_failed">有一张图片读取失败。</string>
+    <string name="phone_voice">语音输入</string>
+    <string name="phone_voice_none">这台手机没有语音识别。</string>
 </resources>
