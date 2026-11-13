@@ -230,8 +230,8 @@ func TestAgentTaskUnavailable(t *testing.T) {
 	if text, isErr := a.call(t, "phone_task_run", map[string]any{"task": "Look"}); !isErr || !strings.Contains(text, "no API key") {
 		t.Fatalf("no key:\n%s", text)
 	}
-	// No model.
-	h.agent(t, "x", Config{Provider: OpenAI}, true)
+	// No model: a custom OpenAI-compatible service has no default one.
+	h.agent(t, "x", Config{Service: CustomOpenAI}, true)
 	if text, isErr := a.call(t, "phone_task_run", map[string]any{"task": "Look"}); !isErr || !strings.Contains(text, "no model") {
 		t.Fatalf("no model:\n%s", text)
 	}
