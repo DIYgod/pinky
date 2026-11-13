@@ -2,6 +2,12 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- While Pinky's own agent works on a task, you can send it a message from Ask Pinky on the computer or from the task screen on the phone, and edit or withdraw it until Pinky reads it.
+- After a task ends, Continue lets Pinky carry on with the same task from a new message; its limits count anew.
+- Pinky on Android can run its tasks on a hidden background screen and show them in a small floating window, so you keep using your phone meanwhile. Turn it on in Settings › Background screen (Android 13 and later, with Wireless debugging).
+
 ## 2026.1113.8 (2026-11-13)
 
 - Pinky on Android now shows a task's steps, approval cards and the phone's status in the app's language (Chinese or Japanese) instead of English.
