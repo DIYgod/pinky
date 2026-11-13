@@ -367,21 +367,6 @@ func upperFirst(s string) string {
 	return string(unicode.ToUpper(r)) + s[n:]
 }
 
-// imperative turns a step's past tense into what was asked: "Tapped “Pay”"
-// becomes "tap “Pay”".
-func imperative(s string) string {
-	for _, v := range [][2]string{
-		{"Long-pressed ", "long-press "}, {"Tapped ", "tap "}, {"Typed ", "type "}, {"Swiped ", "swipe "},
-		{"Pressed ", "press "}, {"Opened ", "open "}, {"Zoomed ", "zoom "}, {"Turned ", "turn "},
-		{"Dragged ", "drag "},
-	} {
-		if rest, ok := strings.CutPrefix(s, v[0]); ok {
-			return v[1] + rest
-		}
-	}
-	return lowerFirst(s)
-}
-
 // Scopes as the person reads them.
 var scopeChoices = []struct {
 	mode  gateway.ScopeMode
@@ -422,27 +407,6 @@ func scopeOf(label string) gateway.ScopeMode {
 		}
 	}
 	return gateway.ScopeEverything
-}
-
-// scopeLine describes a scope in Settings › Agents.
-func scopeLine(s gateway.Scope) string {
-	switch s.Mode {
-	case gateway.ScopeApps:
-		if len(s.Apps) == 0 {
-			return locales.ScopeLineNoApp()
-		}
-		return locales.ScopeLineApps(joinAnd(s.Apps))
-	case gateway.ScopeReadOnly:
-		return locales.ScopeLineReadOnly()
-	case gateway.ScopeWatchOnly:
-		return locales.ScopeLineWatchOnly()
-	}
-	return locales.ScopeLineEverything()
-}
-
-// newAgentNeed reports an agent's first-connection approval.
-func newAgentNeed(n gateway.NeedView) bool {
-	return n.Kind == gateway.NeedApproval && n.Rule == "New agent"
 }
 
 // isLocked reports whether a phone shows its lock screen: the gateway says
