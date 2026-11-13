@@ -38,7 +38,7 @@ A run started by a schedule is **unattended**; Run now is not (the person presse
 
   | Reason | Desktop | Android | What happens |
   | --- | --- | --- | --- |
-  | `locked` | The phone reports locked | Screen off or keyguard showing | Skipped at once. Pinky never unlocks a phone, turns its screen on, or types a PIN for a schedule. |
+  | `locked` | The phone reports locked | Screen off or keyguard showing, unless the background screen is set up ([below](#only-while-the-phone-is-free)) | Skipped at once. Pinky never unlocks a phone, turns its screen on, or types a PIN for a schedule. |
   | `in_use` | The person took over | Screen on, unlocked, touched less than 60 s ago | Waits up to 15 minutes, looking again every minute, then skipped. |
   | `busy` | Another task or agent has the phone | Another task runs | Waits up to 15 minutes, then skipped. |
   | `offline` | Not connected, paused, connecting or waiting for setup | (never) | Skipped at once. |
@@ -47,6 +47,15 @@ A run started by a schedule is **unattended**; Run now is not (the person presse
   | `off` | Ask Pinky turned off | On-phone mode turned off | Skipped at once. |
 
 Every skip is recorded as a run and told to the person, with its reason.
+
+## Steer and Continue
+
+A scheduled task is a task of Pinky's own agent like any other, so the person can steer it and continue it ([builtin-agent.md](builtin-agent.md) has steering and Continue):
+
+- **Steer during a run** is fine, also during one nobody was meant to watch: the message goes to the model as from the person, and the run stays unattended (payments are still denied, there is still no handoff) until it ends. It ends, is recorded and is told as the schedule's run.
+- **Continue after a run** is the person's own doing, so what follows is theirs: the schedule recorded the run that ended, and the continued task is no longer the schedule's run. `Runner.Continue` marks it attended (`run.attendLocked`): `Status.Scheduled` stays set (a schedule started it) with `Unattended` and `Condition` cleared and `Met` dropped. When the run was unattended, the continue message tells the model that the person watches now, that payments and other risky steps go to them for approval as in any task, and that the condition was answered. The host no longer watches it: it does not deny payments, and nothing is told by notification.
+- The model's tools stay as they were for the conversation and its prompt cache (`claude.go`), so a continued unattended run still has no `phone_handoff`: the model finishes saying what the phone needs, and the person continues again once they did it. Giving the tool back would need the models to change their tools mid-conversation; a follow-up if people need it.
+- Continue is never automatic: a schedule's next time starts a new task, which ends the conversation Continue would carry on (one task a phone at a time).
 
 ## What the person hears
 
@@ -85,7 +94,13 @@ The Schedules screen shows a row for each of these while it is not allowed, and 
 
 ### Only while the phone is free
 
-Android cannot drive a locked phone, and Pinky does not unlock one or turn its screen on. So a scheduled task runs only while the screen is on, unlocked and untouched for a minute; a time due while the phone is in the person's pocket is skipped and told (`locked`). This makes schedules on Android most useful on a phone left unlocked on a stand or charger (for example with "Stay awake" while charging, which the person sets themselves). The Schedules screen says this in its note.
+Android cannot drive a locked phone's own screen, and Pinky does not unlock one or turn its screen on. So without the background screen a scheduled task runs only while the screen is on, unlocked and untouched for a minute; a time due while the phone is in the person's pocket is skipped and told (`locked`). That suits a phone left unlocked on a stand or charger (for example with "Stay awake" while charging, which the person sets themselves).
+
+**The background screen** (Settings › Background screen, [android-wadb.md](android-wadb.md)) lifts the lock: tasks run on a virtual display, which Android 13 and later keep unlocked whatever the phone's own lock. While it is set up (`Core.backgroundReady`: turned on, paired, Wireless debugging's port there, and the gateway puts tasks on a background display), a locked phone does not skip the time. Should the display not open, the task moves to the phone's own screen, finds it locked and ends failed, saying so: told like any run. "In use" still waits, background screen or not: a task that moves to the phone's own screen would land under the person's fingers. After a restart Wireless debugging is off until the person turns it on, and the lock skips times again.
+
+Not yet tried on a real phone: a scheduled task on a locked phone's background screen, in Doze, over Wireless debugging. Android 17 stops a background display while the screen is off ([android-virtual-display.md](android-virtual-display.md)); whether the phone's own core keeps the phone awake and dark for it, as desktop Pinky does, is to check.
+
+The Schedules screen says all this in its note.
 
 "In use" is the accessibility service's view: a tap, scroll, typing or a new window in the last 60 s (`ScheduleRules.touches`). Notifications and content that changes by itself do not count.
 
@@ -106,7 +121,7 @@ A scheduled task on the iPhone alone would be skipped almost every time, so Pink
 ## Verified
 
 - `internal/schedule`: next times across repeats, zones and daylight saving; validation; the scheduler's grace, waits and skips; notify with conditions and cooldowns; the last runs.
-- `internal/pilot`: the unattended prompt, no `phone_handoff`, `condition_met`.
+- `internal/pilot`: the unattended prompt, no `phone_handoff`, `condition_met`, and Continue of an unattended run (`TestScheduledContinue`).
 - `ui`: the desktop host with a fake model: a run, a skipped time, payments denied.
-- `internal/standalone`: the phone's commands with a fake model: a run with its notice, locked, in use, off, a payment denied, run now (not told), pause, delete.
+- `internal/standalone`: the phone's commands with a fake model: a run with its notice, locked, in use, off, a payment denied, run now (not told), pause, delete; when the background screen counts as ready (`TestScheduleBackgroundReady`, without a phone that has background displays).
 - Android: unit tests of the rules (`ScheduleRulesTest`) and a debug build. Not yet tried on a real phone with a real model.

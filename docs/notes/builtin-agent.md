@@ -23,6 +23,7 @@ While Pinky works, the person can write to it (steer); once a task ended, they c
 - **One task.** Continue reopens the gateway's task instead of starting another: `mcp.Server.ConnectBuiltinTask` passes the task's id as `gateway.AgentInfo.Continue`, and `phone_connect` takes the ended task back (same id, same steps, its end cleared; only a session of Pinky's own agent can, `AgentInfo.Pilot`, and only on the same phone). Activity and the history keep one task, which ends again with the new outcome.
 - **Limits count anew** each time, with the task's original model and limits: a task that stopped at its 100-step limit gets 100 more. `Status` keeps the whole task's totals (`Steps`, `Cost`, `Tokens`, `Elapsed`), and `Continues` counts the stretches. Rationale: the person decides each stretch, as they decided the first, and a limit that ended the task would otherwise end the continuation at once.
 - **Scope.** Only the phone's latest Ask Pinky task can continue, until Dismiss, a new task or the app's restart (the conversation lives in memory). Continuing an older task from Activity is not supported.
+- **Scheduled tasks.** Steering a scheduled run changes nothing about it; continuing one makes it the person's, attended, with its condition answered ([schedules.md](schedules.md#steer-and-continue)).
 
 ### Go API (for other callers, such as MCP task tools)
 
