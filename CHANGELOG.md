@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Scrolling a list from a button in it (such as Delete order in an order list) is now just a scroll: Pinky no longer asks you about it as a payment, or refuses it in read-only mode.
+- Pressing Stop on Pinky's floating status on Android right after its accessibility service restarted no longer stalls and fails.
+
 ## 2026.1113.2 (2026-11-13)
 
 - Ask Pinky and Pinky on the phone now work with OpenCode Go's OpenAI-compatible service, which refused every task asking for a session header.
