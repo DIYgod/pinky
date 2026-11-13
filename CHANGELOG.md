@@ -2,6 +2,16 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Tasks for Pinky can now be scheduled: once, daily, on weekdays, weekly or every few hours, or only to tell you when a condition holds. Scheduled tasks run on the computer and on Android (not on iPhone); while nobody watches they never pay, ask for approvals by notification, and skip, with a note, when the phone is locked, in use or off.
+- On Android, an optional floating button asks Pinky about what the screen shows: double-tap to type a question, touch and hold to speak it. Turn it on in Settings › This phone or from its Quick Settings tile.
+- Share text, links and pictures from other Android apps to Pinky to start a task with them.
+- Pinky's Quick Settings tiles on Android start a new task or turn the floating button on and off.
+- Speak a task instead of typing it, in Pinky on Android and on the iPhone.
+- On the iPhone, the New task in Pinky shortcut opens Pinky with a task, and text or a link from the share sheet, ready to start.
+- Ask Pinky on the computer has an About the screen button that starts a task about what the phone shows now.
+
 ## 2026.1113.10 (2026-11-13)
 
 - Agents can hand Pinky's own agent a whole task with the new phone_task_run, follow it with phone_task_wait, phone_task_status and phone_task_list, add to it or continue it with phone_task_steer, and cancel it with phone_task_cancel. The task works as that agent, within its access and your rules, and shows in Ask Pinky with the agent's name, where you can message or continue it too.

@@ -2,6 +2,16 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 「交给 Pinky」的任务现在可以定时运行：单次、每天、工作日、每周或每隔几小时，也可以只在条件满足时提醒你。定时任务在电脑和 Android 上运行（iPhone 暂不支持）；无人看着时绝不付款，需要批准时用通知询问，手机锁屏、正在使用或关闭时跳过并留下记录。
+- Android 上新增可选的「悬浮按钮」，可以就屏幕上的内容询问 Pinky：双击输入问题，长按直接说。在「设置 › 这台手机」或快捷设置磁贴中开启。
+- 可以把其他 Android App 里的文字、链接和图片分享给 Pinky，带着它们开始任务。
+- Android 上新增 Pinky 的快捷设置磁贴，可以新建任务，或开关悬浮按钮。
+- 在 Android 和 iPhone 上的 Pinky 里，可以用语音说出任务，不用打字。
+- iPhone 上新增「在Pinky中新建任务」快捷指令，打开 Pinky 时任务已填好，还可以附带分享表单传来的文字或链接，点开始即可。
+- 电脑上的「交给 Pinky」新增「询问屏幕」按钮，可以直接就手机当前显示的内容开始任务。
+
 ## 2026.1113.10 (2026-11-13)
 
 - 智能体现在可以用新的 phone_task_run 把整个任务交给 Pinky 自带的智能体，用 phone_task_wait、phone_task_status 和 phone_task_list 跟进，用 phone_task_steer 补充要求或让它接着做，用 phone_task_cancel 取消。任务以那个智能体的身份进行，遵守它的权限和你的规则，会带着它的名字显示在「交给 Pinky」里，你也可以在那里给它发消息或让它继续。
