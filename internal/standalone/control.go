@@ -29,6 +29,15 @@ import (
 //	{"cmd":"history","before":<ms>,"limit":20}          → {"ok":true,"history":[...],"more":true}
 //	                                                      (History: PastTask, newest first; both fields optional)
 //	{"cmd":"history","id":"..."}                        → {"ok":true,"history":[the task, with its steps]}
+//	{"cmd":"steer","text":"..."}                        → {"ok":true,"id":"m1"}  (Steer: to the running task)
+//	{"cmd":"steer","id":"m1","text":"..."}              → {"ok":true}  (EditMessage; empty text withdraws)
+//	{"cmd":"withdraw","id":"m1"}                        → {"ok":true}  (Withdraw)
+//	{"cmd":"continue","text":"...","key":"..."}         → {"ok":true}  (Continue the task that ended)
+//
+// A message waits in the state's agent.pending until the model reads it;
+// steer with its id or withdraw then fail with the code read. Once a task
+// ended, agent.continuable says continue may go on with it; text may be
+// empty when messages wait.
 //
 // Any command may name the language Pinky's screens show, "locale":
 // "zh-Hans", "ja" or "en"; the state and the history then say the
@@ -51,6 +60,8 @@ type request struct {
 	ID     string `json:"id"`
 	Before int64  `json:"before"`
 	Limit  int    `json:"limit"`
+	// steer and continue: the person's message to the agent.
+	Text string `json:"text"`
 	StartRequest
 }
 
@@ -61,6 +72,7 @@ type reply struct {
 	State   *State     `json:"state,omitempty"`
 	History []PastTask `json:"history,omitempty"`
 	More    bool       `json:"more,omitempty"` // older tasks follow
+	ID      string     `json:"id,omitempty"`   // steer: the new message's
 }
 
 // historyWait bounds a history command, which reads the database.
@@ -75,7 +87,18 @@ const (
 	CodeBusy     = "busy"      // a task already runs
 	CodeComputer = "computer"  // ErrComputer: Pinky on a computer uses the phone
 	CodeGone     = "gone"      // ErrGone: the task is no longer in the history
+	// The person's messages to the agent (steer, withdraw, continue).
+	CodeEmpty          = "empty"           // no message
+	CodeNotRunning     = "not_running"     // no task runs to send it to
+	CodeRead           = "read"            // the model read it already: it can no longer change
+	CodeNoMessage      = "no_message"      // no such message: withdrawn already
+	CodeCannotContinue = "cannot_continue" // no task that ended can go on
 )
+
+// Code is the code of a control command's error, or "" for one the
+// screens show as it is: for cores that answer the commands themselves
+// (ios/onphone).
+func Code(err error) string { return codeOf(err) }
 
 // codeOf is the code of a command's error, or "" for one the screens show
 // as it is.
@@ -95,6 +118,16 @@ func codeOf(err error) string {
 		return CodeComputer
 	case errors.Is(err, ErrGone):
 		return CodeGone
+	case errors.Is(err, pilot.ErrEmpty):
+		return CodeEmpty
+	case errors.Is(err, pilot.ErrNotRunning):
+		return CodeNotRunning
+	case errors.Is(err, pilot.ErrRead):
+		return CodeRead
+	case errors.Is(err, pilot.ErrNoMessage):
+		return CodeNoMessage
+	case errors.Is(err, pilot.ErrCannotContinue):
+		return CodeCannotContinue
 	}
 	return ""
 }
@@ -178,6 +211,20 @@ func (c *Core) handle(r request) reply {
 		c.Dismiss()
 	case "history":
 		return c.history(r)
+	case "steer":
+		if r.ID != "" {
+			err = c.EditMessage(r.ID, r.Text)
+			break
+		}
+		m, err := c.Steer(r.Text)
+		if err != nil {
+			return reply{Error: err.Error(), Code: codeOf(err)}
+		}
+		return reply{OK: true, ID: m.ID}
+	case "withdraw":
+		err = c.Withdraw(r.ID)
+	case "continue":
+		err = c.Continue(r.Text, r.Key)
 	default:
 		err = fmt.Errorf("unknown command %q", r.Cmd)
 	}

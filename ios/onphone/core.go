@@ -18,6 +18,10 @@
 //	{"cmd":"history","before_ms":0,"limit":20} → {"ok":true,"history":[...],"more":true}  (standalone.PastTask, newest first)
 //	{"cmd":"history","id":"..."}             → {"ok":true,"history":[{...,"steps":[...]}]}, or the code gone
 //	{"cmd":"info"}                          → {"ok":true,"info":{...}}
+//	{"cmd":"steer","text":"..."}             → {"ok":true,"id":"m1"}  (a message to the running task)
+//	{"cmd":"steer","id":"m1","text":"..."}   → {"ok":true}  (edits it before Pinky reads it; empty text withdraws)
+//	{"cmd":"withdraw","id":"m1"}             → {"ok":true}
+//	{"cmd":"continue","text":"...","key":"..."} → {"ok":true}  (carries on the task that ended); leaves Pinky's app first
 //
 // reason, when the phone is not ready, says why in a word Pinky's screens
 // put into the person's language: one of the Reason constants.
@@ -25,7 +29,9 @@
 // A failed command replies {"ok":false,"error":"...","code":"..."}, where
 // code, when set, is what Pinky's screens put into words: no_device,
 // no_key, no_task, no_model, busy, computer (Pinky on a computer uses the
-// phone: claims.go) or gone (the need was answered or expired).
+// phone: claims.go) or gone (the need was answered or expired), and for
+// the person's messages empty, not_running, read, no_message and
+// cannot_continue (standalone's Code constants).
 //
 // The key a task starts with stays in memory until the task ends. Nothing
 // here logs a request.
@@ -207,6 +213,7 @@ type request struct {
 	ID        string `json:"id"`
 	BeforeMS  int64  `json:"before_ms"`
 	Limit     int    `json:"limit"`
+	Text      string `json:"text"` // steer and continue: the person's message
 	standalone.StartRequest
 }
 
@@ -220,6 +227,7 @@ type reply struct {
 	History []standalone.PastTask `json:"history,omitempty"`
 	More    bool                  `json:"more,omitempty"`
 	Info    *Info                 `json:"info,omitempty"`
+	ID      string                `json:"id,omitempty"` // steer: the new message's
 }
 
 // Info is the connection as the core sees it, for diagnostics.
@@ -275,6 +283,25 @@ func (c *Core) handle(r request) reply {
 		return c.history(ctx, r)
 	case "info":
 		return reply{OK: true, Info: c.info()}
+	case "steer":
+		if r.ID != "" {
+			if err := c.sc.EditMessage(r.ID, r.Text); err != nil {
+				return fail(standalone.Code(err), err)
+			}
+			break
+		}
+		m, err := c.sc.Steer(r.Text)
+		if err != nil {
+			return fail(standalone.Code(err), err)
+		}
+		c.poke()
+		return reply{OK: true, ID: m.ID}
+	case "withdraw":
+		if err := c.sc.Withdraw(r.ID); err != nil {
+			return fail(standalone.Code(err), err)
+		}
+	case "continue":
+		return c.continueTask(ctx, r.Text, r.Key)
 	default:
 		return fail("", fmt.Errorf("unknown command %q", r.Cmd))
 	}
@@ -341,6 +368,43 @@ func (c *Core) start(ctx context.Context, r standalone.StartRequest) reply {
 	c.log.Info("task started", "provider", cfg.Provider, "model", cfg.Model)
 	// The next publish that finds the task ended logs how, also when it
 	// ended before any publish saw it run.
+	c.mu.Lock()
+	c.started = true
+	c.mu.Unlock()
+	c.poke()
+	return reply{OK: true}
+}
+
+// continueTask carries on the task that ended with the person's message.
+// Like start, it checks what can fail first, then leaves Pinky's app.
+func (c *Core) continueTask(ctx context.Context, text, key string) reply {
+	d := c.prov.phone()
+	st := c.sc.State()
+	switch {
+	case d == nil || !st.Device.Ready:
+		return fail("no_device", errNoDevice)
+	case strings.TrimSpace(key) == "":
+		return fail("no_key", standalone.ErrNoKey)
+	case st.Agent != nil && st.Agent.Running:
+		return fail("busy", errBusy)
+	case st.Agent == nil || !st.Agent.Continuable:
+		return fail(standalone.CodeCannotContinue, pilot.ErrCannotContinue)
+	case strings.TrimSpace(text) == "" && len(st.Agent.Pending) == 0:
+		return fail(standalone.CodeEmpty, pilot.ErrEmpty)
+	case st.Computer != nil:
+		return fail(standalone.CodeComputer, standalone.ErrComputer)
+	}
+	if err := c.leave(ctx, d); err != nil {
+		return fail("", fmt.Errorf("leave Pinky: %w", err))
+	}
+	if err := c.sc.Continue(text, key); err != nil {
+		code := standalone.Code(err)
+		if errors.Is(err, standalone.ErrNoDevice) {
+			err = errNoDevice
+		}
+		return fail(code, err)
+	}
+	c.log.Info("task continued")
 	c.mu.Lock()
 	c.started = true
 	c.mu.Unlock()

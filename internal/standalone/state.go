@@ -43,15 +43,19 @@ type DeviceState struct {
 // Summary only says more for done, failed and error (it is the model's or
 // the API's own words, and English for the other ends).
 type AgentState struct {
-	Task    string  `json:"task"`
-	Model   string  `json:"model"`
-	Running bool    `json:"running"`
-	End     string  `json:"end,omitempty"`
-	Summary string  `json:"summary,omitempty"`
-	Steps   int     `json:"steps"`
-	Cost    float64 `json:"cost"`
-	Tokens  int64   `json:"tokens"`
-	Seconds int64   `json:"seconds"`
+	Task  string `json:"task"`
+	Model string `json:"model"`
+	// Provider is the service the task's model is at (pilot.Anthropic or
+	// pilot.OpenAI): continue needs that service's key, whatever the
+	// screens' settings say now.
+	Provider string  `json:"provider,omitempty"`
+	Running  bool    `json:"running"`
+	End      string  `json:"end,omitempty"`
+	Summary  string  `json:"summary,omitempty"`
+	Steps    int     `json:"steps"`
+	Cost     float64 `json:"cost"`
+	Tokens   int64   `json:"tokens"`
+	Seconds  int64   `json:"seconds"`
 	// Priced says Cost is in US dollars; without it the model's prices are
 	// unknown, and the cost limit is TokenLimit tokens.
 	Priced bool `json:"priced"`
@@ -60,6 +64,22 @@ type AgentState struct {
 	MaxMinutes int     `json:"max_minutes"`
 	MaxCost    float64 `json:"max_cost"`
 	TokenLimit int64   `json:"token_limit"`
+	// Pending is the person's messages the model has not read yet, oldest
+	// first: they can still be edited or withdrawn (steer, withdraw).
+	// Once the task ended, they wait for continue.
+	Pending []Message `json:"pending,omitempty"`
+	// Continuable says the task that ended can go on (continue); Continues
+	// counts how often it did. Steps, Cost, Tokens and Seconds are the
+	// whole task's; the limits count anew each time.
+	Continuable bool `json:"continuable,omitempty"`
+	Continues   int  `json:"continues,omitempty"`
+}
+
+// Message is a message of the person's to the agent.
+type Message struct {
+	ID   string `json:"id"`
+	Text string `json:"text"`
+	MS   int64  `json:"ms"` // when it was sent, Unix milliseconds
 }
 
 // TaskState is the gateway's task: its steps in plain words. ID is the
@@ -151,15 +171,14 @@ func (c *Core) State() State {
 }
 
 func agentState(s pilot.Status) *AgentState {
-	end := s.Ended
-	if end.IsZero() {
-		end = time.Now()
-	}
-	a := &AgentState{Task: s.Task, Model: s.Config.Model, Running: s.Running(), End: string(s.End),
+	a := &AgentState{Task: s.Task, Model: s.Config.Model, Provider: s.Config.Normalize().Provider, Running: s.Running(), End: string(s.End),
 		Summary: s.Summary, Steps: s.Steps, Cost: s.Cost, Tokens: s.Tokens,
-		Seconds: int64(end.Sub(s.Started).Seconds()), Priced: s.Priced,
+		Seconds: int64(s.Elapsed(time.Now()).Seconds()), Priced: s.Priced,
 		MaxSteps: s.Config.MaxSteps, MaxMinutes: int(s.Config.MaxTime / time.Minute), MaxCost: s.Config.MaxCost,
-		TokenLimit: s.Config.TokenLimit()}
+		TokenLimit: s.Config.TokenLimit(), Continuable: s.Continuable, Continues: s.Continues}
+	for _, m := range s.Pending {
+		a.Pending = append(a.Pending, Message{ID: m.ID, Text: m.Text, MS: m.At.UnixMilli()})
+	}
 	if !s.Running() && a.Summary == "" {
 		a.Summary = pilot.Describe(s)
 	}

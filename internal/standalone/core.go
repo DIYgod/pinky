@@ -264,6 +264,82 @@ func (c *Core) Start(r StartRequest) error {
 	return nil
 }
 
+// Steer sends the person's message to the running task; the model reads
+// it at its next step (pilot.Runner.Steer).
+func (c *Core) Steer(text string) (pilot.Message, error) {
+	d, ok := c.device()
+	if !ok {
+		return pilot.Message{}, ErrNoDevice
+	}
+	return c.pilot.Steer(d.Info.ID, text)
+}
+
+// EditMessage changes a message the model has not read; empty text
+// withdraws it (pilot.Runner.Edit).
+func (c *Core) EditMessage(id, text string) error {
+	d, ok := c.device()
+	if !ok {
+		return ErrNoDevice
+	}
+	return c.pilot.Edit(d.Info.ID, id, text)
+}
+
+// Withdraw takes back a message the model has not read.
+func (c *Core) Withdraw(id string) error {
+	d, ok := c.device()
+	if !ok {
+		return ErrNoDevice
+	}
+	return c.pilot.Withdraw(d.Info.ID, id)
+}
+
+// Continue goes on with the task that ended, with the person's message
+// (pilot.Runner.Continue): the same task in the history, its limits
+// counted anew. Like Start, it needs the key again and claims the phone.
+func (c *Core) Continue(text, key string) error {
+	d, ok := c.device()
+	if !ok || d.Info.State != driver.StateOnline {
+		return ErrNoDevice
+	}
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return ErrNoKey
+	}
+	c.startMu.Lock()
+	defer c.startMu.Unlock()
+	s, has := c.pilot.Status(d.Info.ID)
+	switch {
+	case has && s.Running():
+		return pilot.ErrBusy
+	case !has || !s.Continuable:
+		return pilot.ErrCannotContinue
+	case strings.TrimSpace(text) == "" && len(s.Pending) == 0:
+		return pilot.ErrEmpty
+	}
+	if cl := c.opt.Claims; cl != nil {
+		ctx, cancel := context.WithTimeout(c.ctx, claimWait)
+		busy, err := cl.Claim(ctx, s.Task)
+		cancel()
+		if err != nil {
+			return err
+		}
+		if busy {
+			return ErrComputer
+		}
+	}
+	c.mu.Lock()
+	c.key = key
+	c.run++
+	run := c.run
+	c.mu.Unlock()
+	if err := c.pilot.Continue(d.Info.ID, text); err != nil {
+		c.endedLocked(run)
+		return err
+	}
+	go c.endTask(d.Info.ID, run)
+	return nil
+}
+
 // endTask waits for run's task to end, keeps how it ended for the history,
 // then ends it.
 func (c *Core) endTask(device string, run int) {
