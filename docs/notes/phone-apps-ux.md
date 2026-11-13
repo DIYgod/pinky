@@ -120,3 +120,11 @@ Both apps, on the core's `steer`, `withdraw` and `continue` commands ([builtin-a
 - Once read, a message is a step, "You said: “…”" (the iPhone marks it with a speech bubble in the accent color).
 - While Pinky's own screen is in front, the gateway refuses the agent's steps on it, as before: a message sent from the task screen is read at the next request, and the agent acts once the person leaves.
 - Checked: Android's unit tests (`SteeringTest`) and debug build; the iPhone's simulator build and its `steer` and `continue` demo scenarios in English, Chinese and Japanese. Not yet tried on a phone or with a real core end to end.
+
+## Quick entries (2026-11-13)
+
+Reaching Pinky's own agent without opening Pinky first, after Mika's pill:
+
+- **Android**: an optional floating button (double tap: ask about this screen; long press: the same by voice; tap: open Pinky), Share to Pinky for text, links and pictures, two Quick Settings tiles (New task, Floating button), and a mic in the task box. See android-app.md, "Quick entries".
+- **iPhone**: a mic in the task box (Apple's speech recognition, on the phone where it can) and New Task in Pinky for Shortcuts and Siri, which can carry the share sheet's text or link. No Share extension and no "this screen"; iphone-app.md, "Quick entries", says why.
+- **Desktop Pinky**: About the screen in Ask Pinky starts a task about what the phone shows now (with an empty box: "Explain what the phone shows."). No voice button: MyGo has no speech API, and the OS has its own dictation (the Fn key, or Edit › Start Dictation), which types into text fields that take the system's text input; whether Ask Pinky's box takes it was not checked.

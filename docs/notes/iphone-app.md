@@ -187,6 +187,16 @@ Since 2026-11-13 Settings offers desktop Pinky's model services ([model-services
 
 **Release notes.** M1 has none: the app is built from source only, and a real model, approvals and Stop on the phone are not verified yet. Its one change to what people get, that agents can no longer open or act on Pinky's iPhone app, rides along with the next release. When the app is ready for people, its notes say what it does and that change too.
 
+## Quick entries
+
+Since 2026-11-13, after the Android app's (android-app.md, "Quick entries"):
+
+- **Voice input** in the task box (`App/Dictation.swift`): Apple's speech recognition, on the phone when its language allows (`requiresOnDeviceRecognition` when the recognizer supports it), otherwise through Apple as the keyboard's dictation does. It asks for speech recognition and the microphone the first time, listens until the person taps again or for 55 s (the recognizer takes about a minute), puts what it heard after what was typed, and never starts the task itself. It listens only while no task runs, so it never meets `SilentAudio`'s session.
+- **New Task in Pinky** (`App/QuickStart.swift`), an App Intent for Shortcuts and Siri ("New task in Pinky", "Ask Pinky"): it opens the app with the task in the box and, optionally, text or a link to go with it (the core's `shared`, as Android's Share to Pinky). A shortcut that takes the share sheet's input and runs it shares into Pinky. The person starts the task in the app: automations run without anyone looking, so a shortcut never starts one.
+- **No Share extension:** only the app can send the core in the tunnel a message (provider messages belong to the containing app), and with no App Group (AltStore appends the team id) an extension cannot hand the app what was shared. Pictures would also go through the tunnel extension's 50 MB, which a task already uses up to 28 MB of (run 7).
+- **No "ask about this screen":** a task starts from Pinky's own app, which is in front then, and opening the app from Shortcuts puts it in front too; there is no floating button over other apps on iOS.
+- **Checked:** the Simulator build (`ios/build.sh sim`), the App Intents metadata and both usage strings in the bundle, and the mic in the task box in the demo (`-pinkyDemo ready`, iOS 26.5 Simulator). Not checked: listening (the Simulator would use the Mac's microphone), the intent from Shortcuts, and both on a phone.
+
 ## Follow-ups
 
 - **Agents on a computer know Pinky's app only by its id**: `cc.diygod.pinky…` and `pinky.<team id>…`. A build under any other `PINKY_BUNDLE_ID` is guarded on the phone, where the guard learns the app's id, but agents on a computer could open it. [ios/README.md](../../ios/README.md) asks builders for `pinky.<team id>`; once desktop Pinky builds the app, it uses that shape anyway.
