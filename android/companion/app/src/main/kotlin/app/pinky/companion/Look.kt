@@ -393,6 +393,19 @@ class Look(private val activity: Activity) {
         )
     }
 
+    /** Picks any of options; checked says which are picked, and onPick gets them when the person saves. */
+    fun chooseMany(title: String, options: List<String>, checked: BooleanArray, onPick: (BooleanArray) -> Unit) {
+        val picked = checked.copyOf()
+        show(
+            AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setMultiChoiceItems(options.toTypedArray(), picked) { _, which, on -> picked[which] = on }
+                .setPositiveButton(R.string.phone_save) { _, _ -> onPick(picked) }
+                .setNegativeButton(R.string.phone_cancel, null)
+                .create(),
+        )
+    }
+
     /** A menu of actions. */
     fun menu(title: String, items: List<String>, onPick: (Int) -> Unit) {
         show(

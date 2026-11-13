@@ -29,7 +29,7 @@ import java.io.Closeable
  * Pinky's own screen on the phone, in a process of its own (":ui"): the
  * person asks Pinky for a task, follows it and stops it, as in desktop
  * Pinky's Ask Pinky (ui/ask.go), and finds the tasks that ended under
- * Activity (PastTasks). Approvals and handoffs are answered on the card
+ * Activity (PastTasks), and schedules tasks (SchedulesActivity). Approvals and handoffs are answered on the card
  * over other apps (Overlays); the model, its key and a task's limits are
  * in SettingsActivity.
  *
@@ -129,6 +129,11 @@ class TaskActivity : Activity() {
         header.addView(
             look.iconButton(R.drawable.ic_activity, getString(R.string.phone_activity)) {
                 startActivity(Intent(this, HistoryActivity::class.java))
+            },
+        )
+        header.addView(
+            look.iconButton(R.drawable.ic_alarm, getString(R.string.phone_schedules)) {
+                startActivity(Intent(this, SchedulesActivity::class.java))
             },
         )
         header.addView(look.iconButton(R.drawable.ic_settings, getString(R.string.phone_settings)) { openSettings() })

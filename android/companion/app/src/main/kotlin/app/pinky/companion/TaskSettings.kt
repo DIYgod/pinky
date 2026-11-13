@@ -117,7 +117,12 @@ class TaskSettings(private val context: Context) {
     /** The core's check command for the model of a service, with its key ("" for none). */
     fun checkRequest(key: String, id: String = service): JSONObject = modelRequest("check", key, id)
 
-    private fun modelRequest(cmd: String, key: String, id: String): JSONObject = CoreClient.cmd(
+    /**
+     * A command of the core that runs a task with the model's settings and
+     * key (StartRequest): start, check, and the schedules' schedule_due and
+     * schedule_run, whose task is the schedule's.
+     */
+    fun modelRequest(cmd: String, key: String, id: String = service): JSONObject = CoreClient.cmd(
         cmd,
         "service" to id,
         "key" to key,

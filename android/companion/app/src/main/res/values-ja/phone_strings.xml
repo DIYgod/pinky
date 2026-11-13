@@ -333,4 +333,104 @@
     <string name="phone_ask_picture_failed">読み込めない画像がありました。</string>
     <string name="phone_voice">音声入力</string>
     <string name="phone_voice_none">このスマホには音声認識がありません。</string>
+
+    <!-- Scheduled tasks on the phone (SchedulesActivity, ScheduleEditActivity,
+         ScheduleNotices), worded as desktop Pinky's (cmd/pinky/locales: sched*). -->
+    <string name="phone_schedules">スケジュール</string>
+    <string name="phone_sched_note">Pinky がスケジュールしたタスクを実行するのは、このスマホの画面がオンでロックが解除され、1 分以上操作されていないときだけです。スマホのロックを解除したり画面をオンにしたりはしません。それ以外のときはスキップして知らせます。スケジュールしたタスクは支払いをせず、承認が必要な手順は通知を出してあなたを待ちます。</string>
+    <string name="phone_sched_allow">時間どおりに実行するには</string>
+    <string name="phone_sched_notifications">通知</string>
+    <string name="phone_sched_notifications_desc">スケジュールしたタスクの結果や、承認を待っているタスクを Pinky が知らせます。</string>
+    <string name="phone_sched_exact">アラームとリマインダー</string>
+    <string name="phone_sched_exact_desc">許可すると、Pinky がスケジュールしたタスクを時間どおりに開始できます。許可しないと、Android が数分遅らせることがあります。</string>
+    <string name="phone_sched_battery_desc">「制限なし」にすると、スマホを使っていないときも Pinky がスケジュールしたタスクのために起動できます。</string>
+    <string name="phone_sched_list">スケジュール</string>
+    <string name="phone_sched_empty">スケジュールしたタスクはまだありません。</string>
+    <string name="phone_sched_new">新しいスケジュール</string>
+    <string name="phone_sched_core_down">このスマホの Pinky が動いていないため、今はスケジュールを表示・変更できません。</string>
+    <string name="phone_sched_sum_condition">%1$s ・ %2$s ときだけ</string>
+    <string name="phone_sched_paused">一時停止中</string>
+    <string name="phone_sched_title_new">タスクをスケジュール</string>
+    <string name="phone_sched_title_edit">スケジュールしたタスク</string>
+    <string name="phone_sched_task">タスク</string>
+    <string name="phone_sched_task_hint">天気を確認して</string>
+    <string name="phone_sched_repeat">繰り返し</string>
+    <string name="phone_sched_once">1回だけ</string>
+    <string name="phone_sched_daily">毎日</string>
+    <string name="phone_sched_weekdays">平日</string>
+    <string name="phone_sched_weekly">曜日を指定</string>
+    <string name="phone_sched_interval">数時間ごと</string>
+    <string name="phone_sched_date">日付</string>
+    <string name="phone_sched_time">時刻</string>
+    <string name="phone_sched_start_at">開始時刻</string>
+    <string name="phone_sched_add_time">時刻を追加</string>
+    <string name="phone_sched_change">変更</string>
+    <string name="phone_sched_remove">削除</string>
+    <string name="phone_sched_days">曜日</string>
+    <string name="phone_sched_every">間隔</string>
+    <plurals name="phone_sched_hours">
+        <item quantity="other">%d時間ごと</item>
+    </plurals>
+    <string name="phone_sched_condition">次の場合だけ知らせる</string>
+    <string name="phone_sched_condition_desc">空欄なら実行のたびに知らせます。入力すると、Pinky が毎回確かめ、当てはまるときだけ知らせます。</string>
+    <string name="phone_sched_condition_hint">雨が降りそう（任意）</string>
+    <string name="phone_sched_cooldown">通知の頻度</string>
+    <string name="phone_sched_cooldown_always">当てはまるたびに</string>
+    <string name="phone_sched_cooldown_hour">1時間に1回まで</string>
+    <string name="phone_sched_cooldown_day">1日に1回まで</string>
+    <string name="phone_sched_next">次回以降の実行</string>
+    <string name="phone_sched_no_next">今後は実行されません。</string>
+    <string name="phone_sched_run_now">今すぐ実行</string>
+    <string name="phone_sched_pause">一時停止</string>
+    <string name="phone_sched_resume">再開</string>
+    <string name="phone_sched_delete">削除</string>
+    <string name="phone_sched_delete_q">このスケジュールを削除しますか？</string>
+    <string name="phone_sched_runs">最近の実行</string>
+    <string name="phone_sched_no_runs">まだ実行されていません。</string>
+    <string name="phone_sched_run_manual">%s ・ 今すぐ実行</string>
+    <!-- Between the items of a list: days, times. -->
+    <string name="phone_sched_list_sep">・</string>
+    <string name="phone_sched_moment">%1$s %2$s</string>
+    <string name="phone_sched_err_no_task">タスクを入力してください。</string>
+    <string name="phone_sched_err_long">タスクが長すぎます。</string>
+    <string name="phone_sched_err_no_time">時刻を入力してください。</string>
+    <string name="phone_sched_err_time">時刻は 08:00 や 20:30 のように時と分で入力してください。</string>
+    <plurals name="phone_sched_err_too_many">
+        <item quantity="other">1日に指定できるのは %d 回までです。</item>
+    </plurals>
+    <string name="phone_sched_err_date">日付を選んでください。</string>
+    <string name="phone_sched_err_past">その時刻はもう過ぎています。</string>
+    <string name="phone_sched_err_no_days">曜日を 1 つ以上選んでください。</string>
+    <string name="phone_sched_err_not_found">このスケジュールはもうありません。</string>
+    <string name="phone_sched_err_other">スケジュールを保存できませんでした。もう一度お試しください。</string>
+    <string name="phone_sched_notify_title">スケジュール：%s</string>
+    <string name="phone_sched_waiting_title">Pinky があなたを待っています</string>
+    <string name="phone_sched_waiting_text">スケジュールしたタスク「%1$s」があなたを待っています：%2$s</string>
+    <string name="phone_sched_down_title">スケジュールしたタスクを実行できませんでした</string>
+    <string name="phone_sched_down_text">このスマホの Pinky が動いていませんでした。Pinky を開くと再び起動します。</string>
+    <string name="phone_sched_channel">スケジュールしたタスク</string>
+    <string name="phone_sched_channel_desc">スケジュールしたタスクの結果。</string>
+    <string name="phone_sched_waiting_channel">あなたを待っているスケジュール</string>
+    <string name="phone_sched_waiting_channel_desc">スケジュールしたタスクが必要とする承認や操作。</string>
+    <string name="phone_sched_skipped">スキップしました</string>
+    <string name="phone_sched_running">実行中…</string>
+    <string name="phone_sched_met">条件に当てはまる</string>
+    <string name="phone_sched_not_met">条件に当てはまらない</string>
+    <string name="phone_sched_interrupted">タスクが終わる前に Pinky が停止しました。</string>
+    <string name="phone_sched_skip_locked">スマホがロック中か、画面がオフでした。</string>
+    <string name="phone_sched_skip_in_use">スマホを使用中でした。</string>
+    <string name="phone_sched_skip_busy">別のタスクがスマホを使っていました。</string>
+    <string name="phone_sched_skip_offline">Pinky のユーザー補助サービスがオフでした。</string>
+    <string name="phone_sched_skip_no_key">API キーかモデルが設定されていませんでした。「設定」で追加してください。</string>
+    <string name="phone_sched_skip_off">このスマホの Pinky がオフでした。</string>
+    <plurals name="phone_sched_skip_not_running">
+        <item quantity="other">Pinky が動いていなかったため、%d 回分を逃しました。</item>
+    </plurals>
+    <string name="phone_sched_sum_once">%1$s %2$s</string>
+    <string name="phone_sched_sum_daily">毎日 %s</string>
+    <string name="phone_sched_sum_weekdays">平日 %s</string>
+    <string name="phone_sched_sum_weekly">%1$s曜日 %2$s</string>
+    <plurals name="phone_sched_sum_interval">
+        <item quantity="other">%2$s から%1$d時間ごと</item>
+    </plurals>
 </resources>

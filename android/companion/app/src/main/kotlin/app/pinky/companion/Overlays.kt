@@ -35,7 +35,11 @@ import java.io.Closeable
  * screen; and the views are accessibilityDataSensitive, so on Android 15
  * and later they also drop touches an accessibility service injects.
  */
-class Overlays(private val service: PinkyAccessibilityService) {
+class Overlays(
+    private val service: PinkyAccessibilityService,
+    // Gets each state too, on the subscription's thread (ScheduleNotices).
+    private val onState: (JSONObject) -> Unit = {},
+) {
 
     private val wm = service.getSystemService(WindowManager::class.java)
     private val main = Handler(Looper.getMainLooper())
@@ -80,7 +84,10 @@ class Overlays(private val service: PinkyAccessibilityService) {
     }
 
     fun start() {
-        sub = CoreClient.subscribe(service, { st -> main.post { render(st) } }, { main.post { render(JSONObject()) } })
+        sub = CoreClient.subscribe(service, { st ->
+            onState(st)
+            main.post { render(st) }
+        }, { main.post { render(JSONObject()) } })
     }
 
     /** Windows came, went or changed: the service calls it for their events. */

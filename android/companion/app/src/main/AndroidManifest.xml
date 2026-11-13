@@ -10,10 +10,20 @@
          Android asks the person. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- The debug page's test notification, and the notification that takes
-         the Wireless debugging pairing code (Pairing): asked for only when
-         the person starts pairing on Settings › Background screen. -->
+    <!-- How a scheduled task went, and an approval one waits for
+         (ScheduleNotices), asked for once the person has a schedule
+         (SchedulesActivity); the notification that takes the Wireless
+         debugging pairing code (Pairing), asked for when the person starts
+         pairing on Settings › Background screen; and the debug page's test
+         notification. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Scheduled tasks on the phone (Schedules): an exact alarm at each
+         time due, once the person allows "Alarms & reminders" in Android's
+         settings (an inexact one until then), and the alarm set again
+         after the phone restarts. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Android's own dialog to lift Pinky's battery limits (Battery), so
          that a long task on the phone is not stopped in the background.
@@ -113,6 +123,26 @@
             android:theme="@style/Theme.Pinky.Screen"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Scheduled tasks and one of them, opened only from the task
+             screen and from the schedules' notifications, in its process.
+             The editor keeps its draft through a rotation. -->
+        <activity
+            android:name=".SchedulesActivity"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:label="@string/phone_schedules"
+            android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen" />
+        <activity
+            android:name=".ScheduleEditActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:label="@string/phone_schedules"
+            android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Takes the pairing code typed into the pairing notification's
              reply box (Pairing), in the screens' process. Only this app's
              own PendingIntent reaches it. -->
@@ -188,6 +218,21 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <!-- The schedules' alarm, and what clears or moves it (Schedules).
+             In the service's process, where the core runs. -->
+        <receiver
+            android:name=".ScheduleReceiver"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Hears how an update from Pinky's releases went (UpdateInstall). -->
         <receiver
