@@ -26,6 +26,17 @@ type askState struct {
 	err    string // why the last start failed
 	errFor string // the phone it was for
 
+	// The person's messages to the task: one being typed while it runs
+	// (steer), one being edited (editID, edit), the one that continues it
+	// once it ended (next), and why the last of these failed.
+	steer  string
+	next   string
+	editID string
+	edit   string
+	mgen   int // bumped when a field empties, to start it afresh
+	msgErr string
+	msgFor string // the phone msgErr is for
+
 	// keys says which services have an API key saved, by provider, once
 	// looked up off the main thread.
 	keys     map[string]bool
@@ -253,6 +264,129 @@ func (a *app) askRunning(c *mg.Context, s pilot.Status) {
 		// fits on a line in every language.
 		mg.Text(c, usageText(s, c.Now())).FontSize(fsCaption).TextColor(p.ink2).FontFeatures("tnum").Margin(0, 0, 0, 8+sp2)
 	})
+	a.askPending(c, s)
+	a.askMessageRow(c, s.Device, false)
+}
+
+// askPending is the person's messages Pinky has not read yet, each with
+// Edit and Withdraw.
+func (a *app) askPending(c *mg.Context, s pilot.Status) {
+	p := pal(c)
+	st := &a.ask
+	for _, m := range s.Pending {
+		mg.Column(c.Key("ask-msg-"+m.ID)).Padding(sp2, sp3).Radius(rControl).Background(p.bg2).Gap(sp1).Children(func() {
+			if st.editID == m.ID {
+				in := mg.TextInput(c.Key(fmt.Sprintf("ask-edit-msg-%s-%d", m.ID, st.mgen)), &st.edit).Label(locales.AskSteerField()).AutoFocus()
+				mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
+					save := button(c, locales.AskSave(), btnOpt{small: true, kind: btnPrimary})
+					if save.Clicked() || in.Submitted() {
+						a.askEdit(s.Device, m.ID, st.edit)
+					}
+					if button(c, locales.AskCancel(), btnOpt{small: true}).Clicked() {
+						st.editID, st.edit = "", ""
+						st.mgen++
+					}
+				})
+				return
+			}
+			mg.Text(c, m.Text).FontSize(fsSmall).LineHeight(1.4).Selectable()
+			if !s.Running() {
+				// Once it ended, askUnread above says what became of them.
+				return
+			}
+			mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
+				mg.Text(c, locales.AskPendingNote()).FontSize(fsCaption).TextColor(p.ink3).Grow(1).MinWidth(0)
+				if quietButton(c, locales.AskEdit()).Clicked() {
+					st.editID, st.edit, st.msgErr = m.ID, m.Text, ""
+					st.mgen++
+				}
+				if quietButton(c, locales.AskWithdraw()).Clicked() {
+					a.askEdit(s.Device, m.ID, "")
+				}
+			})
+		})
+	}
+}
+
+// askMessageRow is the field for a message to Pinky and its button: Send
+// while the task runs, Continue once it ended.
+func (a *app) askMessageRow(c *mg.Context, device string, ended bool) {
+	p := pal(c)
+	st := &a.ask
+	text, label, placeholder, action := &st.steer, locales.AskSteerField(), locales.AskSteerPlaceholder(), locales.AskSend()
+	key := fmt.Sprintf("ask-steer-%d", st.mgen)
+	if ended {
+		text, label, placeholder, action = &st.next, locales.AskContinueField(), locales.AskContinuePlaceholder(), locales.AskContinue()
+		key = fmt.Sprintf("ask-next-%d", st.mgen)
+	}
+	if st.msgErr != "" && st.msgFor == device {
+		mg.Text(c, st.msgErr).FontSize(fsSmall).LineHeight(1.4).TextColor(p.red).Role(mg.RoleStatus)
+	}
+	mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
+		in := mg.TextInput(c.Key(key), text).Label(label).Placeholder(placeholder).Grow(1).MinWidth(0)
+		// Continue sends the unread messages even with nothing typed.
+		can := strings.TrimSpace(*text) != ""
+		if ended && !can {
+			s, _ := a.opt.Pilot.Status(device)
+			can = len(s.Pending) > 0
+		}
+		send := button(c, action, btnOpt{small: true, kind: btnPrimary}).Disabled(!can)
+		if can && (send.Clicked() || in.Submitted()) {
+			if ended {
+				a.askContinue(device)
+			} else {
+				a.askSteer(device)
+			}
+		}
+	})
+}
+
+func (a *app) askSteer(device string) {
+	st := &a.ask
+	_, err := a.opt.Pilot.Steer(device, st.steer)
+	switch {
+	case err == nil:
+		st.steer, st.msgErr = "", ""
+		st.mgen++
+	case errors.Is(err, pilot.ErrNotRunning):
+		// The task ended meanwhile: the words wait in Continue's field.
+		st.next, st.steer, st.msgErr = st.steer, "", ""
+		st.mgen++
+	case errors.Is(err, pilot.ErrEmpty):
+	default:
+		st.msgErr, st.msgFor = locales.AskErrSend(err.Error()), device
+	}
+}
+
+// askEdit changes a message Pinky has not read; empty text withdraws it.
+func (a *app) askEdit(device, id, text string) {
+	st := &a.ask
+	var err error
+	if strings.TrimSpace(text) == "" {
+		err = a.opt.Pilot.Withdraw(device, id)
+	} else {
+		err = a.opt.Pilot.Edit(device, id, text)
+	}
+	st.editID, st.edit = "", ""
+	st.mgen++
+	switch {
+	case err == nil, errors.Is(err, pilot.ErrNoMessage):
+		st.msgErr = ""
+	case errors.Is(err, pilot.ErrRead):
+		st.msgErr, st.msgFor = locales.AskRead(), device
+	default:
+		st.msgErr, st.msgFor = locales.AskErrSend(err.Error()), device
+	}
+}
+
+func (a *app) askContinue(device string) {
+	st := &a.ask
+	if err := a.opt.Pilot.Continue(device, st.next); err != nil {
+		st.msgErr, st.msgFor = locales.AskErrSend(err.Error()), device
+		return
+	}
+	st.next, st.msgErr = "", ""
+	st.mgen++
 }
 
 // askEnded says how Pinky's last task on the phone ended, until the
@@ -285,6 +419,14 @@ func (a *app) askEnded(c *mg.Context, s pilot.Status) {
 		}
 		mg.Text(c, usageText(s, c.Now())).FontSize(fsCaption).TextColor(p.ink3).FontFeatures("tnum")
 	})
+	if !s.Continuable {
+		return
+	}
+	if len(s.Pending) > 0 {
+		mg.Text(c, locales.AskUnread()).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
+		a.askPending(c, s)
+	}
+	a.askMessageRow(c, s.Device, true)
 }
 
 // askSetup is the box while Ask Pinky lacks a key or a model.
@@ -313,11 +455,7 @@ func usageText(s pilot.Status, now time.Time) string {
 	case s.Tokens > 0:
 		parts = append(parts, locales.AskTokens(int(s.Tokens)))
 	}
-	end := s.Ended
-	if end.IsZero() {
-		end = now
-	}
-	return strings.Join(append(parts, elapsed(end.Sub(s.Started))), " · ")
+	return strings.Join(append(parts, elapsed(s.Elapsed(now))), " · ")
 }
 
 // limitText is a task's cost limit: in dollars, or in tokens for a model

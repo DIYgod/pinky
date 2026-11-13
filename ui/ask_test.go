@@ -2,6 +2,8 @@ package ui
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -22,6 +24,8 @@ type fakePilot struct {
 	started []fakeStart
 	stopped []string
 	status  map[string]pilot.Status
+	seq     int
+	cont    []string // the texts Continue was given
 }
 
 type fakeStart struct {
@@ -48,7 +52,7 @@ func (f *fakePilot) Stop(device string) {
 	defer f.mu.Unlock()
 	f.stopped = append(f.stopped, device)
 	if s, ok := f.status[device]; ok && s.Running() {
-		s.Ended, s.End = time.Now(), pilot.Stopped
+		s.Ended, s.End, s.Continuable = time.Now(), pilot.Stopped, true
 		f.status[device] = s
 	}
 }
@@ -78,6 +82,55 @@ func (f *fakePilot) Dismiss(device string) {
 	if s, ok := f.status[device]; ok && !s.Running() {
 		delete(f.status, device)
 	}
+}
+
+func (f *fakePilot) Steer(device, text string) (pilot.Message, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.status[device]
+	if !ok || !s.Running() {
+		return pilot.Message{}, pilot.ErrNotRunning
+	}
+	f.seq++
+	m := pilot.Message{ID: fmt.Sprintf("m%d", f.seq), Text: strings.TrimSpace(text), At: time.Now()}
+	s.Pending = append(slices.Clone(s.Pending), m)
+	f.status[device] = s
+	return m, nil
+}
+
+func (f *fakePilot) Edit(device, id, text string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s := f.status[device]
+	for i, m := range s.Pending {
+		if m.ID == id {
+			s.Pending = slices.Clone(s.Pending)
+			if text == "" {
+				s.Pending = slices.Delete(s.Pending, i, i+1)
+			} else {
+				s.Pending[i].Text = text
+			}
+			f.status[device] = s
+			return nil
+		}
+	}
+	return pilot.ErrRead
+}
+
+func (f *fakePilot) Withdraw(device, id string) error { return f.Edit(device, id, "") }
+
+func (f *fakePilot) Continue(device, text string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.status[device]
+	if !ok || !s.Continuable {
+		return pilot.ErrCannotContinue
+	}
+	f.cont = append(f.cont, text)
+	s.Ended, s.End, s.Continuable, s.Pending = time.Time{}, "", false, nil
+	s.Continues++
+	f.status[device] = s
+	return nil
 }
 
 func (f *fakePilot) stops() []string {
@@ -319,5 +372,71 @@ func TestAskPinkyAllPhones(t *testing.T) {
 	}
 	if len(fp.started) != 1 || fp.started[0].device != second {
 		t.Errorf("started %+v, want on %s", fp.started, second)
+	}
+}
+
+func TestAskPinkySteerAndContinue(t *testing.T) {
+	ta, fp, tt := newAskApp(t, true, true)
+	id := ta.devices[0].Info.ID
+	frameUntil(t, ta, tt, "Start")
+	if err := tt.Click("Task for Pinky"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("Pick a color")
+	tt.Frame()
+	if err := tt.Click("Start"); err != nil {
+		t.Fatal(err)
+	}
+	frameUntil(t, ta, tt, "Pinky is working on it")
+
+	// A message while it works waits, with Edit and Withdraw, until Pinky
+	// reads it.
+	if err := tt.Click("Message for Pinky"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("Use the red one")
+	tt.Frame()
+	if err := tt.Click("Send"); err != nil {
+		t.Fatal(err)
+	}
+	frameUntil(t, ta, tt, "Pinky reads this at its next step")
+	if err := tt.Click("Edit"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	ta.ask.edit = "Use the blue one"
+	tt.Frame()
+	if err := tt.Click("Save"); err != nil {
+		t.Fatal(err)
+	}
+	frameUntil(t, ta, tt, "Use the blue one")
+	if s, _ := fp.Status(id); len(s.Pending) != 1 || s.Pending[0].Text != "Use the blue one" {
+		t.Fatalf("pending: %+v", s.Pending)
+	}
+	if err := tt.Click("Withdraw"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if s, _ := fp.Status(id); len(s.Pending) != 0 {
+		t.Fatalf("pending after Withdraw: %+v", s.Pending)
+	}
+
+	// Once it stopped, Continue goes on with the same task.
+	if err := tt.Click("Stop Pinky's task"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the pilot to stop", func() bool { return len(fp.stops()) == 1 })
+	frameUntil(t, ta, tt, "Next message for Pinky")
+	if err := tt.Click("Next message for Pinky"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("Now the green one")
+	tt.Frame()
+	if err := tt.Click("Continue"); err != nil {
+		t.Fatal(err)
+	}
+	frameUntil(t, ta, tt, "Pinky is working on it")
+	if len(fp.cont) != 1 || fp.cont[0] != "Now the green one" {
+		t.Fatalf("continued with %q", fp.cont)
 	}
 }

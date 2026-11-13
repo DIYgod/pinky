@@ -134,6 +134,12 @@ type Pilot interface {
 	StopAll()
 	Status(device string) (pilot.Status, bool)
 	Dismiss(device string)
+	// Steer, Edit and Withdraw are the person's messages to the task while
+	// it runs; Continue goes on with the task that ended (pilot.Runner).
+	Steer(device, text string) (pilot.Message, error)
+	Edit(device, id, text string) error
+	Withdraw(device, id string) error
+	Continue(device, text string) error
 }
 
 // Settings are what the Settings screen changes.
