@@ -173,7 +173,6 @@ func TestTaskNotes(t *testing.T) {
 		}
 		return false
 	}
-	results := map[string]string{}
 	h.api.turns = []func(string, *http.Request) any{
 		func(last string, _ *http.Request) any {
 			for _, want := range []string{
@@ -209,20 +208,7 @@ func TestTaskNotes(t *testing.T) {
 	if st.End != Done || st.Steps != 1 {
 		t.Fatalf("status: %+v", st)
 	}
-	for _, req := range h.api.requests() {
-		msgs, _ := req.body["messages"].([]any)
-		for _, m := range msgs {
-			blocks, _ := m.(map[string]any)["content"].([]any)
-			for _, b := range blocks {
-				b, _ := b.(map[string]any)
-				if b["type"] == "tool_result" {
-					parts, _ := b["content"].([]any)
-					p, _ := parts[0].(map[string]any)
-					results[b["tool_use_id"].(string)], _ = p["text"].(string)
-				}
-			}
-		}
-	}
+	results := toolResults(h)
 	for id, want := range map[string]string{
 		"r1": "settled\nSuggested.",
 		"r2": "error: refused\nA said note needs the person's own words",
@@ -254,6 +240,112 @@ func TestTaskNotes(t *testing.T) {
 		t.Fatalf("suggested: %+v", st.Suggested)
 	}
 	if l := mem.List(); len(l) != 3 || l[0].Text != "Uses Calculator for tips" {
+		t.Fatalf("notes: %+v", l)
+	}
+}
+
+// toolResults are the tool results the model got, by the call's id.
+func toolResults(h *harness) map[string]string {
+	results := map[string]string{}
+	for _, req := range h.api.requests() {
+		msgs, _ := req.body["messages"].([]any)
+		for _, m := range msgs {
+			blocks, _ := m.(map[string]any)["content"].([]any)
+			for _, b := range blocks {
+				b, _ := b.(map[string]any)
+				if b["type"] == "tool_result" {
+					parts, _ := b["content"].([]any)
+					p, _ := parts[0].(map[string]any)
+					results[b["tool_use_id"].(string)], _ = p["text"].(string)
+				}
+			}
+		}
+	}
+	return results
+}
+
+// A continued task is one conversation: the notes and a guide are in it
+// once, the suggestions of its first stretch stay and count towards the
+// cap, and the person's messages (steered or to continue) are their words
+// as much as the task.
+func TestContinueWithNotes(t *testing.T) {
+	h := newHarness(t)
+	mem, _ := OpenMemories("")
+	mem.Add(Said, "Likes results rounded to two decimals", "")
+	h.r.opt.Memories = mem
+	lastText := func() string {
+		reqs := h.api.requests()
+		b, _ := json.Marshal(lastUser(t, reqs[len(reqs)-1]))
+		return string(b)
+	}
+	h.api.turns = []func(string, *http.Request) any{
+		func(string, *http.Request) any {
+			if _, err := h.r.Steer("pixel", "Keep it short please"); err != nil {
+				t.Error(err)
+			}
+			return message("tool_use", 1000,
+				use("r1", rememberName, map[string]any{"kind": "said", "text": "Uses Calculator for tips", "quote": "calculator for tips"}),
+				use("l1", "phone_launch", map[string]any{"app": "Calculator"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000,
+				use("r2", rememberName, map[string]any{"kind": "said", "text": "Likes short answers", "quote": "keep it short"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000, use("f1", finishName, map[string]any{"outcome": "done", "summary": "Opened Calculator."}))
+		},
+		func(string, *http.Request) any {
+			if s := lastText(); strings.Contains(s, "<notes>") || strings.Contains(s, "Pinky's guide to") {
+				t.Errorf("the continued stretch sends notes or the guide again:\n%s", s)
+			}
+			return message("tool_use", 1000,
+				use("r3", rememberName, map[string]any{"kind": "said", "text": "Rounds to 2 places", "quote": "round to 2 places"}),
+				use("l2", "phone_launch", map[string]any{"app": "Calculator"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000,
+				use("r4", rememberName, map[string]any{"kind": "learned", "text": "Clear with AC before a new sum"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000, use("f2", finishName, map[string]any{"outcome": "done", "summary": "Opened it again."}))
+		},
+	}
+	st := h.run(t, Config{}, "Open Calculator. I use calculator for tips")
+	if st.End != Done || len(st.Suggested) != 2 {
+		t.Fatalf("status: %+v", st)
+	}
+	if err := h.r.Continue("pixel", "Open it again and round to 2 places"); err != nil {
+		t.Fatal(err)
+	}
+	st = h.wait(t)
+	if st.End != Done || st.Continues != 1 || len(st.Suggested) != 3 || st.Suggested[0].Text != "Uses Calculator for tips" ||
+		st.Suggested[1].Text != "Likes short answers" || st.Suggested[2].Text != "Rounds to 2 places" {
+		t.Fatalf("status: %+v", st)
+	}
+	results := toolResults(h)
+	for id, want := range map[string]string{
+		"r1": "settled\nSuggested.",
+		"r2": "settled\nSuggested.",
+		"r3": "settled\nSuggested.",
+		"r4": "error: refused\nA task suggests at most 3 notes.",
+	} {
+		if !strings.HasPrefix(results[id], want) {
+			t.Errorf("%s: %q, want %q…", id, results[id], want)
+		}
+	}
+	reqs := h.api.requests()
+	raw := reqs[len(reqs)-1].raw
+	g, _ := guides.For("com.google.android.calculator", "")
+	if n := strings.Count(raw, "Likes results rounded to two decimals"); n != 1 {
+		t.Errorf("the notes are in the conversation %d times", n)
+	}
+	if n := strings.Count(raw, g.Body[:40]); n != 1 {
+		t.Errorf("the guide is in the conversation %d times", n)
+	}
+	if err := h.r.Keep("pixel", 0); err != nil {
+		t.Fatal(err)
+	}
+	if l := mem.List(); len(l) != 2 || l[0].Text != "Uses Calculator for tips" {
 		t.Fatalf("notes: %+v", l)
 	}
 }

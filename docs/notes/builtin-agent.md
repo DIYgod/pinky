@@ -81,7 +81,7 @@ The API key is in the system's keychain (`secret.Store`, account `model-key:<nam
 
 ### Memory: the person's notes
 
-- Two kinds of note: `said`, a fact or preference the person stated (the model must quote their words from the task, else the suggestion is refused), and `learned`, how to do something in an app, with the app's name.
+- Two kinds of note: `said`, a fact or preference the person stated (the model must quote their words from the task or from a message of theirs it has read, steered or to continue; else the suggestion is refused, as is a note with numbers they did not write), and `learned`, how to do something in an app, with the app's name.
 - Nothing is kept without the person's yes. The model has a `remember` tool that only suggests (at most `MaxSuggestions`, 3, a task); after the task the person keeps or drops each one, under the ending in the box (desktop), on the end card (Android, iPhone).
 - The rule for what never goes in, enforced in code (`Sensitive`, checked on suggest, keep, add and edit): passwords, PINs, verification or recovery codes, keys and tokens; card, account, ID and phone numbers (any run of digits that looks like one, full-width digits too); email addresses; street addresses (house numbers with a street word, and Chinese and Japanese address forms). A note may still say "the saved 「家」 address in Meituan": where something is, not what it is. Notes about an app the person blocked (`Options.Blocked`, the same check the gateway uses) are refused, and so are suggestions made while such an app was on the screen.
 - At most `MaxMemoryChars` (200) characters a note and `MaxMemories` (50) notes; a task sends at most `MaxNotesChars` (2,400) characters of them, newest first.
@@ -89,6 +89,16 @@ The API key is in the system's keychain (`secret.Store`, account `model-key:<nam
 - Each device keeps its own, never shared: desktop Pinky in `memory.json` in its data folder, Pinky on Android and on the iPhone in `memory.json` in the core's data folder. The file is 0600, written whole and renamed. A file that cannot be read leaves memory in RAM only for that run (logged): the person's notes are not overwritten, but changes made then do not last.
 - Where the person sees and changes them: Settings › Agents › Memory on the computer, Settings › Memory on Android and on the iPhone. Each has a switch for whether tasks use memory (on by default; off, a task neither reads nor suggests notes, and the notes stay), every note with where it came from, add, edit, delete and delete all.
 - The phones' screens reach the notes through the core's commands (`memories`, `memory_add`, `memory_edit`, `memory_delete`, `memory_delete_all`, `keep`, `drop`; `internal/standalone/control.go`, `ios/onphone/core.go`), which agents cannot send.
+
+### With Messages and Continue
+
+A continued task is one conversation, so memory treats it as one task:
+
+- Whether a task uses memory is decided when it starts (`Config.NoMemory`); a continued stretch keeps the same system prompt and tools, `remember` included.
+- The notes go in the first stretch's first message only. Continue does not send them again, and notes the person keeps between two stretches reach the next task, not this one.
+- Guides stay once a task: the apps a task has had a guide for (`run.guided`) last across its stretches. Continue's first message carries the guide of the app on the screen only if the task has not had it, and a guide the end cut off (its results were not sent yet) goes with that message.
+- `Status.Suggested` is the whole task's: Continue keeps the suggestions of earlier stretches, decided or not, and `MaxSuggestions` counts them all, so a task suggests at most 3 notes however often it continues. When the continued task ends, its ending shows them all again, the undecided ones still with Remember and Don't.
+- The person's words are the task and every message of theirs the model has read, steered while it worked or sent to continue: a `said` note may quote any of them, and its numbers must appear in them. A message still pending is not theirs to quote yet.
 
 ### App guides
 
@@ -102,9 +112,9 @@ From `TestPromptCost` (characters; about 4 a token in English, 1–2 in Chinese)
 
 | | Characters |
 |---|---|
-| System prompt, without memory | 3,027 |
-| Memory's rules in the system prompt | +445 |
-| The `remember` tool | 1,068 |
+| System prompt, without memory | 3,395 |
+| Memory's rules in the system prompt | +486 |
+| The `remember` tool | 1,128 |
 | Six typical notes, in the first message | 478 (at most 2,400) |
 | A guide, once a task per app | 873 on average, 1,080 at most |
 
@@ -152,5 +162,5 @@ Decided with the owner's lead session (defaults: the person may steer it; Contin
 - `internal/standalone/check_test.go`: check and usage through the phones' control socket (the core keeps no key); a task on a server that needs no key starts and continues without one, the state names its service and key, and both stretches count in usage.
 - `ui/ask_test.go`: the box, its setup state, saving the key, Start and Stop, Stop all, another agent on the phone, All phones and the endings, Send, Edit, Withdraw and Continue, services, the check and usage, with a fake runner.
 - `internal/pilot/agents_test.go`: an agent's task through the MCP tools: the New agent approval, the agent's scope, cancelling, another agent's view, the reasons it is unavailable, the agent's and the person's messages side by side, the person's and the agent's Continue (one task, under the agent's name), and no Continue by the agent after the person's Stop.
-- `internal/pilot/knowledge_test.go`: the notes' file and limits, the sensitive rule, notes in the first message, suggestions kept and dropped, blocked apps, memory off, a guide once a task, and the cost above; `guides/guides_test.go` checks every guide; `ui/memory_test.go`, `internal/standalone/memory_test.go` and `ios/onphone/memory_test.go` the screens' side.
+- `internal/pilot/knowledge_test.go`: the notes' file and limits, the sensitive rule, notes in the first message, suggestions kept and dropped, blocked apps, memory off, a guide once a task, a continued task (notes and a guide once, the cap across stretches, a steered message as the quote), and the cost above; `guides/guides_test.go` checks every guide; `ui/memory_test.go`, `internal/standalone/memory_test.go` and `ios/onphone/memory_test.go` the screens' side.
 - Not tried yet: a real API call (needs the owner's key) and a real phone (needs their OK); steering, Continue and memory against a real model.
