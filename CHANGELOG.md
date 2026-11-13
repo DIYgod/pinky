@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1113.6 (2026-11-13)
 
 - On an iPhone with two screens, Home now says it may not have worked when neither the Home button nor the swipe up changed the screen, instead of reporting success.
 - On an iPhone with two screens, taps that keep changing nothing are now reported as uncertain, even after an earlier tap worked.
