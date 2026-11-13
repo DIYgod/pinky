@@ -7,10 +7,12 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Outline
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.RippleDrawable
 import android.net.Uri
 import android.os.Build
@@ -23,6 +25,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityManager
@@ -107,12 +110,46 @@ class Look(private val activity: Activity) {
         activity.setContentView(scroll)
     }
 
-    /** The screen's title; the caller may add a button after it. */
-    fun header(title: String, color: Int = ink): LinearLayout = LinearLayout(activity).apply {
+    /**
+     * The screen's title, after Pinky's mark when mark is set (the task
+     * screen, as on the iPhone); the caller may add a button after it.
+     */
+    fun header(title: String, color: Int = ink, mark: Boolean = false): LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(4), dp(12), 0, dp(4))
+        if (mark) addView(mark(32), LinearLayout.LayoutParams(dp(32), dp(32)).apply { marginEnd = dp(10) })
         addView(text(title, TITLE1, color, 700), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+    }
+
+    /**
+     * Pinky's mark: the launcher icon's two layers (ic_launcher_background
+     * and ic_launcher_foreground) in a rounded square, the shape the
+     * iPhone app gives it, whatever mask the launcher uses. The layers'
+     * 108 dp canvas is cropped to its middle 72 dp, as a launcher shows it.
+     * Decorative: the title beside it says Pinky.
+     */
+    fun mark(sizeDp: Int): ImageView = ImageView(activity).apply {
+        val bleed = -dp(sizeDp) / 4
+        setImageDrawable(
+            LayerDrawable(
+                arrayOf(
+                    activity.getDrawable(R.drawable.ic_launcher_background),
+                    activity.getDrawable(R.drawable.ic_launcher_foreground),
+                ),
+            ).apply {
+                setLayerInset(0, bleed, bleed, bleed, bleed)
+                setLayerInset(1, bleed, bleed, bleed, bleed)
+            },
+        )
+        scaleType = ImageView.ScaleType.FIT_XY
+        outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, view.width * 0.225f)
+            }
+        }
+        clipToOutline = true
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     /** A round button with an icon, for the title bar; desc says what it does. */
