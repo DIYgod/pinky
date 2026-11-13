@@ -42,8 +42,9 @@ type Options struct {
 	// Device is the device id tasks run on; empty is the first phone the
 	// providers list.
 	Device string
-	// DataDir holds the history database and the rules; empty keeps
-	// history in memory and uses the bundled rules.
+	// DataDir holds the history database, the rules and the person's
+	// notes for the agent (memory.json); empty keeps history and notes in
+	// memory and uses the bundled rules.
 	DataDir string
 	// KeepDays is how many days the history keeps a task that ended
 	// (gateway.SetRetention); 0 keeps every task.
@@ -56,8 +57,8 @@ type Options struct {
 	// Gateway tunes the gateway; Providers, DataDir, Policy and Logger
 	// are set from the fields above.
 	Gateway gateway.Options
-	// Pilot tunes the agent; Server, Version, Key and Notify are set by
-	// the Core.
+	// Pilot tunes the agent; Server, Version, Key, Notify, Blocked and,
+	// unless set, Memories are set by the Core.
 	Pilot pilot.Options
 	// Claims is who drives the phone: the core claims it while a task
 	// runs, and starts none while Pinky on a computer holds it. Nil claims
@@ -79,6 +80,7 @@ type Core struct {
 	G      *gateway.Gateway
 	MCP    *mcp.Server
 	pilot  *pilot.Runner
+	mem    *pilot.Memories // the person's notes for the agent (memory.go)
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -160,6 +162,26 @@ func New(o Options) (*Core, error) {
 			path = filepath.Join(o.DataDir, "model-usage.json")
 		}
 		popt.Usage = pilot.OpenUsage(path)
+	}
+	if popt.Memories == nil {
+		path := ""
+		if o.DataDir != "" {
+			path = filepath.Join(o.DataDir, "memory.json")
+		}
+		mem, err := pilot.OpenMemories(path)
+		if err != nil {
+			// A file Pinky cannot read: tasks run without notes rather
+			// than not at all, and the file stays for the person.
+			o.Log.Error("memory", "err", err)
+			mem, _ = pilot.OpenMemories("")
+		}
+		popt.Memories = mem
+	}
+	c.mem = popt.Memories
+	c.mem.OnChange(c.changed)
+	popt.Blocked = func(a screen.App) bool {
+		_, blocked := pol.Blocked(a)
+		return blocked
 	}
 	// The key the screens sent with start or continue; empty for a
 	// service that needs none (a local server), which the runner allows
@@ -249,6 +271,8 @@ type StartRequest struct {
 	Screen bool         `json:"screen,omitempty"`
 	Shared string       `json:"shared,omitempty"`
 	Images []StartImage `json:"images,omitempty"`
+	// NoMemory leaves the person's notes out of the task (pilot.Config).
+	NoMemory bool `json:"no_memory"`
 }
 
 // StartImage is a picture the person shared with a task: "image/jpeg",
@@ -270,7 +294,7 @@ func (r StartRequest) extra() pilot.Extra {
 // Config is the task's pilot.Config.
 func (r StartRequest) Config() pilot.Config {
 	return pilot.Config{Service: r.Service, Provider: r.Provider, Model: r.Model, BaseURL: r.BaseURL, MaxSteps: r.MaxSteps,
-		MaxTime: time.Duration(r.MaxMin) * time.Minute, MaxCost: r.MaxCost}
+		MaxTime: time.Duration(r.MaxMin) * time.Minute, MaxCost: r.MaxCost, NoMemory: r.NoMemory}
 }
 
 // Start starts the person's task on the phone. The task claims the phone

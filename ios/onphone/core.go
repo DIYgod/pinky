@@ -24,6 +24,9 @@
 //	{"cmd":"continue","text":"...","key":"..."} → {"ok":true}  (carries on the task that ended); leaves Pinky's app first
 //	{"cmd":"check","service":"...","key":"...",...} → {"ok":true,"check":{...}}  (pilot.CheckResult; a minute at most)
 //	{"cmd":"usage","since":"2006-01-02"}    → {"ok":true,"usage":[...]}  (pilot.UsageRow, newest first)
+//	{"cmd":"memories"}, {"cmd":"memory_add","text":"..."}, {"cmd":"memory_edit","id":"...","text":"..."},
+//	{"cmd":"memory_delete","id":"..."}, {"cmd":"memory_delete_all"} → {"ok":true,"memories":[...]}  (standalone.MemoryState, newest first)
+//	{"cmd":"keep","index":0} / {"cmd":"drop","index":0} → {"ok":true}  (a note the task suggested: AgentState.Suggested)
 //
 // reason, when the phone is not ready, says why in a word Pinky's screens
 // put into the person's language: one of the Reason constants.
@@ -33,7 +36,8 @@
 // no_key, no_task, no_model, busy, computer (Pinky on a computer uses the
 // phone: claims.go) or gone (the need was answered or expired), and for
 // the person's messages empty, not_running, read, no_message and
-// cannot_continue (standalone's Code constants).
+// cannot_continue, and for the notes memory_sensitive, memory_long,
+// memory_full, memory_empty or memory_gone (standalone's Code constants).
 //
 // The key a task starts with stays in memory until the task ends. Nothing
 // here logs a request.
@@ -215,8 +219,9 @@ type request struct {
 	ID        string `json:"id"`
 	BeforeMS  int64  `json:"before_ms"`
 	Limit     int    `json:"limit"`
-	Text      string `json:"text"`  // steer and continue: the person's message
+	Text      string `json:"text"`  // steer and continue: the person's message; a note's words
 	Since     string `json:"since"` // usage: the first day, 2006-01-02
+	Index     int    `json:"index"` // keep, drop: which suggestion
 	standalone.StartRequest
 }
 
@@ -233,6 +238,8 @@ type reply struct {
 	ID      string                `json:"id,omitempty"` // steer: the new message's
 	Check   *pilot.CheckResult    `json:"check,omitempty"`
 	Usage   *[]pilot.UsageRow     `json:"usage,omitempty"`
+	// Memories answers the notes' commands, empty or not.
+	Memories *[]standalone.MemoryState `json:"memories,omitempty"`
 }
 
 // Info is the connection as the core sees it, for diagnostics.
@@ -316,6 +323,16 @@ func (c *Core) handle(r request) reply {
 			rows = []pilot.UsageRow{}
 		}
 		return reply{OK: true, Usage: &rows}
+	case "memories", "memory_add", "memory_edit", "memory_delete", "memory_delete_all":
+		return c.memories(r)
+	case "keep", "drop":
+		decide := c.sc.Keep
+		if r.Cmd == "drop" {
+			decide = c.sc.Drop
+		}
+		if err := decide(r.Index); err != nil {
+			return fail(standalone.MemoryCode(err), err)
+		}
 	default:
 		return fail("", fmt.Errorf("unknown command %q", r.Cmd))
 	}
@@ -489,6 +506,27 @@ func (c *Core) leftAfter(ctx context.Context) {
 		c.log.Warn("Pinky's app did not report leaving the screen")
 		c.gate.setUI(false)
 	}
+}
+
+// memories changes the notes as r says and replies with them, as
+// standalone's commands of the same names.
+func (c *Core) memories(r request) reply {
+	var err error
+	switch r.Cmd {
+	case "memory_add":
+		err = c.sc.AddMemory(r.Text)
+	case "memory_edit":
+		err = c.sc.EditMemory(r.ID, r.Text)
+	case "memory_delete":
+		err = c.sc.DeleteMemory(r.ID)
+	case "memory_delete_all":
+		err = c.sc.DeleteAllMemories()
+	}
+	if err != nil {
+		return fail(standalone.MemoryCode(err), err)
+	}
+	list := c.sc.Memories()
+	return reply{OK: true, Memories: &list}
 }
 
 // history answers Activity as Android's app gets it (standalone's history

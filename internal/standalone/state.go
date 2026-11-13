@@ -91,6 +91,9 @@ type AgentState struct {
 	// nobody pressed Run now: the app notifies the person of what it asks.
 	Scheduled  bool `json:"scheduled,omitempty"`
 	Unattended bool `json:"unattended,omitempty"`
+	// Suggested are the notes the task suggested keeping, which the
+	// person keeps or drops by index (memory.go).
+	Suggested []SuggestionState `json:"suggested,omitempty"`
 }
 
 // Message is a message of the person's to the agent.
@@ -203,7 +206,8 @@ func agentState(s pilot.Status) *AgentState {
 		Summary: s.Summary, Steps: s.Steps, Cost: s.Cost, Tokens: s.Tokens,
 		Seconds: int64(s.Elapsed(time.Now()).Seconds()), Priced: s.Priced,
 		MaxSteps: s.Config.MaxSteps, MaxMinutes: int(s.Config.MaxTime / time.Minute), MaxCost: s.Config.MaxCost,
-		TokenLimit: s.Config.TokenLimit(), Continuable: s.Continuable, Continues: s.Continues}
+		TokenLimit: s.Config.TokenLimit(), Continuable: s.Continuable, Continues: s.Continues,
+		Suggested: suggestionStates(s.Suggested)}
 	for _, m := range s.Pending {
 		a.Pending = append(a.Pending, Message{ID: m.ID, Text: m.Text, MS: m.At.UnixMilli()})
 	}

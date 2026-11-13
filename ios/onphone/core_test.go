@@ -254,6 +254,8 @@ type out struct {
 	More    bool                  `json:"more"`
 	Info    *Info                 `json:"info"`
 	ID      string                `json:"id"`
+
+	Memories []standalone.MemoryState `json:"memories"`
 }
 
 func (h *harness) do(t *testing.T, req map[string]any) out {

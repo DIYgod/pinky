@@ -38,6 +38,12 @@ import (
 //	{"cmd":"steer","id":"m1","text":"..."}              → {"ok":true}  (EditMessage; empty text withdraws)
 //	{"cmd":"withdraw","id":"m1"}                        → {"ok":true}  (Withdraw)
 //	{"cmd":"continue","text":"...","key":"..."}         → {"ok":true}  (Continue the task that ended)
+//	{"cmd":"memories"}                                  → {"ok":true,"memories":[...]}  (MemoryState, newest first)
+//	{"cmd":"memory_add","text":"..."}                   → {"ok":true,"memories":[...]}
+//	{"cmd":"memory_edit","id":"...","text":"..."}       → {"ok":true,"memories":[...]}
+//	{"cmd":"memory_delete","id":"..."}                  → {"ok":true,"memories":[...]}
+//	{"cmd":"memory_delete_all"}                         → {"ok":true,"memories":[]}
+//	{"cmd":"keep","index":0} / {"cmd":"drop","index":0} → {"ok":true}  (AgentState.Suggested)
 //	{"cmd":"schedule_…"} / {"cmd":"notice_seen"}        → the scheduled tasks (schedules.go)
 //
 // A message waits in the state's agent.pending until the model reads it;
@@ -69,8 +75,11 @@ type request struct {
 	ID     string `json:"id"`
 	Before int64  `json:"before"`
 	Limit  int    `json:"limit"`
-	// steer and continue: the person's message to the agent.
-	Text string `json:"text"`
+	// steer and continue: the person's message to the agent; the
+	// notes' commands: a note's words. keep and drop: which suggestion
+	// they answer.
+	Text  string `json:"text"`
+	Index int    `json:"index"`
 	// shell (display.go): what to do, Wireless debugging's port and the
 	// pairing code.
 	Op   string `json:"op"`
@@ -110,6 +119,8 @@ type reply struct {
 	Schedules []schedule.Schedule `json:"schedules,omitempty"`
 	NextMS    int64               `json:"next_ms,omitempty"`
 	Upcoming  []int64             `json:"upcoming,omitempty"`
+	// Memories answers the notes' commands, empty or not.
+	Memories *[]MemoryState `json:"memories,omitempty"`
 }
 
 // maxLine bounds a command: pilot.MaxImages pictures in base64, and room
@@ -177,7 +188,7 @@ func codeOf(err error) string {
 	case errors.Is(err, ErrWrongCode):
 		return CodeWrongCode
 	}
-	return ""
+	return MemoryCode(err)
 }
 
 // Serve answers the control socket until ctx ends. On the phone, ln
@@ -298,6 +309,12 @@ func (c *Core) handle(r request) reply {
 	case "schedules", "schedule_save", "schedule_preview", "schedule_delete", "schedule_pause", "schedule_run",
 		"schedule_due", "notice_seen":
 		return c.schedule(r)
+	case "memories", "memory_add", "memory_edit", "memory_delete", "memory_delete_all":
+		return c.memoryCommand(r)
+	case "keep":
+		err = c.Keep(r.Index)
+	case "drop":
+		err = c.Drop(r.Index)
 	default:
 		err = fmt.Errorf("unknown command %q", r.Cmd)
 	}
@@ -305,6 +322,26 @@ func (c *Core) handle(r request) reply {
 		return reply{Error: err.Error(), Code: codeOf(err)}
 	}
 	return reply{OK: true}
+}
+
+// memoryCommand changes the notes as r says and replies with them.
+func (c *Core) memoryCommand(r request) reply {
+	var err error
+	switch r.Cmd {
+	case "memory_add":
+		err = c.AddMemory(r.Text)
+	case "memory_edit":
+		err = c.EditMemory(r.ID, r.Text)
+	case "memory_delete":
+		err = c.DeleteMemory(r.ID)
+	case "memory_delete_all":
+		err = c.DeleteAllMemories()
+	}
+	if err != nil {
+		return reply{Error: err.Error(), Code: codeOf(err)}
+	}
+	list := c.Memories()
+	return reply{OK: true, Memories: &list}
 }
 
 func (c *Core) history(r request) reply {
