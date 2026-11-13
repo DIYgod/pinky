@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Ask Pinky and Pinky on your phone can now remember things for later tasks. After a task it may suggest a note, such as a preference you told it or a quicker way through an app, and keeps it only if you choose Remember. See, edit or delete notes, or turn memory off, in Settings › Agents › Memory on the computer and Settings › Memory in the phone apps. Notes never hold passwords, codes, card, account, ID or phone numbers, or addresses, and each device keeps its own.
+- Ask Pinky and Pinky on your phone now know their way around WeChat, Alipay, Meituan, Taobao, Xiaohongshu, Amap, Google Maps, Apple Maps, Clock, Calculator and Settings: they read a short guide when they open one of them.
+
 ## 2026.1113.11 (2026-11-13)
 
 - Tasks for Pinky can now be scheduled: once, daily, on weekdays, weekly or every few hours, or only to tell you when a condition holds. Scheduled tasks run on the computer and on Android (not on iPhone); while nobody watches they never pay, ask for approvals by notification, and skip, with a note, when the phone is locked, in use or off.
