@@ -12,6 +12,8 @@ struct ContentView: View {
     @AppStorage("baseURL") private var baseURL = ""
     @AppStorage("maxCost") private var maxCost = 0.0
     @State private var text = ""
+    /// The message for Pinky while a task runs, or to continue it.
+    @State private var message = ""
     @State private var showSettings = false
     @State private var showActivity = false
     /// Keychain is no observable store: the screen reads it again when
@@ -28,6 +30,7 @@ struct ContentView: View {
                     }
                 }
                 statusCard
+                if let a = messagesFor { MessagesSection(agent: a, text: $message) }
                 ForEach(m.state?.needs ?? []) { NeedCard(need: $0) }
                 if ready && setUp && !running { taskBox }
                 if let p = m.problem {
@@ -62,6 +65,14 @@ struct ContentView: View {
     private var ready: Bool { m.vpn == .on && m.state?.device.ready == true }
     private var setUp: Bool { hasKey && !TaskSettings.model.isEmpty }
     private var vpnOn: Bool { m.vpn == .on }
+
+    /// The task the person can send messages to: the running one under its
+    /// card, or the one that ended and can go on under the ended card.
+    private var messagesFor: AgentState? {
+        guard m.paired, vpnOn, let st = m.state, st.device.ready, let a = st.agent else { return nil }
+        if a.running { return a }
+        return setUp && st.computer == nil && a.continuable == true ? a : nil
+    }
 
     private func readKey() {
         hasKey = !(Keychain.get(Keychain.keyAccount(provider)) ?? "").isEmpty
@@ -391,8 +402,12 @@ struct StepRow: View {
         }
     }
 
+    /// What the person told Pinky (gateway.PersonSaid).
+    private var said: Bool { step.text.hasPrefix("You said: ") }
+
     private var icon: String {
-        switch step.status {
+        if said { return "text.bubble" }
+        return switch step.status {
         case "approval_pending": "hand.raised"
         case "running", "pending", "": "circle.dotted"
         case "approval_denied", "blocked_by_policy", "failed", "error": "xmark.circle"
@@ -402,7 +417,8 @@ struct StepRow: View {
     }
 
     private var color: Color {
-        switch step.status {
+        if said { return .pinkyAccent }
+        return switch step.status {
         case "approval_pending": .pinkyAmber
         case "approval_denied", "blocked_by_policy", "failed", "error": .red
         case "running", "pending", "", "user": .secondary

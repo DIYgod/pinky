@@ -401,6 +401,64 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// What became of a message to Pinky, for the task screen.
+    enum Sent: Equatable {
+        case ok
+        /// The task ended meanwhile: the text belongs in Continue.
+        case ended
+        /// The model read it already: it can no longer change.
+        case read
+        /// Withdrawn already.
+        case gone
+        /// In words, for the screen.
+        case failed(String)
+    }
+
+    /// Sends the person's message to the running task: the model reads it
+    /// at its next step.
+    func steer(_ text: String) async -> Sent {
+        sent(await call(["cmd": "steer", "text": text]))
+    }
+
+    /// Changes a message the model has not read yet; empty text withdraws it.
+    func editMessage(_ id: String, _ text: String) async -> Sent {
+        sent(await call(["cmd": "steer", "id": id, "text": text]))
+    }
+
+    func withdraw(_ id: String) async -> Sent {
+        sent(await call(["cmd": "withdraw", "id": id]))
+    }
+
+    private func sent(_ r: CoreReply) -> Sent {
+        if r.ok { return .ok }
+        switch r.code {
+        case "not_running": return .ended
+        case "read": return .read
+        case "no_message": return .gone
+        default: return .failed(L.notSent(r.error))
+        }
+    }
+
+    /// Continues the task that ended with the person's new message (empty
+    /// sends the messages left unread); its limits count anew. The key goes
+    /// with it as with start. nil when the core took it, else why not.
+    func continueTask(_ text: String) async -> String? {
+        problem = nil
+        // The key of the service the task runs on, which Settings may have
+        // changed since.
+        let provider = state?.agent?.provider ?? TaskSettings.provider
+        var key = Keychain.get(Keychain.keyAccount(provider)) ?? ""
+        #if DEBUG
+        // A task a debug build started from launch arguments has its key there.
+        if key.isEmpty { key = ProcessInfo.processInfo.environment["PINKY_MODEL_KEY"] ?? "" }
+        #endif
+        startActivity(state?.agent?.task ?? text)
+        let r = await call(["cmd": "continue", "text": text, "key": key])
+        if r.ok { return nil }
+        endActivities(nil)
+        return L.continueRefused(r.code, r.error)
+    }
+
     func stop() async {
         DarwinNote.post(Pinky.stopNote)
         _ = await call(["cmd": "stop"])

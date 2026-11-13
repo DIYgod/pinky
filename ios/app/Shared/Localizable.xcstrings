@@ -342,6 +342,22 @@
         }
       }
     },
+    "Add or change instructions…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指示を追加・変更…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "补充或修改要求…"
+          }
+        }
+      }
+    },
     "Add the model's API key in Settings first." : {
       "comment" : "Start refused",
       "localizations" : {
@@ -601,6 +617,22 @@
         }
       }
     },
+    "Continue" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "続ける"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续"
+          }
+        }
+      }
+    },
     "Cost is counted from what the service reports, at Anthropic's prices." : {
       "localizations" : {
         "ja" : {
@@ -662,6 +694,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法载入活动。"
+          }
+        }
+      }
+    },
+    "Couldn't send: %@" : {
+      "comment" : "A message to Pinky failed; the reason",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信できませんでした：%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送失败：%@"
           }
         }
       }
@@ -795,6 +844,22 @@
         }
       }
     },
+    "Edit" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編集"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑"
+          }
+        }
+      }
+    },
     "Enter an address that starts with https:// or http://." : {
       "localizations" : {
         "ja" : {
@@ -823,6 +888,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "上限"
+          }
+        }
+      }
+    },
+    "Message for Pinky" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky へのメッセージ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "给 Pinky 的消息"
           }
         }
       }
@@ -871,6 +952,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "模型名称"
+          }
+        }
+      }
+    },
+    "Next message for Pinky" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky への次のメッセージ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "给 Pinky 的下一条消息"
           }
         }
       }
@@ -1168,6 +1265,22 @@
         }
       }
     },
+    "Pinky didn't read these before the task ended. Continue to send them." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タスクが終わる前に Pinky はこれを読みませんでした。続けると送信されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任务结束前 Pinky 没读到这些消息。继续任务即可发送。"
+          }
+        }
+      }
+    },
     "Pinky doesn't know this model's prices, so it counts a million tokens as US$1." : {
       "localizations" : {
         "ja" : {
@@ -1180,6 +1293,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 不知道这个模型的价格，所以按每百万 token 1 美元计算。"
+          }
+        }
+      }
+    },
+    "Pinky has already read it." : {
+      "comment" : "A message to Pinky can no longer be edited or withdrawn",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky はもう読みました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 已经读到了这条消息。"
           }
         }
       }
@@ -1329,6 +1459,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 通过一个不离开手机的 VPN 连接这台 iPhone。"
+          }
+        }
+      }
+    },
+    "Pinky reads this at its next step" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky は次のステップで読みます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 会在下一步读到"
           }
         }
       }
@@ -1610,6 +1756,22 @@
         }
       }
     },
+    "Save" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        }
+      }
+    },
     "Saved" : {
       "localizations" : {
         "ja" : {
@@ -1622,6 +1784,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已保存"
+          }
+        }
+      }
+    },
+    "Send" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送"
           }
         }
       }
@@ -1864,6 +2042,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "停止 Pinky 正在这台 iPhone 上执行的任务。"
+          }
+        }
+      }
+    },
+    "Tell Pinky what to do next…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次にやることを Pinky に伝える…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "告诉 Pinky 接下来做什么…"
           }
         }
       }
@@ -2387,6 +2581,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinky 应在何时询问你？"
+          }
+        }
+      }
+    },
+    "Withdraw" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取り消す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撤回"
           }
         }
       }

@@ -10,6 +10,8 @@ struct CoreReply: Decodable {
     var reason: String?
     var history: [PastTask]?
     var more: Bool?
+    /// steer: the new message's id.
+    var id: String?
 }
 
 /// What Pinky's screens show (internal/standalone.State).
@@ -40,6 +42,8 @@ struct DeviceState: Decodable, Equatable {
 struct AgentState: Decodable, Equatable {
     var task: String
     var model: String
+    /// The service the task's model is at; continue needs its key.
+    var provider: String?
     var running: Bool
     var end: String?
     var summary: String?
@@ -55,6 +59,21 @@ struct AgentState: Decodable, Equatable {
     var max_minutes: Int?
     var max_cost: Double?
     var token_limit: Int?
+    /// The person's messages the model has not read yet, oldest first:
+    /// while the task runs they can still be edited or withdrawn; once it
+    /// ended they wait for continue.
+    var pending: [PendingMessage]?
+    /// The task that ended can go on (continue), and how often it did.
+    var continuable: Bool?
+    var continues: Int?
+}
+
+/// A message of the person's to Pinky that the model has not read yet
+/// (standalone.Message).
+struct PendingMessage: Decodable, Equatable, Identifiable {
+    var id: String
+    var text: String
+    var ms: Int64
 }
 
 struct TaskState: Decodable, Equatable {

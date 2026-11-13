@@ -179,6 +179,27 @@ enum L {
         }
     }
 
+    // MARK: The person's messages to Pinky (steer, withdraw, continue)
+
+    /// A message to Pinky the core did not take.
+    static func notSent(_ error: String?) -> String {
+        let why = error ?? String(localized: "Something went wrong.", comment: "Unknown error")
+        return String(localized: "Couldn't send: \(why)", comment: "A message to Pinky failed; the reason")
+    }
+
+    static var alreadyRead: String {
+        String(localized: "Pinky has already read it.", comment: "A message to Pinky can no longer be edited or withdrawn")
+    }
+
+    /// A continue the core refused, by its code: as a start for the codes
+    /// they share.
+    static func continueRefused(_ code: String?, _ error: String?) -> String {
+        switch code {
+        case "no_device", "no_key", "no_model", "busy", "computer": refused(code, error)
+        default: notSent(error)
+        }
+    }
+
     /// A start or decide the core refused, by its code.
     static func refused(_ code: String?, _ error: String?) -> String {
         switch code {

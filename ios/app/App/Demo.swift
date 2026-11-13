@@ -5,7 +5,9 @@ import Foundation
 /// no packet tunnel and so never gets a core of its own: a debug build
 /// launched with -pinkyDemo <scenario> shows that scenario and talks to no
 /// core (ios/README.md). Scenarios: setup (unpaired), model (the last setup
-/// step), ready, running, asks, ended, computer.
+/// step), ready, running, asks, ended, computer, steer (running, with a
+/// message the model read and one it has not), continue (stopped at a
+/// limit with a message left unread, so it can go on).
 enum Demo {
     static let scenario = UserDefaults.standard.string(forKey: "pinkyDemo")
 
@@ -35,10 +37,25 @@ enum Demo {
         var agent = AgentState(task: task, model: "claude-opus-5-5", running: true, end: nil, summary: nil,
                                steps: 5, cost: 0.06, tokens: 41_000, seconds: 23, priced: true,
                                max_steps: 100, max_minutes: 20, max_cost: 2, token_limit: 0)
+        let said = Step(text: w("You said: “Use the calculator's history too”", "You said: “也看看计算器的历史记录”"),
+                        status: "settled", ms: 0)
+        let unread = PendingMessage(id: "m2", text: w("Then copy the result", "然后把结果复制下来"), ms: now - 5000)
         switch s {
         case "running":
             st.agent = agent
             st.task = TaskState(title: task, state: "working", steps: steps)
+        case "steer":
+            agent.pending = [unread]
+            st.agent = agent
+            st.task = TaskState(title: task, state: "working", steps: Array(steps.prefix(2)) + [said] + steps.dropFirst(2))
+        case "continue":
+            agent.running = false
+            agent.end = "steps"
+            agent.max_steps = 5
+            agent.pending = [unread]
+            agent.continuable = true
+            st.agent = agent
+            st.task = TaskState(title: task, state: "stopped", steps: Array(steps.prefix(2)) + [said] + steps.dropFirst(2))
         case "asks":
             let pay = w("Send the message to Mom", "给妈妈发送这条消息")
             agent.task = w("Tell Mom I'll be home by seven", "告诉妈妈我七点前到家")
@@ -86,6 +103,9 @@ enum Demo {
             let limit = req["limit"] as? Int ?? 20
             let list = history.filter { before == 0 || $0.started_ms < before }
             return CoreReply(ok: true, history: Array(list.prefix(limit)), more: list.count > limit)
+        case "steer" where req["id"] == nil:
+            // The canned state does not change: the message shows nowhere.
+            return CoreReply(ok: true, id: "demo-m")
         default:
             return CoreReply(ok: true)
         }
