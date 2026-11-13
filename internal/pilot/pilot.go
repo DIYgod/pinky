@@ -840,6 +840,12 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	if ru.req.ReadOnly {
 		connectArgs["read_only"] = true
 	}
+	if ru.req.Extra.Screen {
+		// A question about what the person sees: the phone's own screen,
+		// even when tasks run on a background display, whose screen is
+		// not theirs.
+		connectArgs["own_screen"] = true
+	}
 	res := ru.call(ctx, cs, "phone_connect", connectArgs)
 	if res.status == "internal" && ctx.Err() == nil {
 		// The phone is leased; only its first screen failed to read. One
