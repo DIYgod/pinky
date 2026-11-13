@@ -71,6 +71,10 @@ type oaToolCall struct {
 		Name      string `json:"name"`
 		Arguments string `json:"arguments"`
 	} `json:"function"`
+	// ExtraContent is what a service adds to the call and wants back as it
+	// was: Gemini's thought signature ({"google":{"thought_signature":…}}),
+	// without which it refuses the next request.
+	ExtraContent json.RawMessage `json:"extra_content,omitempty"`
 }
 
 type oaResponse struct {
