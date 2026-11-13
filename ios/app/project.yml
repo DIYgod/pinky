@@ -41,6 +41,9 @@ targetTemplates:
     templates: [Core]
     settings:
       base:
+        # App/Assets.xcassets: the home screen icon (assets/icon/pinky-ios-1024.png)
+        # and the mark beside the title (PinkyMark, the same picture).
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Where the Developer Disk Image puts XCTest, for the app hosting
         # WebDriverAgent's test (App/TestHost.swift, build.sh: PINKY_WDA),
         # as Xcode's XCTRunner.app has them.
