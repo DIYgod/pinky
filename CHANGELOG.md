@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1113.7 (2026-11-13)
 
 - The iPhone mirror no longer looks too bright: whites no longer clip and dark parts are no longer crushed to black. Thanks @shrderek.
 - Pinky on the iPhone now has its own icon on the home screen, in notifications and in the Live Activity, instead of a blank one.
