@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1113.17 (2026-11-13)
 
 - Buttons, menus and sidebar rows now show when you press them, and the update card no longer breaks the version across two lines.
 - Pages, new requests and task steps now arrive with a short, calm fade or slide. With Reduce motion turned on in the system, they only fade.
