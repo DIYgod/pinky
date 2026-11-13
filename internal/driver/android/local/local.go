@@ -18,6 +18,7 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -54,9 +55,10 @@ const (
 
 // Provider lists the one phone. It opens the client lazily.
 type Provider struct {
-	app companion.App
-	mu  sync.Mutex
-	dev *Device
+	app   companion.App
+	mu    sync.Mutex
+	dev   *Device
+	shell Shell // background displays (background.go)
 }
 
 // NewProvider returns the provider for the phone the caller runs on,
@@ -93,6 +95,7 @@ func (p *Provider) device(ctx context.Context) (*Device, error) {
 	if err != nil {
 		return nil, err
 	}
+	d.shell = p.shell
 	p.dev = d
 	return d, nil
 }
@@ -106,6 +109,13 @@ type Device struct {
 	appsMu sync.Mutex
 	apps   []driver.App
 	appsAt time.Time
+
+	// Background displays (background.go).
+	sdk          int  // the phone's API level
+	displayInput bool // the service takes input on other displays
+	bgMu         sync.Mutex
+	shell        Shell
+	bg           *Background
 }
 
 // Open connects to the service and reads the phone's details.
@@ -117,11 +127,21 @@ func Open(ctx context.Context, app companion.App) (*Device, error) {
 		return nil, fmt.Errorf("local: %w: %w", driver.ErrOffline, err)
 	}
 	name := strings.TrimSpace(info.Manufacturer + " " + info.Model)
-	return &Device{c: c, app: app, info: driver.Info{
-		ID: ID, Platform: driver.Android, Name: name, Model: info.Model,
-		OSVersion: info.Release, Connection: "local", Backend: "accessibility",
-		State: driver.StateOnline,
-	}}, nil
+	return &Device{c: c, app: app, sdk: info.SDK,
+		displayInput: hasFeatures(info.Features, companion.FeatureDisplays, companion.FeatureDisplayInput), info: driver.Info{
+			ID: ID, Platform: driver.Android, Name: name, Model: info.Model,
+			OSVersion: info.Release, Connection: "local", Backend: "accessibility",
+			State: driver.StateOnline,
+		}}, nil
+}
+
+func hasFeatures(have []string, want ...string) bool {
+	for _, w := range want {
+		if !slices.Contains(have, w) {
+			return false
+		}
+	}
+	return true
 }
 
 // Client is the companion client, for commands the driver has no method
@@ -130,7 +150,15 @@ func (d *Device) Client() *companion.Client { return d.c }
 
 func (d *Device) Info() driver.Info { return d.info }
 
-func (d *Device) Close() error { return d.c.Close() }
+func (d *Device) Close() error {
+	d.bgMu.Lock()
+	bg := d.bg
+	d.bgMu.Unlock()
+	if bg != nil {
+		_ = bg.Close()
+	}
+	return d.c.Close()
+}
 
 // Observe reads every window's tree. The lock state and the keyboard come
 // with the tree; there is no OCR on the phone, so a screen the tree does
