@@ -1432,6 +1432,26 @@
       }
     }
   },
+  "askMemoryDrop": "Don't",
+  "@askMemoryDrop": {
+    "description": "Ask Pinky: the button that does not keep a suggested note."
+  },
+  "askMemoryDropped": "Not remembered",
+  "@askMemoryDropped": {
+    "description": "Ask Pinky: a suggested note the person did not keep."
+  },
+  "askMemoryKeep": "Remember",
+  "@askMemoryKeep": {
+    "description": "Ask Pinky: the button that keeps a suggested note."
+  },
+  "askMemoryKept": "Remembered",
+  "@askMemoryKept": {
+    "description": "Ask Pinky: a suggested note the person kept."
+  },
+  "askMemoryTitle": "Remember for later tasks?",
+  "@askMemoryTitle": {
+    "description": "Ask Pinky: over the notes a finished task suggests keeping."
+  },
   "askTaskLimit": "Up to {limit} a task",
   "@askTaskLimit": {
     "description": "Ask Pinky, under the model's name next to Start: the cost limit of a task (askDollars or askTokens).",
@@ -2743,6 +2763,58 @@
   "companionNotNow": "Not now",
   "@companionNotNow": {
     "description": "The Pinky on the phone card: the quiet button that hides the card for this phone."
+  },
+  "memoryErrFull": "{count, plural, one {Memory keeps at most # note. Delete one first.} other {Memory keeps at most # notes. Delete one first.}}",
+  "@memoryErrFull": {
+    "description": "Why a note of Ask Pinky's memory was not saved: there are as many as it keeps.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "50"
+      }
+    }
+  },
+  "memoryErrLong": "{count, plural, one {A note has at most # character.} other {A note has at most # characters.}}",
+  "@memoryErrLong": {
+    "description": "Why a note of Ask Pinky's memory was not saved: it is too long.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "200"
+      }
+    }
+  },
+  "memoryErrSave": "Couldn't save: {error}",
+  "@memoryErrSave": {
+    "description": "Why a note of Ask Pinky's memory was not saved: the file could not be written.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "memoryErrSensitive": "Memory never keeps passwords, codes, card, account, ID or phone numbers, email or street addresses.",
+  "@memoryErrSensitive": {
+    "description": "Why a note of Ask Pinky's memory was not saved: it holds something memory never keeps."
+  },
+  "memoryFromYou": "From you",
+  "@memoryFromYou": {
+    "description": "Under a note of Ask Pinky's memory: the person said it in a task, or wrote it."
+  },
+  "memoryLearned": "Learned on a task",
+  "@memoryLearned": {
+    "description": "Under a note of Ask Pinky's memory: a way of doing something Pinky found on a task."
+  },
+  "memoryLearnedIn": "Learned in {app}",
+  "@memoryLearnedIn": {
+    "description": "Under a note of Ask Pinky's memory: a way of doing something in an app that Pinky found on a task.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Meituan"
+      }
+    }
   },
   "phoneTasksTitle": "Pinky on the phone can work by itself",
   "@phoneTasksTitle": {
@@ -9001,6 +9073,54 @@
   "settingsLanguageSystem": "System",
   "@settingsLanguageSystem": {
     "description": "Settings › Advanced › Language: the first choice, which follows the computer's preferred languages. The other choices name each language in itself (English, Simplified Chinese)."
+  },
+  "settingsMemory": "Memory",
+  "@settingsMemory": {
+    "description": "Settings › Agents: the heading of Ask Pinky's memory, and the label of the field that writes a note."
+  },
+  "settingsMemoryAdd": "Add…",
+  "@settingsMemoryAdd": {
+    "description": "Settings › Agents › Memory: the button that writes a new note."
+  },
+  "settingsMemoryDelete": "Delete",
+  "@settingsMemoryDelete": {
+    "description": "Settings › Agents › Memory: the button that deletes a note."
+  },
+  "settingsMemoryDeleteAll": "Delete All",
+  "@settingsMemoryDeleteAll": {
+    "description": "Settings › Agents › Memory: the button that deletes every note, and the confirming button of its dialog."
+  },
+  "settingsMemoryDeleteAllMessage": "Every note on this computer is deleted. The phones keep theirs.",
+  "@settingsMemoryDeleteAllMessage": {
+    "description": "Settings › Agents › Memory: the message of the dialog before Delete All."
+  },
+  "settingsMemoryDeleteAllTitle": "Delete all of Ask Pinky's memory?",
+  "@settingsMemoryDeleteAllTitle": {
+    "description": "Settings › Agents › Memory: the title of the dialog before Delete All."
+  },
+  "settingsMemoryEdit": "Edit",
+  "@settingsMemoryEdit": {
+    "description": "Settings › Agents › Memory: the button that changes a note's words."
+  },
+  "settingsMemoryEmpty": "Nothing yet. After a task, Pinky may suggest something to remember; you decide.",
+  "@settingsMemoryEmpty": {
+    "description": "Settings › Agents › Memory: in place of the list while there are no notes."
+  },
+  "settingsMemoryIntro": "What Ask Pinky remembers for its tasks on this computer: what you told it, and ways of doing things you said yes to after a task. Nothing is kept without your yes, and never passwords, codes, card or ID numbers, or addresses. The Pinky app on each phone keeps its own.",
+  "@settingsMemoryIntro": {
+    "description": "Settings › Agents: what Ask Pinky's memory is, under its heading."
+  },
+  "settingsMemoryOn": "Use memory",
+  "@settingsMemoryOn": {
+    "description": "Settings › Agents › Memory: the switch's title."
+  },
+  "settingsMemoryOnDesc": "Tasks read these notes and may suggest new ones. Turned off, the notes stay until you delete them.",
+  "@settingsMemoryOnDesc": {
+    "description": "Settings › Agents › Memory: the line under settingsMemoryOn."
+  },
+  "settingsMemoryPlaceholder": "For example: Prefers window seats",
+  "@settingsMemoryPlaceholder": {
+    "description": "Settings › Agents › Memory: the placeholder of the field that writes a note."
   },
   "settingsNeedsYou": "Needs you",
   "@settingsNeedsYou": {

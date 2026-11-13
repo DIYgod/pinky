@@ -26,6 +26,7 @@ type fakePilot struct {
 	status  map[string]pilot.Status
 	seq     int
 	cont    []string // the texts Continue was given
+	mem     *pilot.Memories
 }
 
 type fakeStart struct {
@@ -34,7 +35,43 @@ type fakeStart struct {
 	extra        pilot.Extra
 }
 
-func newFakePilot() *fakePilot { return &fakePilot{status: map[string]pilot.Status{}} }
+func newFakePilot() *fakePilot {
+	mem, _ := pilot.OpenMemories("")
+	return &fakePilot{status: map[string]pilot.Status{}, mem: mem}
+}
+
+func (f *fakePilot) Memories() *pilot.Memories { return f.mem }
+
+func (f *fakePilot) Keep(device string, i int) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.status[device]
+	if !ok || i < 0 || i >= len(s.Suggested) || s.Suggested[i].Decided() {
+		return pilot.ErrMemoryGone
+	}
+	sg := s.Suggested[i]
+	m, err := f.mem.Add(sg.Kind, sg.Text, sg.App)
+	if err != nil {
+		return err
+	}
+	s.Suggested = append([]pilot.Suggestion(nil), s.Suggested...)
+	s.Suggested[i].Kept = &m
+	f.status[device] = s
+	return nil
+}
+
+func (f *fakePilot) Drop(device string, i int) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.status[device]
+	if !ok || i < 0 || i >= len(s.Suggested) || s.Suggested[i].Decided() {
+		return pilot.ErrMemoryGone
+	}
+	s.Suggested = append([]pilot.Suggestion(nil), s.Suggested...)
+	s.Suggested[i].Dropped = true
+	f.status[device] = s
+	return nil
+}
 
 func (f *fakePilot) Start(cfg pilot.Config, device, task string) error {
 	return f.StartWith(cfg, device, task, pilot.Extra{})

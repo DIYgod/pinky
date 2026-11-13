@@ -716,8 +716,10 @@ func (a *app) settingsAgents(c *mg.Context) {
 	if len(rows) == 0 {
 		a.connectAgents(c)
 		a.askSettings(c)
+		a.memorySettings(c)
 	} else {
 		a.askSettings(c)
+		a.memorySettings(c)
 		a.connectAgents(c)
 	}
 	a.remoteAgents(c)

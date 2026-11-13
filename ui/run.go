@@ -148,6 +148,12 @@ type Pilot interface {
 	Edit(device, id, text string) error
 	Withdraw(device, id string) error
 	Continue(device, text string) error
+	// Keep and Drop decide a note the task on device suggested, by its
+	// index in Status.Suggested; Memories are the notes kept (nil when
+	// the runner keeps none).
+	Keep(device string, i int) error
+	Drop(device string, i int) error
+	Memories() *pilot.Memories
 }
 
 // PilotChecker is a Pilot that can check a model before a task, as
@@ -229,6 +235,9 @@ type Settings struct {
 	PilotMaxSteps   int
 	PilotMaxMinutes int
 	PilotMaxCost    float64
+	// PilotNoMemory keeps tasks from reading and suggesting the person's
+	// notes (Settings › Agents › Ask Pinky › Memory); the notes stay.
+	PilotNoMemory bool
 }
 
 // PilotConfig is the pilot.Config of the settings.
@@ -242,6 +251,7 @@ func (s Settings) PilotConfig() pilot.Config {
 	cfg := pilot.Config{
 		Service: svc, Model: s.pilotModel(svc), BaseURL: s.pilotURL(svc),
 		MaxSteps: s.PilotMaxSteps, MaxTime: time.Duration(s.PilotMaxMinutes) * time.Minute, MaxCost: s.PilotMaxCost,
+		NoMemory: s.PilotNoMemory,
 	}
 	return cfg.Normalize()
 }
@@ -463,6 +473,7 @@ type app struct {
 	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 	ask       askState       // Ask Pinky: the box at the top of Tasks, and its settings (ask.go)
 	sched     schedState     // Ask Pinky's scheduled tasks (schedules.go)
+	mem       memState       // Ask Pinky's notes, after a task and in its settings (memory.go)
 	rotate    rotateState    // Rotate in ⋯ under the mirror (rotate.go)
 
 	vit phoneVitalsState // phones' battery and storage (vitals.go)

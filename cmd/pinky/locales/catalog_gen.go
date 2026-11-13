@@ -4237,6 +4237,76 @@ func (msgs Messages) AskLimitTokens(count int) string {
 	return Catalog.Format(msgs.locale, "askLimitTokens", map[string]any{"count": count})
 }
 
+// AskMemoryDrop says "Don't"
+// in the language the app shows.
+//
+// Ask Pinky: the button that does not keep a suggested note.
+func AskMemoryDrop() string { return In(i18n.Locale()).AskMemoryDrop() }
+
+// AskMemoryDrop says "Don't"
+// in the language of msgs.
+//
+// Ask Pinky: the button that does not keep a suggested note.
+func (msgs Messages) AskMemoryDrop() string {
+	return Catalog.Format(msgs.locale, "askMemoryDrop", nil)
+}
+
+// AskMemoryDropped says "Not remembered"
+// in the language the app shows.
+//
+// Ask Pinky: a suggested note the person did not keep.
+func AskMemoryDropped() string { return In(i18n.Locale()).AskMemoryDropped() }
+
+// AskMemoryDropped says "Not remembered"
+// in the language of msgs.
+//
+// Ask Pinky: a suggested note the person did not keep.
+func (msgs Messages) AskMemoryDropped() string {
+	return Catalog.Format(msgs.locale, "askMemoryDropped", nil)
+}
+
+// AskMemoryKeep says "Remember"
+// in the language the app shows.
+//
+// Ask Pinky: the button that keeps a suggested note.
+func AskMemoryKeep() string { return In(i18n.Locale()).AskMemoryKeep() }
+
+// AskMemoryKeep says "Remember"
+// in the language of msgs.
+//
+// Ask Pinky: the button that keeps a suggested note.
+func (msgs Messages) AskMemoryKeep() string {
+	return Catalog.Format(msgs.locale, "askMemoryKeep", nil)
+}
+
+// AskMemoryKept says "Remembered"
+// in the language the app shows.
+//
+// Ask Pinky: a suggested note the person kept.
+func AskMemoryKept() string { return In(i18n.Locale()).AskMemoryKept() }
+
+// AskMemoryKept says "Remembered"
+// in the language of msgs.
+//
+// Ask Pinky: a suggested note the person kept.
+func (msgs Messages) AskMemoryKept() string {
+	return Catalog.Format(msgs.locale, "askMemoryKept", nil)
+}
+
+// AskMemoryTitle says "Remember for later tasks?"
+// in the language the app shows.
+//
+// Ask Pinky: over the notes a finished task suggests keeping.
+func AskMemoryTitle() string { return In(i18n.Locale()).AskMemoryTitle() }
+
+// AskMemoryTitle says "Remember for later tasks?"
+// in the language of msgs.
+//
+// Ask Pinky: over the notes a finished task suggests keeping.
+func (msgs Messages) AskMemoryTitle() string {
+	return Catalog.Format(msgs.locale, "askMemoryTitle", nil)
+}
+
 // AskTaskLimit says "Up to {limit} a task"
 // in the language the app shows.
 //
@@ -8345,6 +8415,116 @@ func CompanionNotNow() string { return In(i18n.Locale()).CompanionNotNow() }
 // this phone.
 func (msgs Messages) CompanionNotNow() string {
 	return Catalog.Format(msgs.locale, "companionNotNow", nil)
+}
+
+// MemoryErrFull says "{count, plural, one {Memory keeps at most # note. Delete one first.} other {Memory keeps at most # notes. Delete one …"
+// in the language the app shows.
+//
+// Why a note of Ask Pinky's memory was not saved: there are as many as it
+// keeps.
+func MemoryErrFull(count int) string { return In(i18n.Locale()).MemoryErrFull(count) }
+
+// MemoryErrFull says "{count, plural, one {Memory keeps at most # note. Delete one first.} other {Memory keeps at most # notes. Delete one …"
+// in the language of msgs.
+//
+// Why a note of Ask Pinky's memory was not saved: there are as many as it
+// keeps.
+func (msgs Messages) MemoryErrFull(count int) string {
+	return Catalog.Format(msgs.locale, "memoryErrFull", map[string]any{"count": count})
+}
+
+// MemoryErrLong says "{count, plural, one {A note has at most # character.} other {A note has at most # characters.}}"
+// in the language the app shows.
+//
+// Why a note of Ask Pinky's memory was not saved: it is too long.
+func MemoryErrLong(count int) string { return In(i18n.Locale()).MemoryErrLong(count) }
+
+// MemoryErrLong says "{count, plural, one {A note has at most # character.} other {A note has at most # characters.}}"
+// in the language of msgs.
+//
+// Why a note of Ask Pinky's memory was not saved: it is too long.
+func (msgs Messages) MemoryErrLong(count int) string {
+	return Catalog.Format(msgs.locale, "memoryErrLong", map[string]any{"count": count})
+}
+
+// MemoryErrSave says "Couldn't save: {error}"
+// in the language the app shows.
+//
+// Why a note of Ask Pinky's memory was not saved: the file could not be
+// written.
+func MemoryErrSave(error string) string { return In(i18n.Locale()).MemoryErrSave(error) }
+
+// MemoryErrSave says "Couldn't save: {error}"
+// in the language of msgs.
+//
+// Why a note of Ask Pinky's memory was not saved: the file could not be
+// written.
+func (msgs Messages) MemoryErrSave(error string) string {
+	return Catalog.Format(msgs.locale, "memoryErrSave", map[string]any{"error": error})
+}
+
+// MemoryErrSensitive says "Memory never keeps passwords, codes, card, account, ID or phone numbers, email or street addresses."
+// in the language the app shows.
+//
+// Why a note of Ask Pinky's memory was not saved: it holds something memory
+// never keeps.
+func MemoryErrSensitive() string { return In(i18n.Locale()).MemoryErrSensitive() }
+
+// MemoryErrSensitive says "Memory never keeps passwords, codes, card, account, ID or phone numbers, email or street addresses."
+// in the language of msgs.
+//
+// Why a note of Ask Pinky's memory was not saved: it holds something memory
+// never keeps.
+func (msgs Messages) MemoryErrSensitive() string {
+	return Catalog.Format(msgs.locale, "memoryErrSensitive", nil)
+}
+
+// MemoryFromYou says "From you"
+// in the language the app shows.
+//
+// Under a note of Ask Pinky's memory: the person said it in a task, or
+// wrote it.
+func MemoryFromYou() string { return In(i18n.Locale()).MemoryFromYou() }
+
+// MemoryFromYou says "From you"
+// in the language of msgs.
+//
+// Under a note of Ask Pinky's memory: the person said it in a task, or
+// wrote it.
+func (msgs Messages) MemoryFromYou() string {
+	return Catalog.Format(msgs.locale, "memoryFromYou", nil)
+}
+
+// MemoryLearned says "Learned on a task"
+// in the language the app shows.
+//
+// Under a note of Ask Pinky's memory: a way of doing something Pinky found
+// on a task.
+func MemoryLearned() string { return In(i18n.Locale()).MemoryLearned() }
+
+// MemoryLearned says "Learned on a task"
+// in the language of msgs.
+//
+// Under a note of Ask Pinky's memory: a way of doing something Pinky found
+// on a task.
+func (msgs Messages) MemoryLearned() string {
+	return Catalog.Format(msgs.locale, "memoryLearned", nil)
+}
+
+// MemoryLearnedIn says "Learned in {app}"
+// in the language the app shows.
+//
+// Under a note of Ask Pinky's memory: a way of doing something in an app
+// that Pinky found on a task.
+func MemoryLearnedIn(app string) string { return In(i18n.Locale()).MemoryLearnedIn(app) }
+
+// MemoryLearnedIn says "Learned in {app}"
+// in the language of msgs.
+//
+// Under a note of Ask Pinky's memory: a way of doing something in an app
+// that Pinky found on a task.
+func (msgs Messages) MemoryLearnedIn(app string) string {
+	return Catalog.Format(msgs.locale, "memoryLearnedIn", map[string]any{"app": app})
 }
 
 // PhoneTasksTitle says "Pinky on the phone can work by itself"
@@ -24389,6 +24569,188 @@ func SettingsLanguageSystem() string { return In(i18n.Locale()).SettingsLanguage
 // itself (English, Simplified Chinese).
 func (msgs Messages) SettingsLanguageSystem() string {
 	return Catalog.Format(msgs.locale, "settingsLanguageSystem", nil)
+}
+
+// SettingsMemory says "Memory"
+// in the language the app shows.
+//
+// Settings › Agents: the heading of Ask Pinky's memory, and the label of
+// the field that writes a note.
+func SettingsMemory() string { return In(i18n.Locale()).SettingsMemory() }
+
+// SettingsMemory says "Memory"
+// in the language of msgs.
+//
+// Settings › Agents: the heading of Ask Pinky's memory, and the label of
+// the field that writes a note.
+func (msgs Messages) SettingsMemory() string {
+	return Catalog.Format(msgs.locale, "settingsMemory", nil)
+}
+
+// SettingsMemoryAdd says "Add…"
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the button that writes a new note.
+func SettingsMemoryAdd() string { return In(i18n.Locale()).SettingsMemoryAdd() }
+
+// SettingsMemoryAdd says "Add…"
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the button that writes a new note.
+func (msgs Messages) SettingsMemoryAdd() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryAdd", nil)
+}
+
+// SettingsMemoryDelete says "Delete"
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the button that deletes a note.
+func SettingsMemoryDelete() string { return In(i18n.Locale()).SettingsMemoryDelete() }
+
+// SettingsMemoryDelete says "Delete"
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the button that deletes a note.
+func (msgs Messages) SettingsMemoryDelete() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryDelete", nil)
+}
+
+// SettingsMemoryDeleteAll says "Delete All"
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the button that deletes every note, and
+// the confirming button of its dialog.
+func SettingsMemoryDeleteAll() string { return In(i18n.Locale()).SettingsMemoryDeleteAll() }
+
+// SettingsMemoryDeleteAll says "Delete All"
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the button that deletes every note, and
+// the confirming button of its dialog.
+func (msgs Messages) SettingsMemoryDeleteAll() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryDeleteAll", nil)
+}
+
+// SettingsMemoryDeleteAllMessage says "Every note on this computer is deleted. The phones keep theirs."
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the message of the dialog before Delete
+// All.
+func SettingsMemoryDeleteAllMessage() string {
+	return In(i18n.Locale()).SettingsMemoryDeleteAllMessage()
+}
+
+// SettingsMemoryDeleteAllMessage says "Every note on this computer is deleted. The phones keep theirs."
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the message of the dialog before Delete
+// All.
+func (msgs Messages) SettingsMemoryDeleteAllMessage() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryDeleteAllMessage", nil)
+}
+
+// SettingsMemoryDeleteAllTitle says "Delete all of Ask Pinky's memory?"
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the title of the dialog before Delete
+// All.
+func SettingsMemoryDeleteAllTitle() string { return In(i18n.Locale()).SettingsMemoryDeleteAllTitle() }
+
+// SettingsMemoryDeleteAllTitle says "Delete all of Ask Pinky's memory?"
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the title of the dialog before Delete
+// All.
+func (msgs Messages) SettingsMemoryDeleteAllTitle() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryDeleteAllTitle", nil)
+}
+
+// SettingsMemoryEdit says "Edit"
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the button that changes a note's words.
+func SettingsMemoryEdit() string { return In(i18n.Locale()).SettingsMemoryEdit() }
+
+// SettingsMemoryEdit says "Edit"
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the button that changes a note's words.
+func (msgs Messages) SettingsMemoryEdit() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryEdit", nil)
+}
+
+// SettingsMemoryEmpty says "Nothing yet. After a task, Pinky may suggest something to remember; you decide."
+// in the language the app shows.
+//
+// Settings › Agents › Memory: in place of the list while there are no
+// notes.
+func SettingsMemoryEmpty() string { return In(i18n.Locale()).SettingsMemoryEmpty() }
+
+// SettingsMemoryEmpty says "Nothing yet. After a task, Pinky may suggest something to remember; you decide."
+// in the language of msgs.
+//
+// Settings › Agents › Memory: in place of the list while there are no
+// notes.
+func (msgs Messages) SettingsMemoryEmpty() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryEmpty", nil)
+}
+
+// SettingsMemoryIntro says "What Ask Pinky remembers for its tasks on this computer: what you told it, and ways of doing things you said yes to a…"
+// in the language the app shows.
+//
+// Settings › Agents: what Ask Pinky's memory is, under its heading.
+func SettingsMemoryIntro() string { return In(i18n.Locale()).SettingsMemoryIntro() }
+
+// SettingsMemoryIntro says "What Ask Pinky remembers for its tasks on this computer: what you told it, and ways of doing things you said yes to a…"
+// in the language of msgs.
+//
+// Settings › Agents: what Ask Pinky's memory is, under its heading.
+func (msgs Messages) SettingsMemoryIntro() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryIntro", nil)
+}
+
+// SettingsMemoryOn says "Use memory"
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the switch's title.
+func SettingsMemoryOn() string { return In(i18n.Locale()).SettingsMemoryOn() }
+
+// SettingsMemoryOn says "Use memory"
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the switch's title.
+func (msgs Messages) SettingsMemoryOn() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryOn", nil)
+}
+
+// SettingsMemoryOnDesc says "Tasks read these notes and may suggest new ones. Turned off, the notes stay until you delete them."
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the line under settingsMemoryOn.
+func SettingsMemoryOnDesc() string { return In(i18n.Locale()).SettingsMemoryOnDesc() }
+
+// SettingsMemoryOnDesc says "Tasks read these notes and may suggest new ones. Turned off, the notes stay until you delete them."
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the line under settingsMemoryOn.
+func (msgs Messages) SettingsMemoryOnDesc() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryOnDesc", nil)
+}
+
+// SettingsMemoryPlaceholder says "For example: Prefers window seats"
+// in the language the app shows.
+//
+// Settings › Agents › Memory: the placeholder of the field that writes
+// a note.
+func SettingsMemoryPlaceholder() string { return In(i18n.Locale()).SettingsMemoryPlaceholder() }
+
+// SettingsMemoryPlaceholder says "For example: Prefers window seats"
+// in the language of msgs.
+//
+// Settings › Agents › Memory: the placeholder of the field that writes
+// a note.
+func (msgs Messages) SettingsMemoryPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsMemoryPlaceholder", nil)
 }
 
 // SettingsNeedsYou says "Needs you"

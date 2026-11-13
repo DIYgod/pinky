@@ -479,6 +479,7 @@ func (a *app) askEnded(c *mg.Context, s pilot.Status) {
 		if s.By != "" {
 			mg.Text(c, locales.AskByAgent(s.By)).FontSize(fsCaption).TextColor(p.ink3)
 		}
+		a.askSuggestions(c, s)
 	})
 	if !s.Continuable {
 		return

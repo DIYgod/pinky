@@ -140,7 +140,13 @@ func runApp(args []string) error {
 	go refreshSkills(c.Log)
 	gatewaySettings(&settings, rg)
 	// Ask Pinky: Pinky's own agent, a client of the same MCP server as
-	// any agent. Its API keys stay in the keychain until a task starts.
+	// any agent. Its API keys stay in the keychain until a task starts;
+	// the notes the person keeps for it are this computer's own.
+	memories, err := pilot.OpenMemories(filepath.Join(dirs.Data, "memory.json"))
+	if err != nil {
+		c.Log.Error("memory", "err", err)
+		memories, _ = pilot.OpenMemories("")
+	}
 	ask := pilot.New(pilot.Options{
 		Server:  rg.MCP,
 		Version: version,
@@ -149,7 +155,12 @@ func runApp(args []string) error {
 		},
 		Describe: ui.DescribePilot,
 		// What it used, by day, service and model, on this computer only.
-		Usage: pilot.OpenUsage(filepath.Join(dirs.Data, "model-usage.json")),
+		Usage:    pilot.OpenUsage(filepath.Join(dirs.Data, "model-usage.json")),
+		Memories: memories,
+		Blocked: func(a screen.App) bool {
+			_, blocked := rg.Policy.Blocked(a)
+			return blocked
+		},
 	})
 	defer ask.Close()
 	// Agents may hand Pinky's own agent a whole task (phone_task_run),
