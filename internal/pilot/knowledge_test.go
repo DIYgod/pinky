@@ -430,6 +430,104 @@ func TestAgentTaskNotes(t *testing.T) {
 	}
 }
 
+// A scheduled task reads the notes and gets guides like any other. While
+// nobody watches it may still suggest notes, but they wait for the person
+// on the ended task: none is kept until the person keeps it.
+func TestScheduledNotes(t *testing.T) {
+	h := newHarness(t)
+	mem, _ := OpenMemories("")
+	mem.Add(Said, "Likes results rounded to two decimals", "")
+	h.r.opt.Memories = mem
+	h.api.turns = []func(string, *http.Request) any{
+		func(first string, _ *http.Request) any {
+			notes := strings.Index(first, "<notes>\n- Likes results rounded to two decimals\n</notes>")
+			cond := strings.Index(first, "<condition>\nit is over 10\n</condition>")
+			if notes < 0 || cond < 0 {
+				t.Errorf("first message without the notes or the condition:\n%s", first)
+			}
+			return message("tool_use", 1000,
+				use("r1", rememberName, map[string]any{"kind": "said", "text": "Tracks the tip in Calculator", "quote": "tip in calculator"}),
+				use("l1", "phone_launch", map[string]any{"app": "Calculator"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000,
+				use("r2", rememberName, map[string]any{"kind": "learned", "text": "Clear with AC before a new sum"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000, use("f", finishName, map[string]any{
+				"outcome": "done", "summary": "It is 12.", conditionMet: true}))
+		},
+	}
+	if err := h.r.StartScheduled(Config{}, "pixel", "Work out the tip in calculator", Scheduled{Unattended: true, Condition: "it is over 10"}); err != nil {
+		t.Fatal(err)
+	}
+	st := h.wait(t)
+	if st.End != Done || st.Scheduled == nil || len(st.Suggested) != 2 || st.Suggested[0].Text != "Tracks the tip in Calculator" {
+		t.Fatalf("status: %+v", st)
+	}
+	results := toolResults(h)
+	for _, id := range []string{"r1", "r2"} {
+		if !strings.HasPrefix(results[id], "settled\nSuggested.") {
+			t.Errorf("%s: %q", id, results[id])
+		}
+	}
+	reqs := h.api.requests()
+	g, _ := guides.For("com.google.android.calculator", "")
+	if n := strings.Count(reqs[len(reqs)-1].raw, g.Body[:40]); n != 1 {
+		t.Errorf("the guide is in the conversation %d times", n)
+	}
+	if l := mem.List(); len(l) != 1 {
+		t.Fatalf("a suggestion was kept without the person: %+v", l)
+	}
+	if err := h.r.Keep("pixel", 1); err != nil {
+		t.Fatal(err)
+	}
+	if l := mem.List(); len(l) != 2 {
+		t.Fatalf("notes: %+v", l)
+	}
+}
+
+// What a quick entry brings along (the screen, shared text and pictures)
+// follows the notes in the first message, and is not the person's words: a
+// said note's quote comes only from what they typed.
+func TestExtraNotes(t *testing.T) {
+	h := newHarness(t)
+	mem, _ := OpenMemories("")
+	mem.Add(Said, "Likes results rounded to two decimals", "")
+	h.r.opt.Memories = mem
+	h.api.turns = []func(string, *http.Request) any{
+		func(first string, _ *http.Request) any {
+			notes := strings.Index(first, "</notes>")
+			screen := strings.Index(first, "what their phone shows right now")
+			shared := strings.Index(first, "<shared>\nAlways tips at Luigi's\n</shared>")
+			if notes < 0 || screen < notes || shared < notes {
+				t.Errorf("the notes do not come before what was shared:\n%s", first)
+			}
+			return message("tool_use", 1000,
+				use("r1", rememberName, map[string]any{"kind": "said", "text": "Tips at Luigi's", "quote": "always tips at luigi's"}),
+				use("r2", rememberName, map[string]any{"kind": "said", "text": "Splits the bill", "quote": "split the bill"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000, use("f", finishName, map[string]any{"outcome": "done", "summary": "Split it."}))
+		},
+	}
+	x := Extra{Screen: true, Shared: "Always tips at Luigi's"}
+	if err := h.r.StartWith(Config{}, "pixel", "Split the bill", x); err != nil {
+		t.Fatal(err)
+	}
+	st := h.wait(t)
+	if st.End != Done || len(st.Suggested) != 1 || st.Suggested[0].Text != "Splits the bill" {
+		t.Fatalf("status: %+v", st)
+	}
+	results := toolResults(h)
+	if r := results["r1"]; !strings.HasPrefix(r, "error: refused\nA said note needs the person's own words") {
+		t.Errorf("r1: %q", r)
+	}
+	if r := results["r2"]; !strings.HasPrefix(r, "settled\nSuggested.") {
+		t.Errorf("r2: %q", r)
+	}
+}
+
 // With notes turned off, the task neither reads nor suggests them.
 func TestTaskWithoutNotes(t *testing.T) {
 	h := newHarness(t)
