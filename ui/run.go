@@ -56,7 +56,8 @@ type Options struct {
 	Settings   *Settings
 	OnSettings func(old, s Settings)
 	// GatewaySettings reads again what the gateway keeps of Settings ›
-	// Safety (Preset, HideCodes, ReadOnly and BlockedApps), which hand
+	// Safety (Preset, HideCodes, VirtualCredentials, ReadOnly and
+	// BlockedApps), which hand
 	// edits of rules.yaml and apps.yaml change while Pinky runs. since is
 	// the version of the policy it returned last, -1 at first; ok is false
 	// while the policy is still at it. The client calls it off the main
@@ -176,6 +177,9 @@ type Settings struct {
 	ReadOnly           bool
 	UnlockFromComputer bool
 	HideCodes          bool
+	// VirtualCredentials lets agents type passwords and one-time codes on
+	// virtual phones (policy.File.VirtualCredentials).
+	VirtualCredentials bool
 	KeepDays           int
 	Record             bool
 	DeveloperMode      bool

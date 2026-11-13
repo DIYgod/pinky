@@ -1603,6 +1603,8 @@
   "settingsSafetyBlockedIntro": "エージェントはこれらのアプリを開けず、画面も通知も見られません。",
   "settingsSafetyHideCodes": "エージェントからコードを隠す",
   "settingsSafetyHideCodesDesc": "画面上と通知内のワンタイムコードは、エージェントが読む前に伏せ字にし、スクリーンショットでも隠します。録画ではそのまま見えるため、エージェントに渡すのはあなたが許可したときだけです。",
+  "settingsSafetyVirtualCredentials": "仮想スマホでのパスワード入力を許可",
+  "settingsSafetyVirtualCredentialsDesc": "このパソコン上のエミュレーターとシミュレーターでは、テスト用アカウントでのログインを試せるよう、エージェントがパスワードとワンタイムコードを入力できます。実機のスマホでは入力できません。",
   "settingsSafetyIntro": "Pinky は操作がスマホに届く前に確認を行います。エージェントはこれらの設定を変更できません。",
   "settingsSafetyKindBanking": "銀行",
   "settingsSafetyKindBrowsers": "ブラウザ",

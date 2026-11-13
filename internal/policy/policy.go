@@ -116,6 +116,9 @@ type Input struct {
 	ScopeApps []string
 	// ReadOnly forces read-only mode, for agents whose scope is read-only.
 	ReadOnly bool
+	// Virtual is set for a virtual phone, an emulator or a Simulator on this
+	// computer (File.VirtualCredentials).
+	Virtual bool
 	// AllowBlocked is set when the person allowed the app for the task
 	// although a rule blocks it (a finance app, or one they blocked): rules
 	// that block whole apps do not apply to it. Every other rule still

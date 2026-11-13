@@ -26491,6 +26491,44 @@ func (msgs Messages) SettingsSafetyHideCodesDesc() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyHideCodesDesc", nil)
 }
 
+// SettingsSafetyVirtualCredentials says "Allow passwords on virtual phones"
+// in the language the app shows.
+//
+// Settings › Safety: the switch that lets agents type passwords and
+// one-time codes on virtual phones (emulators and Simulators on this
+// computer). Off by default.
+func SettingsSafetyVirtualCredentials() string {
+	return In(i18n.Locale()).SettingsSafetyVirtualCredentials()
+}
+
+// SettingsSafetyVirtualCredentials says "Allow passwords on virtual phones"
+// in the language of msgs.
+//
+// Settings › Safety: the switch that lets agents type passwords and
+// one-time codes on virtual phones (emulators and Simulators on this
+// computer). Off by default.
+func (msgs Messages) SettingsSafetyVirtualCredentials() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyVirtualCredentials", nil)
+}
+
+// SettingsSafetyVirtualCredentialsDesc says "Agents may type passwords and one-time codes on emulators and Simulators on this computer, to test sign-ins with test…"
+// in the language the app shows.
+//
+// Settings › Safety: the line under Allow passwords on virtual phones.
+// Phones means real phones, as opposed to virtual ones.
+func SettingsSafetyVirtualCredentialsDesc() string {
+	return In(i18n.Locale()).SettingsSafetyVirtualCredentialsDesc()
+}
+
+// SettingsSafetyVirtualCredentialsDesc says "Agents may type passwords and one-time codes on emulators and Simulators on this computer, to test sign-ins with test…"
+// in the language of msgs.
+//
+// Settings › Safety: the line under Allow passwords on virtual phones.
+// Phones means real phones, as opposed to virtual ones.
+func (msgs Messages) SettingsSafetyVirtualCredentialsDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyVirtualCredentialsDesc", nil)
+}
+
 // SettingsSafetyIntro says "Pinky checks every action before it reaches the phone. Agents can't change these settings."
 // in the language the app shows.
 //

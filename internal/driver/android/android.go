@@ -562,7 +562,9 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 		Model:      strings.ReplaceAll(e.Model, "_", " "),
 		Connection: "usb",
 		Backend:    "scrcpy",
-		Virtual:    emulatorSerial(e.Serial),
+		// An emulator on this computer is no USB device: a phone on a cable
+		// whose serial reads like one is still a phone.
+		Virtual: emulatorSerial(e.Serial) && e.USB == "",
 	}
 	if e.Wireless() {
 		info.Connection = "wifi"
