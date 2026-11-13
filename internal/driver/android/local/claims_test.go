@@ -331,3 +331,48 @@ func TestClaims(t *testing.T) {
 		t.Fatalf("StopComputer after a quiet restart: %v", err)
 	}
 }
+
+// A request that finds its subscription dead waits for the next one while
+// it holds the claims lock, so Watch must not wait on that lock to go on
+// with a subscription it just opened (a 5 s stall, then "does not answer",
+// when Stop on the pill came right after the service restarted).
+func TestClaimsRequestWhileWatchReclaims(t *testing.T) {
+	app := newFakeApp(t)
+	cl := newClaims(companion.NewFor(app, companion.Release))
+	cl.retry = 10 * time.Millisecond
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		cl.Watch(ctx, func() {}, func() {})
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
+	sub := func() *companion.Subscription {
+		cl.mu.Lock()
+		defer cl.mu.Unlock()
+		return cl.sub
+	}
+	eventually(t, "Watch subscribes", func() bool { return sub() != nil })
+	first := sub()
+
+	// A request holds the lock while the service restarts: Watch opens a
+	// new subscription and wants the lock to make the core's claim again.
+	cl.op.Lock()
+	defer cl.op.Unlock()
+	app.restart(nil)
+	eventually(t, "Watch subscribes again", func() bool { s := sub(); return s != nil && s != first })
+	app.restartQuietly()
+
+	rctx, rcancel := context.WithTimeout(ctx, 2*time.Second)
+	defer rcancel()
+	err := cl.request(rctx, func(s *companion.Subscription) error {
+		_, err := s.StopClaim(rctx)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("a request while Watch reclaims: %v", err)
+	}
+}

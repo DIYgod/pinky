@@ -58,9 +58,13 @@ func (c *Claims) Watch(ctx context.Context, changed, lost func()) {
 		c.sub = sub
 		close(c.ready)
 		c.mu.Unlock()
-		if !c.reclaim(ctx, sub) {
-			go lost()
-		}
+		// Reclaim beside the loop: a request that holds c.op while it
+		// waits for the next subscription must not wait on this one.
+		go func(sub *companion.Subscription) {
+			if !c.reclaim(ctx, sub) && ctx.Err() == nil {
+				lost()
+			}
+		}(sub)
 		for ev := range sub.C() {
 			if ev.Kind != companion.EventClaim {
 				continue
@@ -81,14 +85,15 @@ func (c *Claims) Watch(ctx context.Context, changed, lost func()) {
 }
 
 // reclaim makes the claim the core held on a new subscription; false when
-// that failed and the claim is gone.
+// that failed and the claim is gone. A subscription that already ended
+// leaves it to the next one.
 func (c *Claims) reclaim(ctx context.Context, sub *companion.Subscription) bool {
 	c.op.Lock()
 	defer c.op.Unlock()
 	c.mu.Lock()
-	held, task := c.held, c.task
+	held, task, current := c.held, c.task, c.sub == sub
 	c.mu.Unlock()
-	if !held {
+	if !held || !current {
 		return true
 	}
 	if err := sub.Claim(ctx, companion.ByPhone, task); err != nil {
