@@ -91,7 +91,7 @@ func (a *app) webMirrorSettings(c *mg.Context) {
 			}
 			mg.Row(c).Gap(sp2).AlignItems(mg.Start).Padding(10, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).Margin(0, sp4, sp2, sp4).
 				Children(func() {
-					mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber)
+					mg.Icon(c, icAlert).FontSize(iconBody).TextColor(p.amber)
 					mg.Text(c, locales.WebMirrorWarning()).FontSize(fsSmall).LineHeight(1.4).Grow(1).MinWidth(0)
 				})
 			tn := a.webMirrorTailnet(c, wm)
@@ -105,7 +105,7 @@ func (a *app) webMirrorSettings(c *mg.Context) {
 			if st.WebMirrorControl {
 				mg.Row(c).Gap(sp2).AlignItems(mg.Start).Padding(10, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).Margin(0, sp4, sp2, sp4).
 					Children(func() {
-						mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber)
+						mg.Icon(c, icAlert).FontSize(iconBody).TextColor(p.amber)
 						mg.Text(c, locales.WebMirrorControlWarning()).FontSize(fsSmall).LineHeight(1.4).Grow(1).MinWidth(0)
 					})
 				a.webMirrorLinks(c.Key("control"), tn, wm.ControlToken(), locales.WebMirrorControlLink(), locales.WebMirrorControlTailnetLink(),
@@ -218,7 +218,7 @@ func (a *app) webMirrorBadge(c *mg.Context, device string) {
 	p := pal(c)
 	mg.Row(c).Gap(3).AlignItems(mg.Center).Padding(1, 6).Radius(99).Background(p.amberTint).TextColor(p.amber).
 		Tooltip(text).Label(text).Children(func() {
-		mg.Icon(c, ic).FontSize(12)
+		mg.Icon(c, ic).FontSize(iconMicro)
 		mg.Text(c, strconv.Itoa(n)).FontSize(fsCaption).FontWeight(fwMedium)
 	})
 }

@@ -29533,18 +29533,40 @@ func (msgs Messages) UpdateAgoNow() string {
 	return Catalog.Format(msgs.locale, "updateAgoNow", nil)
 }
 
-// UpdateAvailable says "Pinky {version} is available"
+// UpdateAvailableTitle says "New version available"
 // in the language the app shows.
 //
-// The update card's title when a newer version is out.
-func UpdateAvailable(version string) string { return In(i18n.Locale()).UpdateAvailable(version) }
+// The update card's title in the sidebar when a newer version is out; the
+// version shows on the line under it (updateAvailableVersion). Keep it
+// short: the card is about 190 points wide.
+func UpdateAvailableTitle() string { return In(i18n.Locale()).UpdateAvailableTitle() }
 
-// UpdateAvailable says "Pinky {version} is available"
+// UpdateAvailableTitle says "New version available"
 // in the language of msgs.
 //
-// The update card's title when a newer version is out.
-func (msgs Messages) UpdateAvailable(version string) string {
-	return Catalog.Format(msgs.locale, "updateAvailable", map[string]any{"version": version})
+// The update card's title in the sidebar when a newer version is out; the
+// version shows on the line under it (updateAvailableVersion). Keep it
+// short: the card is about 190 points wide.
+func (msgs Messages) UpdateAvailableTitle() string {
+	return Catalog.Format(msgs.locale, "updateAvailableTitle", nil)
+}
+
+// UpdateAvailableVersion says "Pinky {version}"
+// in the language the app shows.
+//
+// The line under the update card's title (updateAvailableTitle): the app's
+// name and the new version.
+func UpdateAvailableVersion(version string) string {
+	return In(i18n.Locale()).UpdateAvailableVersion(version)
+}
+
+// UpdateAvailableVersion says "Pinky {version}"
+// in the language of msgs.
+//
+// The line under the update card's title (updateAvailableTitle): the app's
+// name and the new version.
+func (msgs Messages) UpdateAvailableVersion(version string) string {
+	return Catalog.Format(msgs.locale, "updateAvailableVersion", map[string]any{"version": version})
 }
 
 // UpdateBusyControl says "you control {phone}"

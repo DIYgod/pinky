@@ -461,7 +461,7 @@ func (a *app) askEnded(c *mg.Context, s pilot.Status) {
 		mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
 			switch s.End {
 			case pilot.Done:
-				mg.Icon(c, icCheck).FontSize(16).TextColor(p.green)
+				mg.Icon(c, icCheck).FontSize(iconBody).TextColor(p.green)
 			case pilot.Stopped:
 				dot(c, p.ink3, false)
 			default:
@@ -652,7 +652,7 @@ func (a *app) askKeyRow(c *mg.Context, cfg pilot.Config, svc pilot.Service) {
 		mg.Row(c).Gap(sp2).AlignItems(mg.Center).Shrink(0).Children(func() {
 			if has {
 				mg.Row(c).Gap(6).AlignItems(mg.Center).Margin(0, sp1, 0, 0).Children(func() {
-					mg.Icon(c, icLock).FontSize(14).TextColor(p.ink2)
+					mg.Icon(c, icLock).FontSize(iconSmall).TextColor(p.ink2)
 					mg.Text(c, locales.SettingsAskKeySaved()).FontSize(fsSmall).TextColor(p.ink2)
 				})
 				if button(c, locales.SettingsChange(), btnOpt{small: true}).Label(locales.SettingsAskKeyChange()).Clicked() {
@@ -890,7 +890,7 @@ func (a *app) askCheckRow(c *mg.Context, cfg pilot.Config) {
 	mg.Column(c).Gap(2).Margin(0, sp4, sp2, sp4).Role(mg.RoleStatus).Children(func() {
 		mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 			if res.OK {
-				mg.Icon(c, icCheck).FontSize(14).TextColor(p.green)
+				mg.Icon(c, icCheck).FontSize(iconSmall).TextColor(p.green)
 				mg.Text(c, checkText(*res)).FontSize(fsSmall).LineHeight(1.4).Grow(1).MinWidth(0)
 				return
 			}

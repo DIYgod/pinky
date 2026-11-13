@@ -561,7 +561,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 				pill.Padding(6, 10).Gap(6)
 			}
 			pill.Children(func() {
-				mg.Icon(c, icLock).FontSize(16)
+				mg.Icon(c, icLock).FontSize(iconBody)
 				label := locales.MirrorLocked(d.Info.Name)
 				if tile {
 					label = locales.MirrorLockedTile()
@@ -577,7 +577,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			})
 		case m.state == "failed":
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(8).Padding(20).PassThrough().Children(func() {
-				mg.Icon(c, icAlert).FontSize(22).TextColor(hex("#f7a74e"))
+				mg.Icon(c, icAlert).FontSize(iconBig).TextColor(hex("#f7a74e"))
 				if !tile {
 					mg.Text(c, mirrorError(m.err)).FontSize(fsSmall).TextColor(hex("#d0d0d8")).TextAlign(mg.Center).MaxWidth(240)
 				}
