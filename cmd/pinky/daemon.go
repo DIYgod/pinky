@@ -19,7 +19,9 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/mcp"
+	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/internal/telemetry"
 	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/internal/webmirror"
@@ -156,6 +158,9 @@ type runningGateway struct {
 	// Mirror shows the phones in a web browser while the web mirror is on.
 	Mirror *webMirror
 
+	// ask is Pinky's built-in agent (Ask Pinky), shared by the UI, the
+	// phone_ask tool and the control "ask" method.
+	ask *pilot.Runner
 	ln  net.Listener
 	srv *api.Server
 	log *slog.Logger
@@ -217,9 +222,57 @@ func startGateway(c gatewayConfig) (*runningGateway, error) {
 	}
 	m := mcp.New(g, version)
 	srv := &api.Server{Gateway: g, MCP: m, Token: tok, Trusted: c.Fake, Version: version, Log: log}
+	// Ask Pinky: Pinky's own agent, a client of the same MCP server. It
+	// drives the phone itself with the person's chosen model; phone_ask and
+	// the control "ask" method run it to completion and return the outcome.
+	ask := pilot.New(pilot.Options{
+		Server:  m,
+		Version: version,
+		Key: func(ctx context.Context, provider string) (string, error) {
+			return secret.Get(ctx, secret.System(), secret.ModelKeyAccount(provider))
+		},
+		Describe: ui.DescribePilot,
+	})
+	askFn := askRunner(ask, g, filepath.Join(dirs.Config, "settings.json"), log)
+	m.Ask, srv.Ask = askFn, askFn
 	log.Info("gateway ready", "socket", dirs.Socket(), "data", dataDir, "devices", len(g.Devices()), "fake", c.Fake, "pid", os.Getpid())
 	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, Remote: newRemoteAgents(m, tok, log), MCP: m,
-		Mirror: newWebMirror(g, log), ln: ln, srv: srv, log: log}, nil
+		Mirror: newWebMirror(g, log), ask: ask, ln: ln, srv: srv, log: log}, nil
+}
+
+// askRunner wraps the pilot Runner as an mcp.AskFunc: it starts a task with
+// the saved Ask Pinky settings and waits until it ends.
+func askRunner(ask *pilot.Runner, g *gateway.Gateway, settingsPath string, log *slog.Logger) mcp.AskFunc {
+	return func(ctx context.Context, ref, task string) (mcp.AskResult, error) {
+		s := loadSettings(settingsPath, log)
+		if !s.AskPinky {
+			return mcp.AskResult{}, errors.New("Ask Pinky is turned off in Settings > Agents")
+		}
+		device, phones := g.ResolveDevice(ref)
+		if device == "" {
+			if ref == "" {
+				return mcp.AskResult{}, fmt.Errorf("pass device: no single phone is online. Phones: %s", phones)
+			}
+			return mcp.AskResult{}, fmt.Errorf("no phone %q. Phones: %s", ref, phones)
+		}
+		if err := ask.Start(s.PilotConfig(), device, task); err != nil {
+			return mcp.AskResult{}, err
+		}
+		t := time.NewTicker(300 * time.Millisecond)
+		defer t.Stop()
+		for {
+			if st, ok := ask.Status(device); ok && !st.Running() {
+				return mcp.AskResult{End: string(st.End), Summary: st.Summary, Steps: st.Steps,
+					Cost: st.Cost, Tokens: st.Tokens, Priced: st.Priced}, nil
+			}
+			select {
+			case <-ctx.Done():
+				ask.Stop(device)
+				return mcp.AskResult{}, ctx.Err()
+			case <-t.C:
+			}
+		}
+	}
 }
 
 // Serve answers agents and clients on the socket until ctx ends.
@@ -229,6 +282,9 @@ func (r *runningGateway) Serve(ctx context.Context) error {
 
 // Close stops the gateway and releases the socket.
 func (r *runningGateway) Close() {
+	if r.ask != nil {
+		r.ask.Close()
+	}
 	if r.Remote != nil {
 		r.Remote.Close()
 	}

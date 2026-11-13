@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 20 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket, a named pipe on Windows (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 21 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket, a named pipe on Windows (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -547,6 +547,15 @@ Returns `settled` with `decision: allow`, or `approval_denied`, with the person'
 | `reason` | string, required | What the person should do |
 
 Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone waits for a step (`device_needs_setup`) ends by itself once Pinky has opened the phone, with `note: "The phone is ready."`; if the person hands back before that, the result is `device_needs_setup` again, with their note. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer, if unlocking is all its `reason` asks for ("Please unlock the phone"); one that asks for more ("Unlock the phone, then sign in to Wise") stays open until the person hands back, and so does any handoff after an unlock on the phone itself. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
+
+### phone_ask
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `task` | string, required | One or two sentences of what to do on the phone, as the person would type it in Ask Pinky |
+| `device` | string | The phone, by id, name or a unique id prefix. Optional when exactly one phone is online |
+
+Hands the whole task to Ask Pinky, Pinky's own agent ([builtin-agent.md](notes/builtin-agent.md)), which does it on the phone with the model, key and limits the person set in Settings › Agents › Ask Pinky, under the same rules and approvals as any agent, and answers with its outcome once it ends: the first word is how it ended (`done`, `failed` or `stopped`; `steps`, `time` or `cost` for the limit it reached; `refused` when the model declined it; `no_key`, `bad_key` or `error`), then the steps and the cost (or tokens) in parentheses, then Pinky's summary on the next line. Blocks until then, as the task takes. The phone must be free: Ask Pinky connects it itself, so release a phone this session holds first. When Ask Pinky is off or has no model, the result says so and nothing runs. `pinky ask <device> "<task>"` does the same from a shell, through the gateway's socket.
 
 ## Saving screenshots and reports
 

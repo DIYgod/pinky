@@ -108,6 +108,10 @@ func (l *Listener) Close() error {
 type Server struct {
 	Gateway *gateway.Gateway
 	MCP     *mcp.Server
+	// Ask, when set, runs Pinky's built-in agent (Ask Pinky) on a phone to
+	// completion; the control "ask" method calls it. nil when no model key
+	// is set.
+	Ask mcp.AskFunc
 	// Token is the agent token MCP connections must present.
 	Token string
 	// Trusted lets control clients approve, hand back and unlock. Set it only

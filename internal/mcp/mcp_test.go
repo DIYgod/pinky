@@ -124,7 +124,7 @@ func TestToolList(t *testing.T) {
 	}
 	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_drag", "phone_key",
 		"phone_launch", "phone_apps", "phone_batch", "phone_read_list", "phone_wait_for", "phone_files", "phone_app",
-		"phone_logs", "phone_device", "phone_request_approval", "phone_handoff"}
+		"phone_logs", "phone_device", "phone_request_approval", "phone_handoff", "phone_ask"}
 	got := map[string]*sdk.Tool{}
 	for _, tool := range res.Tools {
 		got[tool.Name] = tool
@@ -659,5 +659,54 @@ func TestPhoneDrag(t *testing.T) {
 	}
 	if in := h.dev.Inputs()[len(h.dev.Inputs())-1]; in.Kind != "drag" || in.P != (screen.Point{X: 540, Y: 648}) {
 		t.Fatalf("batch input %+v", in)
+	}
+}
+
+// TestPhoneAsk: phone_ask says when Pinky's own agent is not set up, and
+// otherwise hands the task to it and answers with its outcome.
+func TestPhoneAsk(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "Claude Code")
+	if text, _ := c.call(t, "phone_ask", map[string]any{"task": "Open Settings"}); !strings.Contains(text, "not set up") {
+		t.Errorf("without an agent: %q", text)
+	}
+	var gotDevice, gotTask string
+	h.srv.Ask = func(_ context.Context, device, task string) (AskResult, error) {
+		gotDevice, gotTask = device, task
+		return AskResult{End: "done", Summary: "Airplane mode is on.", Steps: 3, Cost: 0.012, Priced: true}, nil
+	}
+	if text, _ := c.call(t, "phone_ask", map[string]any{"device": "Pixel 9", "task": " "}); !strings.Contains(text, "no task") {
+		t.Errorf("an empty task: %q", text)
+	}
+	text, _ := c.call(t, "phone_ask", map[string]any{"device": "Pixel 9", "task": " Turn on Airplane mode "})
+	if want := "done (3 steps, $0.012)\nAirplane mode is on."; text != want {
+		t.Errorf("result %q, want %q", text, want)
+	}
+	if gotDevice != "Pixel 9" || gotTask != "Turn on Airplane mode" {
+		t.Errorf("asked %q on %q", gotTask, gotDevice)
+	}
+}
+
+// TestResolveDevice: a phone by id, name or id prefix, or the only phone
+// online without one; none names the phones listed.
+func TestResolveDevice(t *testing.T) {
+	h := newHarness(t)
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		if id, _ := h.g.ResolveDevice(""); id == "pixel" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the only phone online was not found")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	for _, ref := range []string{"pixel", "Pixel 9", "pixe"} {
+		if id, _ := h.g.ResolveDevice(ref); id != "pixel" {
+			t.Errorf("%q: %q", ref, id)
+		}
+	}
+	if id, phones := h.g.ResolveDevice("iphone"); id != "" || !strings.Contains(phones, `"pixel"`) {
+		t.Errorf("an unknown phone: %q, phones %q", id, phones)
 	}
 }

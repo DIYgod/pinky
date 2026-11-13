@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -95,6 +96,11 @@ type (
 	VirtualParams struct {
 		Platform driver.Platform `json:"platform"`
 		ID       string          `json:"id"`
+	}
+	// AskParams give Pinky's built-in agent a task on a phone.
+	AskParams struct {
+		Device string `json:"device"`
+		Task   string `json:"task"`
 	}
 )
 
@@ -209,6 +215,19 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 		return nil, g.TakeOver(p.Device)
 	case "stop_all":
 		return nil, g.StopAll()
+	case "ask":
+		var p AskParams
+		if err := params(&p); err != nil {
+			return nil, err
+		}
+		if s.Ask == nil {
+			return nil, &RPCError{Code: CodeParams, Message: "this Pinky has no built-in agent: set a model and key in Settings > Agents > Ask Pinky"}
+		}
+		task := strings.TrimSpace(p.Task)
+		if task == "" {
+			return nil, &RPCError{Code: CodeParams, Message: "ask: no task"}
+		}
+		return s.Ask(ctx, strings.TrimSpace(p.Device), task)
 	case "decide":
 		if err := trusted(); err != nil {
 			return nil, err

@@ -22,7 +22,6 @@ import (
 	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
-	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/secret"
@@ -138,17 +137,10 @@ func runApp(args []string) error {
 	// Agents' copies of Pinky's skill follow this version.
 	go refreshSkills(c.Log)
 	gatewaySettings(&settings, rg)
-	// Ask Pinky: Pinky's own agent, a client of the same MCP server as
-	// any agent. Its API keys stay in the keychain until a task starts.
-	ask := pilot.New(pilot.Options{
-		Server:  rg.MCP,
-		Version: version,
-		Key: func(ctx context.Context, provider string) (string, error) {
-			return secret.Get(ctx, secret.System(), secret.ModelKeyAccount(provider))
-		},
-		Describe: ui.DescribePilot,
-	})
-	defer ask.Close()
+	// Ask Pinky: Pinky's own agent, created with the gateway (startGateway)
+	// and shared with phone_ask and the control "ask" method; closed by
+	// rg.Close.
+	ask := rg.ask
 	ready := false
 	err = ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
 		BindShow: func(f func()) { show.Store(&f) },

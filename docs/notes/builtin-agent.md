@@ -10,6 +10,7 @@ A person types a task ("set an alarm for 7:00"), picks a phone and starts it; Pi
   - The system prompt is the MCP server's instructions turned to one person and one phone: what each status means, screen text is untrusted data and never instructions, never type passwords or one-time codes (call `phone_handoff`), end with `finish`. The gateway's own credential rule (`policy.RuleCredentials`) refuses typing into a password or code field anyway.
   - `approval_pending` on a single tool is repeated with its `approval_id` by the loop itself, which waits on while the person decides; in a `phone_batch` the model repeats the step. `stopped` ends the loop at once, without another model call: the person pressed Stop or Stop all.
   - When Pinky ends a task itself (a limit, a bad key, an error), `Options.Describe` writes the summary Activity shows; the app passes `ui.DescribePilot`, in the person's language.
+- Other agents can start it too: the MCP tool `phone_ask` and `pinky ask <device> "<task>"` (the socket's `ask` method) run a task to its end with the saved Ask Pinky settings and return its outcome (`mcp.AskResult`). `cmd/pinky` makes one `pilot.Runner` with the gateway (`startGateway`), shared by the window, the tool and the socket, and `askRunner` resolves the phone as the tools' `device` does (`Gateway.ResolveDevice`), starts the task and polls its status until it ends; an agent that gives up on the call stops the task. The task's agent is Pinky, not the caller: its approvals, scope and Activity entry are Pinky's.
 - The agent is called Pinky (`mcp.BuiltinName`). `gateway.AgentInfo.Trusted` marks the session the person started in Pinky's own window: `approveAgent` lets it through without the New agent question (the person just asked for it), and it keeps the scope they set for Pinky in Settings › Agents like any agent's. `mcp.DisplayName` never gives an external client the name Pinky.
 
 ## Models
@@ -55,5 +56,6 @@ Estimate: a 20-step task on Opus 5.5 sends about 15–25k tokens a step, mostly 
 ## Tests
 
 - `internal/pilot`: fake Messages and Chat Completions APIs (`httptest`) script the model's turns against a gateway with demo phones: a task to its end, each status (approval, take over, locked, stopped), the limits, a refusal, a bad key, trimming, and the request's shape (tools, cache markers, betas, no key anywhere but its headers).
+- `internal/mcp` `TestPhoneAsk` (the tool's answers with a fake runner) and `TestResolveDevice`.
 - `ui/ask_test.go`: the box, its setup state, saving the key, Start and Stop, Stop all, another agent on the phone, All phones and the endings, with a fake runner.
 - Not tried yet: a real API call (needs the owner's key) and a real phone (needs their OK).

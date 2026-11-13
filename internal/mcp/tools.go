@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -285,6 +286,11 @@ type handoffIn struct {
 	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Reason     string `json:"reason" jsonschema:"What you need the person to do, e.g. Please sign in to Dinely, or Unlock the phone."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the call with this id to keep waiting."`
+}
+
+type askIn struct {
+	Device string `json:"device,omitempty" jsonschema:"The phone, by device id, name or a unique id prefix. Optional when exactly one phone is online."`
+	Task   string `json:"task" jsonschema:"One or two sentences telling Pinky what to do on the phone, in plain language, e.g. Open Settings and turn on Airplane mode."`
 }
 
 // schema derives the input schema of T and lets patch add enums and limits.
@@ -705,6 +711,48 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 				Call:   gateway.Call{Device: strings.TrimSpace(in.Device), ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
 				Reason: in.Reason})), nil, nil
 		})
+
+	sdk.AddTool(srv, &sdk.Tool{Name: "phone_ask", Title: "Delegate a whole task to Pinky's own agent",
+		Description: "Hand an entire task to Pinky's built-in agent, which does it on the phone itself with the person's chosen model (Settings > Agents > Ask Pinky), step by step under the same rules and approvals, then returns the outcome. " +
+			"Use this to let Pinky drive instead of driving it yourself with the other phone_* tools. The phone must be free: Pinky connects it itself, so do not hold a lease on it (call phone_release first if you do). " +
+			"Blocks until the task ends or reaches its step, time or cost limit; the result's first word is how it ended (done, failed, stopped, steps, time or cost for the limit it reached, refused, no_key, bad_key, error), followed by the summary.",
+		InputSchema: schema[askIn](nil),
+		Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
+		func(ctx context.Context, req *sdk.CallToolRequest, in askIn) (*sdk.CallToolResult, any, error) {
+			if s.Ask == nil {
+				return text("Pinky's built-in agent is not set up: add a model and key in Settings > Agents > Ask Pinky."), nil, nil
+			}
+			task := strings.TrimSpace(in.Task)
+			if task == "" {
+				return text("phone_ask: no task. Pass task with one or two sentences of what Pinky should do."), nil, nil
+			}
+			res, err := s.Ask(ctx, strings.TrimSpace(in.Device), task)
+			if err != nil {
+				return text("phone_ask failed: " + err.Error()), nil, nil
+			}
+			return text(askSummary(res)), nil, nil
+		})
+}
+
+// text is a plain-text tool result.
+func text(s string) *sdk.CallToolResult {
+	return &sdk.CallToolResult{Content: []sdk.Content{&sdk.TextContent{Text: s}}}
+}
+
+// askSummary is the one-line outcome of a phone_ask run.
+func askSummary(r AskResult) string {
+	cost := ""
+	switch {
+	case r.Priced && r.Cost > 0:
+		cost = fmt.Sprintf(", $%.3f", r.Cost)
+	case r.Tokens > 0:
+		cost = fmt.Sprintf(", %d tokens", r.Tokens)
+	}
+	line := fmt.Sprintf("%s (%d steps%s)", r.End, r.Steps, cost)
+	if r.Summary != "" {
+		line += "\n" + r.Summary
+	}
+	return line
 }
 
 // pointArg turns optional x and y into a point; both or neither.

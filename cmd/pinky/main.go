@@ -49,6 +49,8 @@ func main() {
 		err = runDaemon(args)
 	case "mcp":
 		err = runMCP(args)
+	case "ask":
+		err = runAsk(args)
 	case "devices":
 		err = runDevices(args)
 	case "companion":
@@ -103,6 +105,8 @@ Commands:
   daemon    run the gateway without UI
   mcp       run the MCP server on stdio (agents launch this); starts the
             gateway when none is running
+  ask       give Pinky's own agent a task: pinky ask <device> "<task>";
+            it drives the phone with the model set in Settings > Agents
   devices   list connected phones
   companion install [phone]
             install or update Pinky on the phone, Pinky's app for Android phones

@@ -484,6 +484,31 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 	return r
 }
 
+// ResolveDevice returns the id of the phone that ref names, as the tools'
+// device argument does: its id, its name, or a unique prefix of its id.
+// Without ref it is the only phone online. When there is no such phone it
+// returns "" and the phones listed, for an error that names them.
+func (g *Gateway) ResolveDevice(ref string) (id, phones string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if ref != "" {
+		if d := g.findDeviceLocked(ref); d != nil {
+			return d.id, ""
+		}
+		return "", g.deviceListLocked()
+	}
+	var online []*device
+	for _, d := range g.devices {
+		if d.online && !foundLocked(d) {
+			online = append(online, d)
+		}
+	}
+	if len(online) == 1 {
+		return online[0].id, ""
+	}
+	return "", g.deviceListLocked()
+}
+
 func (g *Gateway) findDeviceLocked(ref string) *device {
 	if d, ok := g.devices[ref]; ok && !foundLocked(d) {
 		return d

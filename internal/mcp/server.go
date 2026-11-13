@@ -38,11 +38,30 @@ If Pinky itself got in your way (a tool failed or misread the screen, a harmless
 tell the person afterwards and suggest reporting it with Help › Send Feedback… in Pinky. Issues are public: leave out what
 was on their screen, and never post one yourself without their yes.`
 
+// AskResult is the outcome of an Ask Pinky run (the phone_ask tool and the
+// control "ask" method): Pinky's own agent did the whole task on the phone.
+type AskResult struct {
+	End     string  `json:"end"` // pilot.End: done, failed, stopped, steps, time, cost, refused, no_key, bad_key, error
+	Summary string  `json:"summary"`
+	Steps   int     `json:"steps"`
+	Cost    float64 `json:"cost"`
+	Tokens  int64   `json:"tokens"`
+	Priced  bool    `json:"priced"` // Cost is in US dollars; otherwise a token budget
+}
+
+// AskFunc runs Pinky's own agent on a phone to completion, with the person's
+// saved model settings, and returns the outcome. The host wires it; nil when
+// no model key is set.
+type AskFunc func(ctx context.Context, device, task string) (AskResult, error)
+
 // Server serves Pinky's tools to MCP sessions.
 type Server struct {
 	g       *gateway.Gateway
 	version string
 	srv     *sdk.Server
+
+	// Ask, when set, runs Pinky's built-in agent (phone_ask).
+	Ask AskFunc
 
 	mu         sync.Mutex
 	sessions   map[*sdk.ServerSession]*gateway.Session

@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 20 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`. A list read keeps its per-screen changes inside the gateway and sends back one compact transcript.
+Agents see one MCP server, `pinky`, with 21 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`. A list read keeps its per-screen changes inside the gateway and sends back one compact transcript.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
