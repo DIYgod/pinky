@@ -206,12 +206,12 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 	}
 	b.Height(h).Padding(0, px).Radius(r)
 	bg, border, fg := p.panel, p.line2, p.ink
-	hovered := b.Hovered()
+	hovered, pressed := b.Hovered(), b.Pressed()
 	switch o.kind {
 	case btnPrimary:
 		bg, border, fg = p.accentBtn, p.accentBtn, p.white
 		switch {
-		case b.Pressed():
+		case pressed:
 			bg = bg.Mix(mg.RGB(0, 0, 0), 0.12)
 		case hovered:
 			bg = bg.Mix(mg.RGB(255, 255, 255), 0.08)
@@ -219,11 +219,17 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 		border = bg
 	case btnRed:
 		fg, border = p.red, p.redLine
-		if hovered {
+		switch {
+		case pressed:
+			bg = p.redTint.Mix(p.redLine, 0.5)
+		case hovered:
 			bg = p.redTint
 		}
 	default:
-		if hovered {
+		switch {
+		case pressed:
+			bg = p.sel
+		case hovered:
 			bg = p.bg3
 		}
 	}
@@ -454,7 +460,10 @@ func menuPanel(c *mg.Context, panel mg.Element) mg.Element {
 func menuItem(c *mg.Context, text string, col mg.Color) mg.Element {
 	p := pal(c)
 	b := mg.ButtonBase(c).Label(text).MinHeight(32).Padding(6, 10).Radius(rSmall).Gap(10).AlignItems(mg.Center).Justify(mg.Start)
-	if b.Hovered() || b.Focused() {
+	switch {
+	case b.Pressed():
+		b.Background(p.sel)
+	case b.Hovered() || b.Focused():
 		b.Background(p.bg3)
 	}
 	if col == (mg.Color{}) {

@@ -10786,9 +10786,13 @@
   "@updateAgoNow": {
     "description": "Inside updateLineUpToDate: checked less than a minute ago."
   },
-  "updateAvailable": "Pinky {version} is available",
-  "@updateAvailable": {
-    "description": "The update card's title when a newer version is out.",
+  "updateAvailableTitle": "New version available",
+  "@updateAvailableTitle": {
+    "description": "The update card's title in the sidebar when a newer version is out; the version shows on the line under it (updateAvailableVersion). Keep it short: the card is about 190 points wide."
+  },
+  "updateAvailableVersion": "Pinky {version}",
+  "@updateAvailableVersion": {
+    "description": "The line under the update card's title (updateAvailableTitle): the app's name and the new version.",
     "placeholders": {
       "version": {
         "type": "String",

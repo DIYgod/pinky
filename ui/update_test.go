@@ -132,7 +132,7 @@ func TestUpdateCardThenUpdateNow(t *testing.T) {
 		t.Fatalf("no release after the check: %+v", ut.upd.rel)
 	}
 	tt := mg.NewTester(ut.view, 1280, 820)
-	if !hasText(tt, "Pinky 2026.1107.2 is available") {
+	if !hasText(tt, "New version available") || !hasText(tt, "Pinky 2026.1107.2") {
 		t.Fatalf("no update card: %q", tt.Texts())
 	}
 	if err := tt.Click("What's new in Pinky 2026.1107.2"); err != nil {
@@ -330,7 +330,7 @@ func TestUpdateLater(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	if hasText(tt, "is available") {
+	if hasText(tt, "New version available") {
 		t.Errorf("the card shows after Later: %q", tt.Texts())
 	}
 	if st := ut.u.State(); st.Later != "2026.1107.2" || !st.LaterUntil.After(time.Now().Add(23*time.Hour)) {

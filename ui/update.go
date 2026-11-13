@@ -508,7 +508,7 @@ func (a *app) companionByHandCards(c *mg.Context) {
 
 func sideCard(c *mg.Context, key, label string, fn func()) {
 	p := pal(c)
-	mg.Column(c.Key(key)).Padding(12).Radius(10).Background(p.panel).Border(1, p.line).Gap(6).Margin(0, 0, 8, 0).
+	raised(c, mg.Column(c.Key(key)).Padding(sp3).Radius(rCard).Background(p.card).Border(1, p.line).Gap(6).Margin(0, 0, sp2, 0)).
 		Label(label).Children(fn)
 }
 
@@ -573,7 +573,10 @@ func (a *app) updateCard(c *mg.Context) {
 				}
 			})
 		default:
-			head(locales.UpdateAvailable(v))
+			head(locales.UpdateAvailableTitle())
+			// The version on a line of its own, under the title, which
+			// would otherwise break inside it in the narrow sidebar.
+			mg.Text(c, locales.UpdateAvailableVersion(v)).FontSize(fsSmall).TextColor(p.ink2).Margin(-2, 0, 0, 22)
 			if s.rel.NotesIn(i18n.Locale()) != "" {
 				if linkButton(c, locales.UpdateWhatsNew()).AlignSelf(mg.Start).Label(locales.UpdateWhatsNewIn(v)).Clicked() {
 					s.notesOpen = true

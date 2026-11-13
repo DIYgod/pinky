@@ -74,21 +74,26 @@ func (a *app) addPhonePage(c *mg.Context) {
 	mg.Column(c).Grow(1).Center().Padding(0, sp6, sp8, sp6).Background(p.bg2).Children(func() {
 		card := mg.Scroll(c).FillWidth().MaxWidth(480).MaxHeight(max(h-64, 240)).Padding(sp8).Radius(rSheet).Background(p.panel).Border(1, p.line).Gap(sp5).Label(locales.AddPhoneLabel())
 		shadow(c, card).Children(func() {
-			mg.Row(c).MinHeight(22).AlignItems(mg.Center).Margin(0, 0, -6, 0).Children(func() {
-				if s.step != "choose" && linkButton(c, locales.AddPhoneBack()).Clicked() {
-					switch s.step {
-					case "qr", "tailnet":
-						s.step = "android"
-					default:
-						s.step, s.old, s.oldPick, s.since = "choose", false, "", time.Time{}
+			// Back and Cancel, on a row of their own where there is one
+			// of them: the first step of a first phone has neither, and
+			// an empty row would leave a gap over its title.
+			if s.step != "choose" || len(a.devices) > 0 {
+				mg.Row(c).MinHeight(22).AlignItems(mg.Center).Margin(0, 0, -6, 0).Children(func() {
+					if s.step != "choose" && linkButton(c, locales.AddPhoneBack()).Clicked() {
+						switch s.step {
+						case "qr", "tailnet":
+							s.step = "android"
+						default:
+							s.step, s.old, s.oldPick, s.since = "choose", false, "", time.Time{}
+						}
+						s.snapshot(a)
 					}
-					s.snapshot(a)
-				}
-				mg.Spacer(c)
-				if len(a.devices) > 0 && quietButton(c, locales.AddPhoneCancel()).Clicked() {
-					a.page = pagePhones
-				}
-			})
+					mg.Spacer(c)
+					if len(a.devices) > 0 && quietButton(c, locales.AddPhoneCancel()).Clicked() {
+						a.page = pagePhones
+					}
+				})
+			}
 			switch s.step {
 			case "android":
 				a.addAndroid(c)

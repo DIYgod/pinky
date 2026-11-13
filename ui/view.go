@@ -123,7 +123,10 @@ func (a *app) sidebar(c *mg.Context) {
 				return
 			}
 			stop := mg.ButtonBase(c).Height(32).Padding(0, 10, 0, rowInset).Radius(rControl).Gap(10).AlignItems(mg.Center).Justify(mg.Start).Label(locales.SidebarStopAll())
-			if stop.Hovered() {
+			switch {
+			case stop.Pressed():
+				stop.Background(p.redTint.Mix(p.redLine, 0.5))
+			case stop.Hovered():
 				stop.Background(p.redTint)
 			}
 			if stop.Clicked() {
@@ -191,7 +194,11 @@ func (a *app) sidebarPhones(c *mg.Context) {
 					if d.Status == gateway.DeviceOffline {
 						name.TextColor(p.ink2)
 					}
-					mg.Text(c, statusLine(d)).FontSize(fsCaption).TextColor(p.ink2).SingleLine()
+					// No empty second line: it would lift the name off the
+					// dot beside it.
+					if line := statusLine(d); line != "" {
+						mg.Text(c, line).FontSize(fsCaption).TextColor(p.ink2).SingleLine()
+					}
 				})
 				a.webMirrorBadge(c, d.Info.ID)
 			})
@@ -207,6 +214,8 @@ func phoneRow(c *mg.Context, on bool) mg.Element {
 	case on:
 		row.Background(p.ink.Alpha(wingSelAlpha))
 		selectionMark(c, row)
+	case row.Pressed():
+		row.Background(p.ink.Alpha(wingSelAlpha))
 	case row.Hovered():
 		row.Background(p.ink.Alpha(wingHoverAlpha))
 	}
