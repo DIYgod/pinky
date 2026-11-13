@@ -374,7 +374,7 @@
     <!-- Scheduled tasks on the phone (SchedulesActivity, ScheduleEditActivity,
          ScheduleNotices), worded as desktop Pinky's (cmd/pinky/locales: sched*). -->
     <string name="phone_schedules">Scheduled tasks</string>
-    <string name="phone_sched_note">Pinky runs a scheduled task only while this phone\'s screen is on and unlocked and you haven\'t touched it for a minute: it never unlocks the phone or turns its screen on. Otherwise it skips the time and tells you. A scheduled task never pays, and a step that needs your approval waits for you with a notification.</string>
+    <string name="phone_sched_note">Pinky runs a scheduled task while this phone is unlocked and you haven\'t touched it for a minute. With the background screen set up (Settings › Background screen), it also runs one while the phone is locked. It never unlocks the phone or turns its screen on: otherwise it skips the time and tells you. A scheduled task never pays, and a step that needs your approval waits for you with a notification.</string>
     <string name="phone_sched_allow">So that they run on time</string>
     <string name="phone_sched_notifications">Notifications</string>
     <string name="phone_sched_notifications_desc">Pinky tells you how each scheduled task went, and when one waits for your approval.</string>

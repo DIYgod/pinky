@@ -337,7 +337,7 @@
     <!-- Scheduled tasks on the phone (SchedulesActivity, ScheduleEditActivity,
          ScheduleNotices), worded as desktop Pinky's (cmd/pinky/locales: sched*). -->
     <string name="phone_schedules">スケジュール</string>
-    <string name="phone_sched_note">Pinky がスケジュールしたタスクを実行するのは、このスマホの画面がオンでロックが解除され、1 分以上操作されていないときだけです。スマホのロックを解除したり画面をオンにしたりはしません。それ以外のときはスキップして知らせます。スケジュールしたタスクは支払いをせず、承認が必要な手順は通知を出してあなたを待ちます。</string>
+    <string name="phone_sched_note">Pinky がスケジュールしたタスクを実行するのは、このスマホのロックが解除され、1 分以上操作されていないときです。バックグラウンド画面を設定していれば（「設定 › バックグラウンド画面」）、ロック中も実行します。スマホのロックを解除したり画面をオンにしたりはしません。それ以外のときはスキップして知らせます。スケジュールしたタスクは支払いをせず、承認が必要な手順は通知を出してあなたを待ちます。</string>
     <string name="phone_sched_allow">時間どおりに実行するには</string>
     <string name="phone_sched_notifications">通知</string>
     <string name="phone_sched_notifications_desc">スケジュールしたタスクの結果や、承認を待っているタスクを Pinky が知らせます。</string>

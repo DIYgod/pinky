@@ -145,7 +145,8 @@ func nextMS(t time.Time) int64 {
 // PhoneNow is what only the app knows of the phone when a schedule is due.
 type PhoneNow struct {
 	// Locked: the keyguard shows or the screen is off. Pinky never unlocks
-	// the phone for a scheduled task.
+	// the phone for a scheduled task; it runs one on a background display
+	// that is set up (backgroundReady), or skips the time.
 	Locked bool `json:"locked"`
 	// InUse: the screen is on and the person touched it a moment ago.
 	InUse bool `json:"in_use"`
@@ -170,7 +171,7 @@ func (h schedHost) Check(s schedule.Schedule) string {
 		return schedule.SkipOff
 	case !ok || d.Info.State != "online":
 		return schedule.SkipOffline
-	case h.phone.Locked || d.Status == gateway.DeviceLocked:
+	case (h.phone.Locked || d.Status == gateway.DeviceLocked) && !c.backgroundReady(d.Info.ID):
 		return schedule.SkipLocked
 	case h.phone.InUse:
 		return schedule.SkipInUse
@@ -367,4 +368,23 @@ func (c *Core) schedule(r request) reply {
 		return reply{Error: err.Error(), Code: code}
 	}
 	return reply{OK: true, NextMS: nextMS(c.NextDue())}
+}
+
+// backgroundReady reports whether tasks run on a background display now:
+// the person turned it on and paired Pinky with Wireless debugging, and its
+// port is there. Android 13 and later keep such a display unlocked, so a
+// scheduled task runs while the phone is locked. Not while the person uses
+// it: should the display fail to open, the task moves to the phone's own
+// screen, under their fingers. Nor before the setup is done or after a
+// restart turned Wireless debugging off, when tasks run on the phone's own
+// screen (docs/notes/schedules.md).
+func (c *Core) backgroundReady(device string) bool {
+	sh := c.opt.Shell
+	return sh != nil && shellReady(sh.State().Status) && c.G.Background(device)
+}
+
+// shellReady says whether a Shell's status lets a task open a background
+// display: paired, with Wireless debugging's port.
+func shellReady(status string) bool {
+	return status == "ready" || status == "connected"
 }

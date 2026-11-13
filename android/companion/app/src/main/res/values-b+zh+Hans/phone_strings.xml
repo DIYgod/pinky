@@ -336,7 +336,7 @@
     <!-- Scheduled tasks on the phone (SchedulesActivity, ScheduleEditActivity,
          ScheduleNotices), worded as desktop Pinky's (cmd/pinky/locales: sched*). -->
     <string name="phone_schedules">定时任务</string>
-    <string name="phone_sched_note">Pinky 只在这台手机亮屏、已解锁且你一分钟内没有操作时运行定时任务：它绝不会替你解锁手机或点亮屏幕。其他时候会跳过这次并通知你。定时任务绝不付款，需要你批准的步骤会发通知等你处理。</string>
+    <string name="phone_sched_note">Pinky 会在这台手机已解锁、且你一分钟内没有操作时运行定时任务；设置好后台屏幕（「设置 › 后台屏幕」）后，手机锁屏时也会运行。它绝不会替你解锁手机或点亮屏幕：其他时候会跳过这次并通知你。定时任务绝不付款，需要你批准的步骤会发通知等你处理。</string>
     <string name="phone_sched_allow">让它们按时运行</string>
     <string name="phone_sched_notifications">通知</string>
     <string name="phone_sched_notifications_desc">Pinky 会告诉你每个定时任务的结果，以及哪个任务在等你批准。</string>

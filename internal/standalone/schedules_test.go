@@ -138,3 +138,24 @@ func TestScheduleOnPhone(t *testing.T) {
 		t.Fatalf("schedules: %+v", r)
 	}
 }
+
+// A locked phone runs a scheduled task only on a background display that is
+// set up: paired, with Wireless debugging's port, on a phone that has one.
+func TestScheduleBackgroundReady(t *testing.T) {
+	for status, want := range map[string]bool{"off": false, "unpaired": false, "no_port": false,
+		"ready": true, "connected": true, "refused": false, "failed": false} {
+		if got := shellReady(status); got != want {
+			t.Errorf("shellReady(%q) = %v", status, got)
+		}
+	}
+	h := newHarness(t)
+	if h.core.backgroundReady("pixel") {
+		t.Error("ready without a shell")
+	}
+	sh := &fakeShell{st: ShellState{On: true, Status: "connected"}}
+	h = newHarness(t, func(o *Options) { o.Shell = sh })
+	// The demo phone has no background displays.
+	if h.core.backgroundReady("pixel") {
+		t.Error("ready on a phone without background displays")
+	}
+}
