@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1113.14 (2026-11-13)
 
 - Android emulators that are gone for 10 minutes now leave Pinky's phone list instead of piling up offline, unless Pinky started them from Add phone or you gave them a setting of their own. Thanks @ljh740.
 

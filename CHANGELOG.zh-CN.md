@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1113.14 (2026-11-13)
 
 - 关掉 10 分钟的 Android 模拟器现在会从 Pinky 的手机列表里移除，不再堆成一排离线手机；从「添加手机」启动的模拟器和你单独设置过的模拟器会保留。感谢 @ljh740。
 
