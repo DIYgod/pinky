@@ -2,11 +2,14 @@ package pilot
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -23,6 +26,10 @@ type openAI struct {
 	tools    []oaTool
 	history  []oaMessage
 	noImages bool // the model took no images: send none
+	// session names the conversation to services that ask for it in a
+	// header (OpenCode Go refuses requests without x-opencode-session);
+	// empty for the others.
+	session string
 }
 
 // shotLabel starts the message that carries a turn's screenshots.
@@ -91,6 +98,9 @@ func newOpenAI(cfg Config, key string, hc *http.Client, system string, tools []t
 		base = DefaultOpenAIURL
 	}
 	o := &openAI{url: base + "/chat/completions", key: key, model: cfg.Model, hc: hc}
+	if isOpenCode(base) {
+		o.session = newSessionID()
+	}
 	for _, t := range tools {
 		var ot oaTool
 		ot.Type = "function"
@@ -99,6 +109,25 @@ func newOpenAI(cfg Config, key string, hc *http.Client, system string, tools []t
 	}
 	o.history = []oaMessage{{Role: "system", Content: system}}
 	return o
+}
+
+// isOpenCode reports whether base is one of OpenCode's services, which
+// want every request of a conversation to carry the same
+// x-opencode-session.
+func isOpenCode(base string) bool {
+	u, err := url.Parse(base)
+	if err != nil {
+		return false
+	}
+	h := strings.ToLower(u.Hostname())
+	return h == "opencode.ai" || strings.HasSuffix(h, ".opencode.ai")
+}
+
+// newSessionID is a random ID for one task's conversation.
+func newSessionID() string {
+	var b [16]byte
+	rand.Read(b[:])
+	return "pinky-" + hex.EncodeToString(b[:])
 }
 
 // parameters is a tool's JSON Schema without the keys some services
@@ -217,6 +246,9 @@ func (o *openAI) post(ctx context.Context) (*oaResponse, error) {
 	}
 	h := http.Header{}
 	h.Set("Authorization", "Bearer "+o.key)
+	if o.session != "" {
+		h.Set("x-opencode-session", o.session)
+	}
 	data, err := post(ctx, o.hc, o.url, h, body)
 	if err != nil {
 		return nil, err

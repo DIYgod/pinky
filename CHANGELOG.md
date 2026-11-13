@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Ask Pinky and Pinky on the phone now work with OpenCode Go's OpenAI-compatible service, which refused every task asking for a session header.
+
 ## 2026.1113.1 (2026-11-13)
 
 - Pinky on your Android phone can now do tasks by itself: type what you want in Pinky on the phone, with your own model key, and watch it work. Pinky on the phone is now one app.

@@ -859,6 +859,38 @@ func TestOpenAI(t *testing.T) {
 	}
 }
 
+func TestOpenCodeSession(t *testing.T) {
+	// OpenCode Go refuses a request without x-opencode-session, which must
+	// stay the same through a task's conversation; other services get none.
+	var got []string
+	hc := &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
+		got = append(got, r.Header.Get("x-opencode-session"))
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Request: r,
+			Body: io.NopCloser(strings.NewReader(`{"choices":[{"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`))}, nil
+	})}
+	o := newOpenAI(Config{Provider: OpenAI, Model: "glm-5.3", BaseURL: "https://opencode.ai/inference/go/openai/v1"}, "k", hc, "sys", nil)
+	for range 2 {
+		if _, err := o.send(context.Background(), nil, "hi"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(got) != 2 || got[0] == "" || got[0] != got[1] {
+		t.Fatalf("sessions %q", got)
+	}
+	if o2 := newOpenAI(Config{Provider: OpenAI, Model: "glm-5.3", BaseURL: "https://opencode.ai/inference/go/openai/v1"}, "k", hc, "sys", nil); o2.session == o.session {
+		t.Fatal("two tasks share a session")
+	}
+	got = nil
+	o = newOpenAI(Config{Provider: OpenAI, Model: "m", BaseURL: "https://api.example.com/v1"}, "k", hc, "sys", nil)
+	if _, err := o.send(context.Background(), nil, "hi"); err != nil || len(got) != 1 || got[0] != "" {
+		t.Fatalf("err %v, sessions %q", err, got)
+	}
+}
+
+type roundTrip func(*http.Request) (*http.Response, error)
+
+func (f roundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
 func TestOpenAIImages(t *testing.T) {
 	// A model that takes no images: the request goes again without them,
 	// and later ones carry none.
