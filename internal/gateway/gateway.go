@@ -348,7 +348,7 @@ func (g *Gateway) discover(ctx context.Context) {
 		}
 		g.mu.Lock()
 		var gone []*device
-		var left []string
+		var left, forgot []string
 		now := time.Now()
 		for id, d := range g.devices {
 			if d.provider != p || seen[id] {
@@ -382,6 +382,14 @@ func (g *Gateway) discover(ctx context.Context) {
 				delete(g.devices, id)
 				left = append(left, id)
 				g.log.Info("device forgotten", "device", id, "why", "never opened, and no longer listed")
+			case emulator(d.info) && !d.opening && d.lease == nil && now.Sub(d.unlistedAt) >= emulatorGrace:
+				// An emulator that went away: its next run is likely
+				// another phone (emulatorGrace).
+				d.removed = true
+				g.dropSettingsLocked(id)
+				forgot = append(forgot, id)
+				left = append(left, id)
+				g.log.Info("device forgotten", "device", id, "why", "an emulator, no longer listed")
 			case unlisted(d):
 				left = append(left, id)
 			}
@@ -389,6 +397,9 @@ func (g *Gateway) discover(ctx context.Context) {
 		g.mu.Unlock()
 		for _, d := range gone {
 			g.setOffline(d, "the phone disconnected")
+		}
+		for _, id := range forgot {
+			g.forgetSettings(p, id)
 		}
 		for _, id := range left {
 			g.emit(Event{Kind: EventDevices, DeviceID: id})
@@ -403,6 +414,21 @@ func (g *Gateway) discover(ctx context.Context) {
 // long enough for a phone that restarts while it is set up (Developer
 // Mode) to come back as itself. A variable for tests.
 var unopenedGrace = 2 * time.Minute
+
+// emulatorGrace is how long an Android emulator that its provider no
+// longer lists stays on the list, offline, before it is forgotten with its
+// settings (its history stays). An emulator is listed by its adb serial,
+// which names the port it runs on, so its next run is often another phone:
+// the ones Pinky kept would pile up offline, a hundred a day for a test
+// farm. One that comes back later is listed again as new. A variable for
+// tests.
+var emulatorGrace = 10 * time.Minute
+
+// emulator reports whether the phone is an Android emulator. An iOS
+// Simulator keeps its UDID from run to run and stays.
+func emulator(info driver.Info) bool {
+	return info.Virtual && info.Platform == driver.Android
+}
 
 // unlisted marks a phone its provider no longer lists, and that the
 // gateway has not opened, as offline: it went away while it waited for a

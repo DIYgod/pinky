@@ -382,6 +382,33 @@ func TestUnopenedPhoneForgotten(t *testing.T) {
 	}
 }
 
+// TestEmulatorForgotten: an Android emulator that was open leaves the list
+// a while after it is no longer listed (emulatorGrace), as its next run is
+// likely another phone; a real phone that was open stays, offline. One
+// that comes back is listed again.
+func TestEmulatorForgotten(t *testing.T) {
+	saved := emulatorGrace
+	emulatorGrace = 100 * time.Millisecond
+	t.Cleanup(func() { emulatorGrace = saved })
+	p := &stepProvider{dev: demo.NewDevice("emulator-5554", "Android SDK built for arm64", driver.Android)}
+	emu := driver.Info{ID: "emulator-5554", Platform: driver.Android, Name: "Android SDK built for arm64",
+		Connection: "usb", Backend: "scrcpy", State: driver.StateOnline, Virtual: true}
+	p.list(&emu)
+	g := stepGateway(t, p)
+	waitOnline(t, g, "emulator-5554")
+	p.list(nil)
+	viewUntil(t, g, "emulator-5554", "offline at first", func(v DeviceView) bool { return v.Status == DeviceOffline })
+	deadline := time.Now().Add(3 * time.Second)
+	for len(g.Devices()) != 0 {
+		if time.Now().After(deadline) {
+			t.Fatalf("an emulator that went away stayed listed: %+v", g.Devices())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	p.list(&emu)
+	waitOnline(t, g, "emulator-5554")
+}
+
 // TestAgentWorkingAfterSetup: an agent connected while the phone waited for
 // a step. Once the gateway opens the phone, its driver hears that an agent
 // works on it (driver.WorkWatcher), so Pinky on the phone comes on for the
