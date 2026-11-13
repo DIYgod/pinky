@@ -31,17 +31,22 @@ type fakePilot struct {
 type fakeStart struct {
 	cfg          pilot.Config
 	device, task string
+	extra        pilot.Extra
 }
 
 func newFakePilot() *fakePilot { return &fakePilot{status: map[string]pilot.Status{}} }
 
 func (f *fakePilot) Start(cfg pilot.Config, device, task string) error {
+	return f.StartWith(cfg, device, task, pilot.Extra{})
+}
+
+func (f *fakePilot) StartWith(cfg pilot.Config, device, task string, x pilot.Extra) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if strings.TrimSpace(task) == "" {
 		return pilot.ErrNoTask
 	}
-	f.started = append(f.started, fakeStart{cfg, device, task})
+	f.started = append(f.started, fakeStart{cfg, device, task, x})
 	f.status[device] = pilot.Status{Device: device, Task: task, Config: cfg, Started: time.Now(), Steps: 3,
 		Cost: 0.12, Priced: true}
 	return nil
@@ -279,6 +284,38 @@ func TestAskPinkyStartAndStop(t *testing.T) {
 	tt.Frame()
 	if _, ok := fp.Status(id); ok {
 		t.Errorf("Dismiss left the status")
+	}
+}
+
+// About the screen starts a question about what the phone shows: the
+// screen explained when the field is empty, else what was typed.
+func TestAskPinkyAboutTheScreen(t *testing.T) {
+	ta, fp, tt := newAskApp(t, true, true)
+	frameUntil(t, ta, tt, "About the screen")
+	if err := tt.Click("About the screen"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if len(fp.started) != 1 || !fp.started[0].extra.Screen || fp.started[0].task != "Explain what the phone shows." {
+		t.Fatalf("started %+v", fp.started)
+	}
+	fp.Stop(ta.devices[0].Info.ID)
+	fp.Dismiss(ta.devices[0].Info.ID)
+	frameUntil(t, ta, tt, "About the screen")
+	if err := tt.Click("Task for Pinky"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Type("Which order is the cheapest?")
+	tt.Frame()
+	if err := tt.Click("About the screen"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if len(fp.started) != 2 || !fp.started[1].extra.Screen || fp.started[1].task != "Which order is the cheapest?" {
+		t.Fatalf("started %+v", fp.started)
+	}
+	if ta.ask.draft != "" {
+		t.Errorf("the field kept %q", ta.ask.draft)
 	}
 }
 

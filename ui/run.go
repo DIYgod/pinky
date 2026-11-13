@@ -130,6 +130,9 @@ type Options struct {
 // returns at once.
 type Pilot interface {
 	Start(cfg pilot.Config, device, task string) error
+	// StartWith starts a task with what goes with it: a question about
+	// the screen the phone shows (pilot.Extra.Screen).
+	StartWith(cfg pilot.Config, device, task string, x pilot.Extra) error
 	Stop(device string)
 	StopAll()
 	Status(device string) (pilot.Status, bool)

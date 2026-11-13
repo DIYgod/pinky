@@ -3469,6 +3469,52 @@ func (msgs Messages) AskSteerPlaceholder() string {
 	return Catalog.Format(msgs.locale, "askSteerPlaceholder", nil)
 }
 
+// AskScreen says "About the screen"
+// in the language the app shows.
+//
+// Ask Pinky: the button that starts a question about what the phone shows
+// now; the field may be empty.
+func AskScreen() string { return In(i18n.Locale()).AskScreen() }
+
+// AskScreen says "About the screen"
+// in the language of msgs.
+//
+// Ask Pinky: the button that starts a question about what the phone shows
+// now; the field may be empty.
+func (msgs Messages) AskScreen() string {
+	return Catalog.Format(msgs.locale, "askScreen", nil)
+}
+
+// AskScreenTooltip says "Ask Pinky about what the phone shows now, or have it explained when the field is empty. Blocked apps and hidden codes…"
+// in the language the app shows.
+//
+// Ask Pinky: the tooltip of the button that asks about the phone's screen.
+func AskScreenTooltip() string { return In(i18n.Locale()).AskScreenTooltip() }
+
+// AskScreenTooltip says "Ask Pinky about what the phone shows now, or have it explained when the field is empty. Blocked apps and hidden codes…"
+// in the language of msgs.
+//
+// Ask Pinky: the tooltip of the button that asks about the phone's screen.
+func (msgs Messages) AskScreenTooltip() string {
+	return Catalog.Format(msgs.locale, "askScreenTooltip", nil)
+}
+
+// AskScreenDefault says "Explain what the phone shows."
+// in the language the app shows.
+//
+// Ask Pinky: the task sent when the person asks about the screen with an
+// empty field.
+func AskScreenDefault() string { return In(i18n.Locale()).AskScreenDefault() }
+
+// AskScreenDefault says "Explain what the phone shows."
+// in the language of msgs.
+//
+// Ask Pinky: the task sent when the person asks about the screen with an
+// empty field.
+func (msgs Messages) AskScreenDefault() string {
+	return Catalog.Format(msgs.locale, "askScreenDefault", nil)
+}
+
 // AskSteps says "{count, plural, one {# step} other {# steps}}"
 // in the language the app shows.
 //

@@ -1172,6 +1172,18 @@
   "@askSteerPlaceholder": {
     "description": "Ask Pinky while its task runs: the placeholder of askSteerField. Pinky reads the message at its next step."
   },
+  "askScreen": "About the screen",
+  "@askScreen": {
+    "description": "Ask Pinky: the button that starts a question about what the phone shows now; the field may be empty."
+  },
+  "askScreenTooltip": "Ask Pinky about what the phone shows now, or have it explained when the field is empty. Blocked apps and hidden codes stay hidden.",
+  "@askScreenTooltip": {
+    "description": "Ask Pinky: the tooltip of the button that asks about the phone's screen."
+  },
+  "askScreenDefault": "Explain what the phone shows.",
+  "@askScreenDefault": {
+    "description": "Ask Pinky: the task sent when the person asks about the screen with an empty field."
+  },
   "askSteps": "{count, plural, one {# step} other {# steps}}",
   "@askSteps": {
     "description": "Ask Pinky: how many steps (phone actions) a task took; also the choices of the step limit in Settings › Agents.",

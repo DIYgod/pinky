@@ -237,10 +237,17 @@ func (a *app) askBox(c *mg.Context) {
 					mg.Text(c, locales.AskToday(today)).FontSize(fsCaption).TextColor(p.ink3).FontFeatures("tnum")
 				}
 			})
+			// About the screen: a question about what the phone shows now,
+			// which may be left empty to have the screen explained.
+			screen := button(c, locales.AskScreen(), btnOpt{small: true}).Disabled(why != "").
+				Tooltip(locales.AskScreenTooltip())
+			if why == "" && screen.Clicked() {
+				a.askStart(id, true)
+			}
 			can := why == "" && strings.TrimSpace(st.draft) != ""
 			start := button(c, locales.AskStart(), btnOpt{kind: btnPrimary, small: true}).Disabled(!can)
 			if can && (start.Clicked() || area.Shortcut(mg.Cmd, mg.KeyEnter)) {
-				a.askStart(id)
+				a.askStart(id, false)
 			}
 		})
 	})
@@ -272,9 +279,15 @@ func (a *app) askPicker(c *mg.Context, id string) {
 	}
 }
 
-func (a *app) askStart(id string) {
+// askStart starts the task typed in the field; with screen, a question
+// about what the phone shows, the screen explained when the field is empty.
+func (a *app) askStart(id string, screen bool) {
 	st := &a.ask
-	err := a.opt.Pilot.Start(a.settings.PilotConfig(), id, st.draft)
+	task := st.draft
+	if screen && strings.TrimSpace(task) == "" {
+		task = locales.AskScreenDefault()
+	}
+	err := a.opt.Pilot.StartWith(a.settings.PilotConfig(), id, task, pilot.Extra{Screen: screen})
 	switch {
 	case err == nil:
 		st.draft, st.err, st.errFor = "", "", ""
