@@ -65,7 +65,7 @@ Why each answer is what it is:
 
 ## In the app
 
-- History steps and approval cards are written by the gateway in English. In Chinese and Japanese the app reads them back in `ui/gwtext.go` (`stepText`, `needTitle`, `needDetail`) and shows them from the catalogs (`gwStepInstalledApp`, `gwDoInstallApp`, `gwAppSignedBy` and the like). The card's detail is translated part by part in a fixed order (signer, files, replaced version, or the data note for an uninstall), so the agent's own intent, the last part, is never taken for one of them. Words Pinky does not know stay in English.
+- History steps and approval cards are written by the gateway in English. In Chinese and Japanese the app reads them back in `internal/gwtext/gwtext.go` (`stepText`, `needTitle`, `needDetail`) and shows them from the catalogs (`gwStepInstalledApp`, `gwDoInstallApp`, `gwAppSignedBy` and the like). The card's detail is translated part by part in a fixed order (signer, files, replaced version, or the data note for an uninstall), so the agent's own intent, the last part, is never taken for one of them. Words Pinky does not know stay in English.
 - The four new rules ("Installing from the computer", "Uninstalling apps", "Pinky's own apps", "System apps") have names in the catalogs (`ruleInstallFromComputer` and so on) and are in telemetry's list of known rules, so counts name them instead of "other".
 
 ## Tests

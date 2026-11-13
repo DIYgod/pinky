@@ -6,6 +6,10 @@
      settingsAsk*, needs*). Release builds do not show these screens yet
      (on_phone_ui). -->
 <resources>
+    <!-- Not words: the language these strings are in, as a BCP 47 tag. The
+         core says the gateway's steps, approvals and status lines in it
+         (CoreClient.speak). -->
+    <string name="phone_core_locale">en</string>
     <string name="phone_settings">Settings</string>
     <string name="phone_save">Save</string>
     <string name="phone_cancel">Cancel</string>

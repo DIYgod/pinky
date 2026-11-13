@@ -70,7 +70,7 @@ class HistoryActivity : Activity() {
         reading = true
         renderStatus()
         CoreClient.background {
-            val page = runCatching { PastTasks.page(before, limit) }
+            val page = runCatching { PastTasks.page(this, before, limit) }
             main.post {
                 if (n != reads || isDestroyed) return@post
                 reading = false

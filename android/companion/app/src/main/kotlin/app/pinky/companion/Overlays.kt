@@ -69,7 +69,7 @@ class Overlays(private val service: PinkyAccessibilityService) {
     }
 
     fun start() {
-        sub = CoreClient.subscribe({ st -> main.post { render(st) } }, { main.post { render(JSONObject()) } })
+        sub = CoreClient.subscribe(service, { st -> main.post { render(st) } }, { main.post { render(JSONObject()) } })
     }
 
     /** Windows came, went or changed: the service calls it for their events. */
@@ -262,8 +262,8 @@ class Overlays(private val service: PinkyAccessibilityService) {
             val width = service.resources.displayMetrics.widthPixels - px(24)
             add(it, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, width, bottomInset() + px(12))
         }
-        w.text.text = need.optString("title")
-        val detail = listOf(need.optString("detail"), need.optString("app"), need.optString("rule").let {
+        w.text.text = Words.shown(need, "title")
+        val detail = listOf(Words.shown(need, "detail"), need.optString("app"), Words.shown(need, "rule").let {
             if (it.isEmpty()) "" else service.getString(R.string.phone_rule, it)
         }).filter { it.isNotEmpty() }.joinToString(" · ")
         w.extra?.text = detail

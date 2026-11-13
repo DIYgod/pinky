@@ -110,7 +110,7 @@ class SettingsActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
-        sub = CoreClient.subscribe({ st -> main.post { onState(st) } }, { main.post { onDown() } })
+        sub = CoreClient.subscribe(this, { st -> main.post { onState(st) } }, { main.post { onDown() } })
     }
 
     // The screen is made anew when it is turned, or its theme or language

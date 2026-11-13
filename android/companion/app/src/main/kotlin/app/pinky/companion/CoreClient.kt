@@ -1,5 +1,6 @@
 package app.pinky.companion
 
+import android.content.Context
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
 import org.json.JSONObject
@@ -18,6 +19,21 @@ import java.util.concurrent.Executors
 object CoreClient {
 
     private val io = Executors.newCachedThreadPool()
+
+    /**
+     * The language Pinky's screens show (R.string.phone_core_locale), which
+     * every command names: the core then says the gateway's steps,
+     * approvals and status lines in it too (the state's and the history's
+     * *_shown fields, control.go). Empty until a screen or the service
+     * spoke.
+     */
+    @Volatile
+    private var locale = ""
+
+    /** Takes the language of context's strings for the commands that follow. */
+    fun speak(context: Context) {
+        locale = context.getString(R.string.phone_core_locale)
+    }
 
     /**
      * The core said no. code names the reason when the screens know it
@@ -92,6 +108,7 @@ object CoreClient {
 
     fun cmd(name: String, vararg fields: Pair<String, Any>): JSONObject {
         val j = JSONObject().put("cmd", name)
+        if (locale.isNotEmpty()) j.put("locale", locale)
         for ((k, v) in fields) j.put(k, v)
         return j
     }
@@ -104,9 +121,11 @@ object CoreClient {
      * mode on: while the core is not there, which starts the core once the
      * service is on, and each time the core has the phone again. The core
      * outlives the service (a Go runtime cannot be unloaded), and a service
-     * that was turned off forgot the mode. Close the result to stop.
+     * that was turned off forgot the mode. It speaks context's language
+     * (speak). Close the result to stop.
      */
-    fun subscribe(onState: (JSONObject) -> Unit, onDown: (String) -> Unit): Closeable {
+    fun subscribe(context: Context, onState: (JSONObject) -> Unit, onDown: (String) -> Unit): Closeable {
+        speak(context)
         val sub = Subscription(onState, onDown)
         io.execute(sub)
         return sub
@@ -130,7 +149,8 @@ object CoreClient {
                     socket = s
                     if (closed) break
                     val w = OutputStreamWriter(s.outputStream, Charsets.UTF_8)
-                    w.write("{\"cmd\":\"subscribe\"}\n")
+                    w.write(cmd("subscribe").toString())
+                    w.write("\n")
                     w.flush()
                     val r = BufferedReader(InputStreamReader(s.inputStream, Charsets.UTF_8))
                     // Whether on-phone mode was turned on since the core last

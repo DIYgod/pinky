@@ -141,7 +141,7 @@ class TaskActivity : Activity() {
         super.onStart()
         // Without the core there is nothing to reach, and on-phone mode stays off.
         if (!hasCore) return
-        sub = CoreClient.subscribe({ st -> main.post { onState(st) } }, { why -> main.post { onDown(why) } })
+        sub = CoreClient.subscribe(this, { st -> main.post { onState(st) } }, { why -> main.post { onDown(why) } })
     }
 
     override fun onResume() {
@@ -262,7 +262,7 @@ class TaskActivity : Activity() {
             runTask.say(agent.optString("task"))
             runUsage.say(Words.usage(resources, agent))
             val need = st?.optJSONArray("needs")?.optJSONObject(0)
-            runWaiting.say(need?.let { getString(R.string.phone_waiting_for, it.optString("title")) })
+            runWaiting.say(need?.let { getString(R.string.phone_waiting_for, Words.shown(it, "title")) })
             runHint.shown(need != null)
         } else {
             look.enable(stopButton, true)
@@ -290,7 +290,7 @@ class TaskActivity : Activity() {
         // Why the core cannot be reached is in the log (onDown), in a
         // developer's words; the person gets what to do.
         if (state == null) return getString(R.string.phone_core_failed_hint)
-        return listOf(device?.optString("line").orEmpty(), device?.optString("detail").orEmpty())
+        return listOf(device?.let { Words.shown(it, "line") }.orEmpty(), device?.optString("detail").orEmpty())
             .filter { it.isNotEmpty() }.distinct().joinToString("\n")
     }
 
@@ -430,7 +430,7 @@ class TaskActivity : Activity() {
         CoreClient.background {
             // A read that fails keeps the list as it was, until the next.
             val page = try {
-                PastTasks.page(0, RECENT + 1)
+                PastTasks.page(this, 0, RECENT + 1)
             } catch (_: Exception) {
                 null
             }

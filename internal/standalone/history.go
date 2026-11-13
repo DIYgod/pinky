@@ -162,7 +162,9 @@ func outcomeOf(e pilot.End) string {
 func stepsOf(t gateway.TaskView) []Step {
 	var out []Step
 	for _, s := range t.Steps {
-		out = append(out, Step{Text: s.Text, Status: s.Status, MS: s.Elapsed.Milliseconds()})
+		step := Step{Text: s.Text, Status: s.Status, MS: s.Elapsed.Milliseconds()}
+		step.Shown, step.Asked = stepShown(s.Text)
+		out = append(out, step)
 	}
 	return out
 }

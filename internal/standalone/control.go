@@ -30,12 +30,17 @@ import (
 //	                                                      (History: PastTask, newest first; both fields optional)
 //	{"cmd":"history","id":"..."}                        → {"ok":true,"history":[the task, with its steps]}
 //
+// Any command may name the language Pinky's screens show, "locale":
+// "zh-Hans", "ja" or "en"; the state and the history then say the
+// gateway's words in it too (shown.go).
+//
 // A failed command replies {"ok":false,"error":"...","code":"..."}: the
 // code, when there is one, names an error the screens say in the person's
 // language (the Code constants); the error is for logs.
 
 type request struct {
 	Cmd      string `json:"cmd"`
+	Locale   string `json:"locale"` // the screens' language: setLocale
 	Need     string `json:"need"`
 	Decision string `json:"decision"`
 	Note     string `json:"note"`
@@ -139,6 +144,7 @@ func (c *Core) serveConn(ctx context.Context, conn net.Conn) {
 			_ = enc.Encode(reply{Error: "bad request: " + err.Error()})
 			continue
 		}
+		setLocale(r.Locale)
 		if r.Cmd == "subscribe" {
 			c.stream(ctx, enc)
 			return

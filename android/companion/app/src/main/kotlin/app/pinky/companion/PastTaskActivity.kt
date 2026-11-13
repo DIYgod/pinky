@@ -59,7 +59,7 @@ class PastTaskActivity : Activity() {
     private fun read() {
         val id = intent.getStringExtra(EXTRA_ID).orEmpty()
         CoreClient.background {
-            val t = runCatching { PastTasks.task(id) }
+            val t = runCatching { PastTasks.task(this, id) }
             main.post {
                 if (isDestroyed) return@post
                 t.onSuccess { show(it) }.onFailure { failed(it) }

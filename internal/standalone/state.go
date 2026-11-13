@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/gwtext"
 	"github.com/DIYgod/pinky/internal/pilot"
 )
 
@@ -33,6 +34,9 @@ type DeviceState struct {
 	Status string `json:"status,omitempty"`
 	Line   string `json:"line,omitempty"`
 	Detail string `json:"detail,omitempty"`
+	// LineShown is Line in the screens' language, when it differs
+	// (shown.go).
+	LineShown string `json:"line_shown,omitempty"`
 }
 
 // AgentState is Ask Pinky's task: running, or the last one that ended.
@@ -68,11 +72,19 @@ type TaskState struct {
 	Steps []Step `json:"steps"`
 }
 
-// Step is one step of the task.
+// Step is one step of the task. Text is the gateway's English, which the
+// screens read for what kind of step it is; Shown and Asked say it in the
+// screens' language when that is another (Shown, stepShown).
 type Step struct {
 	Text   string `json:"text"`
 	Status string `json:"status"`
 	MS     int64  `json:"ms"`
+	// Shown is Text in the screens' language: its first line, and its
+	// second when it has one.
+	Shown string `json:"shown,omitempty"`
+	// Asked is, for a step that waited for the person ("Waiting for you:
+	// Tapped “Pay”"), what was asked in the screens' language ("点按“Pay”").
+	Asked string `json:"asked,omitempty"`
 }
 
 // Need is an approval or a handoff the agent waits for.
@@ -85,6 +97,11 @@ type Need struct {
 	Rule       string `json:"rule,omitempty"`
 	DeadlineMS int64  `json:"deadline_ms,omitempty"` // Unix milliseconds; no answer by then means deny
 	AllowTask  bool   `json:"allow_task,omitempty"`
+	// Title, Detail and Rule in the screens' language, when they differ
+	// (shown.go).
+	TitleShown  string `json:"title_shown,omitempty"`
+	DetailShown string `json:"detail_shown,omitempty"`
+	RuleShown   string `json:"rule_shown,omitempty"`
 }
 
 // State reads the current state.
@@ -93,7 +110,7 @@ func (c *Core) State() State {
 	d, ok := c.device()
 	if ok {
 		st.Device = DeviceState{Ready: d.Info.State == "online", Name: d.Info.Name, Status: string(d.Status),
-			Line: d.StatusLine, Detail: d.Info.Detail}
+			Line: d.StatusLine, Detail: d.Info.Detail, LineShown: shown(d.StatusLine, gwtext.StatusLine(d))}
 	}
 	if cl := c.opt.Claims; cl != nil {
 		if task, stoppable, held := cl.Computer(); held {
@@ -124,7 +141,8 @@ func (c *Core) State() State {
 			continue
 		}
 		need := Need{ID: n.ID, Kind: string(n.Kind), Title: n.Title, Detail: n.Detail, App: n.App, Rule: n.Rule,
-			AllowTask: n.AllowTask}
+			AllowTask: n.AllowTask, TitleShown: shown(n.Title, gwtext.NeedTitle(n)),
+			DetailShown: shown(n.Detail, gwtext.NeedDetail(n)), RuleShown: shown(n.Rule, gwtext.RuleName(n.Rule))}
 		if !n.Deadline.IsZero() {
 			need.DeadlineMS = n.Deadline.UnixMilli()
 		}

@@ -2,6 +2,7 @@
 <!-- values/phone_strings.xml in Simplified Chinese, worded as desktop
      Pinky's zh-Hans.json. -->
 <resources>
+    <string name="phone_core_locale">zh-Hans</string>
     <string name="phone_settings">设置</string>
     <string name="phone_save">保存</string>
     <string name="phone_cancel">取消</string>

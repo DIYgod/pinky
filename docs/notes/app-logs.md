@@ -50,7 +50,7 @@ An iPhone keeps no log history a computer can read back, short of `log collect`'
 - MCP: `phone_logs` in `internal/mcp/tools.go` (read-only annotation); `Result.Log` printed by `render.go`.
 - Drivers: `internal/driver/android/logs.go`; `internal/driver/ios/logs.go` (lines, the follower) and `crashes.go` (`.ips` reports).
 - Fake phone: `internal/driver/fake/logs.go` (`AddApp`, `AddLogs`, `AddCrash`, `SetDevBuild`).
-- Client: the steps, the approval title and the rule name are translated in `ui/gwtext.go` and `ui/i18n.go`; "App logs" approvals have no screenshot (`ui/approvalshot.go`).
+- Client: the steps, the approval title and the rule name are translated in `internal/gwtext/gwtext.go` and `internal/gwtext/words.go`; "App logs" approvals have no screenshot (`ui/approvalshot.go`).
 
 ## Tests
 

@@ -1,6 +1,7 @@
 package app.pinky.companion
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.text.TextUtils
 import org.json.JSONArray
@@ -21,8 +22,9 @@ object PastTasks {
     /** Tasks of the history, newest first; more is whether older ones follow. */
     class Page(val tasks: List<JSONObject>, val more: Boolean)
 
-    /** At most limit tasks that started before before (Unix ms; 0 for now). */
-    fun page(before: Long, limit: Int): Page {
+    /** At most limit tasks that started before before (Unix ms; 0 for now), in context's language (CoreClient.speak). */
+    fun page(context: Context, before: Long, limit: Int): Page {
+        CoreClient.speak(context)
         val r = CoreClient.call(CoreClient.cmd("history", "before" to before, "limit" to limit))
         // An empty history leaves "history" out.
         val a = r.optJSONArray("history") ?: JSONArray()
@@ -30,9 +32,11 @@ object PastTasks {
     }
 
     /** One task, with its steps; throws Refused with GONE when the history no longer has it. */
-    fun task(id: String): JSONObject =
-        CoreClient.call(CoreClient.cmd("history", "id" to id)).optJSONArray("history")?.optJSONObject(0)
+    fun task(context: Context, id: String): JSONObject {
+        CoreClient.speak(context)
+        return CoreClient.call(CoreClient.cmd("history", "id" to id)).optJSONArray("history")?.optJSONObject(0)
             ?: throw CoreClient.Refused(GONE, "the core sent no task")
+    }
 
     fun open(activity: Activity, id: String) {
         activity.startActivity(Intent(activity, PastTaskActivity::class.java).putExtra(PastTaskActivity.EXTRA_ID, id))

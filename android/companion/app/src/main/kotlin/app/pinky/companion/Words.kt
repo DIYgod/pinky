@@ -147,16 +147,20 @@ object Words {
      * (ui/extras.go, stepDisplay). Besides the step's status it reads the
      * gateway's own words: an approval's step says "Waiting for you: Tapped
      * …" while it waits and keeps that text when it is denied or withdrawn,
-     * with only its status changing. Those words stay English here; desktop
-     * Pinky translates them (ui/gwtext.go). last is whether it is the
-     * task's last step, taskState the task's state (gateway.TaskState).
+     * with only its status changing. The core says the gateway's words in
+     * the screens' language beside the English (shown, asked; desktop
+     * Pinky's internal/gwtext), and the step reads them when they are
+     * there; the English says what kind of step it is. last is whether it
+     * is the task's last step, taskState the task's state
+     * (gateway.TaskState).
      */
     fun step(res: Resources, s: JSONObject, last: Boolean, taskState: String): Step {
         val status = s.optString("status")
         val full = s.optString("text")
         // A step's second line, after a newline, is a detail.
         val first = full.substringBefore('\n')
-        var sub = full.substringAfter('\n', "").trim()
+        val shown = s.optString("shown").ifEmpty { full }
+        var sub = shown.substringAfter('\n', "").trim()
         var kind = when {
             status == "approval_pending" -> Kind.WAIT
             // The core's steps carry no tool, as desktop Pinky's carry none
@@ -166,7 +170,7 @@ object Words {
             else -> Kind.DONE
         }
         val waiting = first.startsWith(WAITING)
-        val action = if (waiting) imperative(first.removePrefix(WAITING)) else ""
+        val action = if (waiting) s.optString("asked").ifEmpty { imperative(first.removePrefix(WAITING)) } else ""
         val isHandoff = first.startsWith(HANDOFF)
         val handoff = first.removePrefix(HANDOFF)
         val isAsk = first.startsWith(ASK)
@@ -227,9 +231,16 @@ object Words {
             "device_needs_setup" -> sub = res.getString(R.string.phone_step_needs_setup)
             else -> FAILURES[status]?.let { sub = res.getString(R.string.phone_step_failed, res.getString(it)) }
         }
-        val text = said ?: if (waiting && kind != Kind.WAIT) upperFirst(action) else first
+        val text = said ?: if (waiting && kind != Kind.WAIT) upperFirst(action) else shown.substringBefore('\n')
         return Step(text, sub, kind)
     }
+
+    /**
+     * One of the gateway's words in the state (a need's title, detail or
+     * rule, the phone's line) as the core says it in the screens' language,
+     * its field_shown, or as the gateway wrote it.
+     */
+    fun shown(j: JSONObject, field: String): String = j.optString(field + "_shown").ifEmpty { j.optString(field) }
 
     // withSub puts Pinky's line about a step above the step's own second
     // line, when it has one.

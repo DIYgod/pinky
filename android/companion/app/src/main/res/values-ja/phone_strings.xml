@@ -3,6 +3,7 @@
      ja.json (スマホ, 「設定」) and with Android's own names for its
      settings (ユーザー補助, アプリ情報, 制限付き設定を許可). -->
 <resources>
+    <string name="phone_core_locale">ja</string>
     <string name="phone_settings">設定</string>
     <string name="phone_save">保存</string>
     <string name="phone_cancel">キャンセル</string>
