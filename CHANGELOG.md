@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- phone_device no longer fails on Android 13 and later phones whose dark theme turns on at set times or at bedtime.
+
 ## 2026.1113.3 (2026-11-13)
 
 - Scrolling a list from a button in it (such as Delete order in an order list) is now just a scroll: Pinky no longer asks you about it as a payment, or refuses it in read-only mode.
