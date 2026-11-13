@@ -139,9 +139,9 @@ class MemoryActivity : Activity() {
         deleteAll.shown(notes.length() > 0)
     }
 
-    private fun add() {
-        look.edit(getString(R.string.phone_memory_add), "", "", getString(R.string.phone_memory_hint), Look.Field.TEXT, ::check) { v ->
-            save(CoreClient.cmd("memory_add", "text" to v)) { why -> reopen(why) { add() } }
+    private fun add(initial: String = "") {
+        look.edit(getString(R.string.phone_memory_add), "", initial, getString(R.string.phone_memory_hint), Look.Field.TEXT, ::check) { v ->
+            save(CoreClient.cmd("memory_add", "text" to v)) { why -> reopen(why) { add(v) } }
         }
     }
 
