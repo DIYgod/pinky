@@ -38,6 +38,9 @@ type Request struct {
 	// it goes with the first message, and stays in the conversation for
 	// Continue. Agents' tasks have none.
 	Extra Extra
+	// Scheduled is set for a task a schedule starts (StartScheduled).
+	// Agents cannot schedule tasks: phone_task_* leave it nil.
+	Scheduled *Scheduled
 }
 
 // keepFor is how long the tasks agents handed Pinky stay to be asked

@@ -209,6 +209,12 @@ type Status struct {
 	LogFirst int
 	// Version counts the changes of the status.
 	Version int
+
+	// Scheduled is set for a scheduled task (StartScheduled); Met says
+	// whether its condition held, when it has one and the model finished.
+	// Continue makes it a task the person watches (run.attendLocked).
+	Scheduled *Scheduled
+	Met       *bool
 }
 
 // What a task waits for the person to do (Status.Waiting).
@@ -376,7 +382,7 @@ func (r *Runner) start(cfg Config, req Request) (*run, error) {
 	ctx, cancel := context.WithCancel(r.ctx)
 	now := time.Now()
 	ru := &run{r: r, cancel: cancel, req: req, read: map[string]bool{}, changed: make(chan struct{}),
-		st: Status{Device: req.Device, Task: task, Config: cfg, Started: now, Resumed: now, ID: newID(), By: req.Agent.Name}}
+		st: Status{Device: req.Device, Task: task, Config: cfg, Started: now, Resumed: now, ID: newID(), By: req.Agent.Name, Scheduled: req.Scheduled}}
 	_, ru.st.Priced = priceOf(cfg)
 	r.runs[req.Device] = ru
 	if ru.st.By != "" {
@@ -553,6 +559,7 @@ func (r *Runner) continueRunLocked(ru *run, text, from string) error {
 	ru.st.Ended, ru.st.End, ru.st.Summary, ru.st.Continuable = time.Time{}, Running, "", false
 	ru.st.Continues++
 	ru.st.Resumed = now
+	ru.attendLocked()
 	ru.changedLocked()
 	ru.mu.Unlock()
 	r.launch(ctx, cancel, ru)
@@ -655,6 +662,9 @@ type run struct {
 	changed chan struct{}
 	// note is what the model wrote before its next call (Step.Note).
 	note string
+	// attended is what the model is told when the person continues a
+	// scheduled task that nobody watched (attendLocked).
+	attended string
 }
 
 func (ru *run) status() Status {
@@ -755,7 +765,9 @@ var waits = map[string]bool{"phone_handoff": true, "phone_request_approval": tru
 // work runs the task, or its next stretch after Continue, to its end.
 func (ru *run) work(ctx context.Context) (End, string) {
 	ru.mu.Lock()
-	cfg, device, task, taskID, m := ru.st.Config, ru.st.Device, ru.st.Task, ru.st.TaskID, ru.m
+	cfg, device, task, taskID, m, sch := ru.st.Config, ru.st.Device, ru.st.Task, ru.st.TaskID, ru.m, ru.st.Scheduled
+	attended := ru.attended
+	ru.attended = ""
 	ru.mu.Unlock()
 	key, err := ru.r.opt.Key(ctx, cfg.KeyName())
 	if cfg.KeyOptional() && (errors.Is(err, secret.ErrNotFound) || err == nil) {
@@ -820,7 +832,7 @@ func (ru *run) work(ctx context.Context) (End, string) {
 			return ru.ended(ctx, cs, err)
 		}
 		for _, t := range list.Tools {
-			if leftOut[t.Name] {
+			if leftOutFor(sch, t.Name) {
 				continue
 			}
 			s, _ := t.InputSchema.(map[string]any)
@@ -830,7 +842,7 @@ func (ru *run) work(ctx context.Context) (End, string) {
 			}
 			tools = append(tools, tool{name: t.Name, description: t.Description, schema: s})
 		}
-		tools = append(tools, finishTool)
+		tools = append(tools, finishFor(sch))
 	}
 
 	connectArgs := map[string]any{"device": device, "task": oneLine(task)}
@@ -876,14 +888,18 @@ func (ru *run) work(ctx context.Context) (End, string) {
 
 	var text string
 	if m == nil {
-		m, err = newModel(cfg, key, ru.r.opt.HTTPClient, systemPrompt(cfg), tools)
+		m, err = newModel(cfg, key, ru.r.opt.HTTPClient, systemPrompt(cfg)+scheduledPrompt(sch), tools)
 		if err != nil {
 			return ru.end(cs, Error, err.Error())
 		}
 		ru.mu.Lock()
 		ru.m, ru.tools = m, tools
 		ru.mu.Unlock()
-		text = firstMessage(task, device, res.text, time.Now()) + ru.req.Extra.prompt()
+		text = firstMessage(task, device, res.text, time.Now().In(zone(sch)))
+		if extra := scheduledMessage(sch); extra != "" {
+			text = strings.Replace(text, "</task>\n\n", "</task>\n\n"+extra, 1)
+		}
+		text += ru.req.Extra.prompt()
 		if ru.req.Agent.Name != "" {
 			text += "\n\n" + fromAgent(ru.req.Agent.Name)
 		}
@@ -892,7 +908,10 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		}
 	} else {
 		m.setKey(key)
-		text = continueMessage(device, res.text, time.Now(), ru.continuedBy())
+		text = continueMessage(device, res.text, time.Now().In(zone(sch)), ru.continuedBy())
+		if attended != "" {
+			text += "\n\n" + attended
+		}
 	}
 	return ru.loop(ctx, cs, m, tools, key, text)
 }
@@ -1017,6 +1036,10 @@ func (ru *run) finish(ctx context.Context, cs *sdk.ClientSession, c call) (End, 
 	end := Failed
 	if strings.EqualFold(strings.TrimSpace(outcome), "done") {
 		end = Done
+	}
+	if sch := ru.status().Scheduled; sch != nil && sch.Condition != "" {
+		met, _ := c.args[conditionMet].(bool)
+		ru.update(func(s *Status) { s.Met = &met })
 	}
 	res := ru.call(ctx, cs, "phone_release", map[string]any{"outcome": string(end), "summary": summary})
 	if ctx.Err() != nil || res.status == "stopped" {
