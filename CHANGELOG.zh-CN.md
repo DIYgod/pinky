@@ -2,6 +2,12 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- iPhone 的投屏画面不再偏亮：亮处不会变成一片白，暗处也不会压成一片黑。感谢 @shrderek。
+- iPhone 上的 Pinky 在主屏幕、通知和实时活动里显示自己的图标了，不再是空白图标。
+- 两个手机应用的任务页标题旁现在会显示 Pinky 的 logo。
+
 ## 2026.1113.6 (2026-11-13)
 
 - 在有两块屏的 iPhone 上，按「主屏幕」和上滑都没让画面变化时，Pinky 会告诉智能体可能没有生效，不再报告成功。
