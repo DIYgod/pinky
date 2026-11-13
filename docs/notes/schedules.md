@@ -42,7 +42,7 @@ A run started by a schedule is **unattended**; Run now is not (the person presse
   | `in_use` | The person took over | Screen on, unlocked, touched less than 60 s ago | Waits up to 15 minutes, looking again every minute, then skipped. |
   | `busy` | Another task or agent has the phone | Another task runs | Waits up to 15 minutes, then skipped. |
   | `offline` | Not connected, paused, connecting or waiting for setup | (never) | Skipped at once. |
-  | `no_key` | No model or key | No key for the provider | Skipped at once. |
+  | `no_key` | No model or key | No key for the model service | Skipped at once. |
   | `no_phone` | The phone is no longer Pinky's | (never) | Skipped at once. |
   | `off` | Ask Pinky turned off | On-phone mode turned off | Skipped at once. |
 
