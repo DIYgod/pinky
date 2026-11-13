@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Pinky on the computer no longer holds on to step screenshots after you stop looking at them, so it uses less memory over a day of tasks. Thanks @ljh740.
+
 ## 2026.1113.12 (2026-11-13)
 
 - Ask Pinky and Pinky on your phone can now remember things for later tasks. After a task it may suggest a note, such as a preference you told it or a quicker way through an app, and keeps it only if you choose Remember. See, edit or delete notes, or turn memory off, in Settings › Agents › Memory on the computer and Settings › Memory in the phone apps. Notes never hold passwords, codes, card, account, ID or phone numbers, or addresses, and each device keeps its own.
