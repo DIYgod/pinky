@@ -7,7 +7,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.NetworkInterface
+import java.net.Socket
 
 /**
  * Finds this phone's own Wireless debugging services on the network
@@ -15,7 +17,8 @@ import java.net.NetworkInterface
  * listens on, which changes each time Wireless debugging is turned on, and
  * PAIRING, the port of "Pair device with pairing code", there only while
  * that dialog is open. Only records of this phone count: other phones on
- * the Wi-Fi advertise theirs too.
+ * the Wi-Fi advertise theirs too, and a CONNECT port counts only once
+ * this phone's adbd is found listening on it.
  *
  * onPort gets the port, on the main thread, and 0 when the service went
  * away. Pinky never turns Wireless debugging on: it only looks.
@@ -95,14 +98,18 @@ class AdbServices(context: Context, private val type: String, private val onPort
                 }
 
                 override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                    val own = isOwn(serviceInfo.host)
-                    main.post {
-                        resolving = false
-                        if (listener === l && own && serviceInfo.port > 0) {
-                            ours = serviceInfo.serviceName
-                            onPort(serviceInfo.port)
+                    val port = serviceInfo.port
+                    // Off NSD's thread: the connection check below blocks.
+                    CoreClient.background {
+                        val own = isOwn(serviceInfo.host) && port > 0 && (type != CONNECT || listening(port))
+                        main.post {
+                            resolving = false
+                            if (listener === l && own) {
+                                ours = serviceInfo.serviceName
+                                onPort(port)
+                            }
+                            resolveNext()
                         }
-                        resolveNext()
                     }
                 }
             })
@@ -116,6 +123,20 @@ class AdbServices(context: Context, private val type: String, private val onPort
         private const val TAG = "PinkyAdbServices"
         const val CONNECT = "_adb-tls-connect._tcp"
         const val PAIRING = "_adb-tls-pairing._tcp"
+
+        /**
+         * Whether this phone's adbd listens on port: it listens on every
+         * address, so a record of another phone with the same address (two
+         * emulators on one virtual Wi-Fi) or an old record from the cache
+         * fails here. Only for CONNECT: a connection that goes nowhere
+         * could end the pairing dialog's one attempt.
+         */
+        fun listening(port: Int): Boolean = try {
+            Socket().use { it.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), port), 500) }
+            true
+        } catch (_: Exception) {
+            false
+        }
 
         /** Whether addr is one of this phone's own addresses. */
         fun isOwn(addr: InetAddress?): Boolean {
