@@ -35,6 +35,11 @@ struct SettingsView: View {
                 modelSection
                 checkSection
                 limitsSection
+                Section {
+                    NavigationLink("Memory") { MemoryView() }
+                } footer: {
+                    Text("What Pinky remembers between tasks")
+                }
                 usageSection
                 askSection
                 phoneSection

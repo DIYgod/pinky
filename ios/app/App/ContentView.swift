@@ -358,6 +358,7 @@ struct EndedCard: View {
                 Text(verbatim: L.usage(agent)).font(.footnote.monospacedDigit()).foregroundStyle(.secondary)
             }
             .padding(.vertical, 2)
+            if let s = agent.suggested, !s.isEmpty { SuggestionsView(list: s) }
         }
         .listRowBackground(e.tone.color.opacity(0.08))
     }

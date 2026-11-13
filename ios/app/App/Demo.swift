@@ -77,6 +77,9 @@ enum Demo {
             agent.steps = 6
             agent.seconds = 31
             agent.summary = w("128 × 46 = 5,888. Calculator shows the result.", "128 × 46 = 5888，计算器上显示了结果。")
+            agent.suggested = [
+                Suggestion(kind: "learned", text: w("Clear with AC before a new sum", "新算式前先按 AC 清零"), app: w("Calculator", "计算器")),
+            ]
             st.agent = agent
             st.task = TaskState(title: task, state: "done", steps: steps)
         case "computer":
@@ -106,6 +109,11 @@ enum Demo {
         case "steer" where req["id"] == nil:
             // The canned state does not change: the message shows nowhere.
             return CoreReply(ok: true, id: "demo-m")
+        case "memories":
+            return CoreReply(ok: true, memories: [
+                Memory(id: "1", kind: "said", text: w("Prefers window seats", "喜欢靠窗的座位")),
+                Memory(id: "2", kind: "learned", text: w("Orders are under 「我的」, then 「全部订单」", "订单在「我的」›「全部订单」"), app: w("Meituan", "美团")),
+            ])
         default:
             return CoreReply(ok: true)
         }

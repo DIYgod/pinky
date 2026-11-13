@@ -133,7 +133,7 @@ enum TaskSettings {
     /// (standalone.StartRequest), without the key.
     static var request: [String: Any] {
         let s = service
-        return ["service": s.id, "provider": s.api, "model": model, "base_url": baseURL]
+        return ["service": s.id, "provider": s.api, "model": model, "base_url": baseURL, "no_memory": !useMemory]
     }
 
     // MARK: What the task box says
@@ -177,6 +177,9 @@ enum TaskSettings {
         let u = cleanURL(v)
         return u.isEmpty || u.hasPrefix("https://") || u.hasPrefix("http://")
     }
+
+    /// Whether tasks read the notes and suggest new ones (MemoryView).
+    static var useMemory: Bool { d.object(forKey: "useMemory") as? Bool ?? true }
 
     private static func positive(_ n: Int) -> Int? { n > 0 ? n : nil }
 }

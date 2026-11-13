@@ -557,6 +557,24 @@ final class AppModel: ObservableObject {
         usage = r.usage ?? []
     }
 
+    // MARK: Memory
+
+    /// A notes command: the notes after it, or why the core said no.
+    func memory(_ req: [String: Any]) async -> Result<[Memory], MemoryRefusal> {
+        let r = await call(req)
+        if r.ok { return .success(r.memories ?? []) }
+        return .failure(MemoryRefusal(code: r.code))
+    }
+
+    struct MemoryRefusal: Error { var code: String? }
+
+    /// Keeps or drops the note the task suggested at index i; nil when it
+    /// went through, else why not.
+    func decideNote(_ i: Int, keep: Bool) async -> String? {
+        let r = await call(["cmd": keep ? "keep" : "drop", "index": i])
+        return r.ok ? nil : L.memoryError(r.code)
+    }
+
     // MARK: Activity
 
     func loadRecent() async {

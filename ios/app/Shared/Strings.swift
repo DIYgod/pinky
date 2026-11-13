@@ -208,6 +208,31 @@ enum L {
         String(localized: "Speech recognition is not available now.", comment: "Voice input in the task box could not start")
     }
 
+    // MARK: Memory
+
+    /// Where a note came from: the person, or a task in an app.
+    static func memorySource(kind: String, app: String?) -> String {
+        guard kind == "learned" else { return String(localized: "From you", comment: "Memory: a note the person said or wrote") }
+        if let app, !app.isEmpty {
+            return String(localized: "Learned in \(app)", comment: "Memory: a note Pinky learned on a task; the app's name")
+        }
+        return String(localized: "Learned on a task", comment: "Memory: a note Pinky learned on a task")
+    }
+
+    /// Why the core kept no note, by its code (standalone's CodeMemory*).
+    static func memoryError(_ code: String?) -> String {
+        switch code {
+        case "memory_sensitive":
+            String(localized: "Memory never keeps passwords, codes, card, account, ID or phone numbers, email or street addresses.", comment: "Memory: a note was not saved")
+        case "memory_long":
+            String(localized: "A note has at most \(Memory.maxChars) characters.", comment: "Memory: a note was not saved; the most characters")
+        case "memory_full":
+            String(localized: "Memory keeps at most \(Memory.most) notes. Delete one first.", comment: "Memory: a note was not saved; the most notes")
+        default:
+            String(localized: "Couldn't save the note.", comment: "Memory: a note was not saved")
+        }
+    }
+
     /// A start or decide the core refused, by its code.
     static func refused(_ code: String?, _ error: String?) -> String {
         switch code {

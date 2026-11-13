@@ -12,6 +12,8 @@ struct CoreReply: Decodable {
     var more: Bool?
     /// steer: the new message's id.
     var id: String?
+    /// The notes' commands answer with the notes as they are now.
+    var memories: [Memory]?
 }
 
 /// What Pinky's screens show (internal/standalone.State).
@@ -71,6 +73,8 @@ struct AgentState: Decodable, Equatable {
     /// The task that ended can go on (continue), and how often it did.
     var continuable: Bool?
     var continues: Int?
+    /// Notes the task suggested, for the person to keep or drop.
+    var suggested: [Suggestion]?
 }
 
 /// A message of the person's to Pinky that the model has not read yet
@@ -79,6 +83,29 @@ struct PendingMessage: Decodable, Equatable, Identifiable {
     var id: String
     var text: String
     var ms: Int64
+}
+
+/// A note Pinky keeps on this iPhone, never shared with a computer or
+/// another phone (standalone.MemoryState).
+struct Memory: Decodable, Equatable, Identifiable {
+    var id: String
+    /// said: the person's own; learned: how to do something in an app.
+    var kind: String
+    var text: String
+    var app: String?
+
+    // pilot.MaxMemories and pilot.MaxMemoryChars.
+    static let most = 50
+    static let maxChars = 200
+}
+
+/// A note a task suggested, until the person decides (standalone.SuggestionState).
+struct Suggestion: Decodable, Equatable, Hashable {
+    var kind: String
+    var text: String
+    var app: String?
+    var kept: Bool?
+    var dropped: Bool?
 }
 
 struct TaskState: Decodable, Equatable {

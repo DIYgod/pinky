@@ -316,6 +316,23 @@
         }
       }
     },
+    "A note has at most %lld characters." : {
+      "comment" : "Memory: a note was not saved; the most characters",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶は 1 件 %lld 文字までです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一条记忆最多 %lld 个字。"
+          }
+        }
+      }
+    },
     "AI model" : {
       "localizations" : {
         "ja" : {
@@ -457,6 +474,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请先在「设置」中添加模型的 API 密钥。"
+          }
+        }
+      }
+    },
+    "Add…" : {
+      "comment" : "Memory: write a new note",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加…"
           }
         }
       }
@@ -833,6 +867,40 @@
         }
       }
     },
+    "Couldn't read the memory. Pinky may still be starting." : {
+      "comment" : "Memory: the notes could not be read",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶を読み込めませんでした。Pinky がまだ起動中の可能性があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取记忆，Pinky 可能还在启动。"
+          }
+        }
+      }
+    },
+    "Couldn't save the note." : {
+      "comment" : "Memory: a note was not saved",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶を保存できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存这条记忆。"
+          }
+        }
+      }
+    },
     "Couldn't send: %@" : {
       "comment" : "A message to Pinky failed; the reason",
       "localizations" : {
@@ -915,6 +983,57 @@
         }
       }
     },
+    "Delete" : {
+      "comment" : "Memory: forget a note",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除"
+          }
+        }
+      }
+    },
+    "Delete All" : {
+      "comment" : "Memory: forget every note",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部删除"
+          }
+        }
+      }
+    },
+    "Delete all of Pinky's memory?" : {
+      "comment" : "Memory: Delete All asks first",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky の記憶をすべて削除しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除 Pinky 的全部记忆？"
+          }
+        }
+      }
+    },
     "Deny" : {
       "localizations" : {
         "ja" : {
@@ -959,6 +1078,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请你在那个 App 里自己完成，然后回到这里。"
+          }
+        }
+      }
+    },
+    "Don't" : {
+      "comment" : "After a task: don't keep a suggested note",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "覚えない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不用"
           }
         }
       }
@@ -1027,6 +1163,57 @@
         }
       }
     },
+    "Every note on this iPhone is deleted. Pinky on a computer keeps its own." : {
+      "comment" : "Memory: Delete All asks first",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この iPhone の記憶はすべて削除されます。パソコンの Pinky の記憶はそのまま残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这部 iPhone 上的所有记忆都会被删除，电脑上的 Pinky 的记忆不受影响。"
+          }
+        }
+      }
+    },
+    "For example: Prefers window seats" : {
+      "comment" : "Memory: the field of a note",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例：窓側の席が好き"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "例如：喜欢靠窗的座位"
+          }
+        }
+      }
+    },
+    "From you" : {
+      "comment" : "Memory: a note the person said or wrote",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたから"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自你"
+          }
+        }
+      }
+    },
     "International" : {
       "comment" : "A service's international address, after its name in Settings",
       "localizations" : {
@@ -1076,6 +1263,40 @@
         }
       }
     },
+    "Learned in %@" : {
+      "comment" : "Memory: a note Pinky learned on a task; the app's name",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@で覚えたこと"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在%@中学到"
+          }
+        }
+      }
+    },
+    "Learned on a task" : {
+      "comment" : "Memory: a note Pinky learned on a task",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タスクで覚えたこと"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从任务中学到"
+          }
+        }
+      }
+    },
     "Leave it for Anthropic's API, or give the address of a service compatible with it." : {
       "localizations" : {
         "ja" : {
@@ -1104,6 +1325,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "上限"
+          }
+        }
+      }
+    },
+    "Memory" : {
+      "comment" : "Settings: the notes Pinky keeps",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记忆"
+          }
+        }
+      }
+    },
+    "Memory keeps at most %lld notes. Delete one first." : {
+      "comment" : "Memory: a note was not saved; the most notes",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶は %lld 件までです。先に 1 件削除してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记忆最多保存 %lld 条，请先删除一条。"
+          }
+        }
+      }
+    },
+    "Memory never keeps passwords, codes, card, account, ID or phone numbers, email or street addresses." : {
+      "comment" : "Memory: a note was not saved",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶にはパスワード、コード、カード番号、口座番号、ID 番号、電話番号、メールアドレス、住所は保存されません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记忆从不保存密码、验证码、卡号、账号、证件号、电话号码、邮箱或街道地址。"
           }
         }
       }
@@ -1304,6 +1576,23 @@
         }
       }
     },
+    "Not remembered" : {
+      "comment" : "After a task: a suggested note the person dropped",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "覚えませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未记住"
+          }
+        }
+      }
+    },
     "Nothing yet." : {
       "localizations" : {
         "ja" : {
@@ -1316,6 +1605,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "还没有用量。"
+          }
+        }
+      }
+    },
+    "Nothing yet. After a task, Pinky may suggest something to remember; you decide." : {
+      "comment" : "Memory: no notes",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだありません。タスクのあと、Pinky が覚えることを提案する場合があり、あなたが決めます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有记忆。任务结束后，Pinky 可能会建议记住一些内容，由你决定。"
           }
         }
       }
@@ -2105,6 +2411,57 @@
         }
       }
     },
+    "Remember" : {
+      "comment" : "After a task: keep a suggested note",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "覚える"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住"
+          }
+        }
+      }
+    },
+    "Remember for later tasks?" : {
+      "comment" : "After a task: whether to keep the notes it suggested",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後のタスクのために覚えますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记住，供以后的任务用？"
+          }
+        }
+      }
+    },
+    "Remembered" : {
+      "comment" : "After a task: a suggested note the person kept",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "覚えました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已记住"
+          }
+        }
+      }
+    },
     "Remove" : {
       "localizations" : {
         "ja" : {
@@ -2527,6 +2884,23 @@
         }
       },
       "comment" : "App Intent parameter"
+    },
+    "Tasks read these notes and may suggest new ones. Turned off, the notes stay until you delete them." : {
+      "comment" : "Memory: under Use memory",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タスクはこの記憶を読み、新しい記憶を提案することがあります。オフにしても、削除するまで記憶は残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任务会读取这些记忆，也可能建议新的记忆。关闭后，记忆会保留到你删除为止。"
+          }
+        }
+      }
     },
     "Tell Pinky what to do next…" : {
       "localizations" : {
@@ -3214,6 +3588,23 @@
         }
       }
     },
+    "Use memory" : {
+      "comment" : "Memory: whether tasks read and suggest notes",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記憶を使う"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用记忆"
+          }
+        }
+      }
+    },
     "VPN" : {
       "localizations" : {
         "ja" : {
@@ -3291,6 +3682,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "等你处理：%@"
+          }
+        }
+      }
+    },
+    "What Pinky remembers between tasks" : {
+      "comment" : "Settings: under Memory",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky がタスクをまたいで覚えていること"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 在任务之间记住的内容"
+          }
+        }
+      }
+    },
+    "What Pinky remembers for its tasks on this iPhone: what you told it, and ways of doing things you said yes to after a task. Nothing is kept without your yes, and never passwords, codes, card or ID numbers, or addresses. Pinky on a computer keeps its own." : {
+      "comment" : "Memory: what it is",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この iPhone で Pinky がタスクに使う記憶です。あなたが伝えたことと、タスクのあとで保存を許可したやり方が入ります。許可なく保存されることはなく、パスワード、コード、カード番号、ID 番号、住所は保存されません。パソコンの Pinky は、自分の記憶を持ちます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinky 在这部 iPhone 上的任务会用到的记忆：你告诉过它的事，以及任务结束后你同意保存的做法。不经你同意不会保存任何内容，也从不保存密码、验证码、卡号、证件号或地址。电脑上的 Pinky 有自己的记忆。"
           }
         }
       }
@@ -3477,6 +3902,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已完成"
+          }
+        }
+      }
+    },
+    "memory.notes" : {
+      "comment" : "Memory: the notes' heading",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remembered"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "覚えていること"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已记住"
           }
         }
       }
