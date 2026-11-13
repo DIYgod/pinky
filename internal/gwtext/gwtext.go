@@ -512,6 +512,7 @@ var (
 	reFinished  = re(`^Finished: (.*)$`)
 	reWaited    = re(`^Waited for “(.*)”$`)
 	reAskedYou  = re(`^Asked you: (.*)$`)
+	reYouSaid   = re(`^You said: “(.*)”$`)
 	reAskedTake = re(`^Asked you to take over: (.*)$`)
 	reListed    = re(`^Listed the phone's Pinky folder \((\d+) files?\)$`)
 	reListedPC  = re(`^Listed the phone's folder on the computer \((\d+) files?\)$`)
@@ -612,6 +613,9 @@ func stepText(s string) string {
 	}
 	if m := reAskedYou.FindStringSubmatch(s); m != nil {
 		return locales.GwStepAskedYou(m[1])
+	}
+	if m := reYouSaid.FindStringSubmatch(s); m != nil {
+		return locales.GwStepYouSaid(m[1])
 	}
 	if m := reListed.FindStringSubmatch(s); m != nil {
 		return locales.GwStepListedFolder(m[1])

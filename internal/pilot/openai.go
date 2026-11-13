@@ -152,6 +152,8 @@ func parameters(s map[string]any) map[string]any {
 	return p
 }
 
+func (o *openAI) setKey(key string) { o.key = key }
+
 func (o *openAI) send(ctx context.Context, results []result, text string) (*turn, error) {
 	var images []oaPart
 	for _, r := range results {

@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -135,10 +136,53 @@ type Status struct {
 	Tokens int64
 	// Priced says Cost is known; without it the cost limit is in tokens.
 	Priced bool
+
+	// TaskID is the task's id in the gateway, its Activity and history,
+	// once Pinky has connected to the phone for it.
+	TaskID string
+	// Pending are the messages the person sent during the task (Steer)
+	// or to continue it (Continue) that the model has not read yet,
+	// oldest first: they can still be edited or withdrawn. Pinky gives
+	// them to the model with its next request, and they become steps of
+	// the task (gateway.PersonStep). A task that ends keeps the ones it
+	// did not read, for Continue to send.
+	Pending []Message
+	// Continues counts the times the person continued the task.
+	Continues int
+	// Continuable says that the task ended and Continue can carry it on:
+	// Pinky reached the phone and the model for it, and keeps the
+	// conversation until Dismiss or the next task on the phone.
+	Continuable bool
+	// Resumed is when the task started or was last continued; the limits
+	// count from there. Worked is the time of the stretches before it.
+	Resumed time.Time
+	Worked  time.Duration
 }
 
 // Running reports whether the task has not ended.
 func (s Status) Running() bool { return s.Ended.IsZero() }
+
+// Elapsed is the time the task has run, now, less the time it stood
+// ended before it was continued.
+func (s Status) Elapsed(now time.Time) time.Duration {
+	end := s.Ended
+	if end.IsZero() {
+		end = now
+	}
+	from := s.Resumed
+	if from.IsZero() {
+		from = s.Started
+	}
+	return s.Worked + max(0, end.Sub(from))
+}
+
+// Message is what the person told Pinky about a task: typed while it ran
+// (Steer), or to continue it (Continue).
+type Message struct {
+	ID   string
+	Text string
+	At   time.Time
+}
 
 // Errors of Start.
 var (
@@ -146,6 +190,22 @@ var (
 	ErrNoModel = errors.New("pilot: no model")
 	ErrBusy    = errors.New("pilot: Pinky is already doing a task on this phone")
 	ErrClosed  = errors.New("pilot: closed")
+)
+
+// Errors of Steer, Edit, Withdraw and Continue.
+var (
+	// ErrEmpty: the message has no words.
+	ErrEmpty = errors.New("pilot: empty message")
+	// ErrNotRunning: Pinky does no task on the phone; an ended one takes
+	// Continue.
+	ErrNotRunning = errors.New("pilot: Pinky is doing no task on this phone")
+	// ErrRead: the model has read the message, which can no longer change.
+	ErrRead = errors.New("pilot: Pinky has already read the message")
+	// ErrNoMessage: the task has no such message, or it was withdrawn.
+	ErrNoMessage = errors.New("pilot: no such message")
+	// ErrCannotContinue: the phone has no task that ended which Pinky can
+	// carry on (Status.Continuable).
+	ErrCannotContinue = errors.New("pilot: this task cannot be continued")
 )
 
 // Options set up a Runner.
@@ -212,21 +272,168 @@ func (r *Runner) Start(cfg Config, device, task string) error {
 		return ErrBusy
 	}
 	ctx, cancel := context.WithCancel(r.ctx)
-	ru := &run{r: r, cancel: cancel, st: Status{Device: device, Task: task, Config: cfg, Started: time.Now()}}
+	now := time.Now()
+	ru := &run{r: r, cancel: cancel, read: map[string]bool{},
+		st: Status{Device: device, Task: task, Config: cfg, Started: now, Resumed: now}}
 	_, ru.st.Priced = priceOf(cfg)
 	r.runs[device] = ru
-	r.wg.Add(1)
+	r.launch(ctx, cancel, ru)
 	r.mu.Unlock()
+	r.notify()
+	return nil
+}
+
+// launch runs ru's task, or its next stretch, until it ends. The caller
+// holds r.mu.
+func (r *Runner) launch(ctx context.Context, cancel context.CancelFunc, ru *run) {
+	r.wg.Add(1)
 	go func() {
 		defer r.wg.Done()
 		defer cancel()
 		end, summary := ru.work(ctx)
 		ru.mu.Lock()
-		ru.st.End, ru.st.Summary, ru.st.Ended = end, summary, time.Now()
+		now := time.Now()
+		ru.st.End, ru.st.Summary, ru.st.Ended = end, summary, now
+		ru.st.Continuable = ru.m != nil && ru.st.TaskID != ""
+		if ru.m != nil {
+			// The key stays no longer than the stretch; Continue asks
+			// for it again.
+			ru.m.setKey("")
+		}
 		ru.mu.Unlock()
 		r.notify()
 	}()
+}
+
+// Steer gives the running task on a phone a message from the person: more
+// to do, or a change to the task. The model reads it with its next request
+// (after the tool call in flight, or the person's decision Pinky waits
+// for), as the person's words and never as the screen's; until then Edit
+// and Withdraw change it (Status.Pending). It approves nothing: Pinky
+// still asks the person before risky steps.
+func (r *Runner) Steer(device, text string) (Message, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return Message{}, ErrEmpty
+	}
+	r.mu.Lock()
+	ru := r.runs[device]
+	r.mu.Unlock()
+	if ru == nil {
+		return Message{}, ErrNotRunning
+	}
+	ru.mu.Lock()
+	if !ru.st.Running() {
+		ru.mu.Unlock()
+		return Message{}, ErrNotRunning
+	}
+	m := ru.addLocked(text)
+	ru.mu.Unlock()
 	r.notify()
+	return m, nil
+}
+
+// Edit changes a message the model has not read yet: ErrRead once it has.
+// Empty text withdraws it.
+func (r *Runner) Edit(device, id, text string) error {
+	text = strings.TrimSpace(text)
+	return r.pending(device, id, func(p []Message, i int) []Message {
+		if text == "" {
+			return append(p[:i:i], p[i+1:]...)
+		}
+		p = slices.Clone(p)
+		p[i].Text = text
+		return p
+	})
+}
+
+// Withdraw takes back a message the model has not read yet: ErrRead once
+// it has.
+func (r *Runner) Withdraw(device, id string) error {
+	return r.pending(device, id, func(p []Message, i int) []Message { return append(p[:i:i], p[i+1:]...) })
+}
+
+// pending changes the pending message id with f, which returns the new
+// list without changing the old one (a Status may hold it).
+func (r *Runner) pending(device, id string, f func(p []Message, i int) []Message) error {
+	r.mu.Lock()
+	ru := r.runs[device]
+	r.mu.Unlock()
+	if ru == nil {
+		return ErrNoMessage
+	}
+	ru.mu.Lock()
+	i := slices.IndexFunc(ru.st.Pending, func(m Message) bool { return m.ID == id })
+	if i < 0 {
+		read := ru.read[id]
+		ru.mu.Unlock()
+		if read {
+			return ErrRead
+		}
+		return ErrNoMessage
+	}
+	ru.st.Pending = f(ru.st.Pending, i)
+	if len(ru.st.Pending) == 0 {
+		ru.st.Pending = nil
+	}
+	ru.mu.Unlock()
+	r.notify()
+	return nil
+}
+
+// Continue carries on the task on a phone that ended (done, stopped, a
+// limit, failed) with a new message from the person, as the same task:
+// the model goes on from its conversation so far, and the gateway's task
+// runs again with its steps, in Activity and the history. text may be
+// empty when messages the task did not read wait (Status.Pending); they
+// go with it. The limits count anew from here, with the task's own model
+// and limits; Status's steps, cost and time keep counting the whole task.
+// The API key is asked for again, as at Start.
+func (r *Runner) Continue(device, text string) error {
+	text = strings.TrimSpace(text)
+	r.mu.Lock()
+	if err := r.continueLocked(device, text); err != nil {
+		r.mu.Unlock()
+		return err
+	}
+	r.mu.Unlock()
+	r.notify()
+	return nil
+}
+
+func (r *Runner) continueLocked(device, text string) error {
+	if r.closed {
+		return ErrClosed
+	}
+	ru := r.runs[device]
+	if ru == nil {
+		return ErrCannotContinue
+	}
+	ru.mu.Lock()
+	switch {
+	case ru.st.Running():
+		ru.mu.Unlock()
+		return ErrBusy
+	case !ru.st.Continuable:
+		ru.mu.Unlock()
+		return ErrCannotContinue
+	case text == "" && len(ru.st.Pending) == 0:
+		ru.mu.Unlock()
+		return ErrEmpty
+	}
+	if text != "" {
+		ru.addLocked(text)
+	}
+	ctx, cancel := context.WithCancel(r.ctx)
+	now := time.Now()
+	ru.cancel, ru.stopped, ru.waited = cancel, false, 0
+	ru.base = ru.st
+	ru.st.Worked += max(0, ru.st.Ended.Sub(ru.st.Resumed))
+	ru.st.Ended, ru.st.End, ru.st.Summary, ru.st.Continuable = time.Time{}, Running, "", false
+	ru.st.Continues++
+	ru.st.Resumed = now
+	ru.mu.Unlock()
+	r.launch(ctx, cancel, ru)
 	return nil
 }
 
@@ -294,13 +501,25 @@ func (r *Runner) notify() {
 
 // run is one task.
 type run struct {
-	r      *Runner
-	cancel context.CancelFunc
+	r *Runner
 
 	mu      sync.Mutex
+	cancel  context.CancelFunc // the current stretch's
 	st      Status
 	stopped bool
-	waited  time.Duration // spent waiting for the person
+	waited  time.Duration // spent waiting for the person, in this stretch
+	// base is the status as the stretch started, which its limits count
+	// from: all zero for the first.
+	base Status
+	seq  int             // numbers the person's messages
+	read map[string]bool // the messages the model has read, by id
+
+	// The conversation, kept after the task ends for Continue; carry are
+	// the answers to the calls of the model's last turn that never ran,
+	// for its next request.
+	m     model
+	tools []tool
+	carry []result
 }
 
 func (ru *run) status() Status {
@@ -312,8 +531,46 @@ func (ru *run) status() Status {
 func (ru *run) stop() {
 	ru.mu.Lock()
 	ru.stopped = true
+	cancel := ru.cancel
 	ru.mu.Unlock()
-	ru.cancel()
+	cancel()
+}
+
+// addLocked adds a message from the person to those the model has not
+// read. The caller holds ru.mu.
+func (ru *run) addLocked(text string) Message {
+	ru.seq++
+	m := Message{ID: fmt.Sprintf("m%d", ru.seq), Text: text, At: time.Now()}
+	ru.st.Pending = append(slices.Clone(ru.st.Pending), m)
+	return m
+}
+
+// takePending takes the messages the model has not read, for the request
+// about to go: from now they are read, and steps of the task.
+func (ru *run) takePending() []Message {
+	ru.mu.Lock()
+	msgs := ru.st.Pending
+	ru.st.Pending = nil
+	for _, m := range msgs {
+		ru.read[m.ID] = true
+	}
+	device := ru.st.Device
+	ru.mu.Unlock()
+	if len(msgs) == 0 {
+		return nil
+	}
+	for _, m := range msgs {
+		_ = ru.r.opt.Server.PersonSaid(device, m.Text)
+	}
+	ru.r.notify()
+	return msgs
+}
+
+// hasPending reports whether messages wait for the model.
+func (ru *run) hasPending() bool {
+	ru.mu.Lock()
+	defer ru.mu.Unlock()
+	return len(ru.st.Pending) > 0
 }
 
 func (ru *run) update(f func(s *Status)) {
@@ -339,9 +596,11 @@ var leftOut = map[string]bool{
 // against Config.MaxTime.
 var waits = map[string]bool{"phone_handoff": true, "phone_request_approval": true}
 
-// work runs the task to its end.
+// work runs the task, or its next stretch after Continue, to its end.
 func (ru *run) work(ctx context.Context) (End, string) {
-	cfg := ru.st.Config
+	ru.mu.Lock()
+	cfg, device, task, taskID, m := ru.st.Config, ru.st.Device, ru.st.Task, ru.st.TaskID, ru.m
+	ru.mu.Unlock()
 	key, err := ru.r.opt.Key(ctx, cfg.Provider)
 	switch {
 	case ctx.Err() != nil:
@@ -353,12 +612,13 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	}
 	key = strings.TrimSpace(key)
 
-	// The MCP session lives as long as the task, also after a Stop
-	// cancelled ctx, so that it can still end the task.
+	// The MCP session lives as long as the stretch, also after a Stop
+	// cancelled ctx, so that it can still end the task. A session that
+	// continues the task takes the gateway's task back.
 	sctx, scancel := context.WithCancel(context.Background())
 	defer scancel()
 	st, ct := sdk.NewInMemoryTransports()
-	if err := ru.r.opt.Server.ConnectBuiltin(sctx, st); err != nil {
+	if err := ru.r.opt.Server.ConnectBuiltinTask(sctx, st, taskID); err != nil {
 		return Error, err.Error()
 	}
 	cl := sdk.NewClient(&sdk.Implementation{Name: "pinky-agent", Title: mcp.BuiltinName, Version: ru.r.opt.Version}, nil)
@@ -368,26 +628,27 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	}
 	defer cs.Close()
 
-	list, err := cs.ListTools(ctx, nil)
-	if err != nil {
-		return ru.ended(ctx, cs, err)
-	}
-	var tools []tool
-	for _, t := range list.Tools {
-		if leftOut[t.Name] {
-			continue
+	tools := ru.tools
+	if m == nil {
+		list, err := cs.ListTools(ctx, nil)
+		if err != nil {
+			return ru.ended(ctx, cs, err)
 		}
-		s, _ := t.InputSchema.(map[string]any)
-		if s == nil {
-			b, _ := json.Marshal(t.InputSchema)
-			json.Unmarshal(b, &s)
+		for _, t := range list.Tools {
+			if leftOut[t.Name] {
+				continue
+			}
+			s, _ := t.InputSchema.(map[string]any)
+			if s == nil {
+				b, _ := json.Marshal(t.InputSchema)
+				json.Unmarshal(b, &s)
+			}
+			tools = append(tools, tool{name: t.Name, description: t.Description, schema: s})
 		}
-		tools = append(tools, tool{name: t.Name, description: t.Description, schema: s})
+		tools = append(tools, finishTool)
 	}
-	tools = append(tools, finishTool)
 
-	task := ru.st.Task
-	res := ru.call(ctx, cs, "phone_connect", map[string]any{"device": ru.st.Device, "task": oneLine(task)})
+	res := ru.call(ctx, cs, "phone_connect", map[string]any{"device": device, "task": oneLine(task)})
 	if res.status == "internal" && ctx.Err() == nil {
 		// The phone is leased; only its first screen failed to read. One
 		// failed read (a busy accessibility service, as on the phone
@@ -397,7 +658,7 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		case <-time.After(firstReadRetry):
 		case <-ctx.Done():
 		}
-		if again := ru.call(ctx, cs, "phone_observe", map[string]any{"device": ru.st.Device}); ctx.Err() == nil && !again.isError {
+		if again := ru.call(ctx, cs, "phone_observe", map[string]any{"device": device}); ctx.Err() == nil && !again.isError {
 			res = again
 		}
 	}
@@ -407,17 +668,56 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	case res.isError:
 		return Error, res.message()
 	}
-
-	m, err := newModel(cfg, key, ru.r.opt.HTTPClient, systemPrompt(cfg), tools)
-	if err != nil {
-		return ru.end(cs, Error, err.Error())
+	if taskID == "" {
+		taskID = ru.r.opt.Server.TaskOf(device)
+		ru.update(func(s *Status) { s.TaskID = taskID })
 	}
-	text := firstMessage(task, ru.st.Device, res.text, time.Now())
-	var results []result
+
+	var text string
+	if m == nil {
+		m, err = newModel(cfg, key, ru.r.opt.HTTPClient, systemPrompt(cfg), tools)
+		if err != nil {
+			return ru.end(cs, Error, err.Error())
+		}
+		ru.mu.Lock()
+		ru.m, ru.tools = m, tools
+		ru.mu.Unlock()
+		text = firstMessage(task, device, res.text, time.Now())
+	} else {
+		m.setKey(key)
+		text = continueMessage(device, res.text, time.Now())
+	}
+	return ru.loop(ctx, cs, m, tools, key, text)
+}
+
+// loop asks the model and calls its tools until the task ends. text is the
+// first request's message; the person's messages go with each request.
+func (ru *run) loop(ctx context.Context, cs *sdk.ClientSession, m model, tools []tool, key, text string) (End, string) {
+	cfg := ru.status().Config
+	ru.mu.Lock()
+	results := ru.carry
+	ru.carry = nil
+	ru.mu.Unlock()
+	// rest are the calls of the model's last turn without an answer: when
+	// the task ends before they run, they get one with the next request.
+	var rest []call
+	defer func() {
+		carry := append([]result(nil), results...)
+		for _, c := range rest {
+			carry = append(carry, notRun(c))
+		}
+		ru.mu.Lock()
+		ru.carry = carry
+		ru.mu.Unlock()
+	}()
 	nudged := false
 	for {
 		if end := ru.limit(); end != Running {
 			return ru.end(cs, end, "")
+		}
+		if msgs := ru.takePending(); len(msgs) > 0 {
+			text = joinText(text, personMessages(msgs))
+			nudged = false
 		}
 		// The model request gets only the task's remaining time.
 		mctx, mcancel := ru.budget(ctx)
@@ -437,6 +737,10 @@ func (ru *run) work(ctx context.Context) (End, string) {
 			return ru.end(cs, Refused, "")
 		}
 		if len(t.calls) == 0 {
+			if ru.hasPending() {
+				// The person wrote meanwhile: their words are the answer.
+				continue
+			}
 			if nudged {
 				return ru.end(cs, Failed, strings.TrimSpace(t.text))
 			}
@@ -446,7 +750,8 @@ func (ru *run) work(ctx context.Context) (End, string) {
 			text = nudge
 			continue
 		}
-		for _, c := range t.calls {
+		for i, c := range t.calls {
+			rest = t.calls[i:]
 			switch {
 			case c.name == finishName:
 				return ru.finish(ctx, cs, c)
@@ -467,7 +772,18 @@ func (ru *run) work(ctx context.Context) (End, string) {
 			}
 			results = append(results, result{id: c.id, text: res.text, images: res.images, isError: res.isError})
 		}
+		rest = nil
 	}
+}
+
+// notRun is the answer to a call of the model's that never ran because the
+// task ended first, sent if the person continues the task.
+func notRun(c call) result {
+	if c.name == finishName {
+		return result{id: c.id, text: "settled\nThe task ended here."}
+	}
+	return result{id: c.id, text: "error: not_run\nThe task ended before this call finished, so it may not have run. " +
+		"Look at the screen before you do anything else.", isError: true}
 }
 
 // ended ends the task after err, or as stopped when the person stopped it.
@@ -519,14 +835,14 @@ func (ru *run) end(cs *sdk.ClientSession, end End, summary string) (End, string)
 func (ru *run) limit() End {
 	ru.mu.Lock()
 	defer ru.mu.Unlock()
-	s := ru.st
+	s, b := ru.st, ru.base
 	switch {
-	case s.Steps >= s.Config.MaxSteps:
+	case s.Steps-b.Steps >= s.Config.MaxSteps:
 		return StepLimit
-	case time.Since(s.Started)-ru.waited >= s.Config.MaxTime:
+	case time.Since(s.Resumed)-ru.waited >= s.Config.MaxTime:
 		return TimeLimit
-	case s.Priced && s.Cost >= s.Config.MaxCost,
-		!s.Priced && s.Tokens >= s.Config.TokenLimit():
+	case s.Priced && s.Cost-b.Cost >= s.Config.MaxCost,
+		!s.Priced && s.Tokens-b.Tokens >= s.Config.TokenLimit():
 		return CostLimit
 	}
 	return Running
@@ -535,7 +851,7 @@ func (ru *run) limit() End {
 // budget is ctx cut off when the task's time limit is reached.
 func (ru *run) budget(ctx context.Context) (context.Context, context.CancelFunc) {
 	ru.mu.Lock()
-	left := ru.st.Config.MaxTime - (time.Since(ru.st.Started) - ru.waited)
+	left := ru.st.Config.MaxTime - (time.Since(ru.st.Resumed) - ru.waited)
 	ru.mu.Unlock()
 	return context.WithTimeout(ctx, left)
 }

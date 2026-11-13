@@ -942,6 +942,22 @@
       }
     }
   },
+  "askCancel": "Cancel",
+  "@askCancel": {
+    "description": "Ask Pinky: leaves the message as it was."
+  },
+  "askContinue": "Continue",
+  "@askContinue": {
+    "description": "Ask Pinky once its task ended: the button that continues the same task, with the message typed. The limits count anew."
+  },
+  "askContinueField": "Next message for Pinky",
+  "@askContinueField": {
+    "description": "Ask Pinky once its task ended: the accessible name of the field that continues the same task with a new message."
+  },
+  "askContinuePlaceholder": "Tell Pinky what to do next…",
+  "@askContinuePlaceholder": {
+    "description": "Ask Pinky once its task ended: the placeholder of askContinueField."
+  },
   "askDismiss": "Dismiss",
   "@askDismiss": {
     "description": "Ask Pinky: the button that hides how its last task ended."
@@ -955,6 +971,10 @@
         "example": "2.00"
       }
     }
+  },
+  "askEdit": "Edit",
+  "@askEdit": {
+    "description": "Ask Pinky: the button that edits a message Pinky has not read yet."
   },
   "askEndDone": "Done",
   "@askEndDone": {
@@ -985,6 +1005,16 @@
   "askEndStopped": "Stopped",
   "@askEndStopped": {
     "description": "Ask Pinky after a task: the person stopped it, or it reached a limit (then why follows)."
+  },
+  "askErrSend": "Couldn't send: {detail}",
+  "@askErrSend": {
+    "description": "Ask Pinky, in red: a message to Pinky or Continue failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "Pinky runs no task on this phone"
+      }
+    }
   },
   "askErrStart": "Couldn't start: {detail}",
   "@askErrStart": {
@@ -1064,6 +1094,10 @@
   "@askNoKey": {
     "description": "Why Ask Pinky could not start a task."
   },
+  "askPendingNote": "Pinky reads this at its next step",
+  "@askPendingNote": {
+    "description": "Ask Pinky: under a message the person sent that Pinky has not read yet; it can still be edited or withdrawn."
+  },
   "askPhone": "Phone",
   "@askPhone": {
     "description": "Ask Pinky on All phones: the accessible name of the menu that chooses the phone for the task."
@@ -1078,9 +1112,21 @@
       }
     }
   },
+  "askRead": "Pinky has already read it.",
+  "@askRead": {
+    "description": "Ask Pinky, in red: the person tried to edit or withdraw a message that Pinky read in the meantime."
+  },
   "askRefused": "The model declined this task.",
   "@askRefused": {
     "description": "Why Ask Pinky could not finish a task."
+  },
+  "askSave": "Save",
+  "@askSave": {
+    "description": "Ask Pinky: saves the edited message."
+  },
+  "askSend": "Send",
+  "@askSend": {
+    "description": "Ask Pinky while its task runs: the button that sends the message in askSteerField."
   },
   "askSetup": "Pinky can do simple tasks on your phone by itself, with an AI model you choose.",
   "@askSetup": {
@@ -1097,6 +1143,14 @@
   "askStart": "Start",
   "@askStart": {
     "description": "Ask Pinky: the button that starts the task typed in the field."
+  },
+  "askSteerField": "Message for Pinky",
+  "@askSteerField": {
+    "description": "Ask Pinky while its task runs: the accessible name of the field where the person writes to Pinky as it works."
+  },
+  "askSteerPlaceholder": "Add or change instructions…",
+  "@askSteerPlaceholder": {
+    "description": "Ask Pinky while its task runs: the placeholder of askSteerField. Pinky reads the message at its next step."
   },
   "askSteps": "{count, plural, one {# step} other {# steps}}",
   "@askSteps": {
@@ -1125,6 +1179,14 @@
         "example": "1000000"
       }
     }
+  },
+  "askUnread": "Pinky didn't read these before the task ended. Continue to send them.",
+  "@askUnread": {
+    "description": "Ask Pinky once its task ended: above the messages the person sent that Pinky never read; Continue sends them."
+  },
+  "askWithdraw": "Withdraw",
+  "@askWithdraw": {
+    "description": "Ask Pinky: the button that takes back a message Pinky has not read yet."
   },
   "askWorking": "Pinky is working on it",
   "@askWorking": {
@@ -5215,6 +5277,16 @@
       "action": {
         "type": "String",
         "example": "send the message"
+      }
+    }
+  },
+  "gwStepYouSaid": "You said: “{message}”",
+  "@gwStepYouSaid": {
+    "description": "A step: the person's message to Pinky's own agent while it worked, which the agent read. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Use the blue one"
       }
     }
   },

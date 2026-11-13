@@ -2909,6 +2909,66 @@ func (msgs Messages) AskBusy(agent string, phone string) string {
 	return Catalog.Format(msgs.locale, "askBusy", map[string]any{"agent": agent, "phone": phone})
 }
 
+// AskCancel says "Cancel"
+// in the language the app shows.
+//
+// Ask Pinky: leaves the message as it was.
+func AskCancel() string { return In(i18n.Locale()).AskCancel() }
+
+// AskCancel says "Cancel"
+// in the language of msgs.
+//
+// Ask Pinky: leaves the message as it was.
+func (msgs Messages) AskCancel() string {
+	return Catalog.Format(msgs.locale, "askCancel", nil)
+}
+
+// AskContinue says "Continue"
+// in the language the app shows.
+//
+// Ask Pinky once its task ended: the button that continues the same task,
+// with the message typed. The limits count anew.
+func AskContinue() string { return In(i18n.Locale()).AskContinue() }
+
+// AskContinue says "Continue"
+// in the language of msgs.
+//
+// Ask Pinky once its task ended: the button that continues the same task,
+// with the message typed. The limits count anew.
+func (msgs Messages) AskContinue() string {
+	return Catalog.Format(msgs.locale, "askContinue", nil)
+}
+
+// AskContinueField says "Next message for Pinky"
+// in the language the app shows.
+//
+// Ask Pinky once its task ended: the accessible name of the field that
+// continues the same task with a new message.
+func AskContinueField() string { return In(i18n.Locale()).AskContinueField() }
+
+// AskContinueField says "Next message for Pinky"
+// in the language of msgs.
+//
+// Ask Pinky once its task ended: the accessible name of the field that
+// continues the same task with a new message.
+func (msgs Messages) AskContinueField() string {
+	return Catalog.Format(msgs.locale, "askContinueField", nil)
+}
+
+// AskContinuePlaceholder says "Tell Pinky what to do next…"
+// in the language the app shows.
+//
+// Ask Pinky once its task ended: the placeholder of askContinueField.
+func AskContinuePlaceholder() string { return In(i18n.Locale()).AskContinuePlaceholder() }
+
+// AskContinuePlaceholder says "Tell Pinky what to do next…"
+// in the language of msgs.
+//
+// Ask Pinky once its task ended: the placeholder of askContinueField.
+func (msgs Messages) AskContinuePlaceholder() string {
+	return Catalog.Format(msgs.locale, "askContinuePlaceholder", nil)
+}
+
 // AskDismiss says "Dismiss"
 // in the language the app shows.
 //
@@ -2937,6 +2997,20 @@ func AskDollars(amount string) string { return In(i18n.Locale()).AskDollars(amou
 // Pinky cost, or its limit.
 func (msgs Messages) AskDollars(amount string) string {
 	return Catalog.Format(msgs.locale, "askDollars", map[string]any{"amount": amount})
+}
+
+// AskEdit says "Edit"
+// in the language the app shows.
+//
+// Ask Pinky: the button that edits a message Pinky has not read yet.
+func AskEdit() string { return In(i18n.Locale()).AskEdit() }
+
+// AskEdit says "Edit"
+// in the language of msgs.
+//
+// Ask Pinky: the button that edits a message Pinky has not read yet.
+func (msgs Messages) AskEdit() string {
+	return Catalog.Format(msgs.locale, "askEdit", nil)
 }
 
 // AskEndDone says "Done"
@@ -3015,6 +3089,20 @@ func AskEndStopped() string { return In(i18n.Locale()).AskEndStopped() }
 // (then why follows).
 func (msgs Messages) AskEndStopped() string {
 	return Catalog.Format(msgs.locale, "askEndStopped", nil)
+}
+
+// AskErrSend says "Couldn't send: {detail}"
+// in the language the app shows.
+//
+// Ask Pinky, in red: a message to Pinky or Continue failed.
+func AskErrSend(detail string) string { return In(i18n.Locale()).AskErrSend(detail) }
+
+// AskErrSend says "Couldn't send: {detail}"
+// in the language of msgs.
+//
+// Ask Pinky, in red: a message to Pinky or Continue failed.
+func (msgs Messages) AskErrSend(detail string) string {
+	return Catalog.Format(msgs.locale, "askErrSend", map[string]any{"detail": detail})
 }
 
 // AskErrStart says "Couldn't start: {detail}"
@@ -3151,6 +3239,22 @@ func (msgs Messages) AskNoKey() string {
 	return Catalog.Format(msgs.locale, "askNoKey", nil)
 }
 
+// AskPendingNote says "Pinky reads this at its next step"
+// in the language the app shows.
+//
+// Ask Pinky: under a message the person sent that Pinky has not read yet;
+// it can still be edited or withdrawn.
+func AskPendingNote() string { return In(i18n.Locale()).AskPendingNote() }
+
+// AskPendingNote says "Pinky reads this at its next step"
+// in the language of msgs.
+//
+// Ask Pinky: under a message the person sent that Pinky has not read yet;
+// it can still be edited or withdrawn.
+func (msgs Messages) AskPendingNote() string {
+	return Catalog.Format(msgs.locale, "askPendingNote", nil)
+}
+
 // AskPhone says "Phone"
 // in the language the app shows.
 //
@@ -3181,6 +3285,22 @@ func (msgs Messages) AskPlaceholder(phone string) string {
 	return Catalog.Format(msgs.locale, "askPlaceholder", map[string]any{"phone": phone})
 }
 
+// AskRead says "Pinky has already read it."
+// in the language the app shows.
+//
+// Ask Pinky, in red: the person tried to edit or withdraw a message that
+// Pinky read in the meantime.
+func AskRead() string { return In(i18n.Locale()).AskRead() }
+
+// AskRead says "Pinky has already read it."
+// in the language of msgs.
+//
+// Ask Pinky, in red: the person tried to edit or withdraw a message that
+// Pinky read in the meantime.
+func (msgs Messages) AskRead() string {
+	return Catalog.Format(msgs.locale, "askRead", nil)
+}
+
 // AskRefused says "The model declined this task."
 // in the language the app shows.
 //
@@ -3193,6 +3313,36 @@ func AskRefused() string { return In(i18n.Locale()).AskRefused() }
 // Why Ask Pinky could not finish a task.
 func (msgs Messages) AskRefused() string {
 	return Catalog.Format(msgs.locale, "askRefused", nil)
+}
+
+// AskSave says "Save"
+// in the language the app shows.
+//
+// Ask Pinky: saves the edited message.
+func AskSave() string { return In(i18n.Locale()).AskSave() }
+
+// AskSave says "Save"
+// in the language of msgs.
+//
+// Ask Pinky: saves the edited message.
+func (msgs Messages) AskSave() string {
+	return Catalog.Format(msgs.locale, "askSave", nil)
+}
+
+// AskSend says "Send"
+// in the language the app shows.
+//
+// Ask Pinky while its task runs: the button that sends the message in
+// askSteerField.
+func AskSend() string { return In(i18n.Locale()).AskSend() }
+
+// AskSend says "Send"
+// in the language of msgs.
+//
+// Ask Pinky while its task runs: the button that sends the message in
+// askSteerField.
+func (msgs Messages) AskSend() string {
+	return Catalog.Format(msgs.locale, "askSend", nil)
 }
 
 // AskSetup says "Pinky can do simple tasks on your phone by itself, with an AI model you choose."
@@ -3253,6 +3403,38 @@ func AskStart() string { return In(i18n.Locale()).AskStart() }
 // Ask Pinky: the button that starts the task typed in the field.
 func (msgs Messages) AskStart() string {
 	return Catalog.Format(msgs.locale, "askStart", nil)
+}
+
+// AskSteerField says "Message for Pinky"
+// in the language the app shows.
+//
+// Ask Pinky while its task runs: the accessible name of the field where the
+// person writes to Pinky as it works.
+func AskSteerField() string { return In(i18n.Locale()).AskSteerField() }
+
+// AskSteerField says "Message for Pinky"
+// in the language of msgs.
+//
+// Ask Pinky while its task runs: the accessible name of the field where the
+// person writes to Pinky as it works.
+func (msgs Messages) AskSteerField() string {
+	return Catalog.Format(msgs.locale, "askSteerField", nil)
+}
+
+// AskSteerPlaceholder says "Add or change instructions…"
+// in the language the app shows.
+//
+// Ask Pinky while its task runs: the placeholder of askSteerField. Pinky
+// reads the message at its next step.
+func AskSteerPlaceholder() string { return In(i18n.Locale()).AskSteerPlaceholder() }
+
+// AskSteerPlaceholder says "Add or change instructions…"
+// in the language of msgs.
+//
+// Ask Pinky while its task runs: the placeholder of askSteerField. Pinky
+// reads the message at its next step.
+func (msgs Messages) AskSteerPlaceholder() string {
+	return Catalog.Format(msgs.locale, "askSteerPlaceholder", nil)
 }
 
 // AskSteps says "{count, plural, one {# step} other {# steps}}"
@@ -3319,6 +3501,36 @@ func AskTokens(count int) string { return In(i18n.Locale()).AskTokens(count) }
 // prices Pinky does not know.
 func (msgs Messages) AskTokens(count int) string {
 	return Catalog.Format(msgs.locale, "askTokens", map[string]any{"count": count})
+}
+
+// AskUnread says "Pinky didn't read these before the task ended. Continue to send them."
+// in the language the app shows.
+//
+// Ask Pinky once its task ended: above the messages the person sent that
+// Pinky never read; Continue sends them.
+func AskUnread() string { return In(i18n.Locale()).AskUnread() }
+
+// AskUnread says "Pinky didn't read these before the task ended. Continue to send them."
+// in the language of msgs.
+//
+// Ask Pinky once its task ended: above the messages the person sent that
+// Pinky never read; Continue sends them.
+func (msgs Messages) AskUnread() string {
+	return Catalog.Format(msgs.locale, "askUnread", nil)
+}
+
+// AskWithdraw says "Withdraw"
+// in the language the app shows.
+//
+// Ask Pinky: the button that takes back a message Pinky has not read yet.
+func AskWithdraw() string { return In(i18n.Locale()).AskWithdraw() }
+
+// AskWithdraw says "Withdraw"
+// in the language of msgs.
+//
+// Ask Pinky: the button that takes back a message Pinky has not read yet.
+func (msgs Messages) AskWithdraw() string {
+	return Catalog.Format(msgs.locale, "askWithdraw", nil)
 }
 
 // AskWorking says "Pinky is working on it"
@@ -13837,6 +14049,24 @@ func GwStepYouDenied(action string) string { return In(i18n.Locale()).GwStepYouD
 // only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwStepYouDenied(action string) string {
 	return Catalog.Format(msgs.locale, "gwStepYouDenied", map[string]any{"action": action})
+}
+
+// GwStepYouSaid says "You said: “{message}”"
+// in the language the app shows.
+//
+// A step: the person's message to Pinky's own agent while it worked, which
+// the agent read. Shown only in other languages; in English the gateway's
+// own words show.
+func GwStepYouSaid(message string) string { return In(i18n.Locale()).GwStepYouSaid(message) }
+
+// GwStepYouSaid says "You said: “{message}”"
+// in the language of msgs.
+//
+// A step: the person's message to Pinky's own agent while it worked, which
+// the agent read. Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwStepYouSaid(message string) string {
+	return Catalog.Format(msgs.locale, "gwStepYouSaid", map[string]any{"message": message})
 }
 
 // GwStepYouStopped says "You stopped the task"

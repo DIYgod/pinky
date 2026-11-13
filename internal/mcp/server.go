@@ -44,11 +44,14 @@ type Server struct {
 	version string
 	srv     *sdk.Server
 
-	mu         sync.Mutex
-	sessions   map[*sdk.ServerSession]*gateway.Session
-	builtin    map[*sdk.ServerSession]bool // sessions of Pinky's own agent
-	middleware []sdk.Middleware            // Use's, for the HTTP servers made later
-	uploads    map[string]*uploadLink      // upload links by token (upload.go)
+	mu       sync.Mutex
+	sessions map[*sdk.ServerSession]*gateway.Session
+	builtin  map[*sdk.ServerSession]bool // sessions of Pinky's own agent
+	// continues are the tasks sessions of Pinky's own agent continue
+	// (ConnectBuiltinTask), by session.
+	continues  map[*sdk.ServerSession]string
+	middleware []sdk.Middleware       // Use's, for the HTTP servers made later
+	uploads    map[string]*uploadLink // upload links by token (upload.go)
 
 	downloads map[string]*downloadLink // download links by token (download.go)
 }
@@ -56,7 +59,8 @@ type Server struct {
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
 	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}, uploads: map[string]*uploadLink{},
-		downloads: map[string]*downloadLink{}, builtin: map[*sdk.ServerSession]bool{}}
+		downloads: map[string]*downloadLink{}, builtin: map[*sdk.ServerSession]bool{},
+		continues: map[*sdk.ServerSession]string{}}
 	s.srv = s.newSDK(false)
 	return s
 }
@@ -123,12 +127,23 @@ const BuiltinName = "Pinky"
 // gateway session is Trusted and named BuiltinName; it gets the same tools
 // as every agent. The session ends when the client closes it or ctx ends.
 func (s *Server) ConnectBuiltin(ctx context.Context, t sdk.Transport) error {
+	return s.ConnectBuiltinTask(ctx, t, "")
+}
+
+// ConnectBuiltinTask is ConnectBuiltin for a session that continues an
+// ended task of Pinky's own agent, by its id: the session's phone_connect
+// takes the task back rather than starting another
+// (gateway.AgentInfo.Continue). An empty id is ConnectBuiltin.
+func (s *Server) ConnectBuiltinTask(ctx context.Context, t sdk.Transport, task string) error {
 	ss, err := s.srv.Connect(ctx, t, nil)
 	if err != nil {
 		return err
 	}
 	s.mu.Lock()
 	s.builtin[ss] = true
+	if task != "" {
+		s.continues[ss] = task
+	}
 	s.mu.Unlock()
 	go func() {
 		done := make(chan struct{})
@@ -146,12 +161,28 @@ func (s *Server) ConnectBuiltin(ctx context.Context, t sdk.Transport) error {
 	return nil
 }
 
+// PersonSaid adds what the person told Pinky's own agent during its task
+// on a phone to the task's steps (gateway.Gateway.PersonSaid).
+func (s *Server) PersonSaid(device, text string) error { return s.g.PersonSaid(device, text) }
+
+// TaskOf is the id of the task Pinky's own agent runs on a phone, "" when
+// it runs none.
+func (s *Server) TaskOf(device string) string {
+	for _, t := range s.g.Tasks() {
+		if t.DeviceID == device && t.Agent == BuiltinName && t.Ended.IsZero() {
+			return t.ID
+		}
+	}
+	return ""
+}
+
 // forget closes the gateway side of an MCP session that ended.
 func (s *Server) forget(ss *sdk.ServerSession) {
 	s.mu.Lock()
 	gs := s.sessions[ss]
 	delete(s.sessions, ss)
 	delete(s.builtin, ss)
+	delete(s.continues, ss)
 	if gs != nil {
 		s.forgetUploadsLocked(gs)
 	}
@@ -178,7 +209,8 @@ func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session
 	case s.builtin[req.Session]:
 		// Each task of Pinky's own agent is a session of its own, which
 		// ends with the task: there is nothing to reconnect to.
-		info = gateway.AgentInfo{Name: BuiltinName, Client: strings.TrimSpace("pinky " + s.version), Trusted: true}
+		info = gateway.AgentInfo{Name: BuiltinName, Client: strings.TrimSpace("pinky " + s.version), Trusted: true,
+			Continue: s.continues[req.Session]}
 	case remote:
 		// Clients over HTTP may open a session for every call, or leave
 		// the last one open: a newer session continues the older ones'.

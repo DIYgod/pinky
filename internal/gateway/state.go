@@ -305,6 +305,9 @@ type task struct {
 	approvals  int
 	next       int  // the next step index
 	readOnly   bool // the agent asked for read-only (TaskView.ReadOnly)
+	// continued says the task ran before and runs again for Pinky's own
+	// agent (AgentInfo.Continue).
+	continued bool
 }
 
 // maxTaskSteps bounds the steps a running task keeps in memory; history

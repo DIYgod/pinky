@@ -171,6 +171,8 @@ func newClaude(cfg Config, key string, hc *http.Client, system string, tools []t
 	return c
 }
 
+func (c *claude) setKey(key string) { c.key = key }
+
 // header is what each request carries besides its body. The key goes as
 // a bearer token, as the API's version asks; a service of the person's
 // gets it in X-Api-Key too, as Claude Code's ANTHROPIC_AUTH_TOKEN and
@@ -196,7 +198,13 @@ func (c *claude) send(ctx context.Context, results []result, text string) (*turn
 	if text != "" {
 		blocks = append(blocks, anText{Type: "text", Text: text})
 	}
-	c.history = append(c.history, anMessage{Role: "user", Content: blocks})
+	if n := len(c.history); n > 0 && c.history[n-1].Role == "user" {
+		// The last send failed, and the task went on after it (Continue):
+		// the model never answered that turn, so this one adds to it.
+		c.history[n-1].Content = append(c.history[n-1].Content, blocks...)
+	} else {
+		c.history = append(c.history, anMessage{Role: "user", Content: blocks})
+	}
 	if c.trim {
 		c.clearOld()
 	}

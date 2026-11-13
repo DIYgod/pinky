@@ -39,6 +39,13 @@ type AgentInfo struct {
 	// in Pinky's window: it needs no New agent approval, as the person just
 	// asked for it. Its scope and everything else work as any agent's.
 	Trusted bool
+	// Continue is, for Pinky's own agent (Trusted), the id of a task of
+	// its that ended which the session's phone_connect continues: the
+	// person gave the task a new message (pilot.Runner.Continue). The task
+	// runs again as the same task, in Activity and the history, with its
+	// steps so far; a task the gateway no longer has, or one on another
+	// phone, starts afresh.
+	Continue string
 }
 
 // Status is the outcome of a call, from DESIGN.md's Results table.
@@ -672,6 +679,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		}
 	}
 	l := g.newLeaseLocked(s, d, title, req.Apps)
+	continued := l.task.continued
 	l.readOnly, l.task.readOnly = req.ReadOnly, req.ReadOnly
 	l.inflight++
 	shared := g.noteSharedLocked(s)
@@ -681,7 +689,10 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	unknown := g.resolveTaskApps(ctx, l)
 	g.recordSession(s)
 	own := req.OwnScreen && g.useOwnScreen(l)
-	g.addStep(l, connectStep(d.name(), title, req, own))
+	if !continued {
+		// A task that continues has its connection among its steps.
+		g.addStep(l, connectStep(d.name(), title, req, own))
+	}
 	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	res, note := g.taskConnection(ctx, l, way)
@@ -766,8 +777,11 @@ func readOnlyNote(res *Result, readOnly bool) *Result {
 
 func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []string) *lease {
 	now := time.Now()
-	t := &task{id: history.NewID("t_"), sessionID: s.id, title: title, agent: s.agent.Name, deviceID: d.id,
-		deviceName: d.name(), state: TaskWorking, started: now}
+	t := g.reopenLocked(s, d)
+	if t == nil {
+		t = &task{id: history.NewID("t_"), sessionID: s.id, title: title, agent: s.agent.Name, deviceID: d.id,
+			deviceName: d.name(), state: TaskWorking, started: now}
+	}
 	l := &lease{id: history.NewID("l_"), session: s, dev: d, task: t, created: now, lastUsed: now,
 		apps: append([]string(nil), apps...), grants: map[string]bool{}}
 	l.ctx, l.cancel = context.WithCancel(g.ctx)
@@ -792,6 +806,64 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 	g.recordTaskLocked(t)
 	return l
 }
+
+// reopenLocked takes back the ended task that s continues on d
+// (AgentInfo.Continue), running again; nil when s continues none, or the
+// gateway no longer has it. Only one phone_connect continues it. The
+// caller holds g.mu.
+func (g *Gateway) reopenLocked(s *Session, d *device) *task {
+	id := s.agent.Continue
+	if id == "" || !s.agent.Trusted {
+		return nil
+	}
+	s.agent.Continue = ""
+	for i := len(g.ended) - 1; i >= 0; i-- {
+		t := g.ended[i]
+		if t.id != id {
+			continue
+		}
+		if t.deviceID != d.id || t.agent != s.agent.Name {
+			return nil
+		}
+		g.ended = append(g.ended[:i:i], g.ended[i+1:]...)
+		t.state, t.ended, t.outcome, t.summary = TaskWorking, time.Time{}, "", ""
+		t.deviceName = d.name()
+		t.continued = true
+		return t
+	}
+	return nil
+}
+
+// PersonSaid adds what the person told Pinky's own agent during its task
+// on a phone to the task's steps, as the agent's model reads it: a message
+// typed while the task ran, or the one that continued it. It is ErrNoTask
+// when Pinky's own agent runs no task on the phone. It approves nothing.
+func (g *Gateway) PersonSaid(deviceID, text string) error {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return nil
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	d := g.devices[deviceID]
+	if d == nil || d.lease == nil || d.lease.ended || !d.lease.session.agent.Trusted {
+		return ErrNoTask
+	}
+	line := strings.Join(strings.Fields(text), " ")
+	if r := []rune(line); len(r) > 300 {
+		line = string(r[:299]) + "…"
+	}
+	g.addStepLocked(d.lease.task, StepView{Tool: PersonStep, Args: argsJSON(map[string]any{"text": text}),
+		Text: fmt.Sprintf("You said: “%s”", line), Status: string(StatusSettled), At: time.Now()}, "", "")
+	return nil
+}
+
+// PersonStep is the tool name of the steps PersonSaid adds.
+const PersonStep = "person_message"
+
+// ErrNoTask is PersonSaid's for a phone where Pinky's own agent runs no
+// task.
+var ErrNoTask = errors.New("gateway: Pinky runs no task on this phone")
 
 func appendUniq(list []string, s string) []string {
 	for _, x := range list {
