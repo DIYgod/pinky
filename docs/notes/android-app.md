@@ -202,6 +202,7 @@ The owner chose one APK (2026-11-12) over two by ABI or the core as a download o
 - Android 10 (the Pixel): no `takeScreenshot` (API 30) and no `accessibilityDataSensitive` (API 34). On-phone mode should say what it cannot do there instead of failing.
 - Battery over a long task, on a real phone.
 - A shell tier (Shizuku or Wireless debugging) is not in the first version. The local driver keeps room for it: actions go through the service's commands, and a shell could serve the same ones.
+- Tasks on a separate screen, watched in a floating window: not possible for an ordinary app, which cannot start other apps on a display it creates; it needs that shell tier. Evidence, how others do it and what the shell route would take: [android-virtual-display.md](android-virtual-display.md) (2026-11-13).
 
 ## Building and testing
 
