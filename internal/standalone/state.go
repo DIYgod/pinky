@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/gateway"
-	"github.com/DIYgod/pinky/internal/gwtext"
 	"github.com/DIYgod/pinky/internal/pilot"
 )
 
@@ -110,7 +109,7 @@ func (c *Core) State() State {
 	d, ok := c.device()
 	if ok {
 		st.Device = DeviceState{Ready: d.Info.State == "online", Name: d.Info.Name, Status: string(d.Status),
-			Line: d.StatusLine, Detail: d.Info.Detail, LineShown: shown(d.StatusLine, gwtext.StatusLine(d))}
+			Line: d.StatusLine, Detail: d.Info.Detail, LineShown: lineShown(d)}
 	}
 	if cl := c.opt.Claims; cl != nil {
 		if task, stoppable, held := cl.Computer(); held {
@@ -141,8 +140,8 @@ func (c *Core) State() State {
 			continue
 		}
 		need := Need{ID: n.ID, Kind: string(n.Kind), Title: n.Title, Detail: n.Detail, App: n.App, Rule: n.Rule,
-			AllowTask: n.AllowTask, TitleShown: shown(n.Title, gwtext.NeedTitle(n)),
-			DetailShown: shown(n.Detail, gwtext.NeedDetail(n)), RuleShown: shown(n.Rule, gwtext.RuleName(n.Rule))}
+			AllowTask: n.AllowTask}
+		need.TitleShown, need.DetailShown, need.RuleShown = needShown(n)
 		if !n.Deadline.IsZero() {
 			need.DeadlineMS = n.Deadline.UnixMilli()
 		}

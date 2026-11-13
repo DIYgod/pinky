@@ -1,3 +1,5 @@
+//go:build !ios
+
 package standalone
 
 import (
@@ -7,6 +9,7 @@ import (
 
 	"github.com/egoist/mygo/i18n"
 
+	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/gwtext"
 )
 
@@ -17,6 +20,10 @@ import (
 // carry the gateway's words in it beside the English (the *Shown fields),
 // as desktop Pinky says them (internal/gwtext). A core serves the screens
 // of one app, so the language is the core's, the last one a command named.
+//
+// Not on the iPhone (shown_ios.go): its app names no language yet, and the
+// catalogs internal/gwtext needs would take memory in the network
+// extension, which iOS holds to 50 MB, at its start.
 
 // screenLocale is the language the screens last named; "" is English.
 var (
@@ -42,6 +49,15 @@ func setLocale(locale string) {
 			return ""
 		})
 	})
+}
+
+// lineShown is the phone's line in the screens' language, or "".
+func lineShown(d gateway.DeviceView) string { return shown(d.StatusLine, gwtext.StatusLine(d)) }
+
+// needShown is a need's title, detail and rule in the screens' language,
+// each "" where that says the same.
+func needShown(n gateway.NeedView) (title, detail, rule string) {
+	return shown(n.Title, gwtext.NeedTitle(n)), shown(n.Detail, gwtext.NeedDetail(n)), shown(n.Rule, gwtext.RuleName(n.Rule))
 }
 
 // shown is s said in the screens' language, or "" when that says the same.
