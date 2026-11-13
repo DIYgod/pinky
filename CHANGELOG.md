@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1113.11 (2026-11-13)
 
 - Tasks for Pinky can now be scheduled: once, daily, on weekdays, weekly or every few hours, or only to tell you when a condition holds. Scheduled tasks run on the computer and on Android (not on iPhone); while nobody watches they never pay, ask for approvals by notification, and skip, with a note, when the phone is locked, in use or off.
 - On Android, an optional floating button asks Pinky about what the screen shows: double-tap to type a question, touch and hold to speak it. Turn it on in Settings › This phone or from its Quick Settings tile.
