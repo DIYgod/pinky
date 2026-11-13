@@ -163,6 +163,26 @@ func taskConnect(t *testing.T, srv *mcp.Server, name string, steps *stepLog) *sd
 	return cs
 }
 
+// taskBuffer is a bytes.Buffer that the client's notification handler may
+// write from another goroutine while the test reads it. (e2e_test.go's
+// syncBuffer is not built on Windows.)
+type taskBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *taskBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *taskBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
+}
+
 func exitCode(err error) int {
 	if err == nil {
 		return 0
@@ -187,7 +207,7 @@ func TestTaskRun(t *testing.T) {
 	}{{"done", 0}, {"failed", exitTaskEnded}, {"bad_key", exitTaskError}} {
 		t.Run(c.end, func(t *testing.T) {
 			tasks := &fakeTasks{states: taskStates(c.end, "approval")}
-			var buf syncBuffer
+			var buf taskBuffer
 			log := &stepLog{w: &buf}
 			cs := taskConnect(t, taskHarness(t, tasks), taskAgentName, log)
 			var out bytes.Buffer
@@ -219,7 +239,7 @@ func TestTaskRun(t *testing.T) {
 
 // TestTaskDetach: run -detach prints only the task_id on stdout.
 func TestTaskDetach(t *testing.T) {
-	var buf syncBuffer
+	var buf taskBuffer
 	log := &stepLog{w: &buf}
 	cs := taskConnect(t, taskHarness(t, &fakeTasks{states: taskStates("done", "")}), taskAgentName, log)
 	var out bytes.Buffer
@@ -235,7 +255,7 @@ func TestTaskDetach(t *testing.T) {
 func TestTaskInterrupt(t *testing.T) {
 	states := taskStates("done", "")
 	tasks := &fakeTasks{states: states[:2]} // it never ends by itself
-	var buf syncBuffer
+	var buf taskBuffer
 	log := &stepLog{w: &buf}
 	cs := taskConnect(t, taskHarness(t, tasks), taskAgentName, log)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -263,7 +283,7 @@ func TestTaskInterrupt(t *testing.T) {
 func TestTaskAs(t *testing.T) {
 	for name, want := range map[string]string{"Nightly tests": "Nightly tests", "Pinky": "Pinky (external)"} {
 		tasks := &fakeTasks{states: taskStates("done", "")}
-		var buf syncBuffer
+		var buf taskBuffer
 		log := &stepLog{w: &buf}
 		cs := taskConnect(t, taskHarness(t, tasks), name, log)
 		if err := task(context.Background(), cs, taskOptions{sub: "run", text: "Turn on Airplane mode", detach: true}, &bytes.Buffer{}, log); err != nil {
@@ -279,7 +299,7 @@ func TestTaskAs(t *testing.T) {
 // Pinky's window (no tasks) a call is refused with exit status 2.
 func TestTaskOnce(t *testing.T) {
 	tasks := &fakeTasks{states: taskStates("done", "")}
-	var buf syncBuffer
+	var buf taskBuffer
 	log := &stepLog{w: &buf}
 	cs := taskConnect(t, taskHarness(t, tasks), taskAgentName, log)
 	for _, o := range []taskOptions{{sub: "status", id: "t0123456789ab"}, {sub: "list"}, {sub: "cancel", id: "t0123456789ab"}} {
@@ -306,7 +326,7 @@ func TestTaskOnce(t *testing.T) {
 // cancels the task, whose task_id is known, and exits 130.
 func TestTaskInterruptSteer(t *testing.T) {
 	tasks := &fakeTasks{states: taskStates("done", "")[:2], steerBlock: make(chan struct{})}
-	var buf syncBuffer
+	var buf taskBuffer
 	log := &stepLog{w: &buf}
 	cs := taskConnect(t, taskHarness(t, tasks), taskAgentName, log)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -348,7 +368,7 @@ func TestStepLog(t *testing.T) {
 func TestTaskSummaryLines(t *testing.T) {
 	states := taskStates("done", "")
 	states[len(states)-1].Summary = "Found three alarms:\n7:00\n7:30"
-	var buf syncBuffer
+	var buf taskBuffer
 	log := &stepLog{w: &buf}
 	cs := taskConnect(t, taskHarness(t, &fakeTasks{states: states}), taskAgentName, log)
 	var out bytes.Buffer
