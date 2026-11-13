@@ -149,6 +149,9 @@ type PhoneNow struct {
 	Locked bool `json:"locked"`
 	// InUse: the screen is on and the person touched it a moment ago.
 	InUse bool `json:"in_use"`
+	// Off: the person turned Pinky on the phone off in its screen, so
+	// nothing would show the run or its approvals.
+	Off bool `json:"off"`
 }
 
 // schedHost runs the schedules on this phone, with the model settings and
@@ -163,6 +166,8 @@ func (h schedHost) Check(s schedule.Schedule) string {
 	c := h.c
 	d, ok := c.device()
 	switch {
+	case h.phone.Off:
+		return schedule.SkipOff
 	case !ok || d.Info.State != "online":
 		return schedule.SkipOffline
 	case h.phone.Locked || d.Status == gateway.DeviceLocked:

@@ -57,6 +57,19 @@ func TestScheduleOnPhone(t *testing.T) {
 	if st := ctl.do(map[string]any{"cmd": "state"}).State; len(st.Notices) != 0 {
 		t.Fatalf("notice not taken: %+v", st.Notices)
 	}
+	// Pinky on the phone turned off: skipped too.
+	setNow(t, noon.Add(time.Hour))
+	ctl.do(map[string]any{"cmd": "schedule_save", "schedule": map[string]any{"id": id, "task": "Order lunch", "repeat": "daily",
+		"times": []string{"12:00", "23:00"}}})
+	setNow(t, noon.Add(11*time.Hour+time.Minute))
+	ctl.do(map[string]any{"cmd": "schedule_due", "off": true, "key": "sk-test"})
+	st = ctl.do(map[string]any{"cmd": "state"}).State
+	if len(st.Notices) != 1 || st.Notices[0].Reason != schedule.SkipOff {
+		t.Fatalf("notices while off: %+v", st.Notices)
+	}
+	ctl.do(map[string]any{"cmd": "notice_seen", "notice": st.Notices[0].ID})
+	ctl.do(map[string]any{"cmd": "schedule_save", "schedule": map[string]any{"id": id, "task": "Order lunch", "repeat": "daily",
+		"times": []string{"12:00"}}})
 
 	// The next day, free: it runs unattended, and its payment is denied.
 	h.api.turns = []func(string, *http.Request) map[string]any{
@@ -88,7 +101,7 @@ func TestScheduleOnPhone(t *testing.T) {
 	}
 	eventually(t, "the key is gone with the run", func() bool { return h.key() == "" })
 	s, _ := h.core.sched.Get(id)
-	if len(s.Runs) != 2 || s.Runs[0].End != "failed" || s.Runs[1].Reason != schedule.SkipLocked {
+	if len(s.Runs) != 3 || s.Runs[0].End != "failed" || s.Runs[1].Reason != schedule.SkipOff || s.Runs[2].Reason != schedule.SkipLocked {
 		t.Fatalf("runs: %+v", s.Runs)
 	}
 
@@ -106,7 +119,7 @@ func TestScheduleOnPhone(t *testing.T) {
 	}
 	eventually(t, "run now to end", func() bool {
 		s, _ := h.core.sched.Get(id)
-		return len(s.Runs) == 3 && s.Runs[0].End == "done"
+		return len(s.Runs) == 4 && s.Runs[0].End == "done"
 	})
 	if s, _ := h.core.sched.Get(id); !s.Runs[0].Manual || len(h.core.pendingNotices()) != 0 {
 		t.Errorf("run now: %+v, %d notices", s.Runs[0], len(h.core.pendingNotices()))
