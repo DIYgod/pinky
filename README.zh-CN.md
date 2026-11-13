@@ -1,16 +1,17 @@
 <p align="center"><img src="assets/icon/pinky-macos-1024.png" width="112" alt=""></p>
 <h1 align="center">Pinky</h1>
-<p align="center"><b>让任何 AI Agent 用上你的 iPhone 和 Android 手机：Mac、Windows、Linux 都能跑，关键一步你说了算。</b></p>
+<p align="center"><b>让 AI 用上你的 iPhone 和 Android 手机，关键一步你说了算：可以是 Mac、Windows、Linux 上的任何 Agent，也可以是手机上的 Pinky 自己。</b></p>
 <p align="center"><a href="https://github.com/DIYgod/pinky/releases/latest">下载</a> · <a href="#开始使用">开始使用</a> · <a href="#常见问题">常见问题</a> · <a href="https://discord.gg/S27b7SHjng">Discord</a></p>
 <p align="center"><a href="README.md">English</a> · 简体中文 · <a href="README.ja.md">日本語</a></p>
 <p align="center"><img src="assets/readme/demo-zh.gif" width="760" alt="Claude Code 在短信里输入回复，Pinky 扣住「发送」这一下，等你允许后才发出去"><br><sub>在 Android 16 模拟器上真实运行的 Claude Code。Pinky 默认只在付款前询问，这次还设了发消息前也要问。</sub></p>
 
-Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者一段脚本）通过 MCP 操作真实的 iPhone 或 Android 手机。你在电脑上看着它干活，有风险的步骤由你批准，随时可以接管，事后还能回看。审批由 Pinky 的网关执行，不靠给 Agent 的指令。
+Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者一段脚本）通过 MCP 操作真实的 iPhone 或 Android 手机。你在电脑上看着它干活，有风险的步骤由你批准，随时可以接管，事后还能回看。Pinky 也能用你选的 AI 模型自己完成任务：在电脑上交给它，或者直接在手机上的 Pinky 应用里让它做，完全不用电脑。不管任务由谁来做，审批都由 Pinky 的网关执行，不靠给 Agent 的指令。
 
 - **全平台**：一个应用，macOS（Apple 芯片和 Intel）、Windows、Linux 都能用。能操作 Android 手机（Android 10 到 17）和 iOS 17.4 及以上的 iPhone：iOS 27 及以上手机上什么都不用装；iOS 17.4 到 26 要在装有 Xcode 的 Mac 上装一次 iPhone 上的 Pinky，iOS 27 上也可以选择用它（在 iOS 27、iOS 27 以下的真机和模拟器上都试过；[详情](#手机)）。
 - **小巧原生**：窗口由 [MyGo](https://github.com/egoist/mygo) 在 GPU 上绘制，没有 Electron，也没有 webview：安装包 16–22 MB，在 Mac 上空闲时内存约 70 MB，CPU 0%。
 - **任何 Agent，一键接入**：在「设置 › 智能体」里点一下就能接入 Claude Code、Claude Desktop、Codex、Cursor 等；任何支持 MCP 的 Agent 都能用，在同一台电脑上或者通过 HTTP 都行。
-- **简单的任务，手机自己就能做**：手机上的 Pinky 应用（Android 和 iPhone 上都叫 Pinky）也能用你选的 AI 模型自己完成简单的任务，不需要电脑：在手机上写下任务，看着它做就行（[怎么设置](#pinky-on-the-phone)）。
+- **手机上的 Pinky，不用电脑也能做事**：Android 和 iPhone 上的 Pinky 应用能用你选的模型自己完成任务，DeepSeek、通义千问、Kimi、智谱 GLM、Claude、GPT、Gemini 都行，也可以用 Ollama 或 LM Studio 里的本地模型。打字或说出任务，或者把内容分享给它都可以；在 Android 上，还能用悬浮按钮问它屏幕上的内容，让它在隐藏的后台屏幕上干活，你照常用手机（[怎么设置](#pinky-on-the-phone)）。
+- **定时任务和记忆**：Pinky 可以在设定的时间执行任务，或者在某个条件满足时通知你，电脑和 Android 上都行。任务结束后，它可能会建议记住一些内容，比如你说过的偏好，你同意了才会保存（[详情](#交给-pinky)）。
 - **手机锁着也能在电脑上解锁**：在 Pinky 里保存一次手机的 PIN 码，之后每次解锁用 Touch ID、Windows Hello 或密钥环密码确认。Agent 永远看不到 PIN 码。
 - **开源免费**，Apache-2.0 协议，不用注册账号。
 
@@ -29,7 +30,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 </tr>
 </table>
 
-**状态**：pre-alpha。Claude Code 已经通过它在真机上完整跑通过（一台用 USB 连接的 Android 手机、一台 iOS 27 的 iPhone，和一台通过 Pinky 助手（iPhone 上的 Pinky 的前身）连接的 iOS 18.7.11 iPhone XS Max），Agent 可以通过 stdio 或 HTTP 连接。从电脑解锁、Android 后台工作、录屏、导出、Wi-Fi 配对和手机文件都已经做好，其中一部分还在等人实际试用。现在哪些能用、怎么试，见 [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
+**状态**：pre-alpha。Claude Code 已经通过它在真机上完整跑通过（一台用 USB 连接的 Android 手机、一台 iOS 27 的 iPhone，和一台通过 Pinky 助手（iPhone 上的 Pinky 的前身）连接的 iOS 18.7.11 iPhone XS Max），Agent 可以通过 stdio 或 HTTP 连接。手机上的 Pinky 已经在 Mi 10 Pro（Android 17）和 iPhone 13 mini（iOS 27.0.1）上用真实模型完成过任务。从电脑解锁、Android 后台工作、录屏、导出、Wi-Fi 配对和手机文件都已经做好，其中一部分还在等人实际试用。现在哪些能用、怎么试，见 [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。
 
 ## 开始使用
 
@@ -213,11 +214,15 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 
 ### 交给 Pinky
 
-自己没有 Agent？简单的任务，Pinky 可以自己在一台手机上做完。在「设置 › 智能体」的「交给 Pinky」里选一个服务，填上它的 API 密钥：可以通过 Anthropic 的 API（或兼容它的服务）用 Claude，也可以通过兼容 OpenAI API 的服务用别的模型，这时还要填服务地址和模型名称。密钥和手机的 PIN 码一样，保存在 Mac 的钥匙串、Windows 凭据管理器或你的密钥环里，只发送给这个服务。
+自己没有 Agent？Pinky 可以自己在一台手机上把任务做完。在「设置 › 智能体」的「交给 Pinky」里选一个服务，填上它的 API 密钥。DeepSeek、通义千问、Kimi、智谱 GLM、硅基流动、火山方舟、OpenRouter、Anthropic、OpenAI、Gemini、Ollama 和 LM Studio 都有现成的设置；其他兼容 Anthropic 或 OpenAI API 的服务，填上服务地址和模型名称也能用。保存时会马上检查模型，出了问题会说清楚是什么问题。密钥和手机的 PIN 码一样，保存在 Mac 的钥匙串、Windows 凭据管理器或你的密钥环里，只发送给这个服务。「用量」里可以看到 Pinky 自己的智能体今天、最近 7 天和最近 30 天用了多少 token，按服务和模型分开列，知道价格的还会显示费用；这些数据只存在你的电脑上。
 
-然后在手机页面「任务」顶部写下任务，比如「定一个 7:00 的闹钟」，点「开始」（或按 ⌘↩，Windows 和 Linux 上是 Ctrl+Enter）；在「所有手机」里要先选手机。Pinky 会以「Pinky」这个 Agent 的身份一步步操作，和其他 Agent 走同一条路：你的规则、审批、已屏蔽的应用、「接管」、「全部停止」和录屏对它都有效，它的任务也会记在「活动」里。它从不输入密码和一次性验证码（除非你允许了在虚拟手机上输入，而且任务里给了），遇到时会把手机交给你。点「停止」会立刻结束任务。
+然后在手机页面「任务」顶部写下任务，比如「定一个 7:00 的闹钟」，点「开始」（或按 ⌘↩，Windows 和 Linux 上是 Ctrl+Enter）；在「所有手机」里要先选手机。点「询问屏幕」会开始一个关于手机当前画面的任务。Pinky 会以「Pinky」这个 Agent 的身份一步步操作，和其他 Agent 走同一条路：你的规则、审批、已屏蔽的应用、「接管」、「全部停止」和录屏对它都有效，它的任务也会记在「活动」里。它从不输入密码和一次性验证码（除非你允许了在虚拟手机上输入，而且任务里给了），遇到时会把手机交给你。点「停止」会立刻结束任务。它工作时，你可以在任务框里给它发消息，Pinky 读到之前都可以修改或撤回；任务结束后，点「继续」可以发一条新消息让它接着做。
 
-每个任务做到 100 步、20 分钟或 2 美元就会停下，以先到者为准；这些上限可以在「设置 › 智能体」里改，等你操作的时间不算在内。费用按 Anthropic 的价格计算；Pinky 不知道价格的模型，按每百万 token 1 美元计算。「交给 Pinky」不会记住上一个任务，一次只用一台手机：更复杂的事，还是接入一个 Agent（[详情](docs/notes/builtin-agent.md)）。
+每个任务做到 100 步、20 分钟或 2 美元就会停下，以先到者为准；这些上限可以在「设置 › 智能体」里改，等你操作的时间不算在内。费用按 Anthropic 的价格计算；Pinky 不知道价格的模型，按每百万 token 1 美元计算。「交给 Pinky」一次只用一台手机：更复杂的事，还是接入一个 Agent（[详情](docs/notes/builtin-agent.md)）。
+
+**记忆**：任务结束后，Pinky 可能会建议记住一些内容供以后的任务使用，比如你说过的偏好，或者在某个 App 里更快的操作方法；只有你点了「记住」才会保存。在「设置 › 智能体 › 记忆」里可以查看、编辑、删除这些记忆，也可以关掉记忆。记忆从不保存密码、验证码、卡号、账号、证件号、电话号码或地址，每台设备各存各的。Pinky 还熟悉微信、支付宝、美团、淘宝、小红书、高德地图、Google 地图、Apple 地图、时钟、计算器和设置：打开它们时会先读一份简短的使用指南（[详情](docs/notes/builtin-agent.md#memory-and-app-guides)）。
+
+**定时任务**：在手机页面的「定时任务」下点「新建定时任务…」，可以让任务只执行一次，或者每天、每个工作日、每周、每隔几小时执行，也可以只在某个条件满足时通知你。定时任务在电脑和 Android 上运行（iPhone 上不行）。没人看着的时候，它从不付款，需要审批时会发通知问你；手机锁着、正在用或者关机时会跳过这一次，并留下说明。
 
 你的 Agent 也可以把整个任务交给 Pinky，不用自己一步步操作手机：`phone_task_run` 用你在这里设好的模型和上限开始任务，`phone_task_wait`、`phone_task_status`、`phone_task_list` 用来跟进，`phone_task_steer` 用来补充要求或让它接着做，`phone_task_cancel` 用来取消。这样的任务以那个 Agent 的身份进行，而不是以 Pinky 的身份：它第一次连接时会问你，「设置 › 智能体」里给它的权限和你的规则照样有效，审批也只有你能回答。「任务」顶部的框会显示这个任务和交来它的 Agent：你也可以在那里给它发消息、点「继续」让它接着做，任务仍以那个 Agent 的身份进行；点「停止」就会结束，之后 Agent 不能再让它继续。Pinky 的窗口开着时才能用，`pinky daemon` 里不行（[详情](docs/mcp.md#phone_task_run)）。脚本也可以在终端里这样做：`pinkyctl task run "设一个 7:00 的闹钟"` 会等任务做完并显示结果，它以名为「Pinky CLI」的 Agent 身份进行（也可以用 `-as "Nightly tests"` 另起名字），`pinkyctl task status|steer|cancel|list` 用来跟进（[详情](docs/mcp.md#from-a-shell-pinkyctl-task)）。
 
@@ -225,10 +230,16 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 
 ### 手机上的 Pinky
 
-手机上的 Pinky 应用（在手机上就叫 Pinky）也能自己在这台手机上完成简单的任务，不需要电脑。它和「交给 Pinky」一样，用你选的 AI 模型和 API 密钥：在手机上的 Pinky 里写下任务，点「开始」，Pinky 就离开自己的界面，到其他 App 里操作，你在旁边看着。Pinky 的规则在手机上同样有效：有风险的步骤会先问你（「设置 › Pinky 应在何时询问你？」），遇到密码和验证码会把手机交给你，到了上限或你点「停止」就停下，做过的任务都在它的「活动」里。密钥只保存在手机上，也只发给那个服务。电脑上的 Pinky 正在使用这台手机时，应用会告诉你，等它用完就可以在手机上开始任务。电脑上的 Pinky 会在手机页面上提示一次，「设置 › 手机」里的「在手机上做任务」也有说明和设置方法。
+手机上的 Pinky 应用（在手机上就叫 Pinky）也能自己在这台手机上完成简单的任务，不需要电脑。它和「交给 Pinky」一样，用你选的 AI 模型和 API 密钥：在手机上的 Pinky 里写下任务，点「开始」，Pinky 就离开自己的界面，到其他 App 里操作，你在旁边看着。Pinky 的规则在手机上同样有效：有风险的步骤会先问你（「设置 › Pinky 应在何时询问你？」），遇到密码和验证码会把手机交给你，到了上限或你点「停止」就停下，做过的任务都在它的「活动」里。密钥只保存在手机上，也只发给那个服务。手机上的 Pinky 和电脑上的一样，提供同样的模型服务、保存时的检查和用量统计。你可以用说的代替打字，在它工作时给它发消息，任务结束后点「继续」让它接着做；你同意保存的记忆在它自己的「设置 › 记忆」里。电脑上的 Pinky 正在使用这台手机时，应用会告诉你，等它用完就可以在手机上开始任务。电脑上的 Pinky 会在手机页面上提示一次，「设置 › 手机」里的「在手机上做任务」也有说明和设置方法。
 
-- **Android**：在 Pinky 的手机页面上点「安装」装上 Pinky 的应用；不用电脑也行：在手机上打开最新版本的 [`pinky-android.apk`](https://github.com/DIYgod/pinky/releases/latest/download/pinky-android.apk) 并安装（[详见](#install-companion-by-hand)）。在手机上打开 Pinky，按它的步骤来：先在 Android 的无障碍设置里打开 Pinky（Android 13 起，系统可能要你先在 Pinky 的应用信息里允许受限设置，应用里有说明），再选择 AI 模型并添加 API 密钥。之后 Pinky 会提出让自己保持运行，因为 Android 和一些手机厂商会在后台停掉应用。任务进行时，其他 App 上方会浮着一个小胶囊显示 Pinky 在做什么，需要你处理时会弹出卡片。已在 Mi 10 Pro（LineageOS，Android 17）上用真实模型试过。
-- **iPhone**：在装有 Xcode 的 Mac 上安装 Pinky 的应用：在手机页面或「设置 › 手机」里点「安装 iPhone 上的 Pinky」，或者运行 `pinkyctl helper install`（[怎么装](docs/notes/ios.md#installing-pinky-for-iphone)）。在 iPhone 上打开 Pinky，按它的步骤来：先「让 Pinky 与这台 iPhone 配对」（iOS 27 上在 iPhone 的「设置」里输入 Pinky 显示的配对码；iOS 27 以下要在装有 Pinky 的 Mac 上配对一次），再「打开 Pinky 的 VPN」（它让 Pinky 在手机上就能连到这台手机），最后选择 AI 模型并添加 API 密钥。需要你确认的事会在 Pinky 里等你，也会发通知；实时活动会显示任务和「停止」按钮。带自己 VPN 的应用需要付费的 Apple 开发者账号；用免费 Apple ID 时，Pinky 会构建一个轻量版应用，它要配合 App Store 上的 LocalDevVPN 使用（[详情](docs/notes/iphone-app.md)）。已在 iPhone 13 mini（iOS 27.0.1）上用真实模型试过一个简单任务，任务由调试版启动（[这次运行](docs/notes/iphone-app.md#a-real-model-on-the-phone-run)）。
+- **Android**：在 Pinky 的手机页面上点「安装」装上 Pinky 的应用；不用电脑也行：在手机上打开最新版本的 [`pinky-android.apk`](https://github.com/DIYgod/pinky/releases/latest/download/pinky-android.apk) 并安装（[详见](#install-companion-by-hand)）。在手机上打开 Pinky，按它的步骤来：先在 Android 的无障碍设置里打开 Pinky（Android 13 起，系统可能要你先在 Pinky 的应用信息里允许受限设置，应用里有说明），再选择 AI 模型并添加 API 密钥。之后 Pinky 会提出让自己保持运行，因为 Android 和一些手机厂商会在后台停掉应用。任务进行时，其他 App 上方会浮着一个小胶囊显示 Pinky 在做什么，需要你处理时会弹出卡片。Android 上的 Pinky 还能：
+  - 在隐藏的「后台屏幕」上执行任务，并用一个小悬浮窗显示进度，你可以同时照常用手机（「设置 › 后台屏幕」；需要 Android 13 及以上，并打开无线调试）；
+  - 在其他 App 上方显示「悬浮按钮」，用来问 Pinky 屏幕上的内容：双击打字提问，长按说话（「设置 › 这台手机」，或者用它的快捷设置图块）；
+  - 从其他 App 把文字、链接和图片分享给 Pinky 来开始任务，或者用快捷设置图块新建任务；
+  - 像电脑上一样执行定时任务（见上文）。
+
+  已在 Mi 10 Pro（LineageOS，Android 17）上用真实模型试过。
+- **iPhone**：在装有 Xcode 的 Mac 上安装 Pinky 的应用：在手机页面或「设置 › 手机」里点「安装 iPhone 上的 Pinky」，或者运行 `pinkyctl helper install`（[怎么装](docs/notes/ios.md#installing-pinky-for-iphone)）。在 iPhone 上打开 Pinky，按它的步骤来：先「让 Pinky 与这台 iPhone 配对」（iOS 27 上在 iPhone 的「设置」里输入 Pinky 显示的配对码；iOS 27 以下要在装有 Pinky 的 Mac 上配对一次），再「打开 Pinky 的 VPN」（它让 Pinky 在手机上就能连到这台手机），最后选择 AI 模型并添加 API 密钥。需要你确认的事会在 Pinky 里等你，也会发通知；实时活动会显示任务和「停止」按钮。「在 Pinky 中新建任务」快捷指令会打开 Pinky，带上任务，以及从共享表单传来的文字或链接，直接就能开始。带自己 VPN 的应用需要付费的 Apple 开发者账号；用免费 Apple ID 时，Pinky 会构建一个轻量版应用，它要配合 App Store 上的 LocalDevVPN 使用（[详情](docs/notes/iphone-app.md)）。已在 iPhone 13 mini（iOS 27.0.1）上用真实模型试过一个简单任务，任务由调试版启动（[这次运行](docs/notes/iphone-app.md#a-real-model-on-the-phone-run)）。
 
 ### 更新
 
