@@ -244,6 +244,9 @@ func (a *app) askBox(c *mg.Context) {
 			if why == "" && screen.Clicked() {
 				a.askStart(id, true)
 			}
+			if a.schedOn() && quietButton(c.Key("ask-schedule"), locales.SchedButton()).Clicked() {
+				a.newSchedule(id, st.draft)
+			}
 			can := why == "" && strings.TrimSpace(st.draft) != ""
 			start := button(c, locales.AskStart(), btnOpt{kind: btnPrimary, small: true}).Disabled(!can)
 			if can && (start.Clicked() || area.Shortcut(mg.Cmd, mg.KeyEnter)) {

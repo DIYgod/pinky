@@ -20,6 +20,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/pilot"
+	"github.com/DIYgod/pinky/internal/schedule"
 	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/internal/telemetry"
 	"github.com/DIYgod/pinky/internal/update"
@@ -123,6 +124,10 @@ type Options struct {
 	// at the top of Tasks and its part of Settings › Agents. nil leaves
 	// them out.
 	Pilot Pilot
+	// Schedules keeps Ask Pinky's scheduled tasks, which the client runs
+	// while it runs, through a Pilot that also has StartScheduled
+	// (schedules.go); nil leaves them out.
+	Schedules *schedule.Store
 }
 
 // Pilot runs Pinky's own agent, one task a phone at a time, as
@@ -457,6 +462,7 @@ type app struct {
 	tn        tailnetState   // phones away from this computer's network, through Tailscale
 	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 	ask       askState       // Ask Pinky: the box at the top of Tasks, and its settings (ask.go)
+	sched     schedState     // Ask Pinky's scheduled tasks (schedules.go)
 	rotate    rotateState    // Rotate in ⋯ under the mirror (rotate.go)
 
 	vit phoneVitalsState // phones' battery and storage (vitals.go)
@@ -559,6 +565,7 @@ func (a *app) ready() {
 	a.loaded = true
 	a.applySettings()
 	a.afterRefresh(true)
+	a.startSchedules()
 
 	a.main = mygo.NewWindow(mygo.WindowOptions{
 		Title: "Pinky", Width: 1280, Height: 820, MinWidth: 960, MinHeight: 620,
@@ -625,6 +632,7 @@ func (a *app) ready() {
 
 func (a *app) shutdown() {
 	a.end()
+	a.stopSchedules()
 	a.setAwake(false)
 	a.setAwayAwake(false)
 	for id, m := range a.mirrors {

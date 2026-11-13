@@ -42,6 +42,7 @@ func (a *app) rightPanel(c *mg.Context) {
 				a.taskList(c)
 			})
 		})
+		a.scheduledSection(c)
 	})
 }
 

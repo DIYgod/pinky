@@ -37,6 +37,1016 @@ type Messages struct{ locale string }
 // source language.
 func In(locale string) Messages { return Messages{locale} }
 
+// SchedButton says "Schedule…"
+// in the language the app shows.
+//
+// Ask Pinky: the button beside Start that opens the dialog to run the typed
+// task at set times instead of now.
+func SchedButton() string { return In(i18n.Locale()).SchedButton() }
+
+// SchedButton says "Schedule…"
+// in the language of msgs.
+//
+// Ask Pinky: the button beside Start that opens the dialog to run the typed
+// task at set times instead of now.
+func (msgs Messages) SchedButton() string {
+	return Catalog.Format(msgs.locale, "schedButton", nil)
+}
+
+// SchedCondition says "Tell me only if"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the optional condition, in the
+// person's words, under which they want to hear of a run ("it will rain").
+func SchedCondition() string { return In(i18n.Locale()).SchedCondition() }
+
+// SchedCondition says "Tell me only if"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the optional condition, in the
+// person's words, under which they want to hear of a run ("it will rain").
+func (msgs Messages) SchedCondition() string {
+	return Catalog.Format(msgs.locale, "schedCondition", nil)
+}
+
+// SchedConditionDesc says "Leave it empty to hear of every run. Otherwise Pinky checks it each time and tells you only when it holds."
+// in the language the app shows.
+//
+// Scheduled task dialog: the note under the condition field.
+func SchedConditionDesc() string { return In(i18n.Locale()).SchedConditionDesc() }
+
+// SchedConditionDesc says "Leave it empty to hear of every run. Otherwise Pinky checks it each time and tells you only when it holds."
+// in the language of msgs.
+//
+// Scheduled task dialog: the note under the condition field.
+func (msgs Messages) SchedConditionDesc() string {
+	return Catalog.Format(msgs.locale, "schedConditionDesc", nil)
+}
+
+// SchedConditionHint says "it will rain (optional)"
+// in the language the app shows.
+//
+// Scheduled task dialog: the hint in the empty condition field, an example
+// that completes "Tell me only if".
+func SchedConditionHint() string { return In(i18n.Locale()).SchedConditionHint() }
+
+// SchedConditionHint says "it will rain (optional)"
+// in the language of msgs.
+//
+// Scheduled task dialog: the hint in the empty condition field, an example
+// that completes "Tell me only if".
+func (msgs Messages) SchedConditionHint() string {
+	return Catalog.Format(msgs.locale, "schedConditionHint", nil)
+}
+
+// SchedCooldown says "Tell me"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of how often a condition that holds
+// again tells the person.
+func SchedCooldown() string { return In(i18n.Locale()).SchedCooldown() }
+
+// SchedCooldown says "Tell me"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of how often a condition that holds
+// again tells the person.
+func (msgs Messages) SchedCooldown() string {
+	return Catalog.Format(msgs.locale, "schedCooldown", nil)
+}
+
+// SchedCooldownAlways says "Each time it holds"
+// in the language the app shows.
+//
+// Scheduled task dialog, Tell me: every run whose condition holds tells the
+// person.
+func SchedCooldownAlways() string { return In(i18n.Locale()).SchedCooldownAlways() }
+
+// SchedCooldownAlways says "Each time it holds"
+// in the language of msgs.
+//
+// Scheduled task dialog, Tell me: every run whose condition holds tells the
+// person.
+func (msgs Messages) SchedCooldownAlways() string {
+	return Catalog.Format(msgs.locale, "schedCooldownAlways", nil)
+}
+
+// SchedCooldownDay says "At most once a day"
+// in the language the app shows.
+//
+// Scheduled task dialog, Tell me: a condition that holds tells the person
+// at most once a day.
+func SchedCooldownDay() string { return In(i18n.Locale()).SchedCooldownDay() }
+
+// SchedCooldownDay says "At most once a day"
+// in the language of msgs.
+//
+// Scheduled task dialog, Tell me: a condition that holds tells the person
+// at most once a day.
+func (msgs Messages) SchedCooldownDay() string {
+	return Catalog.Format(msgs.locale, "schedCooldownDay", nil)
+}
+
+// SchedCooldownHour says "At most once an hour"
+// in the language the app shows.
+//
+// Scheduled task dialog, Tell me: a condition that holds tells the person
+// at most once an hour.
+func SchedCooldownHour() string { return In(i18n.Locale()).SchedCooldownHour() }
+
+// SchedCooldownHour says "At most once an hour"
+// in the language of msgs.
+//
+// Scheduled task dialog, Tell me: a condition that holds tells the person
+// at most once an hour.
+func (msgs Messages) SchedCooldownHour() string {
+	return Catalog.Format(msgs.locale, "schedCooldownHour", nil)
+}
+
+// SchedDate says "Date"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the date of a task that runs once.
+func SchedDate() string { return In(i18n.Locale()).SchedDate() }
+
+// SchedDate says "Date"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the date of a task that runs once.
+func (msgs Messages) SchedDate() string {
+	return Catalog.Format(msgs.locale, "schedDate", nil)
+}
+
+// SchedDay says "{day, date, ::EEE}"
+// in the language the app shows.
+//
+// Scheduled task dialog: a day of the week the person can pick, short.
+func SchedDay(day time.Time) string { return In(i18n.Locale()).SchedDay(day) }
+
+// SchedDay says "{day, date, ::EEE}"
+// in the language of msgs.
+//
+// Scheduled task dialog: a day of the week the person can pick, short.
+func (msgs Messages) SchedDay(day time.Time) string {
+	return Catalog.Format(msgs.locale, "schedDay", map[string]any{"day": day})
+}
+
+// SchedDays says "Days"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the days of the week the task runs
+// on.
+func SchedDays() string { return In(i18n.Locale()).SchedDays() }
+
+// SchedDays says "Days"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the days of the week the task runs
+// on.
+func (msgs Messages) SchedDays() string {
+	return Catalog.Format(msgs.locale, "schedDays", nil)
+}
+
+// SchedDelete says "Delete"
+// in the language the app shows.
+//
+// Scheduled task dialog: deletes the scheduled task.
+func SchedDelete() string { return In(i18n.Locale()).SchedDelete() }
+
+// SchedDelete says "Delete"
+// in the language of msgs.
+//
+// Scheduled task dialog: deletes the scheduled task.
+func (msgs Messages) SchedDelete() string {
+	return Catalog.Format(msgs.locale, "schedDelete", nil)
+}
+
+// SchedDesktopNote says "Scheduled tasks run while Pinky is open on this computer, also with its window closed. A time missed while Pinky is q…"
+// in the language the app shows.
+//
+// Scheduled task dialog: the note at the bottom on when scheduled tasks run
+// on this computer and what Pinky does in a run nobody watches.
+func SchedDesktopNote() string { return In(i18n.Locale()).SchedDesktopNote() }
+
+// SchedDesktopNote says "Scheduled tasks run while Pinky is open on this computer, also with its window closed. A time missed while Pinky is q…"
+// in the language of msgs.
+//
+// Scheduled task dialog: the note at the bottom on when scheduled tasks run
+// on this computer and what Pinky does in a run nobody watches.
+func (msgs Messages) SchedDesktopNote() string {
+	return Catalog.Format(msgs.locale, "schedDesktopNote", nil)
+}
+
+// SchedErrDate says "Write the date as year-month-day, like 2026-11-20."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: the date of a task that
+// runs once is not year-month-day.
+func SchedErrDate() string { return In(i18n.Locale()).SchedErrDate() }
+
+// SchedErrDate says "Write the date as year-month-day, like 2026-11-20."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: the date of a task that
+// runs once is not year-month-day.
+func (msgs Messages) SchedErrDate() string {
+	return Catalog.Format(msgs.locale, "schedErrDate", nil)
+}
+
+// SchedErrLong says "The task is too long."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: the task or the condition
+// is too long.
+func SchedErrLong() string { return In(i18n.Locale()).SchedErrLong() }
+
+// SchedErrLong says "The task is too long."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: the task or the condition
+// is too long.
+func (msgs Messages) SchedErrLong() string {
+	return Catalog.Format(msgs.locale, "schedErrLong", nil)
+}
+
+// SchedErrNoDays says "Choose at least one day."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: On certain days without a
+// day.
+func SchedErrNoDays() string { return In(i18n.Locale()).SchedErrNoDays() }
+
+// SchedErrNoDays says "Choose at least one day."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: On certain days without a
+// day.
+func (msgs Messages) SchedErrNoDays() string {
+	return Catalog.Format(msgs.locale, "schedErrNoDays", nil)
+}
+
+// SchedErrNoPhone says "Choose a phone."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: no phone.
+func SchedErrNoPhone() string { return In(i18n.Locale()).SchedErrNoPhone() }
+
+// SchedErrNoPhone says "Choose a phone."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: no phone.
+func (msgs Messages) SchedErrNoPhone() string {
+	return Catalog.Format(msgs.locale, "schedErrNoPhone", nil)
+}
+
+// SchedErrNoTask says "Type a task."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: no task.
+func SchedErrNoTask() string { return In(i18n.Locale()).SchedErrNoTask() }
+
+// SchedErrNoTask says "Type a task."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: no task.
+func (msgs Messages) SchedErrNoTask() string {
+	return Catalog.Format(msgs.locale, "schedErrNoTask", nil)
+}
+
+// SchedErrNoTime says "Add a time."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: no time of day.
+func SchedErrNoTime() string { return In(i18n.Locale()).SchedErrNoTime() }
+
+// SchedErrNoTime says "Add a time."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: no time of day.
+func (msgs Messages) SchedErrNoTime() string {
+	return Catalog.Format(msgs.locale, "schedErrNoTime", nil)
+}
+
+// SchedErrOther says "Couldn't save the schedule: {detail}"
+// in the language the app shows.
+//
+// Scheduled task dialog: saving failed; detail is the error, in English.
+func SchedErrOther(detail string) string { return In(i18n.Locale()).SchedErrOther(detail) }
+
+// SchedErrOther says "Couldn't save the schedule: {detail}"
+// in the language of msgs.
+//
+// Scheduled task dialog: saving failed; detail is the error, in English.
+func (msgs Messages) SchedErrOther(detail string) string {
+	return Catalog.Format(msgs.locale, "schedErrOther", map[string]any{"detail": detail})
+}
+
+// SchedErrPast says "That time has passed."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: the time of a task that
+// runs once has passed.
+func SchedErrPast() string { return In(i18n.Locale()).SchedErrPast() }
+
+// SchedErrPast says "That time has passed."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: the time of a task that
+// runs once has passed.
+func (msgs Messages) SchedErrPast() string {
+	return Catalog.Format(msgs.locale, "schedErrPast", nil)
+}
+
+// SchedErrRunning says "A scheduled task is already running. Try again when it ends."
+// in the language the app shows.
+//
+// Scheduled task dialog, Run now: another scheduled task runs.
+func SchedErrRunning() string { return In(i18n.Locale()).SchedErrRunning() }
+
+// SchedErrRunning says "A scheduled task is already running. Try again when it ends."
+// in the language of msgs.
+//
+// Scheduled task dialog, Run now: another scheduled task runs.
+func (msgs Messages) SchedErrRunning() string {
+	return Catalog.Format(msgs.locale, "schedErrRunning", nil)
+}
+
+// SchedErrTime says "Write times as hours and minutes, like 08:00 or 20:30."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: a time is not hours and
+// minutes.
+func SchedErrTime() string { return In(i18n.Locale()).SchedErrTime() }
+
+// SchedErrTime says "Write times as hours and minutes, like 08:00 or 20:30."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: a time is not hours and
+// minutes.
+func (msgs Messages) SchedErrTime() string {
+	return Catalog.Format(msgs.locale, "schedErrTime", nil)
+}
+
+// SchedErrTooMany says "{count, plural, one {# time a day at most.} other {# times a day at most.}}"
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: too many times a day.
+func SchedErrTooMany(count int) string { return In(i18n.Locale()).SchedErrTooMany(count) }
+
+// SchedErrTooMany says "{count, plural, one {# time a day at most.} other {# times a day at most.}}"
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: too many times a day.
+func (msgs Messages) SchedErrTooMany(count int) string {
+	return Catalog.Format(msgs.locale, "schedErrTooMany", map[string]any{"count": count})
+}
+
+// SchedErrZone says "Pinky doesn't know this time zone. Use a name like Asia/Shanghai, or leave it empty."
+// in the language the app shows.
+//
+// Scheduled task dialog: why it cannot be saved: an unknown time zone.
+// Asia/Shanghai is an example of an IANA name and stays as it is (a
+// Japanese one may give Asia/Tokyo).
+func SchedErrZone() string { return In(i18n.Locale()).SchedErrZone() }
+
+// SchedErrZone says "Pinky doesn't know this time zone. Use a name like Asia/Shanghai, or leave it empty."
+// in the language of msgs.
+//
+// Scheduled task dialog: why it cannot be saved: an unknown time zone.
+// Asia/Shanghai is an example of an IANA name and stays as it is (a
+// Japanese one may give Asia/Tokyo).
+func (msgs Messages) SchedErrZone() string {
+	return Catalog.Format(msgs.locale, "schedErrZone", nil)
+}
+
+// SchedEvery says "Every"
+// in the language the app shows.
+//
+// Scheduled task dialog, Every few hours: the label of the choice of how
+// many hours apart.
+func SchedEvery() string { return In(i18n.Locale()).SchedEvery() }
+
+// SchedEvery says "Every"
+// in the language of msgs.
+//
+// Scheduled task dialog, Every few hours: the label of the choice of how
+// many hours apart.
+func (msgs Messages) SchedEvery() string {
+	return Catalog.Format(msgs.locale, "schedEvery", nil)
+}
+
+// SchedHours says "{count, plural, one {Every hour} other {Every # hours}}"
+// in the language the app shows.
+//
+// Scheduled task dialog, Every few hours: a choice of how many hours apart
+// the task runs.
+func SchedHours(count int) string { return In(i18n.Locale()).SchedHours(count) }
+
+// SchedHours says "{count, plural, one {Every hour} other {Every # hours}}"
+// in the language of msgs.
+//
+// Scheduled task dialog, Every few hours: a choice of how many hours apart
+// the task runs.
+func (msgs Messages) SchedHours(count int) string {
+	return Catalog.Format(msgs.locale, "schedHours", map[string]any{"count": count})
+}
+
+// SchedInterrupted says "Pinky quit before the task ended."
+// in the language the app shows.
+//
+// A scheduled task's run that never ended: Pinky quit while it ran.
+func SchedInterrupted() string { return In(i18n.Locale()).SchedInterrupted() }
+
+// SchedInterrupted says "Pinky quit before the task ended."
+// in the language of msgs.
+//
+// A scheduled task's run that never ended: Pinky quit while it ran.
+func (msgs Messages) SchedInterrupted() string {
+	return Catalog.Format(msgs.locale, "schedInterrupted", nil)
+}
+
+// SchedMet says "condition met"
+// in the language the app shows.
+//
+// After how a scheduled task's run went: its condition held, so the person
+// was told.
+func SchedMet() string { return In(i18n.Locale()).SchedMet() }
+
+// SchedMet says "condition met"
+// in the language of msgs.
+//
+// After how a scheduled task's run went: its condition held, so the person
+// was told.
+func (msgs Messages) SchedMet() string {
+	return Catalog.Format(msgs.locale, "schedMet", nil)
+}
+
+// SchedNew says "New schedule…"
+// in the language the app shows.
+//
+// The right panel, under the list of scheduled tasks: opens the dialog for
+// a new one.
+func SchedNew() string { return In(i18n.Locale()).SchedNew() }
+
+// SchedNew says "New schedule…"
+// in the language of msgs.
+//
+// The right panel, under the list of scheduled tasks: opens the dialog for
+// a new one.
+func (msgs Messages) SchedNew() string {
+	return Catalog.Format(msgs.locale, "schedNew", nil)
+}
+
+// SchedNext says "Next runs"
+// in the language the app shows.
+//
+// Scheduled task dialog: the heading of the next three times the task runs,
+// or why it cannot be saved.
+func SchedNext() string { return In(i18n.Locale()).SchedNext() }
+
+// SchedNext says "Next runs"
+// in the language of msgs.
+//
+// Scheduled task dialog: the heading of the next three times the task runs,
+// or why it cannot be saved.
+func (msgs Messages) SchedNext() string {
+	return Catalog.Format(msgs.locale, "schedNext", nil)
+}
+
+// SchedNextAt says "Next {when, date, ::MMMEEEdjmm}"
+// in the language the app shows.
+//
+// A scheduled task's row in the right panel: when it runs next.
+func SchedNextAt(when time.Time) string { return In(i18n.Locale()).SchedNextAt(when) }
+
+// SchedNextAt says "Next {when, date, ::MMMEEEdjmm}"
+// in the language of msgs.
+//
+// A scheduled task's row in the right panel: when it runs next.
+func (msgs Messages) SchedNextAt(when time.Time) string {
+	return Catalog.Format(msgs.locale, "schedNextAt", map[string]any{"when": when})
+}
+
+// SchedNoNext says "It won't run again."
+// in the language the app shows.
+//
+// A scheduled task that runs no more: one that ran once.
+func SchedNoNext() string { return In(i18n.Locale()).SchedNoNext() }
+
+// SchedNoNext says "It won't run again."
+// in the language of msgs.
+//
+// A scheduled task that runs no more: one that ran once.
+func (msgs Messages) SchedNoNext() string {
+	return Catalog.Format(msgs.locale, "schedNoNext", nil)
+}
+
+// SchedNoRuns says "It hasn't run yet."
+// in the language the app shows.
+//
+// Scheduled task dialog, Last runs: none yet.
+func SchedNoRuns() string { return In(i18n.Locale()).SchedNoRuns() }
+
+// SchedNoRuns says "It hasn't run yet."
+// in the language of msgs.
+//
+// Scheduled task dialog, Last runs: none yet.
+func (msgs Messages) SchedNoRuns() string {
+	return Catalog.Format(msgs.locale, "schedNoRuns", nil)
+}
+
+// SchedNotMet says "condition not met"
+// in the language the app shows.
+//
+// After how a scheduled task's run went: its condition did not hold.
+func SchedNotMet() string { return In(i18n.Locale()).SchedNotMet() }
+
+// SchedNotMet says "condition not met"
+// in the language of msgs.
+//
+// After how a scheduled task's run went: its condition did not hold.
+func (msgs Messages) SchedNotMet() string {
+	return Catalog.Format(msgs.locale, "schedNotMet", nil)
+}
+
+// SchedNotifyTitle says "Scheduled: {task}"
+// in the language the app shows.
+//
+// The title of the notification, or the toast, of how a scheduled task
+// went. task is the task's words, shortened.
+func SchedNotifyTitle(task string) string { return In(i18n.Locale()).SchedNotifyTitle(task) }
+
+// SchedNotifyTitle says "Scheduled: {task}"
+// in the language of msgs.
+//
+// The title of the notification, or the toast, of how a scheduled task
+// went. task is the task's words, shortened.
+func (msgs Messages) SchedNotifyTitle(task string) string {
+	return Catalog.Format(msgs.locale, "schedNotifyTitle", map[string]any{"task": task})
+}
+
+// SchedOpen says "Open the schedule “{task}”"
+// in the language the app shows.
+//
+// Accessible name of a scheduled task's row in the right panel, which opens
+// its dialog. task is the task's words, shortened.
+func SchedOpen(task string) string { return In(i18n.Locale()).SchedOpen(task) }
+
+// SchedOpen says "Open the schedule “{task}”"
+// in the language of msgs.
+//
+// Accessible name of a scheduled task's row in the right panel, which opens
+// its dialog. task is the task's words, shortened.
+func (msgs Messages) SchedOpen(task string) string {
+	return Catalog.Format(msgs.locale, "schedOpen", map[string]any{"task": task})
+}
+
+// SchedPause says "Pause"
+// in the language the app shows.
+//
+// Scheduled task dialog: stops the task from running at its times until
+// Resume.
+func SchedPause() string { return In(i18n.Locale()).SchedPause() }
+
+// SchedPause says "Pause"
+// in the language of msgs.
+//
+// Scheduled task dialog: stops the task from running at its times until
+// Resume.
+func (msgs Messages) SchedPause() string {
+	return Catalog.Format(msgs.locale, "schedPause", nil)
+}
+
+// SchedPaused says "Paused"
+// in the language the app shows.
+//
+// A scheduled task's row in the right panel: the person paused it, so it
+// does not run.
+func SchedPaused() string { return In(i18n.Locale()).SchedPaused() }
+
+// SchedPaused says "Paused"
+// in the language of msgs.
+//
+// A scheduled task's row in the right panel: the person paused it, so it
+// does not run.
+func (msgs Messages) SchedPaused() string {
+	return Catalog.Format(msgs.locale, "schedPaused", nil)
+}
+
+// SchedPaymentDenied says "A scheduled task never pays: Pinky denied this step by itself."
+// in the language the app shows.
+//
+// The note of an approval Pinky denied by itself: a payment step in a
+// scheduled task nobody watched.
+func SchedPaymentDenied() string { return In(i18n.Locale()).SchedPaymentDenied() }
+
+// SchedPaymentDenied says "A scheduled task never pays: Pinky denied this step by itself."
+// in the language of msgs.
+//
+// The note of an approval Pinky denied by itself: a payment step in a
+// scheduled task nobody watched.
+func (msgs Messages) SchedPaymentDenied() string {
+	return Catalog.Format(msgs.locale, "schedPaymentDenied", nil)
+}
+
+// SchedRepeat says "Repeat"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the choice of how the task repeats.
+func SchedRepeat() string { return In(i18n.Locale()).SchedRepeat() }
+
+// SchedRepeat says "Repeat"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the choice of how the task repeats.
+func (msgs Messages) SchedRepeat() string {
+	return Catalog.Format(msgs.locale, "schedRepeat", nil)
+}
+
+// SchedRepeatDaily says "Every day"
+// in the language the app shows.
+//
+// Scheduled task dialog, Repeat: every day, at one or more times.
+func SchedRepeatDaily() string { return In(i18n.Locale()).SchedRepeatDaily() }
+
+// SchedRepeatDaily says "Every day"
+// in the language of msgs.
+//
+// Scheduled task dialog, Repeat: every day, at one or more times.
+func (msgs Messages) SchedRepeatDaily() string {
+	return Catalog.Format(msgs.locale, "schedRepeatDaily", nil)
+}
+
+// SchedRepeatInterval says "Every few hours"
+// in the language the app shows.
+//
+// Scheduled task dialog, Repeat: every few hours, from a time of day to
+// midnight.
+func SchedRepeatInterval() string { return In(i18n.Locale()).SchedRepeatInterval() }
+
+// SchedRepeatInterval says "Every few hours"
+// in the language of msgs.
+//
+// Scheduled task dialog, Repeat: every few hours, from a time of day to
+// midnight.
+func (msgs Messages) SchedRepeatInterval() string {
+	return Catalog.Format(msgs.locale, "schedRepeatInterval", nil)
+}
+
+// SchedRepeatOnce says "Once"
+// in the language the app shows.
+//
+// Scheduled task dialog, Repeat: run once, on a date at a time.
+func SchedRepeatOnce() string { return In(i18n.Locale()).SchedRepeatOnce() }
+
+// SchedRepeatOnce says "Once"
+// in the language of msgs.
+//
+// Scheduled task dialog, Repeat: run once, on a date at a time.
+func (msgs Messages) SchedRepeatOnce() string {
+	return Catalog.Format(msgs.locale, "schedRepeatOnce", nil)
+}
+
+// SchedRepeatWeekdays says "Weekdays"
+// in the language the app shows.
+//
+// Scheduled task dialog, Repeat: Monday to Friday, at one or more times.
+func SchedRepeatWeekdays() string { return In(i18n.Locale()).SchedRepeatWeekdays() }
+
+// SchedRepeatWeekdays says "Weekdays"
+// in the language of msgs.
+//
+// Scheduled task dialog, Repeat: Monday to Friday, at one or more times.
+func (msgs Messages) SchedRepeatWeekdays() string {
+	return Catalog.Format(msgs.locale, "schedRepeatWeekdays", nil)
+}
+
+// SchedRepeatWeekly says "On certain days"
+// in the language the app shows.
+//
+// Scheduled task dialog, Repeat: on the days of the week the person picks,
+// at one or more times.
+func SchedRepeatWeekly() string { return In(i18n.Locale()).SchedRepeatWeekly() }
+
+// SchedRepeatWeekly says "On certain days"
+// in the language of msgs.
+//
+// Scheduled task dialog, Repeat: on the days of the week the person picks,
+// at one or more times.
+func (msgs Messages) SchedRepeatWeekly() string {
+	return Catalog.Format(msgs.locale, "schedRepeatWeekly", nil)
+}
+
+// SchedResume says "Resume"
+// in the language the app shows.
+//
+// Scheduled task dialog: runs a paused task at its times again, from now
+// on.
+func SchedResume() string { return In(i18n.Locale()).SchedResume() }
+
+// SchedResume says "Resume"
+// in the language of msgs.
+//
+// Scheduled task dialog: runs a paused task at its times again, from now
+// on.
+func (msgs Messages) SchedResume() string {
+	return Catalog.Format(msgs.locale, "schedResume", nil)
+}
+
+// SchedRunNow says "Run now"
+// in the language the app shows.
+//
+// Scheduled task dialog: runs the task at once, with the person there; also
+// marks such a run in Last runs.
+func SchedRunNow() string { return In(i18n.Locale()).SchedRunNow() }
+
+// SchedRunNow says "Run now"
+// in the language of msgs.
+//
+// Scheduled task dialog: runs the task at once, with the person there; also
+// marks such a run in Last runs.
+func (msgs Messages) SchedRunNow() string {
+	return Catalog.Format(msgs.locale, "schedRunNow", nil)
+}
+
+// SchedRuns says "Last runs"
+// in the language the app shows.
+//
+// Scheduled task dialog: the heading of the task's last ten runs.
+func SchedRuns() string { return In(i18n.Locale()).SchedRuns() }
+
+// SchedRuns says "Last runs"
+// in the language of msgs.
+//
+// Scheduled task dialog: the heading of the task's last ten runs.
+func (msgs Messages) SchedRuns() string {
+	return Catalog.Format(msgs.locale, "schedRuns", nil)
+}
+
+// SchedSection says "Scheduled"
+// in the language the app shows.
+//
+// The right panel: the heading of the list of scheduled tasks (Ask Pinky
+// tasks set to run at set times), under Tasks.
+func SchedSection() string { return In(i18n.Locale()).SchedSection() }
+
+// SchedSection says "Scheduled"
+// in the language of msgs.
+//
+// The right panel: the heading of the list of scheduled tasks (Ask Pinky
+// tasks set to run at set times), under Tasks.
+func (msgs Messages) SchedSection() string {
+	return Catalog.Format(msgs.locale, "schedSection", nil)
+}
+
+// SchedSkipBusy says "{phone} was busy with another task."
+// in the language the app shows.
+//
+// A scheduled task's skipped run: another task had the phone for 15 minutes
+// after its time.
+func SchedSkipBusy(phone string) string { return In(i18n.Locale()).SchedSkipBusy(phone) }
+
+// SchedSkipBusy says "{phone} was busy with another task."
+// in the language of msgs.
+//
+// A scheduled task's skipped run: another task had the phone for 15 minutes
+// after its time.
+func (msgs Messages) SchedSkipBusy(phone string) string {
+	return Catalog.Format(msgs.locale, "schedSkipBusy", map[string]any{"phone": phone})
+}
+
+// SchedSkipInUse says "You were using {phone}."
+// in the language the app shows.
+//
+// A scheduled task's skipped run: the person had taken over the phone for
+// 15 minutes after its time.
+func SchedSkipInUse(phone string) string { return In(i18n.Locale()).SchedSkipInUse(phone) }
+
+// SchedSkipInUse says "You were using {phone}."
+// in the language of msgs.
+//
+// A scheduled task's skipped run: the person had taken over the phone for
+// 15 minutes after its time.
+func (msgs Messages) SchedSkipInUse(phone string) string {
+	return Catalog.Format(msgs.locale, "schedSkipInUse", map[string]any{"phone": phone})
+}
+
+// SchedSkipLocked says "{phone} was locked."
+// in the language the app shows.
+//
+// A scheduled task's skipped run: the phone was locked, and Pinky never
+// unlocks it for a scheduled task.
+func SchedSkipLocked(phone string) string { return In(i18n.Locale()).SchedSkipLocked(phone) }
+
+// SchedSkipLocked says "{phone} was locked."
+// in the language of msgs.
+//
+// A scheduled task's skipped run: the phone was locked, and Pinky never
+// unlocks it for a scheduled task.
+func (msgs Messages) SchedSkipLocked(phone string) string {
+	return Catalog.Format(msgs.locale, "schedSkipLocked", map[string]any{"phone": phone})
+}
+
+// SchedSkipNoPhone says "The phone is no longer in Pinky."
+// in the language the app shows.
+//
+// A scheduled task's skipped run: its phone was removed from Pinky.
+func SchedSkipNoPhone() string { return In(i18n.Locale()).SchedSkipNoPhone() }
+
+// SchedSkipNoPhone says "The phone is no longer in Pinky."
+// in the language of msgs.
+//
+// A scheduled task's skipped run: its phone was removed from Pinky.
+func (msgs Messages) SchedSkipNoPhone() string {
+	return Catalog.Format(msgs.locale, "schedSkipNoPhone", nil)
+}
+
+// SchedSkipNotRunning says "{count, plural, one {Pinky wasn't running at that time.} other {Pinky wasn't running: # times were missed.}}"
+// in the language the app shows.
+//
+// A scheduled task's skipped run: Pinky was quit or the computer asleep at
+// its times. count is how many times were missed.
+func SchedSkipNotRunning(count int) string { return In(i18n.Locale()).SchedSkipNotRunning(count) }
+
+// SchedSkipNotRunning says "{count, plural, one {Pinky wasn't running at that time.} other {Pinky wasn't running: # times were missed.}}"
+// in the language of msgs.
+//
+// A scheduled task's skipped run: Pinky was quit or the computer asleep at
+// its times. count is how many times were missed.
+func (msgs Messages) SchedSkipNotRunning(count int) string {
+	return Catalog.Format(msgs.locale, "schedSkipNotRunning", map[string]any{"count": count})
+}
+
+// SchedSkipOff says "Ask Pinky was turned off."
+// in the language the app shows.
+//
+// A scheduled task's skipped run: the person turned Ask Pinky off in
+// Settings › Agents.
+func SchedSkipOff() string { return In(i18n.Locale()).SchedSkipOff() }
+
+// SchedSkipOff says "Ask Pinky was turned off."
+// in the language of msgs.
+//
+// A scheduled task's skipped run: the person turned Ask Pinky off in
+// Settings › Agents.
+func (msgs Messages) SchedSkipOff() string {
+	return Catalog.Format(msgs.locale, "schedSkipOff", nil)
+}
+
+// SchedSkipOffline says "{phone} wasn't connected."
+// in the language the app shows.
+//
+// A scheduled task's skipped run: the phone was not connected to Pinky, or
+// not ready.
+func SchedSkipOffline(phone string) string { return In(i18n.Locale()).SchedSkipOffline(phone) }
+
+// SchedSkipOffline says "{phone} wasn't connected."
+// in the language of msgs.
+//
+// A scheduled task's skipped run: the phone was not connected to Pinky, or
+// not ready.
+func (msgs Messages) SchedSkipOffline(phone string) string {
+	return Catalog.Format(msgs.locale, "schedSkipOffline", map[string]any{"phone": phone})
+}
+
+// SchedSkipped says "Skipped"
+// in the language the app shows.
+//
+// How a scheduled task's run went: it did not run at its time, for the
+// reason below.
+func SchedSkipped() string { return In(i18n.Locale()).SchedSkipped() }
+
+// SchedSkipped says "Skipped"
+// in the language of msgs.
+//
+// How a scheduled task's run went: it did not run at its time, for the
+// reason below.
+func (msgs Messages) SchedSkipped() string {
+	return Catalog.Format(msgs.locale, "schedSkipped", nil)
+}
+
+// SchedStartAt says "Starting at"
+// in the language the app shows.
+//
+// Scheduled task dialog, Every few hours: the label of the first time of
+// each day.
+func SchedStartAt() string { return In(i18n.Locale()).SchedStartAt() }
+
+// SchedStartAt says "Starting at"
+// in the language of msgs.
+//
+// Scheduled task dialog, Every few hours: the label of the first time of
+// each day.
+func (msgs Messages) SchedStartAt() string {
+	return Catalog.Format(msgs.locale, "schedStartAt", nil)
+}
+
+// SchedTask says "Task"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the field with the task, in the
+// person's words, as they would type it into Ask Pinky.
+func SchedTask() string { return In(i18n.Locale()).SchedTask() }
+
+// SchedTask says "Task"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the field with the task, in the
+// person's words, as they would type it into Ask Pinky.
+func (msgs Messages) SchedTask() string {
+	return Catalog.Format(msgs.locale, "schedTask", nil)
+}
+
+// SchedTime says "Time"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the time of day of a task that runs
+// once.
+func SchedTime() string { return In(i18n.Locale()).SchedTime() }
+
+// SchedTime says "Time"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the time of day of a task that runs
+// once.
+func (msgs Messages) SchedTime() string {
+	return Catalog.Format(msgs.locale, "schedTime", nil)
+}
+
+// SchedTimes says "Times"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the times of day the task runs at,
+// one or more, separated by commas.
+func SchedTimes() string { return In(i18n.Locale()).SchedTimes() }
+
+// SchedTimes says "Times"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the times of day the task runs at,
+// one or more, separated by commas.
+func (msgs Messages) SchedTimes() string {
+	return Catalog.Format(msgs.locale, "schedTimes", nil)
+}
+
+// SchedTitleEdit says "Scheduled task"
+// in the language the app shows.
+//
+// The title of the dialog that shows and edits a scheduled task.
+func SchedTitleEdit() string { return In(i18n.Locale()).SchedTitleEdit() }
+
+// SchedTitleEdit says "Scheduled task"
+// in the language of msgs.
+//
+// The title of the dialog that shows and edits a scheduled task.
+func (msgs Messages) SchedTitleEdit() string {
+	return Catalog.Format(msgs.locale, "schedTitleEdit", nil)
+}
+
+// SchedTitleNew says "Schedule a task"
+// in the language the app shows.
+//
+// The title of the dialog that makes a scheduled task.
+func SchedTitleNew() string { return In(i18n.Locale()).SchedTitleNew() }
+
+// SchedTitleNew says "Schedule a task"
+// in the language of msgs.
+//
+// The title of the dialog that makes a scheduled task.
+func (msgs Messages) SchedTitleNew() string {
+	return Catalog.Format(msgs.locale, "schedTitleNew", nil)
+}
+
+// SchedWhen says "{when, date, ::MMMEEEdjmm}"
+// in the language the app shows.
+//
+// A time a scheduled task runs or ran: the weekday, the day and the time.
+func SchedWhen(when time.Time) string { return In(i18n.Locale()).SchedWhen(when) }
+
+// SchedWhen says "{when, date, ::MMMEEEdjmm}"
+// in the language of msgs.
+//
+// A time a scheduled task runs or ran: the weekday, the day and the time.
+func (msgs Messages) SchedWhen(when time.Time) string {
+	return Catalog.Format(msgs.locale, "schedWhen", map[string]any{"when": when})
+}
+
+// SchedZone says "Time zone"
+// in the language the app shows.
+//
+// Scheduled task dialog: the label of the time zone the times are in; empty
+// is this computer's, which the hint shows.
+func SchedZone() string { return In(i18n.Locale()).SchedZone() }
+
+// SchedZone says "Time zone"
+// in the language of msgs.
+//
+// Scheduled task dialog: the label of the time zone the times are in; empty
+// is this computer's, which the hint shows.
+func (msgs Messages) SchedZone() string {
+	return Catalog.Format(msgs.locale, "schedZone", nil)
+}
+
 // ActivityAnsweredIn says "Answered in {duration}"
 // in the language the app shows.
 //

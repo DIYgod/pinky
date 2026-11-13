@@ -1,5 +1,347 @@
 {
   "@@locale": "en",
+  "schedButton": "Schedule…",
+  "@schedButton": {
+    "description": "Ask Pinky: the button beside Start that opens the dialog to run the typed task at set times instead of now."
+  },
+  "schedCondition": "Tell me only if",
+  "@schedCondition": {
+    "description": "Scheduled task dialog: the label of the optional condition, in the person's words, under which they want to hear of a run (\"it will rain\")."
+  },
+  "schedConditionDesc": "Leave it empty to hear of every run. Otherwise Pinky checks it each time and tells you only when it holds.",
+  "@schedConditionDesc": {
+    "description": "Scheduled task dialog: the note under the condition field."
+  },
+  "schedConditionHint": "it will rain (optional)",
+  "@schedConditionHint": {
+    "description": "Scheduled task dialog: the hint in the empty condition field, an example that completes \"Tell me only if\"."
+  },
+  "schedCooldown": "Tell me",
+  "@schedCooldown": {
+    "description": "Scheduled task dialog: the label of how often a condition that holds again tells the person."
+  },
+  "schedCooldownAlways": "Each time it holds",
+  "@schedCooldownAlways": {
+    "description": "Scheduled task dialog, Tell me: every run whose condition holds tells the person."
+  },
+  "schedCooldownDay": "At most once a day",
+  "@schedCooldownDay": {
+    "description": "Scheduled task dialog, Tell me: a condition that holds tells the person at most once a day."
+  },
+  "schedCooldownHour": "At most once an hour",
+  "@schedCooldownHour": {
+    "description": "Scheduled task dialog, Tell me: a condition that holds tells the person at most once an hour."
+  },
+  "schedDate": "Date",
+  "@schedDate": {
+    "description": "Scheduled task dialog: the label of the date of a task that runs once."
+  },
+  "schedDay": "{day, date, ::EEE}",
+  "@schedDay": {
+    "description": "Scheduled task dialog: a day of the week the person can pick, short.",
+    "placeholders": {
+      "day": {
+        "type": "DateTime",
+        "example": "Mon"
+      }
+    }
+  },
+  "schedDays": "Days",
+  "@schedDays": {
+    "description": "Scheduled task dialog: the label of the days of the week the task runs on."
+  },
+  "schedDelete": "Delete",
+  "@schedDelete": {
+    "description": "Scheduled task dialog: deletes the scheduled task."
+  },
+  "schedDesktopNote": "Scheduled tasks run while Pinky is open on this computer, also with its window closed. A time missed while Pinky is quit or the computer sleeps is skipped and reported; one the phone is busy for waits up to 15 minutes. Nobody watches a scheduled run: Pinky never pays in it, and a step that needs your approval waits for you as usual.",
+  "@schedDesktopNote": {
+    "description": "Scheduled task dialog: the note at the bottom on when scheduled tasks run on this computer and what Pinky does in a run nobody watches."
+  },
+  "schedErrDate": "Write the date as year-month-day, like 2026-11-20.",
+  "@schedErrDate": {
+    "description": "Scheduled task dialog: why it cannot be saved: the date of a task that runs once is not year-month-day."
+  },
+  "schedErrLong": "The task is too long.",
+  "@schedErrLong": {
+    "description": "Scheduled task dialog: why it cannot be saved: the task or the condition is too long."
+  },
+  "schedErrNoDays": "Choose at least one day.",
+  "@schedErrNoDays": {
+    "description": "Scheduled task dialog: why it cannot be saved: On certain days without a day."
+  },
+  "schedErrNoPhone": "Choose a phone.",
+  "@schedErrNoPhone": {
+    "description": "Scheduled task dialog: why it cannot be saved: no phone."
+  },
+  "schedErrNoTask": "Type a task.",
+  "@schedErrNoTask": {
+    "description": "Scheduled task dialog: why it cannot be saved: no task."
+  },
+  "schedErrNoTime": "Add a time.",
+  "@schedErrNoTime": {
+    "description": "Scheduled task dialog: why it cannot be saved: no time of day."
+  },
+  "schedErrOther": "Couldn't save the schedule: {detail}",
+  "@schedErrOther": {
+    "description": "Scheduled task dialog: saving failed; detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "schedErrPast": "That time has passed.",
+  "@schedErrPast": {
+    "description": "Scheduled task dialog: why it cannot be saved: the time of a task that runs once has passed."
+  },
+  "schedErrRunning": "A scheduled task is already running. Try again when it ends.",
+  "@schedErrRunning": {
+    "description": "Scheduled task dialog, Run now: another scheduled task runs."
+  },
+  "schedErrTime": "Write times as hours and minutes, like 08:00 or 20:30.",
+  "@schedErrTime": {
+    "description": "Scheduled task dialog: why it cannot be saved: a time is not hours and minutes."
+  },
+  "schedErrTooMany": "{count, plural, one {# time a day at most.} other {# times a day at most.}}",
+  "@schedErrTooMany": {
+    "description": "Scheduled task dialog: why it cannot be saved: too many times a day.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "schedErrZone": "Pinky doesn't know this time zone. Use a name like Asia/Shanghai, or leave it empty.",
+  "@schedErrZone": {
+    "description": "Scheduled task dialog: why it cannot be saved: an unknown time zone. Asia/Shanghai is an example of an IANA name and stays as it is (a Japanese one may give Asia/Tokyo)."
+  },
+  "schedEvery": "Every",
+  "@schedEvery": {
+    "description": "Scheduled task dialog, Every few hours: the label of the choice of how many hours apart."
+  },
+  "schedHours": "{count, plural, one {Every hour} other {Every # hours}}",
+  "@schedHours": {
+    "description": "Scheduled task dialog, Every few hours: a choice of how many hours apart the task runs.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "schedInterrupted": "Pinky quit before the task ended.",
+  "@schedInterrupted": {
+    "description": "A scheduled task's run that never ended: Pinky quit while it ran."
+  },
+  "schedMet": "condition met",
+  "@schedMet": {
+    "description": "After how a scheduled task's run went: its condition held, so the person was told."
+  },
+  "schedNew": "New schedule…",
+  "@schedNew": {
+    "description": "The right panel, under the list of scheduled tasks: opens the dialog for a new one."
+  },
+  "schedNext": "Next runs",
+  "@schedNext": {
+    "description": "Scheduled task dialog: the heading of the next three times the task runs, or why it cannot be saved."
+  },
+  "schedNextAt": "Next {when, date, ::MMMEEEdjmm}",
+  "@schedNextAt": {
+    "description": "A scheduled task's row in the right panel: when it runs next.",
+    "placeholders": {
+      "when": {
+        "type": "DateTime",
+        "example": "Fri, Nov 14, 8:00 AM"
+      }
+    }
+  },
+  "schedNoNext": "It won't run again.",
+  "@schedNoNext": {
+    "description": "A scheduled task that runs no more: one that ran once."
+  },
+  "schedNoRuns": "It hasn't run yet.",
+  "@schedNoRuns": {
+    "description": "Scheduled task dialog, Last runs: none yet."
+  },
+  "schedNotMet": "condition not met",
+  "@schedNotMet": {
+    "description": "After how a scheduled task's run went: its condition did not hold."
+  },
+  "schedNotifyTitle": "Scheduled: {task}",
+  "@schedNotifyTitle": {
+    "description": "The title of the notification, or the toast, of how a scheduled task went. task is the task's words, shortened.",
+    "placeholders": {
+      "task": {
+        "type": "String",
+        "example": "Check the weather"
+      }
+    }
+  },
+  "schedOpen": "Open the schedule “{task}”",
+  "@schedOpen": {
+    "description": "Accessible name of a scheduled task's row in the right panel, which opens its dialog. task is the task's words, shortened.",
+    "placeholders": {
+      "task": {
+        "type": "String",
+        "example": "Check the weather"
+      }
+    }
+  },
+  "schedPause": "Pause",
+  "@schedPause": {
+    "description": "Scheduled task dialog: stops the task from running at its times until Resume."
+  },
+  "schedPaused": "Paused",
+  "@schedPaused": {
+    "description": "A scheduled task's row in the right panel: the person paused it, so it does not run."
+  },
+  "schedPaymentDenied": "A scheduled task never pays: Pinky denied this step by itself.",
+  "@schedPaymentDenied": {
+    "description": "The note of an approval Pinky denied by itself: a payment step in a scheduled task nobody watched."
+  },
+  "schedRepeat": "Repeat",
+  "@schedRepeat": {
+    "description": "Scheduled task dialog: the label of the choice of how the task repeats."
+  },
+  "schedRepeatDaily": "Every day",
+  "@schedRepeatDaily": {
+    "description": "Scheduled task dialog, Repeat: every day, at one or more times."
+  },
+  "schedRepeatInterval": "Every few hours",
+  "@schedRepeatInterval": {
+    "description": "Scheduled task dialog, Repeat: every few hours, from a time of day to midnight."
+  },
+  "schedRepeatOnce": "Once",
+  "@schedRepeatOnce": {
+    "description": "Scheduled task dialog, Repeat: run once, on a date at a time."
+  },
+  "schedRepeatWeekdays": "Weekdays",
+  "@schedRepeatWeekdays": {
+    "description": "Scheduled task dialog, Repeat: Monday to Friday, at one or more times."
+  },
+  "schedRepeatWeekly": "On certain days",
+  "@schedRepeatWeekly": {
+    "description": "Scheduled task dialog, Repeat: on the days of the week the person picks, at one or more times."
+  },
+  "schedResume": "Resume",
+  "@schedResume": {
+    "description": "Scheduled task dialog: runs a paused task at its times again, from now on."
+  },
+  "schedRunNow": "Run now",
+  "@schedRunNow": {
+    "description": "Scheduled task dialog: runs the task at once, with the person there; also marks such a run in Last runs."
+  },
+  "schedRuns": "Last runs",
+  "@schedRuns": {
+    "description": "Scheduled task dialog: the heading of the task's last ten runs."
+  },
+  "schedSection": "Scheduled",
+  "@schedSection": {
+    "description": "The right panel: the heading of the list of scheduled tasks (Ask Pinky tasks set to run at set times), under Tasks."
+  },
+  "schedSkipBusy": "{phone} was busy with another task.",
+  "@schedSkipBusy": {
+    "description": "A scheduled task's skipped run: another task had the phone for 15 minutes after its time.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "schedSkipInUse": "You were using {phone}.",
+  "@schedSkipInUse": {
+    "description": "A scheduled task's skipped run: the person had taken over the phone for 15 minutes after its time.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "schedSkipLocked": "{phone} was locked.",
+  "@schedSkipLocked": {
+    "description": "A scheduled task's skipped run: the phone was locked, and Pinky never unlocks it for a scheduled task.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "schedSkipNoPhone": "The phone is no longer in Pinky.",
+  "@schedSkipNoPhone": {
+    "description": "A scheduled task's skipped run: its phone was removed from Pinky."
+  },
+  "schedSkipNotRunning": "{count, plural, one {Pinky wasn't running at that time.} other {Pinky wasn't running: # times were missed.}}",
+  "@schedSkipNotRunning": {
+    "description": "A scheduled task's skipped run: Pinky was quit or the computer asleep at its times. count is how many times were missed.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "schedSkipOff": "Ask Pinky was turned off.",
+  "@schedSkipOff": {
+    "description": "A scheduled task's skipped run: the person turned Ask Pinky off in Settings › Agents."
+  },
+  "schedSkipOffline": "{phone} wasn't connected.",
+  "@schedSkipOffline": {
+    "description": "A scheduled task's skipped run: the phone was not connected to Pinky, or not ready.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "schedSkipped": "Skipped",
+  "@schedSkipped": {
+    "description": "How a scheduled task's run went: it did not run at its time, for the reason below."
+  },
+  "schedStartAt": "Starting at",
+  "@schedStartAt": {
+    "description": "Scheduled task dialog, Every few hours: the label of the first time of each day."
+  },
+  "schedTask": "Task",
+  "@schedTask": {
+    "description": "Scheduled task dialog: the label of the field with the task, in the person's words, as they would type it into Ask Pinky."
+  },
+  "schedTime": "Time",
+  "@schedTime": {
+    "description": "Scheduled task dialog: the label of the time of day of a task that runs once."
+  },
+  "schedTimes": "Times",
+  "@schedTimes": {
+    "description": "Scheduled task dialog: the label of the times of day the task runs at, one or more, separated by commas."
+  },
+  "schedTitleEdit": "Scheduled task",
+  "@schedTitleEdit": {
+    "description": "The title of the dialog that shows and edits a scheduled task."
+  },
+  "schedTitleNew": "Schedule a task",
+  "@schedTitleNew": {
+    "description": "The title of the dialog that makes a scheduled task."
+  },
+  "schedWhen": "{when, date, ::MMMEEEdjmm}",
+  "@schedWhen": {
+    "description": "A time a scheduled task runs or ran: the weekday, the day and the time.",
+    "placeholders": {
+      "when": {
+        "type": "DateTime",
+        "example": "Fri, Nov 14, 8:00 AM"
+      }
+    }
+  },
+  "schedZone": "Time zone",
+  "@schedZone": {
+    "description": "Scheduled task dialog: the label of the time zone the times are in; empty is this computer's, which the hint shows."
+  },
   "activityAnsweredIn": "Answered in {duration}",
   "@activityAnsweredIn": {
     "description": "The second line of a step where the person allowed or denied what the agent asked: how long they took to answer. duration is as \"14 s\" or \"1 min 02 s\".",

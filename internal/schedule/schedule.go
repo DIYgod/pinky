@@ -128,6 +128,7 @@ const (
 	SkipInUse      = "in_use"      // the person was using the phone
 	SkipNoKey      = "no_key"      // no API key, or no model, to run with
 	SkipNoPhone    = "no_phone"    // the schedule's phone is no longer Pinky's
+	SkipOff        = "off"         // the person turned Pinky's own agent off
 )
 
 // Errors of Validate. The hosts say them in the person's language.
