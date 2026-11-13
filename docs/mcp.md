@@ -621,6 +621,20 @@ Stops the task at once, cancelling a model request in flight, and releases the p
 
 No arguments. Lists the tasks this agent handed Pinky in the last day, the newest first: `t3f9c… · done · Pixel 9 · steps: 7 · started 14:02 · “Set an alarm for 7:00”`.
 
+### From a shell: pinkyctl task
+
+`pinkyctl task run|status|steer|cancel|list` calls these tools for scripts, as an MCP client over the same connection `pinkyctl mcp` uses (starting Pinky when it does not run). It is an agent like any other, named "Pinky CLI", or the name `-as` gives, so each script can show up and be scoped on its own in Settings › Agents: the first task under a name asks the person (`New agent`), and its scope and the person's rules apply. A script calling itself Pinky shows as "Pinky (external)".
+
+```sh
+pinkyctl task run [-device phone] [-apps a,b] [-read-only] [-detach] [-as name] "<task>"
+pinkyctl task status <task_id>
+pinkyctl task steer <task_id> "<message>"
+pinkyctl task cancel <task_id>
+pinkyctl task list
+```
+
+`run` and `steer` wait for the task to end: its steps and a line when it waits for the person go to stderr, and only the final status line and summary to stdout (`run -detach` prints only the `task_id`). `status`, `cancel` and `list` print the tool's answer. Ctrl-C cancels the task and exits 130. Otherwise the exit status is 0 when the task was done (or the call worked, for `status`, `cancel` and `list`), 1 when it ended otherwise (`failed`, `refused`, `limit_reached`, `cancelled`, `stopped`), and 2 for usage errors, a call Pinky refused (such as `unsupported` while Pinky's window is closed) and a task that could not run (`no_key`, `bad_key`, `error`).
+
 ## Saving screenshots and reports
 
 An agent that writes a bug report or a pull request can keep what it saw as files: `phone_observe { save: "onboarding-1.png" }` saves a screenshot, and `phone_release { export: true }` the task's report. Both write into the phone's folder on the computer, `<data>/files/<phone id>/` (the one `phone_files` uses), and nothing to the phone, so they ask nothing, except for a screen recording: read-only and watch-only agents may save, in read-only mode too. They work on every phone, iPhones included. A Pinky without a data folder returns `unsupported`.

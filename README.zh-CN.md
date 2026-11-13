@@ -219,7 +219,7 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 
 每个任务做到 100 步、20 分钟或 2 美元就会停下，以先到者为准；这些上限可以在「设置 › 智能体」里改，等你操作的时间不算在内。费用按 Anthropic 的价格计算；Pinky 不知道价格的模型，按每百万 token 1 美元计算。「交给 Pinky」不会记住上一个任务，一次只用一台手机：更复杂的事，还是接入一个 Agent（[详情](docs/notes/builtin-agent.md)）。
 
-你的 Agent 也可以把整个任务交给 Pinky，不用自己一步步操作手机：`phone_task_run` 用你在这里设好的模型和上限开始任务，`phone_task_wait`、`phone_task_status`、`phone_task_list` 用来跟进，`phone_task_steer` 用来补充要求或让它接着做，`phone_task_cancel` 用来取消。这样的任务以那个 Agent 的身份进行，而不是以 Pinky 的身份：它第一次连接时会问你，「设置 › 智能体」里给它的权限和你的规则照样有效，审批也只有你能回答。「任务」顶部的框会显示这个任务和交来它的 Agent：你也可以在那里给它发消息、点「继续」让它接着做，任务仍以那个 Agent 的身份进行；点「停止」就会结束，之后 Agent 不能再让它继续。Pinky 的窗口开着时才能用，`pinky daemon` 里不行（[详情](docs/mcp.md#phone_task_run)）。
+你的 Agent 也可以把整个任务交给 Pinky，不用自己一步步操作手机：`phone_task_run` 用你在这里设好的模型和上限开始任务，`phone_task_wait`、`phone_task_status`、`phone_task_list` 用来跟进，`phone_task_steer` 用来补充要求或让它接着做，`phone_task_cancel` 用来取消。这样的任务以那个 Agent 的身份进行，而不是以 Pinky 的身份：它第一次连接时会问你，「设置 › 智能体」里给它的权限和你的规则照样有效，审批也只有你能回答。「任务」顶部的框会显示这个任务和交来它的 Agent：你也可以在那里给它发消息、点「继续」让它接着做，任务仍以那个 Agent 的身份进行；点「停止」就会结束，之后 Agent 不能再让它继续。Pinky 的窗口开着时才能用，`pinky daemon` 里不行（[详情](docs/mcp.md#phone_task_run)）。脚本也可以在终端里这样做：`pinkyctl task run "设一个 7:00 的闹钟"` 会等任务做完并显示结果，它以名为「Pinky CLI」的 Agent 身份进行（也可以用 `-as "Nightly tests"` 另起名字），`pinkyctl task status|steer|cancel|list` 用来跟进（[详情](docs/mcp.md#from-a-shell-pinkyctl-task)）。
 
 <a id="pinky-on-the-phone"></a>
 
