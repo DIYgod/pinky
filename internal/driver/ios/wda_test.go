@@ -529,6 +529,15 @@ func TestWDAClient(t *testing.T) {
 	if f.sessions != 1 || len(f.bodies["POST /appium/settings"]) != 1 {
 		t.Fatalf("sessions %d, settings %v", f.sessions, f.bodies["POST /appium/settings"])
 	}
+	// Typing goes at Pinky's speed, not XCTest's default of 60 keys a
+	// second (GitHub issue #101).
+	var set struct {
+		Settings map[string]any `json:"settings"`
+	}
+	json.Unmarshal([]byte(f.bodies["POST /appium/settings"][0]), &set)
+	if set.Settings["maxTypingFrequency"] != float64(wdaTypingFrequency) {
+		t.Fatalf("maxTypingFrequency %v, want %d", set.Settings["maxTypingFrequency"], wdaTypingFrequency)
+	}
 	var acts struct {
 		Actions []struct {
 			Type       string `json:"type"`
