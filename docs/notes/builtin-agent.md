@@ -100,6 +100,14 @@ A continued task is one conversation, so memory treats it as one task:
 - `Status.Suggested` is the whole task's: Continue keeps the suggestions of earlier stretches, decided or not, and `MaxSuggestions` counts them all, so a task suggests at most 3 notes however often it continues. When the continued task ends, its ending shows them all again, the undecided ones still with Remember and Don't.
 - The person's words are the task and every message of theirs the model has read, steered while it worked or sent to continue: a `said` note may quote any of them, and its numbers must appear in them. A message still pending is not theirs to quote yet.
 
+### In a task an agent hands Pinky
+
+A task an agent hands Pinky over MCP (`phone_task_run`, `Request.Agent`, `Status.By`) uses memory as the person's own tasks do, with two differences:
+
+- It reads the person's notes and gets guides like any task (unless memory is off). After `fromAgent`, its first message adds that the notes are the person's, for doing the task, and stay out of finish's summary, which goes to the agent, unless the task needs what one says.
+- Only the person's own words are a quote source: their messages in Pinky (`Message.From` empty), steered or sent to continue. The agent's task and its messages (`phone_task_steer`, `From` set) are the agent's words, so a `said` note quoting them is refused. `learned` notes work as in any task.
+- Suggestions go to the person only: they are in `Status.Suggested` and on the ended task in Ask Pinky, with Remember and Don't, and never in what `phone_task_*` returns (`taskOf` leaves them out, and `remember` calls are not steps, so the log has none).
+
 ### App guides
 
 - One Markdown file an app in `guides/` (front matter: name, other names, Android packages, iPhone bundle ids; a body of short lines, at most 1,000 characters). `guides/CONTRIBUTING.md` says how to write one and what stays out: rules for the agent, anything that gets around Pinky's rules or an app's security, personal data, instructions to the model. `go test ./guides` checks each.
@@ -162,5 +170,5 @@ Decided with the owner's lead session (defaults: the person may steer it; Contin
 - `internal/standalone/check_test.go`: check and usage through the phones' control socket (the core keeps no key); a task on a server that needs no key starts and continues without one, the state names its service and key, and both stretches count in usage.
 - `ui/ask_test.go`: the box, its setup state, saving the key, Start and Stop, Stop all, another agent on the phone, All phones and the endings, Send, Edit, Withdraw and Continue, services, the check and usage, with a fake runner.
 - `internal/pilot/agents_test.go`: an agent's task through the MCP tools: the New agent approval, the agent's scope, cancelling, another agent's view, the reasons it is unavailable, the agent's and the person's messages side by side, the person's and the agent's Continue (one task, under the agent's name), and no Continue by the agent after the person's Stop.
-- `internal/pilot/knowledge_test.go`: the notes' file and limits, the sensitive rule, notes in the first message, suggestions kept and dropped, blocked apps, memory off, a guide once a task, a continued task (notes and a guide once, the cap across stretches, a steered message as the quote), and the cost above; `guides/guides_test.go` checks every guide; `ui/memory_test.go`, `internal/standalone/memory_test.go` and `ios/onphone/memory_test.go` the screens' side.
+- `internal/pilot/knowledge_test.go`: the notes' file and limits, the sensitive rule, notes in the first message, suggestions kept and dropped, blocked apps, memory off, a guide once a task, a continued task (notes and a guide once, the cap across stretches, a steered message as the quote), an agent's task (notes and a guide, the agent's words not a quote, no suggestion reaching the agent), and the cost above; `guides/guides_test.go` checks every guide; `ui/memory_test.go`, `internal/standalone/memory_test.go` and `ios/onphone/memory_test.go` the screens' side.
 - Not tried yet: a real API call (needs the owner's key) and a real phone (needs their OK); steering, Continue and memory against a real model.

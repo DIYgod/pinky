@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/DIYgod/pinky/guides"
+	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -347,6 +348,85 @@ func TestContinueWithNotes(t *testing.T) {
 	}
 	if l := mem.List(); len(l) != 2 || l[0].Text != "Uses Calculator for tips" {
 		t.Fatalf("notes: %+v", l)
+	}
+}
+
+// A task an agent hands Pinky reads the person's notes and gets guides
+// like any other, but only the person's own messages are their words, and
+// the suggestions are for the person in Pinky, never for the agent.
+func TestAgentTaskNotes(t *testing.T) {
+	h := newHarness(t, func(o *gateway.Options) { o.TrustNewAgents = true })
+	mem, _ := OpenMemories("")
+	mem.Add(Said, "Likes results rounded to two decimals", "")
+	h.r.opt.Memories = mem
+	var a *agent
+	var id string
+	release := make(chan struct{})
+	h.api.turns = []func(string, *http.Request) any{
+		func(last string, _ *http.Request) any {
+			<-release
+			for _, want := range []string{"<notes>\n- Likes results rounded to two decimals\n</notes>", agentNotes} {
+				if !strings.Contains(last, want) {
+					t.Errorf("first message lacks %q:\n%s", want, last)
+				}
+			}
+			if text, isErr := a.call(t, "phone_task_steer", map[string]any{"task_id": id, "message": "They round to 2 places"}); isErr {
+				t.Errorf("steer:\n%s", text)
+			}
+			if _, err := h.r.Steer("pixel", "Keep it short please"); err != nil {
+				t.Error(err)
+			}
+			return message("tool_use", 1000,
+				use("r1", rememberName, map[string]any{"kind": "said", "text": "Uses Calculator for tips", "quote": "calculator for tips"}),
+				use("l1", "phone_launch", map[string]any{"app": "Calculator"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000,
+				use("r2", rememberName, map[string]any{"kind": "said", "text": "Rounds to 2 places", "quote": "round to 2 places"}),
+				use("r3", rememberName, map[string]any{"kind": "said", "text": "Likes short answers", "quote": "keep it short"}),
+				use("r4", rememberName, map[string]any{"kind": "learned", "text": "Clear with AC before a new sum"}))
+		},
+		func(string, *http.Request) any {
+			return message("tool_use", 1000, use("f", finishName, map[string]any{"outcome": "done", "summary": "Opened Calculator."}))
+		},
+	}
+	a = h.agent(t, "claude-code", Config{}, true)
+	text, _ := a.call(t, "phone_task_run", map[string]any{"task": "Open Calculator. They use calculator for tips"})
+	id = taskID(t, text)
+	close(release)
+	end := a.waitEnd(t, id)
+	if !strings.HasPrefix(end, "done") {
+		t.Fatalf("end:\n%s", end)
+	}
+
+	results := toolResults(h)
+	for id, want := range map[string]string{
+		"r1": "error: refused\nAn agent handed you this task",
+		"r2": "error: refused\nAn agent handed you this task",
+		"r3": "settled\nSuggested.",
+		"r4": "settled\nSuggested.",
+	} {
+		if !strings.HasPrefix(results[id], want) {
+			t.Errorf("%s: %q, want %q…", id, results[id], want)
+		}
+	}
+	reqs := h.api.requests()
+	g, _ := guides.For("com.google.android.calculator", "")
+	if n := strings.Count(reqs[len(reqs)-1].raw, g.Body[:40]); n != 1 {
+		t.Errorf("the guide is in the conversation %d times", n)
+	}
+
+	// The person sees the suggestions in Pinky; the agent never does.
+	st, _ := h.r.Status("pixel")
+	if len(st.Suggested) != 2 || st.Suggested[0].Text != "Likes short answers" || st.By == "" {
+		t.Fatalf("status: %+v", st)
+	}
+	for _, text := range []string{end, func() string { s, _ := a.call(t, "phone_task_status", map[string]any{"task_id": id}); return s }()} {
+		for _, leak := range []string{"Likes short answers", "Clear with AC", "remember", "rounded to two decimals"} {
+			if strings.Contains(text, leak) {
+				t.Errorf("the agent sees %q:\n%s", leak, text)
+			}
+		}
 	}
 }
 
