@@ -404,6 +404,18 @@ class Look(private val activity: Activity) {
         )
     }
 
+    /** Asks the person to confirm: ok runs onOk, Cancel nothing. */
+    fun confirm(title: String, message: String, ok: String, onOk: () -> Unit) {
+        show(
+            AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(ok) { _, _ -> onOk() }
+                .setNegativeButton(R.string.phone_cancel, null)
+                .create(),
+        )
+    }
+
     enum class Field { TEXT, URL, SECRET }
 
     /**

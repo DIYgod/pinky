@@ -10,7 +10,9 @@
          Android asks the person. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- Only for the debug page's test notification. Never requested at run time. -->
+    <!-- The debug page's test notification, and the notification that takes
+         the Wireless debugging pairing code (Pairing): asked for only when
+         the person starts pairing on Settings › Background screen. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Android's own dialog to lift Pinky's battery limits (Battery), so
@@ -93,6 +95,26 @@
             android:label="@string/phone_activity"
             android:process=":ui"
             android:theme="@style/Theme.Pinky.Screen" />
+
+        <!-- Settings › Background screen, opened only from Settings, in its
+             process. -->
+        <activity
+            android:name=".BackgroundActivity"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:label="@string/phone_bg_title"
+            android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Takes the pairing code typed into the pairing notification's
+             reply box (Pairing), in the screens' process. Only this app's
+             own PendingIntent reaches it. -->
+        <receiver
+            android:name=".PairingReceiver"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:process=":ui" />
 
         <!-- Hears how an update from Pinky's releases went (UpdateInstall). -->
         <receiver

@@ -216,4 +216,59 @@
     <string name="phone_code_unsupported">非対応</string>
     <string name="phone_code_invalid_argument">無効な引数</string>
     <string name="phone_code_internal">内部エラー</string>
+
+    <!-- 設定 › バックグラウンド画面 -->
+    <string name="phone_bg_title">バックグラウンド画面</string>
+    <string name="phone_bg_row_desc">スマホを使い続けながら、隠れた 2 つ目の画面でタスクを実行します。</string>
+    <string name="phone_bg_intro">Pinky は隠れた 2 つ目の画面でタスクを実行し、小さなフローティングウィンドウに表示します。その間もスマホをいつもどおり使えます。これにはワイヤレスデバッグが必要です。ここでオンにして、Pinky を一度ペア設定してください。</string>
+    <string name="phone_bg_switch">バックグラウンド画面を使う</string>
+    <string name="phone_bg_needs_13">Android 13 以降が必要です。タスクはスマホの画面で実行されます。</string>
+    <string name="phone_bg_core_down">変更するには Pinky をオンにしてください。</string>
+    <string name="phone_bg_unavailable">このバージョンの Pinky ではバックグラウンド画面を使えません。</string>
+    <string name="phone_bg_status_off">オフ。タスクはスマホの画面で実行されます。</string>
+    <string name="phone_bg_status_unpaired">Pinky をワイヤレスデバッグとペア設定すると完了です。</string>
+    <string name="phone_bg_status_no_port">ワイヤレスデバッグがオフです。オンにするまで、タスクはスマホの画面で実行されます。</string>
+    <string name="phone_bg_status_ready">準備完了。タスクはバックグラウンド画面で実行されます。</string>
+    <string name="phone_bg_status_connected">接続済み。タスクはバックグラウンド画面で実行されます。</string>
+    <string name="phone_bg_status_refused">スマホが Pinky を認識しなくなりました。もう一度ペア設定してください。</string>
+    <string name="phone_bg_status_failed">接続できませんでした：%1$s。タスクはスマホの画面で実行されます。</string>
+    <string name="phone_bg_steps">設定手順</string>
+    <string name="phone_bg_step_dev">開発者向けオプション</string>
+    <string name="phone_bg_step_dev_desc">オフの場合は、「デバイス情報」で「ビルド番号」を 7 回タップします。</string>
+    <string name="phone_bg_step_wireless">ワイヤレスデバッグ</string>
+    <string name="phone_bg_step_wireless_desc">開発者向けオプションでオンにします。Wi-Fi が必要です。</string>
+    <string name="phone_bg_step_pair">Pinky をペア設定</string>
+    <string name="phone_bg_step_pair_desc">ワイヤレスデバッグで「ペア設定コードによるデバイスのペア設定」をタップし、Pinky の通知にコードを入力します。</string>
+    <string name="phone_bg_paired_short">ペア設定済み</string>
+    <string name="phone_bg_pairing">ペア設定中…</string>
+    <string name="phone_bg_pair_toast">「ペア設定コードによるデバイスのペア設定」をタップし、Pinky の通知にコードを入力してください。</string>
+    <string name="phone_bg_no_notify">通知がオフです。分割画面で設定と Pinky を並べて、ここにコードを入力してください。</string>
+    <string name="phone_bg_enter_code">ペア設定コードを入力</string>
+    <string name="phone_bg_code_desc">分割画面でワイヤレスデバッグと Pinky を並べて、ここに入力することもできます。</string>
+    <string name="phone_bg_code_dialog_desc">「ペア設定コードによるデバイスのペア設定」に表示される 6 桁のコードです。そのダイアログは開いたままにしてください。</string>
+    <string name="phone_bg_code_hint">6 桁のコード</string>
+    <string name="phone_bg_not_a_code">コードは 6 桁の数字です。</string>
+    <string name="phone_bg_wrong_code">コードが違います。ダイアログのコードを確認して、もう一度お試しください。</string>
+    <string name="phone_bg_no_dialog">ペア設定のダイアログが見つかりません。「ペア設定コードによるデバイスのペア設定」を開き、コードを入力するまで開いたままにしてください。</string>
+    <string name="phone_bg_pair_failed">ペア設定できませんでした：%1$s</string>
+    <string name="phone_bg_paired">ペア設定しました。Pinky はバックグラウンド画面を使えます。</string>
+    <string name="phone_bg_pair_channel">ペア設定</string>
+    <string name="phone_bg_pair_notify_title">Pinky をペア設定</string>
+    <string name="phone_bg_pair_notify_body">ワイヤレスデバッグで「ペア設定コードによるデバイスのペア設定」をタップし、ここにコードを入力してください。</string>
+    <string name="phone_bg_forget">ペア設定を削除</string>
+    <string name="phone_bg_forget_desc">Pinky は自分の鍵を削除します。スマホからも Pinky を削除するには、ワイヤレスデバッグの「ペア設定済みのデバイス」でタップしてください。</string>
+    <string name="phone_bg_forget_confirm">Pinky はペア設定の鍵を削除し、接続を切ります。バックグラウンド画面を使うには、もう一度ペア設定が必要です。</string>
+    <string name="phone_bg_confirm_title">ワイヤレスデバッグを使いますか？</string>
+    <string name="phone_bg_confirm_body">ワイヤレスデバッグを使うと、Pinky はパソコンがこのスマホをデバッグするときと同じアクセス権を持ちます。Pinky がこれを使うのは画面ヘルパーの実行だけです。隠れた 2 つ目の画面を開き、そこでアプリを起動し、その画面を表示して操作します。アプリのインストール、ファイルの読み取り、設定の変更には使いません。Pinky が接続するのはこれがオンの間だけで、オフにすると接続を切ります。</string>
+    <string name="phone_bg_confirm_ok">オンにする</string>
+    <string name="phone_bg_safety">Pinky がワイヤレスデバッグで行うこと</string>
+    <string name="phone_bg_safety_body">Pinky はこのスマホとだけペア設定し、鍵は自分のストレージに保存します。バックグラウンド画面がオンの間、Pinky はスマホへのデバッグ接続を保ち、画面ヘルパーの実行だけに使います。隠れた 2 つ目の画面を開き、タスクのアプリをそこで起動し、その画面を表示して操作します。承認と引き継ぎはスマホの画面と同じです。オフにすると Pinky は接続を切り、「ペア設定を削除」で鍵を削除します。スマホが Wi-Fi から離れると Android はワイヤレスデバッグをオフにし、タスクはスマホの画面で実行されます。</string>
+
+    <!-- バックグラウンド画面のタスクのフローティングウィンドウ -->
+    <string name="phone_bg_window_working">Pinky が作業中 · タップで引き継ぐ</string>
+    <string name="phone_bg_window_yours">あなたが操作中</string>
+    <string name="phone_bg_window_larger">拡大</string>
+    <string name="phone_bg_window_smaller">縮小</string>
+    <string name="phone_bg_take_over">引き継ぐ</string>
+    <string name="phone_bg_hand_back">返す</string>
 </resources>

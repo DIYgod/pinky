@@ -1,6 +1,7 @@
 package app.pinky.companion
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -34,6 +35,7 @@ class SettingsActivity : Activity() {
     private var sub: Closeable? = null
 
     private var coreUp = false // the core answers, so when Pinky asks can change
+    private var backgroundOn = false // the core's state.shell.on
     private var known = false // the core answered, or could not be reached, at least once
     private var preset = 0 // the core's policy.Preset; 0 until it says
     private var checking = false
@@ -52,6 +54,7 @@ class SettingsActivity : Activity() {
     private lateinit var presetNote: TextView
     private lateinit var accessibilityRow: Look.Row
     private lateinit var batteryRow: Look.Row
+    private lateinit var backgroundRow: Look.Row
     private lateinit var updateRow: Look.Row
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,7 +94,10 @@ class SettingsActivity : Activity() {
         batteryRow = look.row(getString(R.string.phone_battery), desc = getString(R.string.phone_battery_desc)) {
             if (Battery.unrestricted(this)) Battery.openAppInfo(this) else Battery.askUnrestricted(this)
         }
-        val phoneRows = mutableListOf(accessibilityRow.view, batteryRow.view)
+        backgroundRow = look.row(getString(R.string.phone_bg_title), desc = getString(R.string.phone_bg_row_desc)) {
+            look.open(Intent(this, BackgroundActivity::class.java))
+        }
+        val phoneRows = mutableListOf(accessibilityRow.view, batteryRow.view, backgroundRow.view)
         // Only on phones whose vendor adds the switch; whether it is on cannot be read.
         if (Battery.hasAutostart()) {
             phoneRows += look.row(getString(R.string.phone_autostart), desc = getString(R.string.phone_autostart_desc)) {
@@ -163,10 +169,12 @@ class SettingsActivity : Activity() {
 
     private fun onState(st: JSONObject) {
         val p = st.optInt("preset", 0)
-        if (coreUp && p == preset) return
+        val bg = st.optJSONObject("shell")?.optBoolean("on") == true
+        if (coreUp && p == preset && bg == backgroundOn) return
         coreUp = true
         known = true
         preset = p
+        backgroundOn = bg
         render()
     }
 
@@ -207,6 +215,7 @@ class SettingsActivity : Activity() {
         val unrestricted = Battery.unrestricted(this)
         batteryRow.value.say(getString(if (unrestricted) R.string.phone_battery_unrestricted else R.string.phone_battery_optimized))
         batteryRow.value.setTextColor(if (unrestricted) look.ink3 else look.accent)
+        backgroundRow.value.say(getString(if (backgroundOn) R.string.phone_on else R.string.phone_off))
 
         updateRow.desc.say(if (UpdateCheck.enabled) updateNote else getString(R.string.phone_update_dev))
         updateRow.value.say(if (updateFound != null) getString(R.string.phone_update_download) else "")

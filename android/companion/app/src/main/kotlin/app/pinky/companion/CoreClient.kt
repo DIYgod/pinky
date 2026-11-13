@@ -42,7 +42,8 @@ object CoreClient {
      */
     class Refused(val code: String, message: String) : Exception(message)
 
-    private fun connect(): LocalSocket {
+    /** Opens a connection to the core's control socket; the caller closes it. */
+    fun connect(): LocalSocket {
         val s = LocalSocket()
         s.connect(LocalSocketAddress(BuildConfig.CORE_SOCKET, LocalSocketAddress.Namespace.ABSTRACT))
         return s

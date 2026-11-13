@@ -249,4 +249,62 @@
     <string name="phone_code_unsupported">unsupported</string>
     <string name="phone_code_invalid_argument">invalid argument</string>
     <string name="phone_code_internal">internal</string>
+
+    <!-- Settings › Background screen (BackgroundActivity): tasks run on a
+         hidden second screen, shown in a floating window, so the person
+         keeps using the phone. Developer options, Wireless debugging and
+         "Pair device with pairing code" are Android's own names. -->
+    <string name="phone_bg_title">Background screen</string>
+    <string name="phone_bg_row_desc">Run tasks on a hidden second screen while you keep using the phone.</string>
+    <string name="phone_bg_intro">Pinky runs your tasks on a hidden second screen and shows it in a small floating window, so you can keep using the phone. Pinky needs Wireless debugging for it: you turn it on and pair Pinky once, here.</string>
+    <string name="phone_bg_switch">Use the background screen</string>
+    <string name="phone_bg_needs_13">Needs Android 13 or later. Tasks run on the phone\'s screen.</string>
+    <string name="phone_bg_core_down">Turn on Pinky to change this.</string>
+    <string name="phone_bg_unavailable">This version of Pinky can\'t use a background screen.</string>
+    <string name="phone_bg_status_off">Off. Tasks run on the phone\'s screen.</string>
+    <string name="phone_bg_status_unpaired">Pair Pinky with Wireless debugging to finish.</string>
+    <string name="phone_bg_status_no_port">Wireless debugging is off. Tasks run on the phone\'s screen until you turn it on.</string>
+    <string name="phone_bg_status_ready">Ready. Tasks run on the background screen.</string>
+    <string name="phone_bg_status_connected">Connected. Tasks run on the background screen.</string>
+    <string name="phone_bg_status_refused">The phone no longer knows Pinky. Pair Pinky again.</string>
+    <string name="phone_bg_status_failed">Couldn\'t connect: %1$s. Tasks run on the phone\'s screen.</string>
+    <string name="phone_bg_steps">Set up</string>
+    <string name="phone_bg_step_dev">Developer options</string>
+    <string name="phone_bg_step_dev_desc">If it\'s off: in About phone, tap Build number seven times.</string>
+    <string name="phone_bg_step_wireless">Wireless debugging</string>
+    <string name="phone_bg_step_wireless_desc">Turn it on in Developer options. It needs Wi-Fi.</string>
+    <string name="phone_bg_step_pair">Pair Pinky</string>
+    <string name="phone_bg_step_pair_desc">In Wireless debugging, tap Pair device with pairing code, then type the code into Pinky\'s notification.</string>
+    <string name="phone_bg_paired_short">Paired</string>
+    <string name="phone_bg_pairing">Pairing…</string>
+    <string name="phone_bg_pair_toast">Tap Pair device with pairing code, then enter the code in Pinky\'s notification.</string>
+    <string name="phone_bg_no_notify">Notifications are off: enter the code here, with Settings and Pinky side by side in split screen.</string>
+    <string name="phone_bg_enter_code">Enter pairing code</string>
+    <string name="phone_bg_code_desc">Or type the code here, with Wireless debugging open beside Pinky in split screen.</string>
+    <string name="phone_bg_code_dialog_desc">The six-digit code from Pair device with pairing code. Keep that dialog open.</string>
+    <string name="phone_bg_code_hint">Six-digit code</string>
+    <string name="phone_bg_not_a_code">The code has six digits.</string>
+    <string name="phone_bg_wrong_code">That code didn\'t work. Check the code in the dialog and try again.</string>
+    <string name="phone_bg_no_dialog">Pinky couldn\'t find the pairing dialog. Open Pair device with pairing code and keep it open while you enter the code.</string>
+    <string name="phone_bg_pair_failed">Pairing failed: %1$s</string>
+    <string name="phone_bg_paired">Paired. Pinky can use the background screen.</string>
+    <string name="phone_bg_pair_channel">Pairing</string>
+    <string name="phone_bg_pair_notify_title">Pair Pinky</string>
+    <string name="phone_bg_pair_notify_body">In Wireless debugging, tap Pair device with pairing code, then enter the code here.</string>
+    <string name="phone_bg_forget">Forget pairing</string>
+    <string name="phone_bg_forget_desc">Pinky deletes its key. To remove Pinky from the phone too, tap it under Paired devices in Wireless debugging.</string>
+    <string name="phone_bg_forget_confirm">Pinky deletes its pairing key and drops its connection. You\'ll need to pair again to use the background screen.</string>
+    <string name="phone_bg_confirm_title">Use Wireless debugging?</string>
+    <string name="phone_bg_confirm_body">Wireless debugging gives Pinky the access a computer has when it debugs this phone. Pinky uses it only to run its screen helper, which opens the hidden second screen, starts apps on it, and shows and controls it. It doesn\'t use it to install apps, read your files or change settings. Pinky connects only while this is on and drops the connection when you turn it off.</string>
+    <string name="phone_bg_confirm_ok">Turn on</string>
+    <string name="phone_bg_safety">What Pinky does with Wireless debugging</string>
+    <string name="phone_bg_safety_body">Pinky pairs with this phone only, and keeps its key in its own storage. While the background screen is on, Pinky holds a debugging connection to the phone and uses it only to run its screen helper: it opens the hidden second screen, starts the task\'s apps there, and shows and controls that screen. Approvals and taking over work as on the phone\'s screen. Turn this off and Pinky drops the connection; Forget pairing deletes the key. Android turns Wireless debugging off when the phone leaves Wi-Fi: tasks then run on the phone\'s screen.</string>
+
+    <!-- The floating window of a task on the background screen (AgentWindow). -->
+    <string name="phone_bg_window_working">Pinky is working · tap to take over</string>
+    <string name="phone_bg_window_yours">You have control</string>
+    <string name="phone_bg_window_larger">Larger</string>
+    <string name="phone_bg_window_smaller">Smaller</string>
+    <string name="phone_bg_take_over">Take over</string>
+    <string name="phone_bg_hand_back">Hand back</string>
 </resources>
