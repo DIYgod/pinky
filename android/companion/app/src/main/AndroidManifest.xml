@@ -105,6 +105,13 @@
             android:process=":ui"
             android:theme="@style/Theme.Pinky.Screen" />
         <activity
+            android:name=".MemoryActivity"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:label="@string/phone_memory"
+            android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen" />
+        <activity
             android:name=".PastTaskActivity"
             android:enabled="@bool/on_phone_ui"
             android:exported="false"

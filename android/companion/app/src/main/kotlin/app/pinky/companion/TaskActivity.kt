@@ -99,6 +99,7 @@ class TaskActivity : Activity() {
     private var continuing = false // a continue on its way
     private var pendingShown: List<Steering.Message>? = null // what steerPending lists
     private var unreadShown: List<Steering.Message>? = null // what continuePending lists
+    private lateinit var suggestions: Suggestions
     private lateinit var askBox: View
     private lateinit var input: EditText
     private lateinit var modelLine: TextView
@@ -147,6 +148,8 @@ class TaskActivity : Activity() {
         col.addView(runCard(), look.below(12))
         col.addView(steerBox(), look.below(12))
         endCard = EndCard(this, look) { dismiss() }
+        suggestions = Suggestions(this, look) { i, keep -> decideNote(i, keep) }
+        endCard.view.addView(suggestions.view, look.matchWrap())
         col.addView(endCard.view, look.below(12))
         col.addView(continueBox(), look.below(12))
         col.addView(askBox(), look.below(12))
@@ -307,7 +310,10 @@ class TaskActivity : Activity() {
         updateSend()
 
         endCard.view.shown(agent != null && !running)
-        if (agent != null && !running) endCard.show(agent)
+        if (agent != null && !running) {
+            endCard.show(agent)
+            suggestions.show(agent)
+        }
 
         // Once it ended, it may go on: with the messages it did not read,
         // and a new one.
@@ -635,6 +641,13 @@ class TaskActivity : Activity() {
     private fun dismiss() {
         error.say("")
         CoreClient.send(CoreClient.cmd("dismiss"))
+    }
+
+    // Keep or Drop on a note the task suggested; the state shows the answer.
+    private fun decideNote(i: Int, keep: Boolean) {
+        CoreClient.send(CoreClient.cmd(if (keep) "keep" else "drop", "index" to i)) { err ->
+            if (err != null) main.post { if (!isDestroyed) suggestions.failed((err as? CoreClient.Refused)?.code ?: "") }
+        }
     }
 
     private fun openSettings() {

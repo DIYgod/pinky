@@ -474,4 +474,34 @@
         <item quantity="one">Every hour from %2$s</item>
         <item quantity="other">Every %1$d hours from %2$s</item>
     </plurals>
+    <!-- Pinky's memory (MemoryActivity, and the end card's question):
+         the notes the person keeps for tasks on this phone, as desktop
+         Pinky's settingsMemory* and askMemory*. -->
+    <string name="phone_memory">Memory</string>
+    <string name="phone_memory_desc">What Pinky remembers between tasks</string>
+    <string name="phone_memory_intro">What Pinky remembers for its tasks on this phone: what you told it, and ways of doing things you said yes to after a task. Nothing is kept without your yes, and never passwords, codes, card or ID numbers, or addresses. Pinky on a computer keeps its own.</string>
+    <string name="phone_memory_use">Use memory</string>
+    <string name="phone_memory_use_desc">Tasks read these notes and may suggest new ones. Turned off, the notes stay until you delete them.</string>
+    <string name="phone_memory_notes">Remembered</string>
+    <string name="phone_memory_empty">Nothing yet. After a task, Pinky may suggest something to remember; you decide.</string>
+    <string name="phone_memory_read_failed">Couldn\'t read the memory. Pinky may still be starting.</string>
+    <string name="phone_memory_add">Add…</string>
+    <string name="phone_memory_edit">Edit</string>
+    <string name="phone_memory_delete">Delete</string>
+    <string name="phone_memory_delete_all">Delete All</string>
+    <string name="phone_memory_delete_all_title">Delete all of Pinky\'s memory?</string>
+    <string name="phone_memory_delete_all_message">Every note on this phone is deleted. Pinky on a computer keeps its own.</string>
+    <string name="phone_memory_hint">For example: Prefers window seats</string>
+    <string name="phone_memory_from_you">From you</string>
+    <string name="phone_memory_learned">Learned on a task</string>
+    <string name="phone_memory_learned_in">Learned in %1$s</string>
+    <string name="phone_memory_err_sensitive">Memory never keeps passwords, codes, card, account, ID or phone numbers, email or street addresses.</string>
+    <string name="phone_memory_err_long">A note has at most %1$d characters.</string>
+    <string name="phone_memory_err_full">Memory keeps at most %1$d notes. Delete one first.</string>
+    <string name="phone_memory_err_failed">Couldn\'t save the note.</string>
+    <string name="phone_memory_ask">Remember for later tasks?</string>
+    <string name="phone_memory_keep">Remember</string>
+    <string name="phone_memory_drop">Don\'t</string>
+    <string name="phone_memory_kept">Remembered</string>
+    <string name="phone_memory_dropped">Not remembered</string>
 </resources>

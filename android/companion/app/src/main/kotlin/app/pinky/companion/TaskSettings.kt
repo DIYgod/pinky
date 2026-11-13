@@ -96,6 +96,11 @@ class TaskSettings(private val context: Context) {
         get() = prefs.getFloat("max_cost", DEFAULT_COST.toFloat()).toDouble().takeIf { it > 0 } ?: DEFAULT_COST
         set(v) = prefs.edit().putFloat("max_cost", v.toFloat()).apply()
 
+    /** Whether tasks read the person's notes and may suggest new ones (MemoryActivity); off leaves the notes as they are. */
+    var useMemory: Boolean
+        get() = prefs.getBoolean("use_memory", true)
+        set(v) = prefs.edit().putBoolean("use_memory", v).apply()
+
     /** Whether Pinky knows the model's prices, and so counts the cost limit in dollars (pilot.Config.Priced). */
     fun priced(id: String = service): Boolean = svc(id).priced(model(id))
 
@@ -132,6 +137,7 @@ class TaskSettings(private val context: Context) {
         "max_steps" to maxSteps,
         "max_minutes" to maxMinutes,
         "max_cost" to maxCost,
+        "no_memory" to !useMemory,
     )
 
     companion object {

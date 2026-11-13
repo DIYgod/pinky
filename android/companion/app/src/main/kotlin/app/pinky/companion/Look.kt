@@ -38,7 +38,8 @@ import android.widget.TextView
 
 /**
  * The look of Pinky's own screens on the phone (TaskActivity,
- * SettingsActivity, HistoryActivity and PastTaskActivity), built in code:
+ * SettingsActivity, MemoryActivity, HistoryActivity and PastTaskActivity),
+ * built in code:
  * desktop Pinky's palette
  * (res/values/colors.xml, dark in values-night) and type, grouped rows,
  * buttons and dialogs.
@@ -417,15 +418,21 @@ class Look(private val activity: Activity) {
         )
     }
 
-    /** Asks the person to confirm: ok runs onOk, Cancel nothing. */
-    fun confirm(title: String, message: String, ok: String, onOk: () -> Unit) {
+    /**
+     * Asks the person to confirm: ok runs onOk, Cancel nothing. destructive,
+     * for what cannot be undone, makes ok a red button.
+     */
+    fun confirm(title: String, message: String, ok: String, destructive: Boolean = false, onOk: () -> Unit) {
         show(
             AlertDialog.Builder(activity)
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton(ok) { _, _ -> onOk() }
                 .setNegativeButton(R.string.phone_cancel, null)
-                .create(),
+                .create()
+                .also { d ->
+                    if (destructive) d.setOnShowListener { d.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(red) }
+                },
         )
     }
 

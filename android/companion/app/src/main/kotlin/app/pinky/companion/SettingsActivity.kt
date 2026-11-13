@@ -89,6 +89,11 @@ class SettingsActivity : Activity() {
         costRow = look.row(getString(R.string.phone_cost_limit)) { chooseCost() }
         addGroup(col, R.string.phone_section_limits, stepsRow.view, timeRow.view, costRow.view)
 
+        val memoryRow = look.row(getString(R.string.phone_memory), desc = getString(R.string.phone_memory_desc)) {
+            startActivity(Intent(this, MemoryActivity::class.java))
+        }
+        addGroup(col, R.string.phone_memory, memoryRow.view)
+
         usageRows = listOf(R.string.phone_today, R.string.phone_usage_week, R.string.phone_usage_month).map {
             look.row(getString(it), getString(R.string.phone_usage_none))
         }

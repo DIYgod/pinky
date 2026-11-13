@@ -433,4 +433,31 @@
     <plurals name="phone_sched_sum_interval">
         <item quantity="other">%2$s から%1$d時間ごと</item>
     </plurals>
+    <string name="phone_memory">記憶</string>
+    <string name="phone_memory_desc">Pinky がタスクをまたいで覚えていること</string>
+    <string name="phone_memory_intro">このスマホで Pinky がタスクに使う記憶です。あなたが伝えたことと、タスクのあとで保存を許可したやり方が入ります。許可なく保存されることはなく、パスワード、コード、カード番号、ID 番号、住所は保存されません。パソコンの Pinky は、自分の記憶を持ちます。</string>
+    <string name="phone_memory_use">記憶を使う</string>
+    <string name="phone_memory_use_desc">タスクはこの記憶を読み、新しい記憶を提案することがあります。オフにしても、削除するまで記憶は残ります。</string>
+    <string name="phone_memory_notes">覚えていること</string>
+    <string name="phone_memory_empty">まだありません。タスクのあと、Pinky が覚えることを提案する場合があり、あなたが決めます。</string>
+    <string name="phone_memory_read_failed">記憶を読み込めませんでした。Pinky がまだ起動中の可能性があります。</string>
+    <string name="phone_memory_add">追加…</string>
+    <string name="phone_memory_edit">編集</string>
+    <string name="phone_memory_delete">削除</string>
+    <string name="phone_memory_delete_all">すべて削除</string>
+    <string name="phone_memory_delete_all_title">Pinky の記憶をすべて削除しますか？</string>
+    <string name="phone_memory_delete_all_message">このスマホの記憶はすべて削除されます。パソコンの Pinky の記憶はそのまま残ります。</string>
+    <string name="phone_memory_hint">例：窓側の席が好き</string>
+    <string name="phone_memory_from_you">あなたから</string>
+    <string name="phone_memory_learned">タスクで覚えたこと</string>
+    <string name="phone_memory_learned_in">%1$sで覚えたこと</string>
+    <string name="phone_memory_err_sensitive">記憶にはパスワード、コード、カード番号、口座番号、ID 番号、電話番号、メールアドレス、住所は保存されません。</string>
+    <string name="phone_memory_err_long">記憶は 1 件 %1$d 文字までです。</string>
+    <string name="phone_memory_err_full">記憶は %1$d 件までです。先に 1 件削除してください。</string>
+    <string name="phone_memory_err_failed">記憶を保存できませんでした。</string>
+    <string name="phone_memory_ask">今後のタスクのために覚えますか？</string>
+    <string name="phone_memory_keep">覚える</string>
+    <string name="phone_memory_drop">覚えない</string>
+    <string name="phone_memory_kept">覚えました</string>
+    <string name="phone_memory_dropped">覚えませんでした</string>
 </resources>
