@@ -126,6 +126,10 @@ func addText(ctx context.Context, s *screen.Screen, sc textScan, opt driver.Obse
 		st.Err = fmt.Errorf("ocr: %w", err)
 		return st
 	}
+	if sc.proof != nil && src.moved != nil && src.moved(ctx, since, s.App) {
+		st.Skipped = "window identity changed during OCR"
+		return st
+	}
 	st.Lines = len(lines)
 	lines = sc.keep(lines, s.Width, s.Height, opt.OCRAll, s.Keyboard)
 	extra := ocr.Extras(s.Elements, lines, s.Width, s.Height)

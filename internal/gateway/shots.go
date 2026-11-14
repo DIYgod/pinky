@@ -52,16 +52,17 @@ const shotWait = 10 * time.Minute
 
 // bgShot is a history screenshot of one read.
 type bgShot struct {
-	key    string     // shotKey of the read
-	app    screen.App // the read's app
-	inputs uint64     // d.inputs at the read
-	state  shotState
-	done   chan struct{} // closed when the driver call returns
-	doneAt time.Time
-	expire *time.Timer // drops it after shotWait while it waits
-	img    image.Image // until written to history; at history size
-	id     string      // media id once written
-	uses   []shotUse   // step pictures that show it once kept
+	key      string     // shotKey of the read
+	app      screen.App // the read's app
+	identity string     // optional verified window identity of the read
+	inputs   uint64     // d.inputs at the read
+	state    shotState
+	done     chan struct{} // closed when the driver call returns
+	doneAt   time.Time
+	expire   *time.Timer // drops it after shotWait while it waits
+	img      image.Image // until written to history; at history size
+	id       string      // media id once written
+	uses     []shotUse   // step pictures that show it once kept
 	// reads are the reads it shows, which place the one-time codes it
 	// covers when written (codes.go); covered is set when they are
 	// covered already.
@@ -84,6 +85,9 @@ type shotUse struct {
 func shotKey(s *screen.Screen) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%dx%d|%s|%s|%t|%t", s.Width, s.Height, s.App.ID, s.App.Name, s.Locked, s.Keyboard)
+	if s.CaptureIdentity != "" {
+		b.WriteString("|" + s.CaptureIdentity)
+	}
 	for _, e := range s.Elements {
 		if e.Source == screen.SourceOCR || inStatusBar(s, e) {
 			continue
@@ -121,7 +125,7 @@ func (g *Gateway) startShot(d *device, s *screen.Screen) *bgShot {
 		}
 		g.dropShotLocked(d, p)
 	}
-	p := &bgShot{key: key, app: s.App, inputs: d.inputs, done: make(chan struct{}), reads: []*screen.Screen{s}}
+	p := &bgShot{key: key, app: s.App, identity: s.CaptureIdentity, inputs: d.inputs, done: make(chan struct{}), reads: []*screen.Screen{s}}
 	d.shot = p
 	g.shots.add()
 	dev, bg := g.screenOfLocked(d)
@@ -167,7 +171,7 @@ func (g *Gateway) confirmShotLocked(d *device, s *screen.Screen, start time.Time
 	if p == nil || p.state != shotWaiting || start.Before(p.doneAt) {
 		return
 	}
-	if d.inputs != p.inputs || d.person || !recordableScreen(g.policy, s) || s.App != p.app {
+	if d.inputs != p.inputs || d.person || !recordableScreen(g.policy, s) || s.App != p.app || s.CaptureIdentity != p.identity {
 		g.dropShotLocked(d, p)
 		return
 	}
@@ -266,7 +270,7 @@ func (g *Gateway) keepImage(d *device, s *screen.Screen, img image.Image, covere
 	if !g.recording() || img == nil || !recordableScreen(g.policy, s) {
 		return nil
 	}
-	p := &bgShot{key: shotKey(s), app: s.App, img: img, state: shotKept, reads: []*screen.Screen{s}, covered: covered}
+	p := &bgShot{key: shotKey(s), app: s.App, identity: s.CaptureIdentity, img: img, state: shotKept, reads: []*screen.Screen{s}, covered: covered}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if d.person {
