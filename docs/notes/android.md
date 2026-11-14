@@ -661,3 +661,15 @@ After run 1 a failure right after a restart no longer holds the phone back for f
 - In ui: `TestCheckupHostWords` (the words, the step on the connection item, a Detail without a port) and `TestAddAndroidOtherServer` (Add phone, in Chinese).
 
 The command lines were compared with this Mac's `ps`, where a start-server server ran on 5047 (`adb -L tcp:5047 fork-server server --reply-fd 4`) beside the SDK's on 5037. No real phone was used, and no second server was started.
+
+## Missing main-display accessibility identity (2026-11-14)
+
+When the main-display accessibility tree contains neither an app identity nor elements, the driver can validate identity using a fresh `dumpsys window -a` snapshot. Only a focused full-screen application, matching the focused activity and window owner, with a known unlocked policy state and no other visible windows except thin system bars and same-owner full-screen application windows behind the focused window qualifies. Unknown state, IME, dialogs, overlays, SECURE flags and other displays fail closed. Historical ANR and token sections are excluded. Duplicate or malformed visibility fields, unrecognized window headers and overflowing coordinates are rejected. No inferred or cached last-app identity is used.
+
+OCR still requires the existing gateway MayCapture decision. Window identity is checked after capture and again after recognition; video frames are not used for this OCR fallback. The additive internal `screen.Screen.CaptureIdentity` field is excluded from JSON and binds agent/history screenshots to the same verified window across reads. Existing blocked-app, credential/code masking, consent and lock rules are unchanged. Background displays retain the existing failure-to-main-display behavior; this repair does not assert that an untracked virtual display is safe. The Android companion APK is unchanged.
+
+Regression tests use synthetic metadata only. The local build was exercised on Mi Note 3, Android 15 / API 35, crDroid 11.2 and WeChat 8.0.80: search results, an article and an image-post detail regained app identity, screenshots and OCR. This does not restore missing native accessibility nodes, prove why WeChat loses them, or establish support on other ROMs. Real-device dumps and screenshots are not included in the repository.
+
+### WeChat main-display compatibility
+
+WeChat 8.0.80 repeatedly became unresponsive when its existing task moved to a virtual display on the Mi Note 3 / API 35 setup above. `Background.startWith` now returns `ErrUnsupported` for WeChat on that model/API before moving the task. The gateway then follows its existing main-display fallback, including person-takeover and lock checks. Other apps, models and API levels retain their display preferences. The guard currently matches the model/API and package, not the ROM or installed WeChat version; the regression tests delimit that scope. This is a compatibility workaround, not a diagnosis of the ANR, and can be removed when virtual-display use is verified to work on that combination.
