@@ -363,10 +363,10 @@ func (r Rule) matches(app screen.App, cats []string, kinds []Kind, in Input) boo
 	return true
 }
 
-// appIn reports whether the app matches any entry, by id or by name.
 // scoped reports whether the agent may use only the apps in in.ScopeApps.
 func scoped(in Input) bool { return in.Scoped || len(in.ScopeApps) > 0 }
 
+// appIn reports whether the app matches any entry, by id or by name.
 func appIn(app screen.App, list []string) bool {
 	id := clonePackage(app.ID)
 	for _, x := range list {
