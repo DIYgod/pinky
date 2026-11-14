@@ -1137,3 +1137,33 @@ An iPhone 16 Pro on iOS 27.0.1 over Wi-Fi (Windows, remote agents over Tailscale
 Tests: `TestDeviceRestsAndWakes`, `TestDeviceWakeFails` (a fake tunnel and redial: no rest while working, watched or recently used; one dial for concurrent callers; a resting phone is not gone, a failed wake is), `TestWDADeviceIdleKeepsRunner` (a fake WebDriverAgent: the runner stays, the session ends once, the next request makes a new one), `TestWDADeviceTheirsNeverRests`, and the gateway's `TestIdleWiFiPhoneLockSlower`.
 
 **A phone must still confirm:** that resting removes the stutter the reporter saw on iOS 27; how long the first call after a rest takes over Wi-Fi; that the mirror opening on a resting phone shows a picture; and that a resting phone still locks by itself and pauses and resumes. Whether the helper's runner alone slows a phone below iOS 27 is not known; if it does, Pause connection is the way out.
+
+## Typing through the helper (GitHub issue #101, 2026-11-13)
+
+Text typed through WebDriverAgent appeared one character at a time: XCTest types keys at `maxTypingFrequency`, 60 a second by default. Pinky's session now sets it to 600 (`wdaTypingFrequency` in `wda.go`, sent with the other `wdaSettings`). `/element/:id/clear` deletes at the same speed.
+
+Pasting, as the CoreDevice path does (`type.go`), was tried first and does not work here:
+
+- `/wda/setPasteboard` sets the text in 10 to 20 ms, but Command-V through XCTest's `typeKey` (`/wda/element/0/keyboardInput` with `modifierFlags` 16) pasted nothing on the iPhone: Settings' search field kept its placeholder, and the call took 1.2 to 1.4 s. On the iOS 26.5 Simulator the same paste worked in about 0.55 s.
+- `/wda/getPasteboard` reads plain text only (images and rich text could not be put back), and on iOS 16 and later, whenever the pasteboard holds text, it waits at least 2 s (its loop that answers the Allow Paste alert runs the run loop 2 s at a time).
+- No alert showed during the reads or Command-V; the phone's pasteboard was empty at the time, so a read of another app's text was not tried.
+
+Measured with `TestWDATypingProbe` (`wda_typing_device_test.go`, tag `device`), on the iPhone 13 mini, iOS 27.0.1, WDA 16.15.3 through the helper on a cable, in Settings' search field; each text was typed after clearing the field and read back as the active element's value 300 ms later:
+
+| Text | Default (60) | 300 | 600 | 1000 |
+| --- | --- | --- | --- | --- |
+| `clock` (5) | 0.41 s | 0.32 s | 0.31 to 0.32 s | 0.31 s |
+| English sentence with digits (54) | 1.14 s | 0.52 s | 0.41 to 0.42 s | 0.31 s |
+| Chinese with a full-width comma (13) | 0.52 s | 0.31 s | 0.31 to 0.32 s | 0.31 s |
+| `café ✓ 😀 naïve` (14) | 0.52 s | 0.31 s | 0.31 to 0.32 s | 0.31 s |
+| Mixed English, Chinese, emoji and punctuation (105) | 1.97 s | 0.62 s | 0.41 to 0.52 s | 0.41 to 0.43 s |
+| The same three times (318) | | | 0.82 to 0.83 s | 0.62 s |
+
+Every text read back exactly as typed, in one run at 60 and 300 and in four at 600 and 1000 (three with the 318-character text). About 0.3 s of each call is WDA's own. 600 rather than 1000 leaves room for apps slower than Settings, for little time.
+
+```sh
+PINKY_PASTEPROBE=1 PINKY_FREQS=0,600,1000 PINKY_LONG=1 PINKY_DEVICE=<udid> \
+  scripts/devlock.sh <udid> go test -tags device -count=1 -v -run TestWDATypingProbe ./internal/driver/ios/
+```
+
+`PINKY_WDA_URL` runs it against a Simulator's WDA instead; `PINKY_NOPASTE=1` skips the paste part. It saves the pasteboard (plain text) first and puts it back last, and logs only lengths and timings.
