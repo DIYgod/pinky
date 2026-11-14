@@ -7044,15 +7044,13 @@ func (msgs Messages) CheckNoModel() string {
 // CheckNoTools says "The model answered but didn't use a tool. Pinky works through tools, so choose a model that uses them."
 // in the language the app shows.
 //
-// A check of the model: it answered without calling the tool, or the
-// service said it does not support tools.
+// A check of the model: it answered without calling the tool.
 func CheckNoTools() string { return In(i18n.Locale()).CheckNoTools() }
 
 // CheckNoTools says "The model answered but didn't use a tool. Pinky works through tools, so choose a model that uses them."
 // in the language of msgs.
 //
-// A check of the model: it answered without calling the tool, or the
-// service said it does not support tools.
+// A check of the model: it answered without calling the tool.
 func (msgs Messages) CheckNoTools() string {
 	return Catalog.Format(msgs.locale, "checkNoTools", nil)
 }
@@ -7237,6 +7235,44 @@ func CheckSimHelperTitle() string { return In(i18n.Locale()).CheckSimHelperTitle
 // WebDriverAgent helper Pinky builds with Xcode.
 func (msgs Messages) CheckSimHelperTitle() string {
 	return Catalog.Format(msgs.locale, "checkSimHelperTitle", nil)
+}
+
+// CheckToolsAPI says "The service lets this model use tools only through OpenAI's Responses API, or with its reasoning turned off, and this…"
+// in the language the app shows.
+//
+// A check of the model on an OpenAI-compatible service: Chat Completions
+// refused the model's tools and pointed at the Responses API (or at turning
+// reasoning off), and the address answered no Responses request either.
+// settingsAskCheckDetail follows with the service's words. 'Responses API'
+// is the API's name: keep it in English.
+func CheckToolsAPI() string { return In(i18n.Locale()).CheckToolsAPI() }
+
+// CheckToolsAPI says "The service lets this model use tools only through OpenAI's Responses API, or with its reasoning turned off, and this…"
+// in the language of msgs.
+//
+// A check of the model on an OpenAI-compatible service: Chat Completions
+// refused the model's tools and pointed at the Responses API (or at turning
+// reasoning off), and the address answered no Responses request either.
+// settingsAskCheckDetail follows with the service's words. 'Responses API'
+// is the API's name: keep it in English.
+func (msgs Messages) CheckToolsAPI() string {
+	return Catalog.Format(msgs.locale, "checkToolsAPI", nil)
+}
+
+// CheckToolsUnsupported says "The service says this model can't use tools. Pinky works through tools, so choose a model that uses them."
+// in the language the app shows.
+//
+// A check of the model: the service refused the request, saying the model
+// does not support tools; settingsAskCheckDetail follows with its words.
+func CheckToolsUnsupported() string { return In(i18n.Locale()).CheckToolsUnsupported() }
+
+// CheckToolsUnsupported says "The service says this model can't use tools. Pinky works through tools, so choose a model that uses them."
+// in the language of msgs.
+//
+// A check of the model: the service refused the request, saying the model
+// does not support tools; settingsAskCheckDetail follows with its words.
+func (msgs Messages) CheckToolsUnsupported() string {
+	return Catalog.Format(msgs.locale, "checkToolsUnsupported", nil)
 }
 
 // CheckTrustedPass says "The iPhone trusts this computer."
@@ -24066,15 +24102,17 @@ func (msgs Messages) SettingsAskServiceDesc() string {
 // SettingsAskServiceOpenAI says "OpenAI-compatible API"
 // in the language the app shows.
 //
-// Settings › Agents › Ask Pinky: a choice of service: OpenAI's Chat
-// Completions API, or a service that speaks it.
+// Settings › Agents › Ask Pinky: a choice of service: OpenAI's API
+// (Chat Completions, or the Responses API where a model needs it), or a
+// service that speaks it.
 func SettingsAskServiceOpenAI() string { return In(i18n.Locale()).SettingsAskServiceOpenAI() }
 
 // SettingsAskServiceOpenAI says "OpenAI-compatible API"
 // in the language of msgs.
 //
-// Settings › Agents › Ask Pinky: a choice of service: OpenAI's Chat
-// Completions API, or a service that speaks it.
+// Settings › Agents › Ask Pinky: a choice of service: OpenAI's API
+// (Chat Completions, or the Responses API where a model needs it), or a
+// service that speaks it.
 func (msgs Messages) SettingsAskServiceOpenAI() string {
 	return Catalog.Format(msgs.locale, "settingsAskServiceOpenAI", nil)
 }
