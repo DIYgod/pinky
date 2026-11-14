@@ -6534,7 +6534,7 @@
   },
   "needsApproveNoApps": "Name at least one app",
   "@needsApproveNoApps": {
-    "description": "The tooltip of the disabled Approve button on a first-connection card, when \"Only the apps I choose\" is chosen and no app is named yet."
+    "description": "The tooltip of the disabled Approve button on a first-connection card, and of the disabled Save button under an agent in Settings › Agents, when \"Only the apps I choose\" is chosen and no app is named yet."
   },
   "needsDecline": "Decline",
   "@needsDecline": {

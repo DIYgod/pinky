@@ -17291,6 +17291,7 @@ func (msgs Messages) NeedsApprove() string {
 // in the language the app shows.
 //
 // The tooltip of the disabled Approve button on a first-connection card,
+// and of the disabled Save button under an agent in Settings › Agents,
 // when "Only the apps I choose" is chosen and no app is named yet.
 func NeedsApproveNoApps() string { return In(i18n.Locale()).NeedsApproveNoApps() }
 
@@ -17298,6 +17299,7 @@ func NeedsApproveNoApps() string { return In(i18n.Locale()).NeedsApproveNoApps()
 // in the language of msgs.
 //
 // The tooltip of the disabled Approve button on a first-connection card,
+// and of the disabled Save button under an agent in Settings › Agents,
 // when "Only the apps I choose" is chosen and no app is named yet.
 func (msgs Messages) NeedsApproveNoApps() string {
 	return Catalog.Format(msgs.locale, "needsApproveNoApps", nil)

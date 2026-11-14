@@ -696,7 +696,14 @@ func (a *app) settingsAgents(c *mg.Context) {
 				if st.editing == r.name && canScope {
 					mg.Column(c).Gap(8).Padding(0, 0, 0, 44).Children(func() {
 						scope := a.scopePicker(c, r.name, locales.SettingsAgentsScopeLabel(r.name), r.scope)
-						if button(c, locales.SettingsSave(), btnOpt{kind: btnPrimary}).AlignSelf(mg.Start).Clicked() {
+						// As on the first-connection card: a list of apps
+						// with no app in it is not saved.
+						noApps := scope.Mode == gateway.ScopeApps && len(scope.Apps) == 0
+						save := button(c, locales.SettingsSave(), btnOpt{kind: btnPrimary}).AlignSelf(mg.Start).Disabled(noApps)
+						if noApps {
+							save.Tooltip(locales.NeedsApproveNoApps())
+						}
+						if save.Clicked() {
 							if sc, ok := a.api.(agentScoper); ok {
 								name := r.name
 								go func() {
