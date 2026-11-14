@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 通过「iPhone 上的 Pinky（WebDriverAgent）」连接的 iPhone，输入文字快了好几倍：一长句话大约半秒就输完，不再一个字一个字地出现。
+
 ## 2026.1113.18 (2026-11-13)
 
 - 智能体用 phone_task_wait 等待交给 Pinky 的任务时，每一步现在都带着自己的那一行说明，编号也和任务的步骤列表一致；以前某一步可能显示成上一步的说明。感谢 @pseudoyu。
