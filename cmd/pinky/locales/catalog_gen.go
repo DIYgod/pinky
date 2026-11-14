@@ -1100,17 +1100,129 @@ func (msgs Messages) ActivityChooseTask() string {
 // ActivityDelete says "Delete"
 // in the language the app shows.
 //
-// An item of the ⋯ menu in a task's detail, which deletes the task. It
-// shows disabled: the gateway cannot delete one task yet.
+// An item of the ⋯ menu in a task's detail, which asks to confirm, then
+// deletes the task; and the button of that alert which deletes it.
 func ActivityDelete() string { return In(i18n.Locale()).ActivityDelete() }
 
 // ActivityDelete says "Delete"
 // in the language of msgs.
 //
-// An item of the ⋯ menu in a task's detail, which deletes the task. It
-// shows disabled: the gateway cannot delete one task yet.
+// An item of the ⋯ menu in a task's detail, which asks to confirm, then
+// deletes the task; and the button of that alert which deletes it.
 func (msgs Messages) ActivityDelete() string {
 	return Catalog.Format(msgs.locale, "activityDelete", nil)
+}
+
+// ActivityDeleteCancel says "Cancel"
+// in the language the app shows.
+//
+// The button of the alert that confirms deleting a task in Activity, which
+// closes it and deletes nothing.
+func ActivityDeleteCancel() string { return In(i18n.Locale()).ActivityDeleteCancel() }
+
+// ActivityDeleteCancel says "Cancel"
+// in the language of msgs.
+//
+// The button of the alert that confirms deleting a task in Activity, which
+// closes it and deletes nothing.
+func (msgs Messages) ActivityDeleteCancel() string {
+	return Catalog.Format(msgs.locale, "activityDeleteCancel", nil)
+}
+
+// ActivityDeleteFailed says "Couldn't delete the task: {reason}"
+// in the language the app shows.
+//
+// A toast when deleting one task from Activity failed. reason is the error,
+// in English.
+func ActivityDeleteFailed(reason string) string {
+	return In(i18n.Locale()).ActivityDeleteFailed(reason)
+}
+
+// ActivityDeleteFailed says "Couldn't delete the task: {reason}"
+// in the language of msgs.
+//
+// A toast when deleting one task from Activity failed. reason is the error,
+// in English.
+func (msgs Messages) ActivityDeleteFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "activityDeleteFailed", map[string]any{"reason": reason})
+}
+
+// ActivityDeleteMessage says "The task, its steps, approvals, screenshots and screen recording are removed from this computer. This can't be undone."
+// in the language the app shows.
+//
+// The message of the alert that confirms deleting one task from Activity.
+func ActivityDeleteMessage() string { return In(i18n.Locale()).ActivityDeleteMessage() }
+
+// ActivityDeleteMessage says "The task, its steps, approvals, screenshots and screen recording are removed from this computer. This can't be undone."
+// in the language of msgs.
+//
+// The message of the alert that confirms deleting one task from Activity.
+func (msgs Messages) ActivityDeleteMessage() string {
+	return Catalog.Format(msgs.locale, "activityDeleteMessage", nil)
+}
+
+// ActivityDeleteRunning says "A running task can't be deleted"
+// in the language the app shows.
+//
+// The tooltip of the disabled Delete item of a task's ⋯ menu in Activity
+// while the task runs.
+func ActivityDeleteRunning() string { return In(i18n.Locale()).ActivityDeleteRunning() }
+
+// ActivityDeleteRunning says "A running task can't be deleted"
+// in the language of msgs.
+//
+// The tooltip of the disabled Delete item of a task's ⋯ menu in Activity
+// while the task runs.
+func (msgs Messages) ActivityDeleteRunning() string {
+	return Catalog.Format(msgs.locale, "activityDeleteRunning", nil)
+}
+
+// ActivityDeleteTitle says "Delete “{title}”?"
+// in the language the app shows.
+//
+// The title of the alert that confirms deleting one task from Activity.
+// title is the task's title, in the agent's words.
+func ActivityDeleteTitle(title string) string { return In(i18n.Locale()).ActivityDeleteTitle(title) }
+
+// ActivityDeleteTitle says "Delete “{title}”?"
+// in the language of msgs.
+//
+// The title of the alert that confirms deleting one task from Activity.
+// title is the task's title, in the agent's words.
+func (msgs Messages) ActivityDeleteTitle(title string) string {
+	return Catalog.Format(msgs.locale, "activityDeleteTitle", map[string]any{"title": title})
+}
+
+// ActivityDeleteUnsupported says "This gateway cannot delete tasks"
+// in the language the app shows.
+//
+// The tooltip of the disabled Delete item of a task's ⋯ menu in Activity
+// when the gateway cannot delete a task.
+func ActivityDeleteUnsupported() string { return In(i18n.Locale()).ActivityDeleteUnsupported() }
+
+// ActivityDeleteUnsupported says "This gateway cannot delete tasks"
+// in the language of msgs.
+//
+// The tooltip of the disabled Delete item of a task's ⋯ menu in Activity
+// when the gateway cannot delete a task.
+func (msgs Messages) ActivityDeleteUnsupported() string {
+	return Catalog.Format(msgs.locale, "activityDeleteUnsupported", nil)
+}
+
+// ActivityDeleted says "Deleted “{title}”"
+// in the language the app shows.
+//
+// A toast once a task is deleted from Activity. title is the task's title,
+// in the agent's words.
+func ActivityDeleted(title string) string { return In(i18n.Locale()).ActivityDeleted(title) }
+
+// ActivityDeleted says "Deleted “{title}”"
+// in the language of msgs.
+//
+// A toast once a task is deleted from Activity. title is the task's title,
+// in the agent's words.
+func (msgs Messages) ActivityDeleted(title string) string {
+	return Catalog.Format(msgs.locale, "activityDeleted", map[string]any{"title": title})
 }
 
 // ActivityDetailLabel says "Task detail"

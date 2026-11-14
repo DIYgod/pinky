@@ -368,7 +368,53 @@
   },
   "activityDelete": "Delete",
   "@activityDelete": {
-    "description": "An item of the ⋯ menu in a task's detail, which deletes the task. It shows disabled: the gateway cannot delete one task yet."
+    "description": "An item of the ⋯ menu in a task's detail, which asks to confirm, then deletes the task; and the button of that alert which deletes it."
+  },
+  "activityDeleteCancel": "Cancel",
+  "@activityDeleteCancel": {
+    "description": "The button of the alert that confirms deleting a task in Activity, which closes it and deletes nothing."
+  },
+  "activityDeleteFailed": "Couldn't delete the task: {reason}",
+  "@activityDeleteFailed": {
+    "description": "A toast when deleting one task from Activity failed. reason is the error, in English.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "the task is still running"
+      }
+    }
+  },
+  "activityDeleteMessage": "The task, its steps, approvals, screenshots and screen recording are removed from this computer. This can't be undone.",
+  "@activityDeleteMessage": {
+    "description": "The message of the alert that confirms deleting one task from Activity."
+  },
+  "activityDeleteRunning": "A running task can't be deleted",
+  "@activityDeleteRunning": {
+    "description": "The tooltip of the disabled Delete item of a task's ⋯ menu in Activity while the task runs."
+  },
+  "activityDeleteTitle": "Delete “{title}”?",
+  "@activityDeleteTitle": {
+    "description": "The title of the alert that confirms deleting one task from Activity. title is the task's title, in the agent's words.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Reorder last week's lunch"
+      }
+    }
+  },
+  "activityDeleteUnsupported": "This gateway cannot delete tasks",
+  "@activityDeleteUnsupported": {
+    "description": "The tooltip of the disabled Delete item of a task's ⋯ menu in Activity when the gateway cannot delete a task."
+  },
+  "activityDeleted": "Deleted “{title}”",
+  "@activityDeleted": {
+    "description": "A toast once a task is deleted from Activity. title is the task's title, in the agent's words.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Reorder last week's lunch"
+      }
+    }
   },
   "activityDetailLabel": "Task detail",
   "@activityDetailLabel": {
