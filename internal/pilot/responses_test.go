@@ -213,23 +213,48 @@ func TestCheckNoResponsesAPI(t *testing.T) {
 }
 
 func TestOpenAIOwnAPIUsesResponses(t *testing.T) {
-	cfg := Config{Service: OpenAI}.Normalize()
-	if cfg.Model != "gpt-6.1-terra" {
-		t.Errorf("default model %q", cfg.Model)
+	// Settings that never chose a model keep GPT-5.6 Terra, on Chat
+	// Completions as before: settings of before there were services too.
+	for _, cfg := range []Config{
+		{Service: OpenAI},
+		{Provider: OpenAI},
+		{Provider: OpenAI, BaseURL: DefaultOpenAIURL + "/"},
+	} {
+		cfg = cfg.Normalize()
+		if cfg.Model != "gpt-5.6-terra" {
+			t.Errorf("%+v: default model %q", cfg, cfg.Model)
+		}
+		m, _ := newModel(cfg, "k", http.DefaultClient, "s", nil, nil)
+		c, ok := m.(*chatFirst)
+		if !ok || c.m.(*openAI).url != DefaultOpenAIURL+"/chat/completions" {
+			t.Fatalf("%+v: %T", cfg, m)
+		}
 	}
-	m, _ := newModel(cfg, "k", http.DefaultClient, "s", nil, nil)
-	if r, ok := m.(*responses); !ok || r.url != DefaultOpenAIURL+"/responses" {
-		t.Fatalf("%T %+v", m, m)
+	// The GPT-6 models start on Responses at OpenAI's address, with the
+	// preset or the custom entry.
+	for _, cfg := range []Config{
+		{Service: OpenAI, Model: "gpt-6.1-terra"},
+		{Service: OpenAI, Model: "gpt-6.1-sol"},
+		{Service: OpenAI, Model: "gpt-6-astra"},
+		{Service: OpenAI, Model: "gpt-6-luna"},
+		{Service: CustomOpenAI, Model: "gpt-6.1-sol", BaseURL: DefaultOpenAIURL},
+	} {
+		m, _ := newModel(cfg.Normalize(), "k", http.DefaultClient, "s", nil, nil)
+		if r, ok := m.(*responses); !ok || r.url != DefaultOpenAIURL+"/responses" {
+			t.Fatalf("%+v: %T", cfg, m)
+		}
 	}
-	// The custom entry at OpenAI's address too.
-	m, _ = newModel(Config{Service: CustomOpenAI, Model: "gpt-6.1-sol", BaseURL: DefaultOpenAIURL}.Normalize(), "k", http.DefaultClient, "s", nil, nil)
-	if _, ok := m.(*responses); !ok {
-		t.Fatalf("%T", m)
-	}
-	// Other services start on Chat Completions.
-	m, _ = newModel(Config{Service: "deepseek"}.Normalize(), "k", http.DefaultClient, "s", nil, nil)
-	if _, ok := m.(*chatFirst); !ok {
-		t.Fatalf("%T", m)
+	// Other services start on Chat Completions, with the fallback, even
+	// with a GPT-6 model's name.
+	for _, cfg := range []Config{
+		{Service: "deepseek"},
+		{Service: "openrouter", Model: "gpt-6.1-terra"},
+		{Service: CustomOpenAI, Model: "gpt-6.1-terra", BaseURL: "https://relay.example/v1"},
+	} {
+		m, _ := newModel(cfg.Normalize(), "k", http.DefaultClient, "s", nil, nil)
+		if _, ok := m.(*chatFirst); !ok {
+			t.Fatalf("%+v: %T", cfg, m)
+		}
 	}
 	// OpenCode's services get their session header on Responses too.
 	r := newResponses(Config{Provider: OpenAI, Model: "m", BaseURL: "https://opencode.ai/zen/v1"}, "k", http.DefaultClient, "s", nil)

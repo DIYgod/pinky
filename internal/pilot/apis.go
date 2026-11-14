@@ -15,23 +15,32 @@ import (
 // The OpenAI API family has two ways to talk to a model: Chat
 // Completions, which every OpenAI-compatible service speaks, and the
 // Responses API, which OpenAI's own newer models need to call tools.
-// Pinky uses Responses for OpenAI's own address and Chat Completions for
-// the others, until a service refuses a model's tools on Chat
-// Completions and points at Responses (or at the model's reasoning,
-// which Responses allows with tools): Pinky then asks Responses at the
-// same address, and when that answers, keeps to it for that service and
-// model (APIs).
+// Pinky uses Responses for the models of OpenAI's own address that call
+// tools only through it, and Chat Completions for everything else, until
+// a service refuses a model's tools on Chat Completions and points at
+// Responses (or at the model's reasoning, which Responses allows with
+// tools): Pinky then asks Responses at the same address, and when that
+// answers, keeps to it for that service and model (APIs).
+//
+// Responses has not been run against a live key yet, so a model that
+// works on Chat Completions stays there.
 
 // usesResponses reports whether a conversation with the model of cfg
-// starts on the Responses API: OpenAI's own address does.
+// starts on the Responses API: a GPT-6 model at OpenAI's own address
+// (GPT-6 Astra and Luna, 6.1 Sol and 6.1 Terra), which OpenAI documents
+// as calling tools only through it, or on Chat Completions only without
+// reasoning.
 func usesResponses(cfg Config) bool {
-	return cfg.Provider == OpenAI && (cfg.BaseURL == "" || cfg.BaseURL == DefaultOpenAIURL)
+	if cfg.Provider != OpenAI || (cfg.BaseURL != "" && cfg.BaseURL != DefaultOpenAIURL) {
+		return false
+	}
+	return strings.HasPrefix(strings.ToLower(cfg.Model), "gpt-6")
 }
 
 // newOpenAIModel starts a conversation with an OpenAI-compatible service:
-// on the Responses API for OpenAI's own address and for a service and
-// model apis remembers, else on Chat Completions, which moves to
-// Responses as the comment above says.
+// on the Responses API for the models usesResponses names and for a
+// service and model apis remembers, else on Chat Completions, which moves
+// to Responses as the comment above says.
 func newOpenAIModel(cfg Config, key string, hc *http.Client, system string, tools []tool, apis *APIs) model {
 	if usesResponses(cfg) || apis.responses(cfg) {
 		return newResponses(cfg, key, hc, system, tools)

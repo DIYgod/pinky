@@ -82,9 +82,9 @@ const (
 // OpenAI first, then the others by name, local servers, then the custom
 // entries. Every service here speaks its API with Pinky's tools and
 // takes screenshots as images, as its documentation says; each suggested
-// model reads images and calls tools through the API Pinky speaks to its
-// service: the Responses API for OpenAI's own, Chat Completions for the
-// others (apis.go). All of it as of 2026-11-14.
+// model reads images and calls tools through the API Pinky speaks to it:
+// the Responses API for OpenAI's GPT-6 models, Chat Completions for the
+// rest (apis.go). All of it as of 2026-11-14.
 var services = []Service{
 	{
 		ID: Anthropic, Name: "Anthropic", API: Anthropic,
@@ -95,16 +95,18 @@ var services = []Service{
 		},
 	},
 	{
-		// Pinky speaks the Responses API here: GPT-6 Astra, 6.1 Sol and
-		// 6.1 Terra call tools only through it, and GPT-6 Luna on Chat
-		// Completions only without reasoning. GPT-6.1 Terra is OpenAI's
-		// model for visual reasoning and computer use, and costs less
-		// than GPT-5.6 Terra.
+		// GPT-6 Astra, 6.1 Sol and 6.1 Terra call tools only through the
+		// Responses API, and GPT-6 Luna on Chat Completions only without
+		// reasoning, so Pinky speaks Responses to the GPT-6 models and
+		// Chat Completions to the others (usesResponses). GPT-5.6 Terra,
+		// on Chat Completions, stays the default: Responses has not been
+		// run against a live key yet, and a person who never chose a
+		// model keeps the one they have.
 		ID: OpenAI, Name: "OpenAI", API: OpenAI, BaseURL: DefaultOpenAIURL,
 		Models: []ServiceModel{
+			{ID: "gpt-5.6-terra", Name: "GPT-5.6 Terra"},
 			{ID: "gpt-6.1-terra", Name: "GPT-6.1 Terra"},
 			{ID: "gpt-6.1-sol", Name: "GPT-6.1 Sol"},
-			{ID: "gpt-5.6-terra", Name: "GPT-5.6 Terra"},
 		},
 	},
 	{
