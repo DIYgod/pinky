@@ -2,6 +2,12 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Ask Pinky now works with OpenAI's GPT-6 models, such as GPT-6.1 Terra, which use tools only through OpenAI's Responses API. Other OpenAI-compatible services switch to it by themselves when a model needs it.
+- Checking a model no longer says it answered without using a tool when the service refused the request: it shows what the service said and what to do.
+- GPT-6.1 Terra and GPT-6.1 Sol join GPT-5.6 Terra in OpenAI's suggested models; GPT-5.6 Terra stays the default.
+
 ## 2026.1114.1 (2026-11-14)
 
 - Typing on an iPhone connected through Pinky on the iPhone (WebDriverAgent) is now several times faster: a long sentence goes in about half a second instead of appearing one character at a time.
