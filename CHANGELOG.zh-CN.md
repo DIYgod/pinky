@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1114.2 (2026-11-14)
 
 - 「交给 Pinky」现在可以使用 OpenAI 的 GPT-6 系列模型，比如 GPT-6.1 Terra。这些模型只能通过 OpenAI 的 Responses API 调用工具；其他兼容 OpenAI 的服务遇到需要它的模型时，也会自动改用。
 - 检查模型时，如果是服务拒绝了请求，不会再说模型回应了但没调用工具，而是显示服务的原话和该怎么做。
