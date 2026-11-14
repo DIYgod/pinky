@@ -2368,7 +2368,7 @@
   },
   "checkNoTools": "The model answered but didn't use a tool. Pinky works through tools, so choose a model that uses them.",
   "@checkNoTools": {
-    "description": "A check of the model: it answered without calling the tool, or the service said it does not support tools."
+    "description": "A check of the model: it answered without calling the tool."
   },
   "checkNotFound": "The service doesn't know this model or address. Check the model's name and the API address.",
   "@checkNotFound": {
@@ -2417,6 +2417,14 @@
   "checkSimHelperTitle": "Helper for Simulators",
   "@checkSimHelperTitle": {
     "description": "The checkup of an iOS Simulator: the title of the item for the WebDriverAgent helper Pinky builds with Xcode."
+  },
+  "checkToolsAPI": "The service lets this model use tools only through OpenAI's Responses API, or with its reasoning turned off, and this address has no Responses API. Choose another model, or an address that offers the Responses API.",
+  "@checkToolsAPI": {
+    "description": "A check of the model on an OpenAI-compatible service: Chat Completions refused the model's tools and pointed at the Responses API (or at turning reasoning off), and the address answered no Responses request either. settingsAskCheckDetail follows with the service's words. 'Responses API' is the API's name: keep it in English."
+  },
+  "checkToolsUnsupported": "The service says this model can't use tools. Pinky works through tools, so choose a model that uses them.",
+  "@checkToolsUnsupported": {
+    "description": "A check of the model: the service refused the request, saying the model does not support tools; settingsAskCheckDetail follows with its words."
   },
   "checkTrustedPass": "The iPhone trusts this computer.",
   "@checkTrustedPass": {
@@ -8908,7 +8916,7 @@
   },
   "settingsAskServiceOpenAI": "OpenAI-compatible API",
   "@settingsAskServiceOpenAI": {
-    "description": "Settings › Agents › Ask Pinky: a choice of service: OpenAI's Chat Completions API, or a service that speaks it."
+    "description": "Settings › Agents › Ask Pinky: a choice of service: OpenAI's API (Chat Completions, or the Responses API where a model needs it), or a service that speaks it."
   },
   "settingsAskServiceRegion": "{service} ({region})",
   "@settingsAskServiceRegion": {

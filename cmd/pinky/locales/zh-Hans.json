@@ -375,6 +375,8 @@
   "checkSimHelperPass": "模拟器辅助应用已就绪。",
   "checkSimHelperRetry": "重试",
   "checkSimHelperTitle": "模拟器辅助应用",
+  "checkToolsAPI": "这个服务只允许该模型通过 OpenAI 的 Responses API 调用工具，或者关闭推理后调用，但这个地址没有 Responses API。请换一个模型，或者改用提供 Responses API 的地址。",
+  "checkToolsUnsupported": "服务说这个模型不支持工具调用。Pinky 要靠工具操作手机，请换一个支持工具调用的模型。",
   "checkTrustedPass": "iPhone 已信任这台电脑。",
   "checkUSBNotReady": "这台电脑暂时还无法通过 USB 使用这台手机。",
   "checkUSBPermission": "这台电脑没有权限打开手机的 USB 连接。",

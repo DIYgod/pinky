@@ -375,6 +375,8 @@
   "checkSimHelperPass": "シミュレータ用ヘルパーの準備ができています。",
   "checkSimHelperRetry": "再試行",
   "checkSimHelperTitle": "シミュレータ用ヘルパー",
+  "checkToolsAPI": "このサービスでは、このモデルがツールを使えるのは OpenAI の Responses API 経由か、推論をオフにしたときだけですが、このアドレスには Responses API がありません。別のモデルを選ぶか、Responses API に対応したアドレスを使ってください。",
+  "checkToolsUnsupported": "サービスによると、このモデルはツールを使えません。Pinky はツールで操作するので、ツールを使えるモデルを選んでください。",
   "checkTrustedPass": "iPhone はこのパソコンを信頼しています。",
   "checkUSBNotReady": "このパソコンからは、まだUSB経由で使えません。",
   "checkUSBPermission": "このパソコンに、スマホのUSB接続を開く権限がありません。",

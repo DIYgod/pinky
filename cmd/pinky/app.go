@@ -157,6 +157,9 @@ func runApp(args []string) error {
 		// What it used, by day, service and model, on this computer only.
 		Usage:    pilot.OpenUsage(filepath.Join(dirs.Data, "model-usage.json")),
 		Memories: memories,
+		// The OpenAI-compatible models that call tools only through the
+		// Responses API, as their services said.
+		APIs: pilot.OpenAPIs(filepath.Join(dirs.Data, "model-apis.json")),
 		Blocked: func(a screen.App) bool {
 			_, blocked := rg.Policy.Blocked(a)
 			return blocked
