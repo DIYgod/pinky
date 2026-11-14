@@ -663,3 +663,30 @@ func TestBackButtonSplitView(t *testing.T) {
 		t.Fatalf("leading button %v", p)
 	}
 }
+
+// Opening an iPhone loads the OCR models in the background: an agent's
+// first read comes with OCR, and would otherwise wait while macOS compiles
+// them for a program that has not used them yet.
+func TestWDAOpenWarmsOCR(t *testing.T) {
+	warmed := 0
+	old := ocrWarm
+	ocrWarm = func() { warmed++ }
+	defer func() { ocrWarm = old }()
+	f := &fakeWDA{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/wda/screen") {
+			fmt.Fprint(w, `{"value":{"scale":3,"screenSize":{"width":390,"height":844}}}`)
+			return
+		}
+		f.ServeHTTP(w, r)
+	}))
+	defer srv.Close()
+	d, err := openWDA(context.Background(), driver.Info{ID: "sim"}, newWDAURL(srv.URL, ""), goios.DeviceEntry{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	if warmed != 1 {
+		t.Fatalf("OCR warmed %d times, want once", warmed)
+	}
+}

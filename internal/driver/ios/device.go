@@ -166,6 +166,11 @@ func (d *Device) run() {
 	d.reconnect = d.reconnectCore
 	go d.idleLoop()
 	go d.orientLoop()
+	// An agent's reads come with OCR, and a program's first recognition
+	// waits while macOS compiles the recognizer's models: 28 s of a first
+	// phone_connect's 29 on a Mac mini (2026-11-15). Load them now, in the
+	// background, so that the agent's first read finds them ready.
+	ocrWarm()
 	// Connect the accessibility service now (the phone answers its first
 	// requests slowly while it builds the first tree it pushes), and the
 	// pasteboard service, whose handshake would otherwise slow the first

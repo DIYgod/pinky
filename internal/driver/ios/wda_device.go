@@ -116,6 +116,7 @@ func openWDA(ctx context.Context, info driver.Info, c *wdaClient, entry goios.De
 	c.gone = d.gone
 	c.enter = d.idle.enter
 	d.idle.init()
+	ocrWarm() // as Device.run does
 	return d, nil
 }
 
