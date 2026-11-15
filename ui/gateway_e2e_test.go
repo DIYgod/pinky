@@ -605,7 +605,13 @@ func TestSettingsAgentAppsPicker(t *testing.T) {
 	if ga.agents.find["Codex"] != "" || ga.agents.only["Codex"] || !hasText(tt, "Notes") {
 		t.Fatalf("the editor did not open anew: %q", tt.Texts())
 	}
+	// The old name is the last row, below what the box shows of a long
+	// list: the field brings it into view.
+	ga.agents.find["Codex"] = "old"
+	tt.Frame()
 	click("Oldapp")
+	ga.agents.find["Codex"] = ""
+	tt.Frame()
 	click("Save")
 	ga.waitFor(t, "the scope without the old name", func() bool { return last() == "scope Codex apps:Dinely,Calendar" })
 
