@@ -388,8 +388,11 @@ func settingsVersion(policyVersion int, devices []gateway.DeviceView) int {
 }
 
 // startSettings applies what the gateway takes from Settings at start:
-// recording, retention, iPhones over Wi-Fi and remote agents.
+// recording and its folder, retention, iPhones over Wi-Fi and remote agents.
 func startSettings(rg *runningGateway, s ui.Settings, log *slog.Logger) {
+	if err := rg.G.SetRecordingsDir(s.RecordingsDir); err != nil {
+		log.Warn("settings: recordings folder", "err", err)
+	}
 	rg.G.SetRecording(s.Record)
 	rg.G.SetSmallerRecordings(s.SmallerRecordings)
 	rg.G.SetRetention(s.KeepDays)
@@ -468,6 +471,9 @@ func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
 		if err != nil {
 			log.Warn("settings: "+what, "err", err)
 		}
+	}
+	if s.RecordingsDir != old.RecordingsDir {
+		warn("recordings folder", rg.G.SetRecordingsDir(s.RecordingsDir))
 	}
 	if s.Record != old.Record {
 		rg.G.SetRecording(s.Record)

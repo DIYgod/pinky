@@ -9352,6 +9352,52 @@
   "@settingsPrivacyRecordDesc": {
     "description": "Settings › Privacy: the line under Record the screen during tasks. Activity is the page of finished tasks."
   },
+  "settingsPrivacyRecordFolder": "Recordings folder",
+  "@settingsPrivacyRecordFolder": {
+    "description": "Settings › Privacy: the row that chooses the folder new task recordings go to, shown under Record the screen during tasks while that is on."
+  },
+  "settingsPrivacyRecordFolderChoose": "Choose…",
+  "@settingsPrivacyRecordFolderChoose": {
+    "description": "Settings › Privacy › Recordings folder: the button that opens the system's folder picker."
+  },
+  "settingsPrivacyRecordFolderDefault": "New recordings go to Pinky's own folder.",
+  "@settingsPrivacyRecordFolderDefault": {
+    "description": "Settings › Privacy: the line under Recordings folder while no folder is chosen."
+  },
+  "settingsPrivacyRecordFolderDesc": "New recordings go to {folder}. Recordings made before stay where they are.",
+  "@settingsPrivacyRecordFolderDesc": {
+    "description": "Settings › Privacy: the line under Recordings folder when the person chose one. folder is its path.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "/Volumes/Archive/Pinky"
+      }
+    }
+  },
+  "settingsPrivacyRecordFolderFailed": "Couldn't choose the folder: {reason}",
+  "@settingsPrivacyRecordFolderFailed": {
+    "description": "A toast when the folder picker of Settings › Privacy › Recordings folder failed. reason is the error, in English.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "exit status 1"
+      }
+    }
+  },
+  "settingsPrivacyRecordFolderMissing": "{folder} isn't there now, so new recordings go to Pinky's own folder until it is.",
+  "@settingsPrivacyRecordFolderMissing": {
+    "description": "Settings › Privacy: the line under Recordings folder when the chosen folder is missing, as on a disk that is not plugged in. folder is its path.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "/Volumes/Archive/Pinky"
+      }
+    }
+  },
+  "settingsPrivacyRecordFolderReset": "Use Pinky's folder",
+  "@settingsPrivacyRecordFolderReset": {
+    "description": "Settings › Privacy › Recordings folder: the button, shown while a folder is chosen, that sends new recordings back to Pinky's own folder."
+  },
   "settingsPrivacyRecordOriginal": "Original",
   "@settingsPrivacyRecordOriginal": {
     "description": "Settings › Privacy › Recording size: the choice that keeps recordings as the phone sent its screen, at full size and quality."

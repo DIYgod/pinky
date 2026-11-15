@@ -71,7 +71,7 @@ func (s *Store) Prune(ctx context.Context, cutoff time.Time, keep []string) (Pru
 	if err := tx.Commit(); err != nil {
 		return out, err
 	}
-	return out, removeFiles(files)
+	return out, errors.Join(removeFiles(files), s.removePending(ctx))
 }
 
 // DeleteTasks deletes the tasks ids names, with their steps, approvals,
@@ -133,7 +133,7 @@ func (s *Store) DeleteTasks(ctx context.Context, ids, keep []string) (Pruned, er
 	if err := tx.Commit(); err != nil {
 		return out, err
 	}
-	return out, removeFiles(files)
+	return out, errors.Join(removeFiles(files), s.removePending(ctx))
 }
 
 // dropTasks deletes tasks with their steps, approvals and recordings in tx,
@@ -173,11 +173,11 @@ func (s *Store) dropTasks(ctx context.Context, tx *sql.Tx, ids []string, out *Pr
 		if err != nil {
 			return nil, nil, err
 		}
-		for _, rel := range recs {
-			if !strings.Contains(rel, "..") {
-				files = append(files, filepath.Join(s.dir, filepath.FromSlash(rel)))
-			}
+		recFiles, err := s.dropRecordingFiles(ctx, tx, recs)
+		if err != nil {
+			return nil, nil, err
 		}
+		files = append(files, recFiles...)
 		out.Recordings += len(recs)
 		for _, del := range []struct {
 			table string

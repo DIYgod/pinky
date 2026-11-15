@@ -60,9 +60,12 @@ func runDaemon(args []string) error {
 	defer rg.Close()
 	// Agents' copies of Pinky's skill follow this version.
 	go refreshSkills(c.Log)
-	// Recording, retention, iPhones over Wi-Fi and usage statistics follow
+	// Recording and its folder, retention, iPhones over Wi-Fi and usage statistics follow
 	// the app's settings, when there are any.
 	s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
+	if err := rg.G.SetRecordingsDir(s.RecordingsDir); err != nil {
+		c.Log.Warn("settings: recordings folder", "err", err)
+	}
 	rg.G.SetRecording(s.Record)
 	rg.G.SetSmallerRecordings(s.SmallerRecordings)
 	rg.G.SetRetention(s.KeepDays)

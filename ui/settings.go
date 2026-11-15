@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"os"
 	"runtime"
 	"sort"
 	"strings"
@@ -34,6 +35,20 @@ type settingsState struct {
 	adding  bool
 	newApp  string
 	confirm bool
+	// recDir is whether the chosen recordings folder is there, as last
+	// seen; picking is while its folder picker is open.
+	recDir  folderCheck
+	picking bool
+}
+
+// folderCheck is whether a folder was there when last looked at. The look
+// happens off the main thread: a folder on a network disk may take long to
+// answer.
+type folderCheck struct {
+	dir      string
+	at       time.Time
+	there    bool
+	checking bool
 }
 
 // changed reports a change in Settings, with the settings as they were
@@ -775,6 +790,59 @@ func keepLabelIn(m locales.Messages, days int) string {
 	return m.SettingsPrivacyKeepDays(days)
 }
 
+// recordingsFolderDesc is the line under Recordings folder: where new
+// recordings go, and why not to the chosen folder while it is missing. It
+// looks at the folder again every few seconds, in the background.
+func (a *app) recordingsFolderDesc(dir string) string {
+	if dir == "" {
+		return locales.SettingsPrivacyRecordFolderDefault()
+	}
+	ck := &a.set.recDir
+	if ck.dir != dir {
+		*ck = folderCheck{dir: dir, there: true} // until seen otherwise
+	}
+	if !ck.checking && time.Since(ck.at) > 3*time.Second {
+		ck.checking = true
+		go func() {
+			fi, err := os.Stat(dir)
+			there := err == nil && fi.IsDir()
+			a.post(func() {
+				if ck.dir == dir {
+					ck.there, ck.at, ck.checking = there, time.Now(), false
+				}
+			})
+		}()
+	}
+	if !ck.there {
+		return locales.SettingsPrivacyRecordFolderMissing(dir)
+	}
+	return locales.SettingsPrivacyRecordFolderDesc(dir)
+}
+
+// chooseRecordingsFolder asks for the folder new recordings go to, off the
+// main thread, as the system's picker blocks until it closes.
+func (a *app) chooseRecordingsFolder(cur string) {
+	if a.set.picking {
+		return
+	}
+	a.set.picking = true
+	go func() {
+		paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{
+			Title: locales.SettingsPrivacyRecordFolder(), DefaultPath: cur, Directory: true, CreateDirectories: true,
+		})
+		a.post(func() {
+			a.set.picking = false
+			switch {
+			case err != nil:
+				a.toasts = append(a.toasts, locales.SettingsPrivacyRecordFolderFailed(err.Error()))
+			case len(paths) > 0 && paths[0] != a.settings.RecordingsDir:
+				a.settings.RecordingsDir = paths[0]
+				a.changed()
+			}
+		})
+	}()
+}
+
 func (a *app) settingsPrivacy(c *mg.Context) {
 	p := pal(c)
 	st := &a.settings
@@ -812,6 +880,17 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 					a.changed()
 					a.applyRecordingSize(st.SmallerRecordings)
 				}
+			})
+			settingRow(c, locales.SettingsPrivacyRecordFolder(), a.recordingsFolderDesc(st.RecordingsDir), false, func() {
+				mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
+					if st.RecordingsDir != "" && button(c.Key("rec-dir-reset"), locales.SettingsPrivacyRecordFolderReset(), btnOpt{}).Clicked() {
+						st.RecordingsDir = ""
+						a.changed()
+					}
+					if button(c.Key("rec-dir"), locales.SettingsPrivacyRecordFolderChoose(), btnOpt{}).Clicked() {
+						a.chooseRecordingsFolder(st.RecordingsDir)
+					}
+				})
 			})
 		}
 		settingRow(c, locales.SettingsPrivacyDeleteAll(), locales.SettingsPrivacyDeleteAllDesc(), true, func() {

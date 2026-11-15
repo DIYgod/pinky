@@ -185,7 +185,10 @@ type Settings struct {
 	// SmallerRecordings makes each task's recording smaller when the task
 	// ends (internal/recording.Smaller); off keeps the phone's own stream.
 	SmallerRecordings bool
-	DeveloperMode     bool
+	// RecordingsDir is the folder new recordings go to; "" is Pinky's own
+	// (gateway.SetRecordingsDir).
+	RecordingsDir string
+	DeveloperMode bool
 	// RemoteAgents serves MCP over Streamable HTTP at RemoteAddr, for agents
 	// that cannot start `pinky mcp`; each request needs the agent token.
 	RemoteAgents bool

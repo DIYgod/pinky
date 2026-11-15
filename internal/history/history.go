@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
@@ -27,9 +28,9 @@ import (
 
 // schemaVersion is stored in PRAGMA user_version. Version 2 added the
 // recordings and device_settings tables, version 3 device_connections,
-// version 4 removed_devices, version 5 paused_devices; all versions open
-// the same way.
-const schemaVersion = 5
+// version 4 removed_devices, version 5 paused_devices, version 6
+// recording_removals; all versions open the same way.
+const schemaVersion = 6
 
 const schema = `
 CREATE TABLE IF NOT EXISTS devices (
@@ -145,6 +146,10 @@ CREATE TABLE IF NOT EXISTS paused_devices (
 	device_id TEXT PRIMARY KEY,
 	paused_at INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS recording_removals (
+	path TEXT PRIMARY KEY
+);
 `
 
 // Store is the history database and its media and recordings folders.
@@ -153,7 +158,10 @@ type Store struct {
 	dir      string
 	mediaDir string
 	recDir   string
-	mu       sync.RWMutex // held for writing during Wipe and Prune
+	// userRecDir is the folder the person chose for new recordings, or ""
+	// for recDir (SetRecordingsDir).
+	userRecDir atomic.Pointer[string]
+	mu         sync.RWMutex // held for writing during Wipe and Prune
 }
 
 // Open opens or creates the store in dir: dir/pinky.db and dir/media/.
@@ -530,6 +538,24 @@ func (s *Store) Wipe(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	rows, err := txStrings(ctx, tx, `SELECT path FROM recordings`)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	// Recordings in a folder the person chose go one by one: the folder is
+	// theirs, and may hold other files.
+	var chosen []string
+	for _, row := range rows {
+		if filepath.IsAbs(row) {
+			chosen = append(chosen, row)
+		}
+	}
+	outside, err := s.dropRecordingFiles(ctx, tx, chosen)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
 	for _, t := range []string{"steps", "approvals", "tasks", "sessions", "media", "recordings"} {
 		if _, err := tx.ExecContext(ctx, "DELETE FROM "+t); err != nil {
 			tx.Rollback()
@@ -539,17 +565,12 @@ func (s *Store) Wipe(ctx context.Context) error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	if err := os.RemoveAll(s.mediaDir); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(s.mediaDir, 0o700); err != nil {
-		return err
-	}
-	if err := os.RemoveAll(s.recDir); err != nil {
-		return err
-	}
+	// The rows are gone: remove every file there is to remove, whatever
+	// fails on the way.
+	errs := []error{os.RemoveAll(s.mediaDir), os.MkdirAll(s.mediaDir, 0o700), os.RemoveAll(s.recDir),
+		removeFiles(outside), s.removePending(ctx)}
 	_, err = s.db.ExecContext(ctx, "VACUUM")
-	return err
+	return errors.Join(append(errs, err)...)
 }
 
 func digest(b []byte) string {
