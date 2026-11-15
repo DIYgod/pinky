@@ -228,6 +228,10 @@ type NeedView struct {
 	// asked to only browse and read (phone_connect read_only): the client
 	// offers that scope first.
 	ReadOnly bool
+	// Apps is set on an agent's first-connection card when the agent named
+	// the apps of its task (phone_connect apps), ids or names as it gave
+	// them: the client offers them first under "Only the apps I choose".
+	Apps []string
 }
 
 // Decision answers an approval.

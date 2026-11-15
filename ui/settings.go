@@ -479,7 +479,17 @@ type agentsState struct {
 	asks     int               // open first-connection requests, when last read
 	editing  string            // the agent whose scope is being changed
 	choice   map[string]string // scope mode being chosen, by agent or need id
-	apps     map[string]string // apps typed for "Use only the apps I choose"
+	apps     map[string]string // apps chosen for "Use only the apps I choose", as names with commas between
+	// The list of apps to tick (agentapps.go), by agent or need id as
+	// choice and apps are.
+	find    map[string]string   // what narrows the list down
+	first   map[string]string   // the apps the list opened with, which it shows first
+	missing map[string]string   // the apps an agent named that no phone has: shown, never chosen
+	only    map[string]bool     // the list shows the apps chosen alone
+	asked   map[string]string   // the apps an agent's first connection named, by need id
+	done    map[string]bool     // the first-connection needs the person answered
+	left    map[string]leftCard // by agent, its card that went unanswered, for its next one
+	sorted  appsSorted          // the phones' apps in the order the list shows them
 }
 
 func (s *agentsState) load(a *app) {
@@ -516,19 +526,22 @@ func splitApps(s string) []string {
 	return out
 }
 
-// scopePicker is the select of what an agent may do, with the apps field
-// for "Use only the apps I choose". It returns the scope chosen.
+// scopePicker is the select of what an agent may do, with the list of apps
+// to tick for "Use only the apps I choose" (appsPicker). It returns the
+// scope chosen.
 func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scope) gateway.Scope {
 	st := &a.agents
-	if st.choice == nil {
-		st.choice, st.apps = map[string]string{}, map[string]string{}
-	}
+	st.makeMaps()
 	// The choice is kept as a mode, so it survives a change of language.
 	mode, ok := st.choice[key]
 	if !ok {
 		mode = string(initial.Mode)
 		st.apps[key] = strings.Join(initial.Apps, ", ")
+		st.reopen(key)
 	}
+	// The phones' apps are read while the person reads the choices, so the
+	// list is there when "Only the apps I choose" is picked.
+	a.readApps()
 	choice := scopeLabel(gateway.ScopeMode(mode))
 	labels := make([]string, len(scopeChoices))
 	for i, sc := range scopeChoices {
@@ -539,10 +552,7 @@ func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scop
 	st.choice[key] = string(scope.Mode)
 	mg.Text(c, scopeHint(scope.Mode)).FontSize(fsSmall).TextColor(pal(c).ink2).MaxWidth(360).Margin(4, 0, 0, 0)
 	if scope.Mode == gateway.ScopeApps {
-		apps := st.apps[key]
-		mg.TextInput(c.Key("apps-"+key), &apps).Placeholder(locales.SettingsAgentsAppsPlaceholder()).Label(locales.SettingsAgentsApps()).MaxWidth(360)
-		st.apps[key] = apps
-		scope.Apps = splitApps(apps)
+		scope.Apps = a.appsPicker(c, key)
 	}
 	return scope
 }
@@ -551,6 +561,7 @@ func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scop
 // SetAgentScope, which also approves the agent, then Decide, so the
 // gateway keeps the person's choice when the agent picks up the answer.
 func (a *app) approveAgent(n gateway.NeedView, scope gateway.Scope) {
+	a.agents.answered(n)
 	a.remember(n, gateway.AllowOnce, "")
 	scoper, ok := a.api.(agentScoper)
 	name := n.Agent

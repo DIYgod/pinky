@@ -560,7 +560,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	if !ok {
 		return errResult(ErrInvalidArgument, "connection must be auto, helper or coredevice, not %q.", req.Connection)
 	}
-	if res := s.approveAgent(ctx, req.Call, title, req.ReadOnly); res != nil {
+	if res := s.approveAgent(ctx, req.Call, title, req.ReadOnly, req.Apps); res != nil {
 		return res
 	}
 
@@ -1018,7 +1018,7 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 
 // approveAgent holds an agent's first connection until the person allows
 // it. It returns nil once the agent may connect.
-func (s *Session) approveAgent(ctx context.Context, c Call, title string, readOnly bool) *Result {
+func (s *Session) approveAgent(ctx context.Context, c Call, title string, readOnly bool, apps []string) *Result {
 	g := s.g
 	if g.agentApproved(ctx, s.agent) {
 		return nil
@@ -1057,7 +1057,7 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string, readOn
 			Kind: approval.KindAgent, Binding: b, Rule: "New agent", Agent: s.agent.Name,
 			Title:  fmt.Sprintf("Let %s use your phones?", s.agent.Name),
 			Detail: fmt.Sprintf("%s wants to connect for “%s”. Allowing gives it %s access.", s.agent.Name, title, mode),
-			Data:   agentRequest{readOnly: readOnly},
+			Data:   agentRequest{readOnly: readOnly, apps: cleanApps(apps)},
 		})
 		id = info.ID
 	}

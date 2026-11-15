@@ -273,7 +273,12 @@ func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
 			mg.Text(c, locales.NeedsAgentAskedReadOnly(agentOf(n))).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 		}
 		mg.Text(c, locales.NeedsLetAgent(agentOf(n))).FontSize(fsSmall).FontWeight(fwSemibold).Margin(12, 0, 6, 0)
-		scope = a.scopePicker(c, n.ID, locales.NeedsLetAgent(agentOf(n)), scope)
+		// Whichever choice the card opens with, the apps the agent named
+		// for its task are ticked already under "Only the apps I choose".
+		opens := scope
+		opens.Apps = n.Apps
+		a.agents.askedFor(n.ID, n.Apps)
+		scope = a.scopePicker(c, n.ID, locales.NeedsLetAgent(agentOf(n)), opens)
 	}
 	noApps := scope.Mode == gateway.ScopeApps && len(scope.Apps) == 0
 	mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {

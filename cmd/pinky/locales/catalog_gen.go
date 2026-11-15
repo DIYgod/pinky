@@ -23303,20 +23303,148 @@ func (msgs Messages) SettingsAgentsApps() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsApps", nil)
 }
 
+// SettingsAgentsAppsAsked says "Asked for"
+// in the language the app shows.
+//
+// A short note beside an app in the list of apps to tick under "Only the
+// apps I choose" on a first-connection card: the agent named this app for
+// its task.
+func SettingsAgentsAppsAsked() string { return In(i18n.Locale()).SettingsAgentsAppsAsked() }
+
+// SettingsAgentsAppsAsked says "Asked for"
+// in the language of msgs.
+//
+// A short note beside an app in the list of apps to tick under "Only the
+// apps I choose" on a first-connection card: the agent named this app for
+// its task.
+func (msgs Messages) SettingsAgentsAppsAsked() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsAsked", nil)
+}
+
+// SettingsAgentsAppsBlocked says "Blocked"
+// in the language the app shows.
+//
+// A short note beside an app in the list of apps to tick under "Only the
+// apps I choose" which a rule blocks for agents: it is greyed and cannot be
+// ticked.
+func SettingsAgentsAppsBlocked() string { return In(i18n.Locale()).SettingsAgentsAppsBlocked() }
+
+// SettingsAgentsAppsBlocked says "Blocked"
+// in the language of msgs.
+//
+// A short note beside an app in the list of apps to tick under "Only the
+// apps I choose" which a rule blocks for agents: it is greyed and cannot be
+// ticked.
+func (msgs Messages) SettingsAgentsAppsBlocked() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsBlocked", nil)
+}
+
+// SettingsAgentsAppsChosen says "{count, plural, =0 {No app chosen yet} one {# app chosen} other {# apps chosen}}"
+// in the language the app shows.
+//
+// Under the list of apps to tick under "Only the apps I choose": how many
+// are ticked. With one or more it is a link that shows the ticked apps
+// alone.
+func SettingsAgentsAppsChosen(count int) string {
+	return In(i18n.Locale()).SettingsAgentsAppsChosen(count)
+}
+
+// SettingsAgentsAppsChosen says "{count, plural, =0 {No app chosen yet} one {# app chosen} other {# apps chosen}}"
+// in the language of msgs.
+//
+// Under the list of apps to tick under "Only the apps I choose": how many
+// are ticked. With one or more it is a link that shows the ticked apps
+// alone.
+func (msgs Messages) SettingsAgentsAppsChosen(count int) string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsChosen", map[string]any{"count": count})
+}
+
+// SettingsAgentsAppsMissing says "No app by this name"
+// in the language the app shows.
+//
+// A short note beside a name in the list of apps to tick under "Only the
+// apps I choose" that names no app on the connected phones, such as an
+// English name on a phone that shows the app under its Chinese one: a name
+// the agent gave for its task (greyed, unticked), or one chosen before.
+func SettingsAgentsAppsMissing() string { return In(i18n.Locale()).SettingsAgentsAppsMissing() }
+
+// SettingsAgentsAppsMissing says "No app by this name"
+// in the language of msgs.
+//
+// A short note beside a name in the list of apps to tick under "Only the
+// apps I choose" that names no app on the connected phones, such as an
+// English name on a phone that shows the app under its Chinese one: a name
+// the agent gave for its task (greyed, unticked), or one chosen before.
+func (msgs Messages) SettingsAgentsAppsMissing() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsMissing", nil)
+}
+
+// SettingsAgentsAppsNone says "No app on your phones matches."
+// in the language the app shows.
+//
+// In place of the list of apps to tick under "Only the apps I choose", when
+// what is typed in the field above it matches no app.
+func SettingsAgentsAppsNone() string { return In(i18n.Locale()).SettingsAgentsAppsNone() }
+
+// SettingsAgentsAppsNone says "No app on your phones matches."
+// in the language of msgs.
+//
+// In place of the list of apps to tick under "Only the apps I choose", when
+// what is typed in the field above it matches no app.
+func (msgs Messages) SettingsAgentsAppsNone() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsNone", nil)
+}
+
 // SettingsAgentsAppsPlaceholder says "Apps, separated by commas: Dinely, Chatter"
 // in the language the app shows.
 //
-// The placeholder of the field of the apps an agent may use. Dinely and
-// Chatter are example app names; keep them.
+// The placeholder of the field of the apps an agent may use, shown while no
+// phone lists its apps to tick. Dinely and Chatter are example app names;
+// keep them.
 func SettingsAgentsAppsPlaceholder() string { return In(i18n.Locale()).SettingsAgentsAppsPlaceholder() }
 
 // SettingsAgentsAppsPlaceholder says "Apps, separated by commas: Dinely, Chatter"
 // in the language of msgs.
 //
-// The placeholder of the field of the apps an agent may use. Dinely and
-// Chatter are example app names; keep them.
+// The placeholder of the field of the apps an agent may use, shown while no
+// phone lists its apps to tick. Dinely and Chatter are example app names;
+// keep them.
 func (msgs Messages) SettingsAgentsAppsPlaceholder() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsAppsPlaceholder", nil)
+}
+
+// SettingsAgentsAppsSearch says "Search apps"
+// in the language the app shows.
+//
+// The placeholder and accessibility label of the field that narrows down
+// the list of apps to tick under "Only the apps I choose".
+func SettingsAgentsAppsSearch() string { return In(i18n.Locale()).SettingsAgentsAppsSearch() }
+
+// SettingsAgentsAppsSearch says "Search apps"
+// in the language of msgs.
+//
+// The placeholder and accessibility label of the field that narrows down
+// the list of apps to tick under "Only the apps I choose".
+func (msgs Messages) SettingsAgentsAppsSearch() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsSearch", nil)
+}
+
+// SettingsAgentsAppsShowAll says "Show all apps"
+// in the language the app shows.
+//
+// A link under the list of apps to tick under "Only the apps I choose",
+// while it shows the apps chosen only (after a click on the count of apps
+// chosen): back to every app.
+func SettingsAgentsAppsShowAll() string { return In(i18n.Locale()).SettingsAgentsAppsShowAll() }
+
+// SettingsAgentsAppsShowAll says "Show all apps"
+// in the language of msgs.
+//
+// A link under the list of apps to tick under "Only the apps I choose",
+// while it shows the apps chosen only (after a click on the count of apps
+// chosen): back to every app.
+func (msgs Messages) SettingsAgentsAppsShowAll() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsShowAll", nil)
 }
 
 // SettingsAgentsChangeLabel says "Change what {agent} may do"

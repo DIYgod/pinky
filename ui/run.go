@@ -960,6 +960,7 @@ func (a *app) setNeeds(n []gateway.NeedView) {
 	if asks != a.agents.asks {
 		a.agents.asks, a.agents.lastLoad = asks, time.Time{}
 	}
+	a.agents.cardsChanged(a.needs, n)
 	a.needs = n
 	live := map[string]bool{}
 	for _, x := range n {
@@ -1078,6 +1079,7 @@ func (a *app) selectPhone(id string) {
 }
 
 func (a *app) decide(n gateway.NeedView, d gateway.Decision, note string) {
+	a.agents.answered(n)
 	a.remember(n, d, note)
 	a.call(n.DeviceID, locales.CallAnswer(), func() error {
 		err := a.api.Decide(n.ID, d, note)

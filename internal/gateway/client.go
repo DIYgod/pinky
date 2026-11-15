@@ -220,7 +220,7 @@ func (g *Gateway) Needs() []NeedView {
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
 			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
 			Point: info.Point, To: info.To, Point2: info.Point2, To2: info.To2, Path: info.Path, AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info),
-			Unblock: isUnblock(info), ReadOnly: askedReadOnly(info)})
+			Unblock: isUnblock(info), ReadOnly: askedReadOnly(info), Apps: askedApps(info)})
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
