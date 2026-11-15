@@ -448,9 +448,12 @@ func (g *Gateway) TakeOver(deviceID string) error {
 // HandBack, across leases.
 func (g *Gateway) takeOver(d *device, byInput bool) {
 	g.mu.Lock()
-	if l := d.lease; byInput && l != nil && l.bg != nil {
+	if l := d.lease; byInput && l != nil && l.background() {
 		// The person uses the phone's own screen; the agent works on its
-		// background display and goes on.
+		// background display and goes on, also while that display is still
+		// opening or opens again after the phone dropped. Should it not
+		// open, the task waits for a person who used the screen lately
+		// (readyScreen).
 		d.personAt = time.Now()
 		g.mu.Unlock()
 		return
