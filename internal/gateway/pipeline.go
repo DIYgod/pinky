@@ -2411,7 +2411,7 @@ func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (
 	if err != nil {
 		return nil, cov, err
 	}
-	if !recordableScreen(g.policy, after) || after.App != s.App {
+	if !recordableScreen(g.policy, after) || after.App != s.App || after.CaptureIdentity != s.CaptureIdentity {
 		return nil, cov, errScreenChanged
 	}
 	img, cov.hidden, err = coverHidden(img, s, after)

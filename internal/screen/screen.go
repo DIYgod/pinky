@@ -209,6 +209,9 @@ type Screen struct {
 	Elements   []Element
 	Events     []Event
 	CapturedAt time.Time
+	// CaptureIdentity is an optional driver proof for an otherwise missing
+	// accessibility identity. A screenshot is discarded if this changes.
+	CaptureIdentity string `json:"-"`
 }
 
 // Find returns the element with the given ref.

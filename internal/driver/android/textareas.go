@@ -85,6 +85,7 @@ func (a textArea) holds(p screen.Point) bool {
 
 // textScan is what a screen's tree says about where text may be missing.
 type textScan struct {
+	proof *windowIdentity // fresh WindowManager proof when accessibility supplied no identity
 	areas []textArea
 	// bars are the status and navigation bars and the keyboard: OCR text
 	// from there is never the app's.

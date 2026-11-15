@@ -46,11 +46,15 @@ func (d *Device) ObserveWithText(ctx context.Context, opt driver.ObserveOptions)
 	if err != nil {
 		return nil, TextStats{}, err
 	}
+	sc = d.recoverWindowIdentity(ctx, s, sc)
 	src := textSource{
 		shot:  func(ctx context.Context) ([]byte, error) { return d.screencap(ctx, "screencap -p") },
 		moved: d.movedSince(0),
 	}
-	if d.info.Connection != "usb" {
+	if sc.proof != nil {
+		src.moved = func(ctx context.Context, _ time.Time, _ screen.App) bool { return d.proofMoved(ctx, s, sc.proof) }
+	}
+	if d.info.Connection != "usb" && sc.proof == nil {
 		// Over Wi-Fi a screenshot's PNG (1 to 2 MB) takes seconds to come,
 		// and tens of seconds over a phone's mobile uplink; a frame of the
 		// video costs a key frame. Over USB a screenshot is the cheaper

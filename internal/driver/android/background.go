@@ -649,6 +649,13 @@ func (b *Background) startApp(ctx context.Context, t launchTarget) error {
 // startWith starts app t on the display with start (its launcher, or a
 // link it opens), as startApp says.
 func (b *Background) startWith(ctx context.Context, t launchTarget, start func() error) error {
+	// Local compatibility case: WeChat 8.0.80 repeatedly ANRs when its
+	// existing task is moved onto a virtual display on Mi Note 3 / API 35.
+	// Return before moving it; the gateway's existing fallback checks the
+	// person's activity and lock state before using the main display.
+	if t.pkg == "com.tencent.mm" && b.d.props.Model == "Mi Note 3" && b.d.props.SDK == 35 {
+		return fmt.Errorf("android: WeChat needs the main display on this phone: %w", driver.ErrUnsupported)
+	}
 	if b.theirs != nil {
 		roots, err := b.d.rootTasks(ctx)
 		if err != nil {

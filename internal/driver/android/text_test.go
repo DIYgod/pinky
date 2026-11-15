@@ -318,6 +318,20 @@ func TestAddTextRefuses(t *testing.T) {
 	}
 }
 
+func TestWindowIdentityChangeDuringOCR(t *testing.T) {
+	stub := &ocrStub{lines: []ocr.Line{line("Public article", 500, 1500)}}
+	stubOCR(t, stub)
+	tree, s := miniProgram(false)
+	sc := scanCompanion(tree)
+	sc.proof = &windowIdentity{token: "wm:0:original"}
+	checks := 0
+	src := textSource{frame: frameOf(scrW, scrH), moved: func(context.Context, time.Time, screen.App) bool { checks++; return checks > 1 }}
+	st := addText(context.Background(), s, sc, driver.ObserveOptions{OCR: true}, time.Now(), src)
+	if len(ocrLabels(s)) != 0 || st.Skipped != "window identity changed during OCR" {
+		t.Fatalf("stale OCR retained: %+v", st)
+	}
+}
+
 func TestAddTextPictures(t *testing.T) {
 	stub := &ocrStub{lines: []ocr.Line{line("Repay now", 500, 1500)}}
 	stubOCR(t, stub)
