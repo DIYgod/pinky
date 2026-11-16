@@ -2,7 +2,7 @@
 <h1 align="center">Pinky</h1>
 <p align="center"><b>Let AI use your iPhone or Android phone, with you in the loop: any agent from macOS, Windows or Linux, or Pinky itself, right on the phone.</b></p>
 <p align="center"><a href="https://github.com/DIYgod/pinky/releases/latest">Download</a> · <a href="#get-started">Get started</a> · <a href="#faq">FAQ</a> · <a href="https://discord.gg/S27b7SHjng">Discord</a></p>
-<p align="center">English · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a></p>
+<p align="center">English · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.tr.md">Türkçe</a></p>
 <p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator. Pinky asks before payments by default; this run also asks before messages.</sub></p>
 
 Pinky lets any agent (Claude Code, Claude Desktop, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Pinky can also do tasks by itself, with an AI model you choose: from your computer, or in Pinky's app right on the phone, with no computer at all. Whoever does the task, approvals are enforced by Pinky's gateway, not by instructions to the agent.
