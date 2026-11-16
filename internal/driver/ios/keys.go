@@ -15,6 +15,10 @@ const (
 	usageHome    = 0x40 // "Menu", the home button
 )
 
+// keyboardPage is the HID page the keyboard's usages come from: the ones
+// below, and every key a person types.
+const keyboardPage = 0x07
+
 // HID keyboard usages (page 7).
 const (
 	keyA         = 0x04

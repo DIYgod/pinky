@@ -503,6 +503,15 @@ func (c *wdaClient) keys(ctx context.Context, text string) error {
 	return c.do(ctx, c.long, http.MethodPost, "/wda/keys", map[string]any{"value": []string{text}}, nil)
 }
 
+// hidEvent presses a key of a HID page: page and usage name it, hold is how
+// long it stays down. WDA types keys as characters, which covers what
+// XCUIKeyboardKey names and nothing else; this route takes the usages the
+// arrow and page keys have.
+func (c *wdaClient) hidEvent(ctx context.Context, page, usage int, hold time.Duration) error {
+	body := map[string]any{"page": page, "usage": usage, "duration": hold.Seconds()}
+	return c.do(ctx, c.long, http.MethodPost, "/wda/performIoHidEvent", body, nil)
+}
+
 // clearFocused empties the text field that has the keyboard focus (the
 // active element, in WebDriver's terms). It returns errNoFocus when no
 // field has it.

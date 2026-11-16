@@ -470,7 +470,7 @@ func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "POST /session":
 		f.sessions++
 		fmt.Fprintf(w, `{"value":{"sessionId":"s%d","capabilities":{}},"sessionId":"s%d"}`, f.sessions, f.sessions)
-	case "POST /appium/settings", "POST /actions", "POST /wda/keys", "POST /element/E1/clear", "POST /url":
+	case "POST /appium/settings", "POST /actions", "POST /wda/keys", "POST /wda/performIoHidEvent", "POST /element/E1/clear", "POST /url":
 		fmt.Fprint(w, `{"value":null}`)
 	case "GET /wda/activeAppInfo":
 		fmt.Fprintf(w, `{"value":%s}`, f.app)
@@ -559,6 +559,44 @@ func TestWDAClient(t *testing.T) {
 	}
 	if err := c.do(ctx, c.hc, http.MethodGet, "/element/active?none", nil, nil); !errors.As(err, &we) || we.Code != "no such element" {
 		t.Fatalf("no such element: %v", err)
+	}
+}
+
+func TestWDAKeyUsesHIDForNavKeys(t *testing.T) {
+	f := &fakeWDA{}
+	srv := httptest.NewServer(f)
+	defer srv.Close()
+	d := &WDADevice{c: newWDAURL(srv.URL, ""), scale: 1}
+	ctx := context.Background()
+	// An arrow key has no character, so it goes as a HID usage on the
+	// keyboard page, the way the iOS 27 path presses it.
+	if err := d.Key(ctx, driver.KeyDpadLeft); err != nil {
+		t.Fatal(err)
+	}
+	body := f.bodies["POST /wda/performIoHidEvent"]
+	if len(body) != 1 {
+		t.Fatalf("hid events %v", body)
+	}
+	var ev struct {
+		Page     int     `json:"page"`
+		Usage    int     `json:"usage"`
+		Duration float64 `json:"duration"`
+	}
+	if err := json.Unmarshal([]byte(body[0]), &ev); err != nil {
+		t.Fatal(err)
+	}
+	if ev.Page != keyboardPage || ev.Usage != keyLeft || ev.Duration != wdaKeyHold.Seconds() {
+		t.Fatalf("event %+v", ev)
+	}
+	// Keys a character names still go as text, not as usages.
+	if err := d.Key(ctx, driver.KeyTab); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.bodies["POST /wda/keys"]) != 1 || len(f.bodies["POST /wda/performIoHidEvent"]) != 1 {
+		t.Fatalf("keys %v, hid events %v", f.bodies["POST /wda/keys"], f.bodies["POST /wda/performIoHidEvent"])
+	}
+	if err := d.Key(ctx, driver.Key("nothing")); !errors.Is(err, driver.ErrUnsupported) {
+		t.Fatalf("unknown key: %v", err)
 	}
 }
 
