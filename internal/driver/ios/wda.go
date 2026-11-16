@@ -537,8 +537,26 @@ func (c *wdaClient) clearFocused(ctx context.Context) error {
 
 var errNoFocus = errors.New("no focused field")
 
+// home brings SpringBoard to the front. A locked phone refuses to open it
+// ("Unable to launch (null) because the device was not, or could not be,
+// unlocked"), and that refused open is what wakes a dark lock screen.
+// There is no home screen to reach while locked, so the wake is the whole
+// answer and the refusal is not an error.
 func (c *wdaClient) home(ctx context.Context) error {
-	return c.call(ctx, c.hc, http.MethodPost, "/wda/homescreen", map[string]any{}, nil)
+	err := c.call(ctx, c.hc, http.MethodPost, "/wda/homescreen", map[string]any{}, nil)
+	if err != nil && isLockedRefusal(err) {
+		return nil
+	}
+	return err
+}
+
+// isLockedRefusal reports iOS refusing to open an app because the phone is
+// locked, the answer /wda/homescreen gets on a lock screen. SpringBoard's
+// own code in the message is about the very request that failed, where a
+// lock state read separately can be a step behind the phone.
+func isLockedRefusal(err error) bool {
+	var e *wdaError
+	return errors.As(err, &e) && strings.Contains(e.Message, "BSErrorCodeDescription=Locked")
 }
 
 // pressHome presses the Home button and nothing more. /wda/homescreen

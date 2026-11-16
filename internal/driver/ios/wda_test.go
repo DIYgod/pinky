@@ -425,6 +425,7 @@ type fakeWDA struct {
 	// For reads.
 	app         string        // /wda/activeAppInfo's value
 	locked      bool          // /wda/locked
+	homeRefused string        // /wda/homescreen fails with this message; "" answers OK
 	sourceDelay time.Duration // before /source answers; set before the first request
 	shots       int           // /screenshot requests
 	shotAt      time.Time     // the last one
@@ -476,6 +477,13 @@ func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"value":%s}`, f.app)
 	case "GET /wda/locked":
 		fmt.Fprintf(w, `{"value":%v}`, f.locked)
+	case "POST /wda/homescreen":
+		if f.homeRefused != "" {
+			w.WriteHeader(500)
+			fmt.Fprintf(w, `{"value":{"error":"unknown error","message":%q}}`, f.homeRefused)
+			return
+		}
+		fmt.Fprint(w, `{"value":null}`)
 	case "GET /source":
 		f.sourceAt = time.Now()
 		fmt.Fprint(w, `{"value":{"type":"XCUIElementTypeApplication","label":"App","rect":{"x":0,"y":0,"width":100,"height":200},"isVisible":"1",`+
@@ -597,6 +605,26 @@ func TestWDAKeyUsesHIDForNavKeys(t *testing.T) {
 	}
 	if err := d.Key(ctx, driver.Key("nothing")); !errors.Is(err, driver.ErrUnsupported) {
 		t.Fatalf("unknown key: %v", err)
+	}
+}
+
+// A locked phone refuses to open SpringBoard, which is the wake rather than
+// a failure: the Home key must not surface it.
+func TestWDAHomeKeyOnLockedPhone(t *testing.T) {
+	f := &fakeWDA{homeRefused: `Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "The request to open "com.apple.springboard" failed." UserInfo={BSErrorCodeDescription=Locked, NSLocalizedFailureReason=Unable to launch (null) because the device was not, or could not be, unlocked.}`}
+	srv := httptest.NewServer(f)
+	defer srv.Close()
+	d := &WDADevice{c: newWDAURL(srv.URL, ""), scale: 1}
+	ctx := context.Background()
+	if err := d.Key(ctx, driver.KeyHome); err != nil {
+		t.Fatalf("locked: %v", err)
+	}
+	// A failure to open SpringBoard for any other reason is still a failure.
+	f.mu.Lock()
+	f.homeRefused = `Error Domain=FBSOpenApplicationServiceErrorDomain Code=1 "The request to open "com.apple.springboard" failed."`
+	f.mu.Unlock()
+	if err := d.Key(ctx, driver.KeyHome); err == nil {
+		t.Fatal("not locked: no error")
 	}
 }
 
