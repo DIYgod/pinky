@@ -19,6 +19,8 @@ Everything below was checked against the service's own documentation on 2026-11-
 - `key_optional`, `local`: Ollama and LM Studio run on the person's computer and need no key unless they set one up. On a phone their address is the computer's on the network, which Settings says.
 - `priced_models`: the models whose prices Pinky knows on that service (`internal/pilot/price.go`), by the start of their names. With one of them the cost limit and usage are in dollars; otherwise in tokens.
 
+A computer where Ask Pinky was never set up starts on `aimlapi` (`pilot.FirstService`, applied by `firstService` in `cmd/pinky/app.go` when the app starts): no `settings.json` yet and no key saved for Anthropic, the service that settings without one fall back to. A settings file of any version, or that key, keeps everything as it was, and nothing is written until the person changes a setting. `pinky daemon` runs no Ask Pinky tasks of its own and is unchanged. The phone apps still start on Anthropic: their settings fall back in Kotlin and Swift (`TaskSettings`), not here.
+
 Settings saved before there were services map to one (`ServiceFor`): Anthropic or OpenAI at their own address, or the custom entry for an address the person typed, even a service's own address, so the key saved for it still applies. One change in behaviour: OpenAI with no address used to need a model typed; it is now the OpenAI preset with its default model.
 
 ## The services
