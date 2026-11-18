@@ -27,6 +27,7 @@ Settings saved before there were services map to one (`ServiceFor`): Anthropic o
 |---|---|---|---|---|
 | `anthropic` | Messages | `https://api.anthropic.com` (the default) | `claude-opus-5-5`, `claude-sonnet-5-5`, `claude-haiku-5-5` | USD |
 | `openai` | Chat; Responses for `gpt-6*` | `https://api.openai.com/v1` | `gpt-5.6-terra`, `gpt-6.1-terra`, `gpt-6.1-sol` | USD |
+| `aimlapi` | Chat | `https://api.aimlapi.com/v1` | `anthropic/claude-sonnet-5-5`, `google/gemini-4-hydrogen`, `anthropic/claude-haiku-5-5` | vary by model |
 | `deepseek` | Chat | `https://api.deepseek.com` | `deepseek-flash` | USD, peak and off-peak |
 | `gemini` | Chat | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-4-hydrogen`, `gemini-4-carbon` | USD, Carbon doubles on 2026-12-01 |
 | `kimi-cn` / `kimi-intl` | Chat | `https://api.moonshot.cn/v1` / `https://api.moonshot.ai/v1` | `kimi-k3.1-pro`, `kimi-k3.1-pro-highspeed`, `kimi-k3` | not verified |
@@ -40,7 +41,7 @@ Settings saved before there were services map to one (`ServiceFor`): Anthropic o
 | `openai-compatible` | Chat | typed | typed | none |
 | `anthropic-compatible` | Messages | typed | typed (default `claude-opus-5-5`) | Anthropic's, for Claude models |
 
-Pinky speaks Chat Completions to every service that has it, even those with an Anthropic-style endpoint too (DeepSeek, Qwen, Kimi, Zhipu, SiliconFlow, OpenRouter, Ollama, LM Studio): the Chat endpoints are the documented, general ones, and the Anthropic ones differ per service in auth (several take only Bearer, which the custom Anthropic entry sends anyway) and in what they accept. A person who wants one of those can still use the Anthropic-compatible entry with its address.
+Pinky speaks Chat Completions to every service that has it, even those with an Anthropic-style endpoint too (AI/ML API, DeepSeek, Qwen, Kimi, Zhipu, SiliconFlow, OpenRouter, Ollama, LM Studio): the Chat endpoints are the documented, general ones, and the Anthropic ones differ per service in auth (several take only Bearer, which the custom Anthropic entry sends anyway) and in what they accept. A person who wants one of those can still use the Anthropic-compatible entry with its address.
 
 ### Anthropic
 
@@ -53,6 +54,13 @@ Pinky speaks Chat Completions to every service that has it, even those with an A
 - https://developers.openai.com/api/docs/models, pricing https://developers.openai.com/api/docs/pricing.
 - GPT-6.1 Sol and GPT-6.1 Terra: "Tool calling requires the Responses API" (https://developers.openai.com/api/docs/models/gpt-6.1-sol, https://developers.openai.com/api/docs/models/gpt-6.1-terra); the function-calling guide says the same of GPT-6 Astra (https://developers.openai.com/api/docs/guides/function-calling). GPT-6 Luna calls functions on Chat Completions only with `reasoning_effort: "none"` (https://developers.openai.com/api/docs/models/gpt-6-luna).
 - So Pinky speaks the Responses API to the GPT-6 models at OpenAI's own address, and Chat Completions to the others. The preset's default stays `gpt-5.6-terra`, which supports Chat Completions, function calling and images with no such restriction (https://developers.openai.com/api/docs/models/gpt-5.6-terra), $2 / $0.20 / $12: Responses has not been run against a live key yet, so the proven model stays the default, and a person who never chose a model keeps the one they have. After it the preset suggests `gpt-6.1-terra`, "a fast, efficient model for visual reasoning, precise computer use" that reads images (https://developers.openai.com/api/docs/models/gpt-6.1-terra), $1 / $0.05 / $5, and `gpt-6.1-sol` (images, $2 / $0.10 / $10), both on Responses. Astra ($10 / $1 / $50) and Luna ($0.10 / $0.01 / $0.50) are priced for a person who types one. Prompts over 272K tokens cost more; Pinky's stay far below. The pricing page also lists cache writes (30 minutes at 1.25× input); Pinky sets no cache breakpoints, so it counts none.
+
+### AI/ML API
+
+- https://docs.aimlapi.com/, Chat Completions at `https://api.aimlapi.com/v1/chat/completions` with `Authorization: Bearer`; keys https://aimlapi.com/app/keys. Model IDs carry the vendor (`anthropic/…`, `google/…`). The model list, with each model's input types and capabilities, is `GET https://api.aimlapi.com/v1/models?include=all`, no key needed; chat models are the rows with `type` `openai/chat-completions`.
+- Each suggested model lists `tools` and `vision` there and, checked with a key on 2026-11-18, read a screenshot and answered with a tool call on Chat Completions: `anthropic/claude-sonnet-5-5` (the default, as on OpenRouter), `google/gemini-4-hydrogen` and `anthropic/claude-haiku-5-5`, the cheapest of the three.
+- It also has the Messages API (`https://api.aimlapi.com/v1/messages`) and `/v1/responses`; Pinky speaks Chat Completions there, as to the other services with both.
+- Prices vary by model and change with the list, so Pinky counts tokens.
 
 ### DeepSeek
 

@@ -57,6 +57,23 @@
       ]
     },
     {
+      "id": "aimlapi",
+      "name": "AI/ML API",
+      "api": "openai",
+      "base_url": "https://api.aimlapi.com/v1",
+      "models": [
+        {
+          "id": "anthropic/claude-sonnet-5-5"
+        },
+        {
+          "id": "google/gemini-4-hydrogen"
+        },
+        {
+          "id": "anthropic/claude-haiku-5-5"
+        }
+      ]
+    },
+    {
       "id": "deepseek",
       "name": "DeepSeek",
       "api": "openai",

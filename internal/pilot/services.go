@@ -110,6 +110,16 @@ var services = []Service{
 		},
 	},
 	{
+		// One key for many vendors' models, by vendor-prefixed IDs.
+		// Prices vary by model and change often, so Pinky counts tokens.
+		ID: "aimlapi", Name: "AI/ML API", API: OpenAI, BaseURL: "https://api.aimlapi.com/v1",
+		Models: []ServiceModel{
+			{ID: "anthropic/claude-sonnet-5-5"},
+			{ID: "google/gemini-4-hydrogen"},
+			{ID: "anthropic/claude-haiku-5-5"},
+		},
+	},
+	{
 		// DeepSeek V4 Pro reads no images.
 		ID: "deepseek", Name: "DeepSeek", API: OpenAI, BaseURL: "https://api.deepseek.com",
 		Models: []ServiceModel{{ID: "deepseek-flash"}},
