@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -129,6 +130,53 @@ func TestNormalizeService(t *testing.T) {
 	}
 }
 
+func TestAIMLAPIService(t *testing.T) {
+	s, ok := ServiceByID("aimlapi")
+	if !ok || s.Name != "AI/ML API" || s.API != OpenAI || s.BaseURL != "https://api.aimlapi.com/v1" || s.Custom || s.Local || s.KeyOptional {
+		t.Fatalf("%+v", s)
+	}
+	// Each suggested model read a screenshot and called a tool on Chat
+	// Completions there; the default is the first.
+	var ids []string
+	for _, m := range s.Models {
+		ids = append(ids, m.ID)
+	}
+	if got := strings.Join(ids, " "); got != "anthropic/claude-sonnet-5-5 google/gemini-4-hydrogen anthropic/claude-haiku-5-5" {
+		t.Errorf("models: %s", got)
+	}
+	c := Config{Service: "aimlapi"}.Normalize()
+	if c.Provider != OpenAI || c.BaseURL != "https://api.aimlapi.com/v1" || c.Model != "anthropic/claude-sonnet-5-5" ||
+		c.KeyName() != "aimlapi" || c.KeyOptional() || c.Priced() || len(s.PricedModels) != 0 {
+		t.Fatalf("%+v", c)
+	}
+	// Chat Completions with the key as Bearer and the model's ID as is.
+	const key = "sk-aimlapi-secret"
+	var reqs []*http.Request
+	var body []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqs = append(reqs, r)
+		body, _ = io.ReadAll(r.Body)
+		w.Write([]byte(checkToolCall))
+	}))
+	defer srv.Close()
+	if r := Check(context.Background(), Config{Service: "aimlapi", BaseURL: srv.URL}, key, srv.Client()); !r.OK {
+		t.Fatalf("%+v", r)
+	}
+	if len(reqs) != 1 {
+		t.Fatalf("%d requests", len(reqs))
+	}
+	req := reqs[0]
+	if req.URL.Path != "/chat/completions" || req.Header.Get("Authorization") != "Bearer "+key || req.Header.Get("X-Api-Key") != "" {
+		t.Errorf("request: %s %v", req.URL.Path, req.Header)
+	}
+	var sent struct {
+		Model string `json:"model"`
+	}
+	if err := json.Unmarshal(body, &sent); err != nil || sent.Model != "anthropic/claude-sonnet-5-5" {
+		t.Errorf("model sent: %q, %v", sent.Model, err)
+	}
+}
+
 func TestServicePrices(t *testing.T) {
 	cost := func(cfg Config, at time.Time) float64 {
 		t.Helper()
@@ -161,6 +209,7 @@ func TestServicePrices(t *testing.T) {
 		{Service: "kimi-intl", Provider: OpenAI, Model: "kimi-k3"},
 		{Service: "glm-cn", Provider: OpenAI, Model: "glm-5.3-flash"},
 		{Service: "openrouter", Provider: OpenAI, Model: "anthropic/claude-sonnet-5.5"},
+		{Service: "aimlapi", Provider: OpenAI, Model: "anthropic/claude-sonnet-5-5"},
 	} {
 		if _, ok := priceOf(cfg); ok {
 			t.Errorf("%s priced on %s", cfg.Model, cfg.Service)

@@ -70,6 +70,11 @@ const (
 	RegionGlobal = "global"
 )
 
+// FirstService is the service Ask Pinky starts on where it was never set
+// up (cmd/pinky, firstService): one key reaches models of many vendors
+// that read screens and call tools. Settings of before keep theirs.
+const FirstService = "aimlapi"
+
 // The IDs of the two entries for an address the person types. Their keys
 // are saved under the API's name, as all keys were before there were
 // services (KeyName).
@@ -107,6 +112,16 @@ var services = []Service{
 			{ID: "gpt-5.6-terra", Name: "GPT-5.6 Terra"},
 			{ID: "gpt-6.1-terra", Name: "GPT-6.1 Terra"},
 			{ID: "gpt-6.1-sol", Name: "GPT-6.1 Sol"},
+		},
+	},
+	{
+		// One key for many vendors' models, by vendor-prefixed IDs.
+		// Prices vary by model and change often, so Pinky counts tokens.
+		ID: FirstService, Name: "AI/ML API", API: OpenAI, BaseURL: "https://api.aimlapi.com/v1",
+		Models: []ServiceModel{
+			{ID: "anthropic/claude-sonnet-5-5"},
+			{ID: "google/gemini-4-hydrogen"},
+			{ID: "anthropic/claude-haiku-5-5"},
 		},
 	},
 	{
