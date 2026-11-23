@@ -672,9 +672,17 @@ func (st *readState) take(s *screen.Screen, first bool) bool {
 		// find the next screen's overlap with. A continuation's first read
 		// of the screen the last call ended on is such a screen; forgetting
 		// it took the whole next screen as new.
+		// The next screen overlaps this one at its bottom when the read
+		// goes forward and at its top when it goes back: keep that end.
 		st.previous = tail(current, readListKeep)
+		if req.Direction == "down" && len(current) > readListKeep {
+			st.previous = current[:readListKeep]
+		}
 	}
-	st.raw, st.full = tail(raw, readListKeep), full
+	// The whole last screen: the next one is filtered against it, and a
+	// screen that did not move (the end of a page that shows more lines
+	// than readListKeep) must lose every line.
+	st.raw, st.full = raw, full
 	return true
 }
 
