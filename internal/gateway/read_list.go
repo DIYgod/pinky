@@ -44,8 +44,11 @@ type readCursor struct {
 	direction string
 	page      int
 	previous  []viewportLine
-	pinned    []viewportLine
-	expires   time.Time
+	// raw is the whole screen the call ended on: the next call's first
+	// read of it must lose every line, previous keeps only some.
+	raw     []viewportLine
+	pinned  []viewportLine
+	expires time.Time
 }
 
 // listID is how a read finds its list again on the next screen: its path
@@ -164,7 +167,7 @@ func (g *Gateway) readList(ctx context.Context, l *lease, req ReadListRequest) *
 		cursor = c
 		st.req.Direction = c.direction
 		st.req.Area = c.area
-		st.previous, st.raw, st.pinned = c.previous, c.previous, c.pinned
+		st.previous, st.raw, st.pinned = c.previous, c.raw, c.pinned
 		st.view.StartScreen = c.page
 	}
 	if st.req.Direction == "" {
@@ -1158,6 +1161,7 @@ func (g *Gateway) keepCursor(l *lease, st *readState) string {
 	return g.putCursor(l, &readCursor{app: st.app, list: st.id, area: st.req.Area, direction: st.req.Direction,
 		page:     st.view.StartScreen + st.view.Pages,
 		previous: append([]viewportLine(nil), st.previous...),
+		raw:      append([]viewportLine(nil), st.raw...),
 		pinned:   append([]viewportLine(nil), st.pinned...)})
 }
 
