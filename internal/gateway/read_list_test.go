@@ -45,6 +45,9 @@ type readListDevice struct {
 	// finger's spot with all OCR text (OCRAll).
 	ragged, clock bool
 	reads         int
+	// still keeps each page's lines where the page before had its own:
+	// a swipe that moved the list by whole rows.
+	still bool
 }
 
 func (d *readListDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
@@ -98,6 +101,9 @@ func (d *readListDevice) Observe(ctx context.Context, opt driver.ObserveOptions)
 		shift := -d.page * 5
 		if d.reverse {
 			shift = d.page * 5
+		}
+		if d.still {
+			shift = 0
 		}
 		role := d.lineRole
 		if role == "" {
