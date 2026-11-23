@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 没有手机时，`pinky devices --json` 现在输出空列表（`[]`），不再输出 `null`，不管 Pinky 是否在运行。感谢 @6moran。
+
 ## 2026.1123.1 (2026-11-23)
 
 - 使用免费 Apple ID 时，iPhone 上的 Pinky 会在设置步骤里等 LocalDevVPN 连上：给出 App Store 链接，列出要填的 Tunnel IP 和 Device IP，LocalDevVPN 没打开或地址填错时也会提醒你。感谢 Discord 上的 pepper 反馈。
