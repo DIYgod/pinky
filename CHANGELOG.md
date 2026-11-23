@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1123.2 (2026-11-23)
 
 - `pinky devices --json` now prints an empty list (`[]`) instead of `null` when there are no phones, whether or not Pinky is running. Thanks @6moran.
 
