@@ -81,3 +81,56 @@ func TestReadListBackwardKeepsTheTopOfATallScreen(t *testing.T) {
 		}
 	}
 }
+
+// A continuation starts on the screen the last call ended on, which did
+// not move: every line of it, not only those kept for the overlap, must
+// stay out, or the lines past them look new, share nothing with the kept
+// ones, and the continuation stops at a gap before its first swipe.
+func TestReadListContinuesFromAScreenWithMoreLinesThanItKeeps(t *testing.T) {
+	page := func(first int) []string {
+		var lines []string
+		for n := first; n < first+readListKeep+4; n++ {
+			lines = append(lines, fmt.Sprintf("Line %03d", n))
+		}
+		return lines
+	}
+	for _, tc := range []struct {
+		direction string
+		reverse   bool
+		pages     [][]string
+	}{
+		{"up", false, [][]string{page(1), page(43), page(85), page(127)}},
+		{"down", true, [][]string{page(127), page(85), page(43), page(1)}},
+	} {
+		t.Run(tc.direction, func(t *testing.T) {
+			base := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+			dev := &readListDevice{Device: base, reverse: tc.reverse, lineStep: 20, pages: tc.pages}
+			g := newDevGateway(t, base, dev)
+			s, first := connect(t, g, "Read a list")
+			listRef := 0
+			for _, e := range first.Screen.Elements {
+				if e.Role == screen.RoleList {
+					listRef = e.Ref
+				}
+			}
+			one := s.ReadList(context.Background(), ReadListRequest{
+				Ref: listRef, Direction: tc.direction, MaxScreens: 2, MaxMS: 5000, OCR: "off",
+			})
+			if one.IsError() || one.Scan == nil || one.Scan.Continuation == "" {
+				t.Fatalf("first read: %+v", one.Scan)
+			}
+			two := s.ReadList(context.Background(), ReadListRequest{
+				Continuation: one.Scan.Continuation, MaxScreens: 2, MaxMS: 5000, OCR: "off",
+			})
+			if two.IsError() || two.Scan == nil || two.Scan.Stop == "gap" || two.Scan.Pages != 2 {
+				t.Fatalf("continuation: %+v\n%s", two.Scan, scanText(two.Scan))
+			}
+			text := scanText(one.Scan) + scanText(two.Scan)
+			for n := 1; n < 127+readListKeep+4; n++ {
+				if c := strings.Count(text, fmt.Sprintf("Line %03d", n)); c != 1 {
+					t.Fatalf("Line %03d read %d times:\n%s", n, c, text)
+				}
+			}
+		})
+	}
+}
