@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1123.3 (2026-11-23)
 
 - 在 Android 上，智能体在后台显示器上用的应用关掉后（在首页按返回，或应用崩溃），任务会留在后台显示器上，不会再跑到手机自己的屏幕上。感谢 @pseudoyu。
 
