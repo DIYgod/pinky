@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Reading a long list on a web page with bullets no longer returns some rows twice or stops partway saying content may have been skipped. Thanks @pseudoyu.
+- Reading a long list on a web page no longer ends saying content may have been skipped when it reached the bottom, and reading back up no longer repeats rows. Thanks @pseudoyu.
+
 ## 2026.1123.3 (2026-11-23)
 
 - On Android, when the app an agent works in on the background display closes (Back from its first screen, or a crash), the task now stays on that display instead of moving to the phone's own screen. Thanks @pseudoyu.
