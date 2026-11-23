@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 接着读网页上的长列表时，如果一屏行数很多，不会再一开始就停下说可能漏了内容。感谢 @pseudoyu。
+
 ## 2026.1123.5 (2026-11-23)
 
 - Android 上的 Pinky 现在可以设为手机的「数字助理应用」（「设置 › 应用 › 默认应用」），长按电源键或用助理手势就能问 Pinky 屏幕上的内容。感谢 @Aoufgo 的建议。
