@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On Android, Pinky can now be your phone's digital assistant app (Settings › Apps › Default apps), so holding the power button or using the assistant gesture asks Pinky about what's on the screen. Thanks @Aoufgo for suggesting it.
+- Asking about the screen from the floating button no longer sometimes reads Pinky's own panel instead of the app behind it.
+
 ## 2026.1123.4 (2026-11-23)
 
 - Reading a long list on a web page with bullets no longer returns some rows twice or stops partway saying content may have been skipped. Thanks @pseudoyu.
