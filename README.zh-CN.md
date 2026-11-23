@@ -10,7 +10,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 - **全平台**：一个应用，macOS（Apple 芯片和 Intel）、Windows、Linux 都能用。能操作 Android 手机（Android 10 到 17）和 iOS 17.4 及以上的 iPhone：iOS 27 及以上手机上什么都不用装；iOS 17.4 到 26 要在装有 Xcode 的 Mac 上装一次 iPhone 上的 Pinky，iOS 27 上也可以选择用它（在 iOS 27、iOS 27 以下的真机和模拟器上都试过；[详情](#手机)）。
 - **小巧原生**：窗口由 [MyGo](https://github.com/egoist/mygo) 在 GPU 上绘制，没有 Electron，也没有 webview：安装包 16–22 MB，在 Mac 上空闲时内存约 70 MB，CPU 0%。
 - **任何 Agent，一键接入**：在「设置 › 智能体」里点一下就能接入 Claude Code、Claude Desktop、Codex、Cursor 等；任何支持 MCP 的 Agent 都能用，在同一台电脑上或者通过 HTTP 都行。
-- **手机上的 Pinky，不用电脑也能做事**：Android 和 iPhone 上的 Pinky 应用能用你选的模型自己完成任务，DeepSeek、通义千问、Kimi、智谱 GLM、Claude、GPT、Gemini 都行，也可以用 Ollama 或 LM Studio 里的本地模型。打字或说出任务，或者把内容分享给它都可以；在 Android 上，还能用悬浮按钮问它屏幕上的内容，让它在隐藏的后台屏幕上干活，你照常用手机（[怎么设置](#pinky-on-the-phone)）。
+- **手机上的 Pinky，不用电脑也能做事**：Android 和 iPhone 上的 Pinky 应用能用你选的模型自己完成任务，DeepSeek、通义千问、Kimi、智谱 GLM、Claude、GPT、Gemini 都行，也可以用 Ollama 或 LM Studio 里的本地模型。打字或说出任务，或者把内容分享给它都可以；在 Android 上，还能用悬浮按钮或电源键问它屏幕上的内容，让它在隐藏的后台屏幕上干活，你照常用手机（[怎么设置](#pinky-on-the-phone)）。
 - **定时任务和记忆**：Pinky 可以在设定的时间执行任务，或者在某个条件满足时通知你，电脑和 Android 上都行。任务结束后，它可能会建议记住一些内容，比如你说过的偏好，你同意了才会保存（[详情](#交给-pinky)）。
 - **手机锁着也能在电脑上解锁**：在 Pinky 里保存一次手机的 PIN 码，之后每次解锁用 Touch ID、Windows Hello 或密钥环密码确认。Agent 永远看不到 PIN 码。
 - **开源免费**，Apache-2.0 协议，不用注册账号。
@@ -237,6 +237,7 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 - **Android**：在 Pinky 的手机页面上点「安装」装上 Pinky 的应用；不用电脑也行：在手机上打开最新版本的 [`pinky-android.apk`](https://github.com/DIYgod/pinky/releases/latest/download/pinky-android.apk) 并安装（[详见](#install-companion-by-hand)）。在手机上打开 Pinky，按它的步骤来：先在 Android 的无障碍设置里打开 Pinky（Android 13 起，系统可能要你先在 Pinky 的应用信息里允许受限设置，应用里有说明），再选择 AI 模型并添加 API 密钥。之后 Pinky 会提出让自己保持运行，因为 Android 和一些手机厂商会在后台停掉应用。任务进行时，其他 App 上方会浮着一个小胶囊显示 Pinky 在做什么，需要你处理时会弹出卡片。Android 上的 Pinky 还能：
   - 在隐藏的「后台屏幕」上执行任务，并用一个小悬浮窗显示进度，你可以同时照常用手机（「设置 › 后台屏幕」；需要 Android 13 及以上，并打开无线调试）；
   - 在其他 App 上方显示「悬浮按钮」，用来问 Pinky 屏幕上的内容：双击打字提问，长按说话（「设置 › 这台手机」，或者用它的快捷设置图块）；
+  - 做手机的「数字助理应用」（Android 的「设置 › 应用 › 默认应用」），这样用手机唤起助理的按键或手势（常见的是长按电源键）就能问 Pinky 屏幕上的内容；
   - 从其他 App 把文字、链接和图片分享给 Pinky 来开始任务，或者用快捷设置图块新建任务；
   - 像电脑上一样执行定时任务（见上文）。
 
