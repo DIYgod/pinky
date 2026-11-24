@@ -8,6 +8,7 @@ import (
 	"io"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -43,8 +44,8 @@ type fakeService struct {
 	replies []func() io.Reader
 	dialErr []error // the error of each dial, nil for none
 	dials   int
-	writes  int
-	closed  int
+	writes  atomic.Int32 // go-ios writes and closes on its own goroutines
+	closed  atomic.Int32
 }
 
 func (f *fakeService) dial(goios.DeviceEntry, string) (*xpc.Connection, error) {
@@ -55,9 +56,9 @@ func (f *fakeService) dial(goios.DeviceEntry, string) (*xpc.Connection, error) {
 	}
 	r := f.replies[min(i, len(f.replies)-1)]()
 	return xpc.New(writeFunc(func(p []byte) (int, error) {
-		f.writes++
+		f.writes.Add(1)
 		return len(p), nil
-	}), readOnly{r}, nil, closeFunc(func() error { f.closed++; return nil }))
+	}), readOnly{r}, nil, closeFunc(func() error { f.closed.Add(1); return nil }))
 }
 
 type writeFunc func([]byte) (int, error)
@@ -124,8 +125,8 @@ func TestInvokeRepeatableRedials(t *testing.T) {
 	if pid := toInt64(out["processToken"].(map[string]any)["processIdentifier"]); pid != 42 {
 		t.Errorf("pid = %d", pid)
 	}
-	if f.dials != 2 || f.writes == 0 || f.closed != 1 {
-		t.Errorf("%d dials, %d writes, %d closed; want 2 dials and the dropped connection closed", f.dials, f.writes, f.closed)
+	if f.dials != 2 || f.writes.Load() == 0 || f.closed.Load() != 1 {
+		t.Errorf("%d dials, %d writes, %d closed; want 2 dials and the dropped connection closed", f.dials, f.writes.Load(), f.closed.Load())
 	}
 }
 
