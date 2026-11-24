@@ -34,6 +34,10 @@ func TestSetTOMLServer(t *testing.T) {
 		name: "a header inside a multi-line string is not a header",
 		in:   "notes = \"\"\"\n[mcp_servers.pinky]\n\"\"\"\n",
 		want: "notes = \"\"\"\n[mcp_servers.pinky]\n\"\"\"\n\n" + testTable,
+	}, {
+		name: "single-line strings with triple quotes and escaped multi-line quotes",
+		in:   "prompt = \"avoid ''' and \\\"\\\"\\\" fences\"\ndoc = \"\"\"\nexample: \\\"\\\"\\\"\n[mcp_servers.pinky]\n\"\"\"\n\n[mcp_servers.pinky]\ncommand = \"old\"\n\n[profiles.\"c#dev[0]\"]\nmodel = \"z\"\n",
+		want: "prompt = \"avoid ''' and \\\"\\\"\\\" fences\"\ndoc = \"\"\"\nexample: \\\"\\\"\\\"\n[mcp_servers.pinky]\n\"\"\"\n\n" + testTable + "\n[profiles.\"c#dev[0]\"]\nmodel = \"z\"\n",
 	}}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
