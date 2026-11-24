@@ -30,8 +30,9 @@ import (
 // recordings and device_settings tables, version 3 device_connections,
 // version 4 removed_devices, version 5 paused_devices, version 6
 // recording_removals, version 7 traffic_devices, traffic_routes and
-// traffic_blocklist; all versions open the same way.
-const schemaVersion = 7
+// traffic_blocklist, version 8 nothing new but steps whose typed passwords
+// and codes are masked (scrubbedVersion); all versions open the same way.
+const schemaVersion = 8
 
 const schema = `
 CREATE TABLE IF NOT EXISTS devices (
@@ -205,6 +206,17 @@ func Open(dir string) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("history schema: %w", err)
+	}
+	var version int
+	if err := db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if version < scrubbedVersion {
+		if err := scrubTypedSecrets(db); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("history: mask typed passwords: %w", err)
+		}
 	}
 	if _, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", schemaVersion)); err != nil {
 		db.Close()
