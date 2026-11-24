@@ -6946,6 +6946,10 @@
   "@mirrorLockedTile": {
     "description": "The same pill over a locked phone's tile in All phones, which can be 168 points wide."
   },
+  "mirrorNotLiveTile": "Not live",
+  "@mirrorNotLiveTile": {
+    "description": "A small pill at the bottom of an iPhone's tile in All phones while the tile shows the phone's last picture instead of its live screen (so that the idle iPhone can lock). The tile can be 168 points wide; opening the phone's page shows it live."
+  },
   "mirrorNoPicture": "No picture: {detail}",
   "@mirrorNoPicture": {
     "description": "Over the mirror when the phone's live picture fails. detail is the error, in English.",

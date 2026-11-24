@@ -1024,6 +1024,7 @@
   "mirrorDecoderStats": "{line}。{device}：{decoder}，{fps} fps，数据包到画面延迟 {latency}",
   "mirrorLocked": "{phone} 已锁定",
   "mirrorLockedTile": "已锁定",
+  "mirrorNotLiveTile": "非实时画面",
   "mirrorNoPicture": "没有画面：{detail}",
   "mirrorOffline": "手机已离线。",
   "mirrorScreenLabel": "{phone} 的实时屏幕",

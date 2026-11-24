@@ -18253,6 +18253,26 @@ func (msgs Messages) MirrorLockedTile() string {
 	return Catalog.Format(msgs.locale, "mirrorLockedTile", nil)
 }
 
+// MirrorNotLiveTile says "Not live"
+// in the language the app shows.
+//
+// A small pill at the bottom of an iPhone's tile in All phones while the
+// tile shows the phone's last picture instead of its live screen (so that
+// the idle iPhone can lock). The tile can be 168 points wide; opening the
+// phone's page shows it live.
+func MirrorNotLiveTile() string { return In(i18n.Locale()).MirrorNotLiveTile() }
+
+// MirrorNotLiveTile says "Not live"
+// in the language of msgs.
+//
+// A small pill at the bottom of an iPhone's tile in All phones while the
+// tile shows the phone's last picture instead of its live screen (so that
+// the idle iPhone can lock). The tile can be 168 points wide; opening the
+// phone's page shows it live.
+func (msgs Messages) MirrorNotLiveTile() string {
+	return Catalog.Format(msgs.locale, "mirrorNotLiveTile", nil)
+}
+
 // MirrorNoPicture says "No picture: {detail}"
 // in the language the app shows.
 //

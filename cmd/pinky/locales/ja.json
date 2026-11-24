@@ -1024,6 +1024,7 @@
   "mirrorDecoderStats": "{line}。{device}：{decoder}、{fps} fps、パケットから画面まで {latency}",
   "mirrorLocked": "{phone} はロック中です",
   "mirrorLockedTile": "ロック中",
+  "mirrorNotLiveTile": "ライブではありません",
   "mirrorNoPicture": "映像なし：{detail}",
   "mirrorOffline": "スマホはオフラインです。",
   "mirrorScreenLabel": "{phone} のライブ画面",

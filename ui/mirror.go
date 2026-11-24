@@ -624,6 +624,11 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 					mg.Text(c, locales.MirrorScreenOffWake()).FontSize(fsSmall).TextColor(hex("#d0d0d8")).PassThrough()
 				}
 			})
+		case tile && m.state == "still" && m.bitmap != nil:
+			// An idle iPhone's tile holds its last picture (stillFor): say so,
+			// or the phone seems to have frozen while it goes on changing.
+			mg.Text(c, locales.MirrorNotLiveTile()).Attach(mg.AnchorBottom, mg.AnchorBottom).Bottom(10).Padding(3, 8).Radius(999).
+				Background(mg.RGBA(20, 20, 24, 0.72)).TextColor(hex("#ffffff")).FontSize(fsSmall).NoWrap().PassThrough()
 		case (m.state == "connecting" || m.state == "playing") && m.bitmap == nil:
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(10).PassThrough().Children(func() {
 				spinner(c)
