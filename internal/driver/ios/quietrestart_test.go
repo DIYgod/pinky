@@ -69,12 +69,12 @@ func TestSudoersRule(t *testing.T) {
 	if got != want {
 		t.Fatalf("the rule:\n%s\nwant:\n%s", got, want)
 	}
-	for _, name := range []string{"", "two words", "-x", ".hidden", "a,b", "a:b", "ALL\nroot", "%admin", "a=b", "a#b", "a'b", `a\b`, "a!"} {
+	for _, name := range []string{"", "two words", "-x", ".hidden", "a,b", "a:b", "ALL\nroot", "%admin", "a=b", "a#b", "a'b", `a\b`, "a!", "ALL", "ADMIN", "OPS_2"} {
 		if r, err := sudoersRule(name); err == nil {
 			t.Errorf("sudoersRule(%q) = %q, want an error", name, r)
 		}
 	}
-	for _, name := range []string{"diygod", "john.doe", "a_b-c", "_mbsetupuser", "user1"} {
+	for _, name := range []string{"diygod", "john.doe", "a_b-c", "_mbsetupuser", "user1", "Admin", "ADMIN.x"} {
 		if _, err := sudoersRule(name); err != nil {
 			t.Errorf("sudoersRule(%q): %v", name, err)
 		}

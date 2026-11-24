@@ -105,10 +105,16 @@ func (q *quietRestart) sudo(ctx context.Context, args ...string) ([]byte, error)
 // '-' or '.'.
 var accountName = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]*$`)
 
+// sudoersAlias matches what sudoers reads as an alias or the word ALL, not
+// an account: upper-case letters, digits and '_', starting with a letter.
+// "ALL ALL = …" would let every account restart usbmuxd, and an alias of
+// that name in another file could stand for anyone.
+var sudoersAlias = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+
 // sudoersRule is the rule's content for the account named user: only
 // `/usr/bin/killall usbmuxd`, as root, without a password.
 func sudoersRule(user string) (string, error) {
-	if !accountName.MatchString(user) || len(user) > 255 {
+	if !accountName.MatchString(user) || sudoersAlias.MatchString(user) || len(user) > 255 {
 		return "", fmt.Errorf("the account name %q cannot go into a sudoers rule", user)
 	}
 	return "# Installed by Pinky (Settings > Phones): lets " + user + " restart usbmuxd,\n" +
