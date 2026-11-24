@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1124.9 (2026-11-24)
 
 - 没人在看的 iPhone 现在能正常熄屏了。Pinky 的窗口隐藏、最小化或被完全挡住时，不再传手机的实时画面；锁定的 iPhone 在它的页面上显示最后一帧，鼠标移到画面上才恢复实时画面。感谢 @tangh。
 
