@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Reading an iPhone app's logs no longer brings back mostly system lines caused by Pinky reading the screen, so the app's own lines show up again. The result says how many lines were left out.
+
 ## 2026.1124.9 (2026-11-24)
 
 - An iPhone nobody is watching in Pinky can now turn its screen off. Pinky stops a phone's live picture while its window is hidden, minimized or covered, and a locked iPhone's page shows its last picture until you point at the screen. Thanks @tangh.
