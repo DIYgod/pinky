@@ -256,17 +256,22 @@ func (d *Device) checkHEVCEncoder(ctx context.Context) {
 	cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	out, err := d.client.Shell(cctx, d.info.ID, "dumpsys media.player")
 	cancel()
-	if err != nil {
-		return
+	if err != nil && ctx.Err() != nil {
+		return // the caller gave up, not dumpsys: ask again next time
 	}
-	hw, ok := hasHardwareHEVCEncoder(string(out))
-	if !ok {
-		return
+	// A failed dumpsys or one without the encoder table counts as checked
+	// too, keeping H.265 as before: asking again would hold up every
+	// stream and input for up to two seconds.
+	hw, ok := false, false
+	if err == nil {
+		hw, ok = hasHardwareHEVCEncoder(string(out))
 	}
 	d.mu.Lock()
 	if !d.hevcChecked {
 		d.hevcChecked = true
-		if !hw && !d.noHEVC {
+		if !ok {
+			d.cfg.logf("android: %s: could not read the H.265 encoders (%v); keeping H.265", d.info.ID, err)
+		} else if !hw && !d.noHEVC {
 			d.noHEVC = true
 			d.cfg.logf("android: %s: no hardware H.265 encoder; using H.264", d.info.ID)
 		}

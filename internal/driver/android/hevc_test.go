@@ -175,6 +175,29 @@ func TestCheckHEVCEncoder(t *testing.T) {
 		}
 	})
 
+	t.Run("unreadable table keeps H265 and checks once", func(t *testing.T) {
+		f := startFakeADB(t)
+		f.props = map[string]string{localWiFi: phoneProps}
+		calls := 0
+		f.run = func(_, service string) (string, bool) {
+			if service == "shell:dumpsys media.player" {
+				calls++
+				return "Can't find service: media.player\n", true
+			}
+			return "", false
+		}
+		cfg := f.config()
+		d := newDevice(cfg, driver.Info{ID: localWiFi, Connection: "wifi"}, deviceProps{})
+		d.checkHEVCEncoder(ctx)
+		d.checkHEVCEncoder(ctx)
+		if calls != 1 {
+			t.Fatalf("dumpsys media.player called %d times, want 1", calls)
+		}
+		if o := d.baseOptions(); o.VideoCodec != "h265" {
+			t.Fatalf("VideoCodec = %q, want h265", o.VideoCodec)
+		}
+	})
+
 	t.Run("explicit VideoCodec skips check", func(t *testing.T) {
 		f := startFakeADB(t)
 		f.props = map[string]string{"127.0.0.1:5555": phoneProps}
