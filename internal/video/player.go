@@ -2,6 +2,8 @@ package video
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"image"
 	"io"
 	"sync"
@@ -54,7 +56,34 @@ type PlayerOptions struct {
 	// would paint as if the screen moved. A recording's player keeps them,
 	// as their PTS move its playhead.
 	SkipRepeats bool
+	// StallAfter ends the player with ErrStalled once packets have kept
+	// coming for this long, at least stallPackets of them, without a single
+	// picture out of the decoder: a decoder that fails every packet or
+	// gives nothing back (its GPU device lost, a reference it never got).
+	// The stream itself is no help there: an iPhone sends no key frame
+	// unless asked, so such a decoder would never recover, and nothing
+	// would say so. A still screen sends no packets and never stalls. Zero
+	// turns the watch off.
+	StallAfter time.Duration
+	// OnWaiting is called on the player's goroutine, at most once a
+	// second, while new pictures come and none has been taken for over a
+	// second since one was handed over. A UI whose window should be
+	// painting finds out that it stopped taking pictures, and paints
+	// again; OnFrame alone tells it of each picture only once.
+	OnWaiting func()
 }
+
+// ErrStalled is a player's error when its decoder gave no picture for the
+// packets of PlayerOptions.StallAfter.
+var ErrStalled = errors.New("the video decoder gave no picture")
+
+// stallPackets is how many packets a stall needs besides its time: a few
+// late packets after a pause are no stall.
+const stallPackets = 30
+
+// keyFrameRequester is a stream that can ask its source for a key frame
+// (the gateway's viewers of an iPhone's stream can).
+type keyFrameRequester interface{ RequestKeyFrame() }
 
 // Stats describe a player's work so far.
 type Stats struct {
@@ -95,7 +124,9 @@ type Player struct {
 	sumLat   time.Duration
 	fpsCount int
 	fpsStart time.Time
-	last     *Frame // the picture handed over last; the player's goroutine's only
+	waitFrom time.Time // when pictures started waiting for Take: the first since the last Take came
+	last     *Frame    // the picture handed over last; the player's goroutine's only
+	waitedAt time.Time // when OnWaiting was last called; the player's goroutine's only
 
 	done      chan struct{}
 	closeOnce sync.Once
@@ -188,6 +219,24 @@ func (p *Player) run(dec *Decoder) {
 	}
 	packets := p.stream.Packets()
 	skipping := false
+	var (
+		stall   stallWatch
+		stalled error
+		askedAt time.Time
+	)
+	// failed counts a packet the decoder rejected or a picture it could not
+	// give, and asks the stream for a key frame to start again from: an
+	// iPhone sends none by itself.
+	failed := func(err error) {
+		p.mu.Lock()
+		p.stats.Errors++
+		p.mu.Unlock()
+		stall.last = err
+		if kr, ok := p.stream.(keyFrameRequester); ok && time.Since(askedAt) >= 500*time.Millisecond {
+			askedAt = time.Now()
+			kr.RequestKeyFrame()
+		}
+	}
 	for pkt := range packets {
 		received := time.Now()
 		turn := pkt.Turn
@@ -208,30 +257,43 @@ func (p *Player) run(dec *Decoder) {
 				dec.Flush()
 			}
 		}
-		if err := dec.Send(pkt); err != nil {
-			p.mu.Lock()
-			p.stats.Errors++
-			p.mu.Unlock()
-			continue
+		if !pkt.Config {
+			stall.packet(received)
 		}
-		for {
-			pic, ok, err := dec.Receive()
-			if err != nil {
-				p.mu.Lock()
-				p.stats.Errors++
-				p.mu.Unlock()
-				break
+		if err := dec.Send(pkt); err != nil {
+			failed(err)
+		} else {
+			for {
+				pic, ok, err := dec.Receive()
+				if err != nil {
+					failed(err)
+					break
+				}
+				if !ok {
+					break
+				}
+				decoded := time.Now()
+				shown, err := p.convert(dec, pic, turn, received, decoded)
+				if err != nil {
+					stall.last = err // counted by convert
+					continue
+				}
+				stall.picture()
+				if shown {
+					notify()
+				}
+				p.waiting()
 			}
-			if !ok {
-				break
-			}
-			decoded := time.Now()
-			if p.convert(dec, pic, turn, received, decoded) {
-				notify()
-			}
+		}
+		if now := time.Now(); p.opt.StallAfter > 0 && stall.stalled(now, p.opt.StallAfter) {
+			stalled = stall.err(now)
+			break
 		}
 	}
-	err := p.stream.Err()
+	err := stalled
+	if err == nil {
+		err = p.stream.Err()
+	}
 	if err == nil {
 		err = io.EOF
 	}
@@ -247,12 +309,14 @@ func (p *Player) run(dec *Decoder) {
 // pictures depend on earlier ones. Nobody takes them when the picture
 // waiting has waited for over a second, not when Take has not been called
 // for a while: a mirror of a still screen calls it only when OnFrame woke it.
-func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded time.Time) bool {
+// It reports whether it handed over a new picture, and the error of a
+// picture it could not convert.
+func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded time.Time) (bool, error) {
 	p.mu.Lock()
 	if p.ready && time.Since(p.pending.Ready) > time.Second {
 		p.stats.Idle++
 		p.mu.Unlock()
-		return false
+		return false, nil
 	}
 	w, h := fitSize(pic.Width, pic.Height, p.wantW, p.wantH)
 	f := p.spare
@@ -276,7 +340,7 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 		p.stats.Errors++
 		p.spare = f
 		p.mu.Unlock()
-		return false
+		return false, err
 	}
 	now := time.Now()
 	f.Width, f.Height = pic.Width, pic.Height
@@ -289,7 +353,7 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 		p.stats.Repeats++
 		p.spare = f
 		p.mu.Unlock()
-		return false
+		return false, nil
 	}
 
 	p.mu.Lock()
@@ -309,11 +373,60 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 	}
 	if p.ready {
 		p.stats.Dropped++ // the UI had not taken the last one
+	} else {
+		p.waitFrom = now
 	}
 	// The old pending picture, taken or not, becomes the spare.
 	p.spare, p.pending = p.pending, f
 	p.ready = true
-	return true
+	return true, nil
+}
+
+// waiting calls OnWaiting, at most once a second, when pictures have waited
+// for Take for over a second while new ones come. A UI that stopped
+// painting though it was told of each picture (OnFrame) would otherwise
+// never hear of them again: it is told only once per picture.
+func (p *Player) waiting() {
+	if p.opt.OnWaiting == nil || time.Since(p.waitedAt) < time.Second {
+		return
+	}
+	p.mu.Lock()
+	late := p.ready && time.Since(p.waitFrom) > time.Second
+	p.mu.Unlock()
+	if late {
+		p.waitedAt = time.Now()
+		p.opt.OnWaiting()
+	}
+}
+
+// stallWatch counts the packets sent to the decoder since its last
+// picture, for PlayerOptions.StallAfter.
+type stallWatch struct {
+	since   time.Time // when the first of them came
+	packets int
+	last    error // the last error the decoder or the conversion gave
+}
+
+func (s *stallWatch) packet(at time.Time) {
+	if s.packets == 0 {
+		s.since = at
+	}
+	s.packets++
+}
+
+// picture notes a picture out of the decoder: it works.
+func (s *stallWatch) picture() { *s = stallWatch{} }
+
+func (s *stallWatch) stalled(now time.Time, after time.Duration) bool {
+	return s.packets >= stallPackets && now.Sub(s.since) >= after
+}
+
+func (s *stallWatch) err(now time.Time) error {
+	took := now.Sub(s.since).Round(100 * time.Millisecond)
+	if s.last != nil {
+		return fmt.Errorf("%w for %d packets in %v: %v", ErrStalled, s.packets, took, s.last)
+	}
+	return fmt.Errorf("%w for %d packets in %v", ErrStalled, s.packets, took)
 }
 
 // samePicture reports whether a and b show the same picture the same way.

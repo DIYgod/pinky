@@ -296,10 +296,15 @@ func (d *Device) startStream(ctx context.Context) error {
 	}
 	sd := streamDisplay{
 		start: func(ctx context.Context, id int) (*media, error) {
+			start := startMedia
 			if d.startFn != nil {
-				return d.startFn(ctx, d.link(), id)
+				start = d.startFn
 			}
-			return startMedia(ctx, d.link(), id)
+			m, err := start(ctx, d.link(), id)
+			if m != nil {
+				m.setLog(d.log)
+			}
+			return m, err
 		},
 		stop:   stop,
 		gone:   d.linkGone,
