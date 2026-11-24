@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- When the phone's picture in Pinky freezes because the video decoder on the computer stops responding (seen on Windows after tapping an iPhone's recent apps button in the mirror), Pinky now notices within a few seconds and opens the picture again, decoding in software. Thanks @longzhonguo for reporting it.
+
 ## 2026.1124.6 (2026-11-24)
 
 - Connecting or removing Codex in Settings › Agents no longer deletes a comment written right above the next table in Codex's `config.toml`. Thanks @pseudoyu.
