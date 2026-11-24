@@ -89,7 +89,7 @@ func uncaptured(els []screen.Element, img image.Image, lines []ocrLine, w, h int
 
 // uncapturedNow is uncaptured for a read whose picture img may be older
 // than its tree (early): when img shows some elements as blank, it takes
-// a new picture with again and returns what that one does not show. OCR's
+// a new picture with again and returns those that one does not show either. OCR's
 // lines are of img, and so are not used on the new picture. When again
 // gives no picture, it keeps what img found.
 func uncapturedNow(els []screen.Element, img image.Image, lines []ocrLine, w, h int, early bool, again func() image.Image) []int {
@@ -97,10 +97,23 @@ func uncapturedNow(els []screen.Element, img image.Image, lines []ocrLine, w, h 
 	if len(found) == 0 || !early || again == nil {
 		return found
 	}
-	if now := again(); now != nil {
-		return uncaptured(els, now, nil, w, h)
+	now := again()
+	if now == nil {
+		return found
 	}
-	return found
+	// Only elements neither picture shows: the new one has no OCR lines,
+	// so it alone could mark text the first one's OCR read.
+	blank := map[int]bool{}
+	for _, i := range uncaptured(els, now, nil, w, h) {
+		blank[i] = true
+	}
+	var both []int
+	for _, i := range found {
+		if blank[i] {
+			both = append(both, i)
+		}
+	}
+	return both
 }
 
 // pictureNow takes a picture of the screen for the capture marks, as
