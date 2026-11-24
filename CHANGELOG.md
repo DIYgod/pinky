@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- When an iPhone's mirror stops showing new pictures while the phone keeps working, for example after a permission alert, Pinky now notices within a few seconds and restarts the picture by itself, without restarting Pinky. Thanks @longzhonguo for reporting it.
+
 ## 2026.1124.3 (2026-11-24)
 
 - When the live picture of an iPhone stops moving while the phone keeps changing, Pinky now notices and brings the picture back by itself, and notes it in its log for feedback. Thanks @longzhonguo for reporting it.

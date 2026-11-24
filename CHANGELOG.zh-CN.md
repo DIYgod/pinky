@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- iPhone 的镜像画面卡住不动、手机却还在正常运行时（比如弹出权限提示之后），Pinky 现在会在几秒内发现并自动恢复画面，不用再重启 Pinky。感谢 @longzhonguo 反馈。
+
 ## 2026.1124.3 (2026-11-24)
 
 - iPhone 的实时画面卡住不动、手机却还在变化时，Pinky 现在会发现并自动恢复画面，并在日志里记下，方便反馈时排查。感谢 @longzhonguo 反馈。
