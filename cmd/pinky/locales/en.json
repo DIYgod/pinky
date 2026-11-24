@@ -3790,7 +3790,7 @@
   "@connectionAuto": {
     "description": "Settings › Phones, an iPhone's connection choice: the first choice, which goes by the iOS version."
   },
-  "connectionAutoDesc": "On iOS 27 and later, without Pinky on the iPhone. If Pinky on the iPhone is installed, a task moves to it for apps that refuse screen sharing (DBS digibank, China Merchants Bank) and comes back afterwards. Older iPhones use it when they have it.",
+  "connectionAutoDesc": "On iOS 27 and later, without Pinky on the iPhone. If Pinky on the iPhone is installed, a task moves to it for apps that refuse screen sharing (DBS digibank, China Merchants Bank) and for the Camera, and comes back afterwards. Older iPhones use it when they have it.",
   "@connectionAutoDesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what Automatic does."
   },

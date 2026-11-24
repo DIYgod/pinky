@@ -599,7 +599,7 @@
   "connectWhySkill": "接続済みですが、Pinky の使い方ガイドが古いです",
   "connectWorking": "{agent} の設定を変更中",
   "connectionAuto": "自動",
-  "connectionAutoDesc": "iOS 27 以降は iPhone の Pinky 不要。iPhone の Pinky が入っていれば、画面共有を拒むアプリ（DBS digibank、招商銀行）を開くタスクの間だけそれに切り替え、終わったら戻します。それより前の iPhone では、入っていればそれを使います。",
+  "connectionAutoDesc": "iOS 27 以降は iPhone の Pinky 不要。iPhone の Pinky が入っていれば、画面共有を拒むアプリ（DBS digibank、招商銀行）やカメラを開くタスクの間だけそれに切り替え、終わったら戻します。それより前の iPhone では、入っていればそれを使います。",
   "connectionAutoNow": "自動（現在：{way}）",
   "connectionChangeFailed": "{phone} への接続方法を変更できませんでした：{reason}",
   "connectionChoose": "接続方法を選ぶ",
