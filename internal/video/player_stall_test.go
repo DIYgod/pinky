@@ -3,6 +3,7 @@ package video
 import (
 	"context"
 	"errors"
+	"io"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -119,5 +120,69 @@ func TestPlayerOnWaiting(t *testing.T) {
 	}
 	if err := p.Err(); errors.Is(err, ErrStalled) {
 		t.Fatalf("a player nobody took from stalled: %v", err)
+	}
+}
+
+// A player whose work on one packet never ends (a decoder call that hung,
+// here an OnFrame that blocks) ends with ErrStalled after StallAfter, and
+// Close returns without waiting for it (#210).
+func TestPlayerHangs(t *testing.T) {
+	needFFmpeg(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	s, err := StartTestStream(ctx, TestStreamOptions{Width: 320, Height: 640, FPS: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	release := make(chan struct{})
+	var hung atomic.Bool
+	p, err := NewPlayer(s, PlayerOptions{YUV: true, StallAfter: 300 * time.Millisecond, OnFrame: func() {
+		if hung.CompareAndSwap(false, true) {
+			<-release
+		}
+	}})
+	if err != nil {
+		s.Close()
+		t.Fatal(err)
+	}
+	defer close(release)
+	start := time.Now()
+	select {
+	case <-p.Done():
+	case <-ctx.Done():
+		t.Fatalf("the player did not end: %+v", p.Stats())
+	}
+	if err := p.Err(); !errors.Is(err, ErrHung) || !errors.Is(err, ErrStalled) {
+		t.Fatalf("the player ended with %v", err)
+	}
+	closed := make(chan struct{})
+	go func() { p.Close(); close(closed) }()
+	select {
+	case <-closed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Close waited for the hung goroutine")
+	}
+	t.Logf("%v, %v after the first picture", p.Err(), time.Since(start).Round(time.Millisecond))
+}
+
+// A still screen sends nothing: however long the player waits for a
+// packet, it does not count as hung.
+func TestPlayerWaitIsNoHang(t *testing.T) {
+	needFFmpeg(t)
+	s := &gatedStream{codec: driver.H264, w: 320, h: 640, packets: make(chan driver.Packet)}
+	p, err := NewPlayer(s, PlayerOptions{YUV: true, StallAfter: 50 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	select {
+	case <-p.Done():
+		t.Fatalf("a player waiting for packets ended: %v", p.Err())
+	case <-time.After(400 * time.Millisecond):
+	}
+	close(s.packets)
+	<-p.Done()
+	if err := p.Err(); err != io.EOF {
+		t.Fatalf("the player ended with %v, not io.EOF", err)
 	}
 }

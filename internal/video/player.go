@@ -7,6 +7,7 @@ import (
 	"image"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -64,6 +65,14 @@ type PlayerOptions struct {
 	// unless asked, so such a decoder would never recover, and nothing
 	// would say so. A still screen sends no packets and never stalls. Zero
 	// turns the watch off.
+	//
+	// It also ends the player with ErrStalled when the work on one packet
+	// (decoding it, converting its pictures, OnFrame and OnWaiting) takes
+	// this long: a decoder call that never returns (#210, d3d11va on
+	// Windows, presumably) would otherwise leave the mirror frozen for
+	// good, with the stream's packets piling up behind it. The player then
+	// ends without waiting for that call; its goroutine and decoder are let
+	// go of whenever the call returns.
 	StallAfter time.Duration
 	// OnWaiting is called on the player's goroutine, at most once a
 	// second, while new pictures come and none has been taken for over a
@@ -76,6 +85,11 @@ type PlayerOptions struct {
 // ErrStalled is a player's error when its decoder gave no picture for the
 // packets of PlayerOptions.StallAfter.
 var ErrStalled = errors.New("the video decoder gave no picture")
+
+// ErrHung is a player's error when its work on one packet took
+// PlayerOptions.StallAfter: a decoder call, most likely, that did not
+// return. It is an ErrStalled too.
+var ErrHung = fmt.Errorf("%w: it stopped answering", ErrStalled)
 
 // stallPackets is how many packets a stall needs besides its time: a few
 // late packets after a pause are no stall.
@@ -128,9 +142,29 @@ type Player struct {
 	last     *Frame    // the picture handed over last; the player's goroutine's only
 	waitedAt time.Time // when OnWaiting was last called; the player's goroutine's only
 
+	// busy is when the player's goroutine started on its current packet,
+	// in unix nanoseconds; zero while it waits for one. stage says which
+	// part of that work it is in (stageNames). watch reads both.
+	busy  atomic.Int64
+	stage atomic.Int32
+
 	done      chan struct{}
+	endOnce   sync.Once
 	closeOnce sync.Once
 }
+
+// The parts of a packet's work, for the error of a player that hung in one.
+const (
+	stageNone int32 = iota
+	stageFlush
+	stageSend
+	stageReceive
+	stageConvert
+	stageNotify
+)
+
+var stageNames = [...]string{"on a packet", "flushing the decoder", "sending a packet to the decoder",
+	"taking a picture from the decoder", "converting a picture", "telling the UI of a picture"}
 
 // NewPlayer starts decoding stream. The player owns the stream and closes
 // it with Close.
@@ -144,6 +178,9 @@ func NewPlayer(stream driver.Stream, opt PlayerOptions) (*Player, error) {
 	}
 	p := &Player{stream: stream, opt: opt, done: make(chan struct{}), fpsStart: time.Now()}
 	go p.run(dec)
+	if opt.StallAfter > 0 {
+		go p.watch()
+	}
 	return p, nil
 }
 
@@ -201,7 +238,8 @@ func (p *Player) Stats() Stats {
 	return s
 }
 
-// Close stops decoding, closes the stream and waits for the decoder.
+// Close stops decoding, closes the stream and waits for the decoder, unless
+// the player ended as its decoder hung (StallAfter).
 func (p *Player) Close() {
 	p.closeOnce.Do(func() {
 		p.stream.Close()
@@ -209,11 +247,58 @@ func (p *Player) Close() {
 	})
 }
 
+// end records why the player ended and closes Done, the first time it is
+// called: from run once the stream ended, or from watch once run hung.
+func (p *Player) end(err error) {
+	p.endOnce.Do(func() {
+		p.mu.Lock()
+		p.err = err
+		p.mu.Unlock()
+		if p.opt.OnFrame != nil {
+			p.opt.OnFrame()
+		}
+		close(p.done)
+	})
+}
+
+// at notes the part of a packet's work run goes on to.
+func (p *Player) at(stage int32) { p.stage.Store(stage) }
+
+// watch ends the player once run took StallAfter over one packet.
+func (p *Player) watch() {
+	t := time.NewTicker(max(p.opt.StallAfter/4, 10*time.Millisecond))
+	defer t.Stop()
+	for {
+		select {
+		case <-p.done:
+			return
+		case now := <-t.C:
+			b := p.busy.Load()
+			if b == 0 {
+				continue
+			}
+			if took := now.Sub(time.Unix(0, b)); took >= p.opt.StallAfter {
+				p.mu.Lock()
+				hw, decoded := p.stats.Hardware, p.stats.Decoded
+				p.mu.Unlock()
+				switch {
+				case p.opt.Decoder.Software || (hw == "" && decoded > 0):
+					hw = "software"
+				case hw == "":
+					hw = "not known yet" // no picture so far
+				}
+				p.end(fmt.Errorf("%w: stuck %s for %v (decoder: %s)", ErrHung,
+					stageNames[p.stage.Load()], took.Round(100*time.Millisecond), hw))
+				return
+			}
+		}
+	}
+}
+
 func (p *Player) run(dec *Decoder) {
-	defer close(p.done)
-	defer dec.Close()
 	notify := func() {
 		if p.opt.OnFrame != nil {
+			p.at(stageNotify)
 			p.opt.OnFrame()
 		}
 	}
@@ -237,8 +322,22 @@ func (p *Player) run(dec *Decoder) {
 			kr.RequestKeyFrame()
 		}
 	}
-	for pkt := range packets {
+	for {
+		p.busy.Store(0)
+		pkt, ok := <-packets
+		if !ok {
+			break
+		}
+		select {
+		case <-p.done:
+			// watch ended the player while this goroutine hung.
+			dec.Close()
+			return
+		default:
+		}
 		received := time.Now()
+		p.at(stageNone)
+		p.busy.Store(received.UnixNano())
 		turn := pkt.Turn
 		// Behind by more than the backlog: drop everything up to the next
 		// key frame, which the decoder can start from.
@@ -254,16 +353,19 @@ func (p *Player) run(dec *Decoder) {
 			}
 			if pkt.KeyFrame {
 				skipping = false
+				p.at(stageFlush)
 				dec.Flush()
 			}
 		}
 		if !pkt.Config {
 			stall.packet(received)
 		}
+		p.at(stageSend)
 		if err := dec.Send(pkt); err != nil {
 			failed(err)
 		} else {
 			for {
+				p.at(stageReceive)
 				pic, ok, err := dec.Receive()
 				if err != nil {
 					failed(err)
@@ -273,6 +375,7 @@ func (p *Player) run(dec *Decoder) {
 					break
 				}
 				decoded := time.Now()
+				p.at(stageConvert)
 				shown, err := p.convert(dec, pic, turn, received, decoded)
 				if err != nil {
 					stall.last = err // counted by convert
@@ -282,6 +385,7 @@ func (p *Player) run(dec *Decoder) {
 				if shown {
 					notify()
 				}
+				p.at(stageNotify)
 				p.waiting()
 			}
 		}
@@ -290,6 +394,7 @@ func (p *Player) run(dec *Decoder) {
 			break
 		}
 	}
+	p.busy.Store(0)
 	err := stalled
 	if err == nil {
 		err = p.stream.Err()
@@ -297,10 +402,8 @@ func (p *Player) run(dec *Decoder) {
 	if err == nil {
 		err = io.EOF
 	}
-	p.mu.Lock()
-	p.err = err
-	p.mu.Unlock()
-	notify()
+	dec.Close()
+	p.end(err)
 }
 
 // convert writes the picture into the spare buffer and publishes it.

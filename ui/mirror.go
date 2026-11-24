@@ -55,8 +55,9 @@ type mirror struct {
 	holdDue  bool      // a build is asked for once the picture may be held (stillFor)
 	asleep   atomic.Bool
 	// stalls counts the times the mirror's decoder gave no picture for
-	// what came (video.ErrStalled); from the second on it decodes in
-	// software. lateAt is when a late picture was last logged.
+	// what came (video.ErrStalled); from the second on, or after one that
+	// hung (video.ErrHung), it decodes in software. lateAt is when a late
+	// picture was last logged.
 	stalls int
 	lateAt time.Time
 
@@ -304,10 +305,15 @@ const mirrorLate = 2 * time.Second
 // it to the log: the mirror tries again in two seconds. A decoder that
 // stalled is no failure of the stream: the mirror opens it again at once,
 // with a new decoder, and shows its picture meanwhile; from the second
-// stall on, the decoder works in software.
+// stall on, the decoder works in software, and so it does at once after a
+// decoder that hung (video.ErrHung): a hardware decoder stuck in the GPU's
+// driver may well take the next one down with it.
 func (m *mirror) ended(err error) {
 	if errors.Is(err, video.ErrStalled) {
 		m.stalls++
+		if errors.Is(err, video.ErrHung) {
+			m.stalls = max(m.stalls, 2)
+		}
 		m.a.logInfo(fmt.Sprintf("pinky: mirror %s: the picture stalled; opening the stream again", m.id),
 			"err", err, "stalls", m.stalls, "software", m.stalls > 1)
 		m.open()
