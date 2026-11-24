@@ -17773,6 +17773,26 @@ func (msgs Messages) LostConfirmMessage(phone string) string {
 	return Catalog.Format(msgs.locale, "lostConfirmMessage", map[string]any{"phone": phone})
 }
 
+// LostConfirmMessageQuiet says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language the app shows.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service, once the person allowed restarts without a password
+// (settingsPhonesQuietRestart). phone is the lost iPhone's name.
+func LostConfirmMessageQuiet(phone string) string {
+	return In(i18n.Locale()).LostConfirmMessageQuiet(phone)
+}
+
+// LostConfirmMessageQuiet says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language of msgs.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service, once the person allowed restarts without a password
+// (settingsPhonesQuietRestart). phone is the lost iPhone's name.
+func (msgs Messages) LostConfirmMessageQuiet(phone string) string {
+	return Catalog.Format(msgs.locale, "lostConfirmMessageQuiet", map[string]any{"phone": phone})
+}
+
 // LostConfirmTitle says "Restart the device service?"
 // in the language the app shows.
 //
@@ -17877,6 +17897,22 @@ func LostRestartNote() string { return In(i18n.Locale()).LostRestartNote() }
 // Under the Restart device service button.
 func (msgs Messages) LostRestartNote() string {
 	return Catalog.Format(msgs.locale, "lostRestartNote", nil)
+}
+
+// LostRestartNoteQuiet says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. No password needed: yo…"
+// in the language the app shows.
+//
+// Under the Restart device service button, once the person allowed restarts
+// without a password (settingsPhonesQuietRestart).
+func LostRestartNoteQuiet() string { return In(i18n.Locale()).LostRestartNoteQuiet() }
+
+// LostRestartNoteQuiet says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. No password needed: yo…"
+// in the language of msgs.
+//
+// Under the Restart device service button, once the person allowed restarts
+// without a password (settingsPhonesQuietRestart).
+func (msgs Messages) LostRestartNoteQuiet() string {
+	return Catalog.Format(msgs.locale, "lostRestartNoteQuiet", nil)
 }
 
 // LostRestarted says "Restarted the device service. {phone} shows up again in a few seconds."
@@ -26603,6 +26639,96 @@ func SettingsPhonesWiFiDesc() string { return In(i18n.Locale()).SettingsPhonesWi
 // Settings › Phones: under settingsPhonesWiFi.
 func (msgs Messages) SettingsPhonesWiFiDesc() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesWiFiDesc", nil)
+}
+
+// SettingsPhonesQuietRestart says "Restart device service without a password"
+// in the language the app shows.
+//
+// Settings › Phones, on a Mac: the switch that lets Pinky restart macOS's
+// device service (usbmuxd) by itself, without the administrator password,
+// when it lost an iPhone on Wi-Fi that a task uses. Agents are told this
+// name, in English.
+func SettingsPhonesQuietRestart() string { return In(i18n.Locale()).SettingsPhonesQuietRestart() }
+
+// SettingsPhonesQuietRestart says "Restart device service without a password"
+// in the language of msgs.
+//
+// Settings › Phones, on a Mac: the switch that lets Pinky restart macOS's
+// device service (usbmuxd) by itself, without the administrator password,
+// when it lost an iPhone on Wi-Fi that a task uses. Agents are told this
+// name, in English.
+func (msgs Messages) SettingsPhonesQuietRestart() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestart", nil)
+}
+
+// SettingsPhonesQuietRestartDesc says "macOS's device service (usbmuxd) sometimes loses an iPhone or iPad on Wi-Fi for up to an hour. With this on, Pinky re…"
+// in the language the app shows.
+//
+// Settings › Phones: under settingsPhonesQuietRestart.
+func SettingsPhonesQuietRestartDesc() string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartDesc()
+}
+
+// SettingsPhonesQuietRestartDesc says "macOS's device service (usbmuxd) sometimes loses an iPhone or iPad on Wi-Fi for up to an hour. With this on, Pinky re…"
+// in the language of msgs.
+//
+// Settings › Phones: under settingsPhonesQuietRestart.
+func (msgs Messages) SettingsPhonesQuietRestartDesc() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartDesc", nil)
+}
+
+// SettingsPhonesQuietRestartOnReason says "Pinky wants to let your account restart the device service (usbmuxd) without a password, so that it can bring back an…"
+// in the language the app shows.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart on.
+func SettingsPhonesQuietRestartOnReason() string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartOnReason()
+}
+
+// SettingsPhonesQuietRestartOnReason says "Pinky wants to let your account restart the device service (usbmuxd) without a password, so that it can bring back an…"
+// in the language of msgs.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart on.
+func (msgs Messages) SettingsPhonesQuietRestartOnReason() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartOnReason", nil)
+}
+
+// SettingsPhonesQuietRestartOffReason says "Pinky wants to remove the rule that lets your account restart the device service (usbmuxd) without a password."
+// in the language the app shows.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart off.
+func SettingsPhonesQuietRestartOffReason() string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartOffReason()
+}
+
+// SettingsPhonesQuietRestartOffReason says "Pinky wants to remove the rule that lets your account restart the device service (usbmuxd) without a password."
+// in the language of msgs.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart off.
+func (msgs Messages) SettingsPhonesQuietRestartOffReason() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartOffReason", nil)
+}
+
+// SettingsPhonesQuietRestartFailed says "Couldn't change how the device service restarts: {error}"
+// in the language the app shows.
+//
+// A notice when turning settingsPhonesQuietRestart on or off failed. error
+// is what went wrong.
+func SettingsPhonesQuietRestartFailed(error string) string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartFailed(error)
+}
+
+// SettingsPhonesQuietRestartFailed says "Couldn't change how the device service restarts: {error}"
+// in the language of msgs.
+//
+// A notice when turning settingsPhonesQuietRestart on or off failed. error
+// is what went wrong.
+func (msgs Messages) SettingsPhonesQuietRestartFailed(error string) string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartFailed", map[string]any{"error": error})
 }
 
 // SettingsPrivacyCannotDelete says "This gateway cannot delete its history"

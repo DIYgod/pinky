@@ -1439,13 +1439,36 @@ type PhoneTruster interface {
 // DeviceServiceRestarter is a Provider whose phones go through a service of
 // the computer that it can restart when that service lost a phone
 // (SetupDeviceService): usbmuxd on a Mac. The system asks an administrator
-// to allow it, and every phone of the platform, also on a cable,
-// disconnects for a moment.
+// to allow it, unless the person allowed restarts without a password
+// (QuietDeviceServiceRestarter), and every phone of the platform, also on
+// a cable, disconnects for a moment.
 type DeviceServiceRestarter interface {
 	// RestartDeviceService restarts the service. reason is shown in the
 	// system's request for an administrator's password. It returns
 	// ErrCanceled when the person declines.
 	RestartDeviceService(ctx context.Context, reason string) error
+}
+
+// QuietDeviceServiceRestarter is a DeviceServiceRestarter that the person
+// can allow, once, to restart the service without asking for an
+// administrator's password each time: on a Mac, a sudoers rule that lets
+// the person's account run exactly `/usr/bin/killall usbmuxd`. Allowing it
+// and taking it back each ask an administrator once. While it is allowed,
+// RestartDeviceService asks nobody, and the gateway may restart the
+// service by itself when it lost a phone an agent uses.
+type QuietDeviceServiceRestarter interface {
+	// QuietRestart reports whether the provider can restart the service
+	// without a password at all (supported: on a Mac), and whether the
+	// person allowed it (allowed). Allowed is false until they do.
+	QuietRestart() (supported, allowed bool)
+	// AllowQuietRestart allows (on) or stops allowing restarts without a
+	// password. The system asks an administrator, showing reason. It
+	// returns ErrCanceled when the person declines.
+	AllowQuietRestart(ctx context.Context, on bool, reason string) error
+	// RestartDeviceServiceQuietly restarts the service without asking
+	// anyone, and fails when that is not allowed. Every phone of the
+	// platform, also on a cable, disconnects for a moment.
+	RestartDeviceServiceQuietly(ctx context.Context) error
 }
 
 // ErrCanceled is a request the person declined, such as the system's

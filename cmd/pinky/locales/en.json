@@ -6756,6 +6756,16 @@
       }
     }
   },
+  "lostConfirmMessageQuiet": "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two, and tasks on them wait. You allowed this without a password in Settings › Phones.",
+  "@lostConfirmMessageQuiet": {
+    "description": "The message of the dialog that asks before Pinky restarts macOS's device service, once the person allowed restarts without a password (settingsPhonesQuietRestart). phone is the lost iPhone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
   "lostConfirmTitle": "Restart the device service?",
   "@lostConfirmTitle": {
     "description": "The dialog that asks before Pinky restarts macOS's device service."
@@ -6795,6 +6805,10 @@
   "lostRestartNote": "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an administrator's password.",
   "@lostRestartNote": {
     "description": "Under the Restart device service button."
+  },
+  "lostRestartNoteQuiet": "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. No password needed: you allowed it in Settings › Phones.",
+  "@lostRestartNoteQuiet": {
+    "description": "Under the Restart device service button, once the person allowed restarts without a password (settingsPhonesQuietRestart)."
   },
   "lostRestarted": "Restarted the device service. {phone} shows up again in a few seconds.",
   "@lostRestarted": {
@@ -9861,6 +9875,32 @@
   "settingsPhonesWiFiDesc": "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer: once one trusts this computer on a cable, Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does. Pinky asks before it uses one it finds there. Over Wi-Fi the live picture is less smooth and each step is slower.",
   "@settingsPhonesWiFiDesc": {
     "description": "Settings › Phones: under settingsPhonesWiFi."
+  },
+  "settingsPhonesQuietRestart": "Restart device service without a password",
+  "@settingsPhonesQuietRestart": {
+    "description": "Settings › Phones, on a Mac: the switch that lets Pinky restart macOS's device service (usbmuxd) by itself, without the administrator password, when it lost an iPhone on Wi-Fi that a task uses. Agents are told this name, in English."
+  },
+  "settingsPhonesQuietRestartDesc": "macOS's device service (usbmuxd) sometimes loses an iPhone or iPad on Wi-Fi for up to an hour. With this on, Pinky restarts it by itself when that happens to a phone a task uses, without asking for the administrator password: at most once every 5 minutes, and not while a phone is in the middle of an action. Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two each time. Turning this on or off asks for the password once.",
+  "@settingsPhonesQuietRestartDesc": {
+    "description": "Settings › Phones: under settingsPhonesQuietRestart."
+  },
+  "settingsPhonesQuietRestartOnReason": "Pinky wants to let your account restart the device service (usbmuxd) without a password, so that it can bring back an iPhone this Mac loses on Wi-Fi.",
+  "@settingsPhonesQuietRestartOnReason": {
+    "description": "Shown in macOS's own request for an administrator's password when the person turns settingsPhonesQuietRestart on."
+  },
+  "settingsPhonesQuietRestartOffReason": "Pinky wants to remove the rule that lets your account restart the device service (usbmuxd) without a password.",
+  "@settingsPhonesQuietRestartOffReason": {
+    "description": "Shown in macOS's own request for an administrator's password when the person turns settingsPhonesQuietRestart off."
+  },
+  "settingsPhonesQuietRestartFailed": "Couldn't change how the device service restarts: {error}",
+  "@settingsPhonesQuietRestartFailed": {
+    "description": "A notice when turning settingsPhonesQuietRestart on or off failed. error is what went wrong.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "visudo: syntax error"
+      }
+    }
   },
   "settingsPrivacyCannotDelete": "This gateway cannot delete its history",
   "@settingsPrivacyCannotDelete": {

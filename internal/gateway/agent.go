@@ -772,7 +772,7 @@ func setupResultLocked(d *device, first string) *Result {
 	case driver.SetupMediaInUse:
 		msg += " The person may be on a call: ask them with phone_handoff to end it or close that app when they can, saying why; the handoff ends by itself once the phone is ready."
 	case driver.SetupDeviceService:
-		msg += " " + deviceServiceHelp
+		msg += " " + deviceServiceHelpLocked(d)
 	default:
 		msg += " Ask the person to do it with phone_handoff, saying what to do; the handoff ends by itself once the phone is ready."
 	}
@@ -792,7 +792,8 @@ const deviceServiceHelp = "Only a person at this computer can fix it: they click
 	"and enter the computer's administrator password, which Pinky cannot do for them (Pinky shows them a card in Needs you and a notification). " +
 	"If nobody is at the computer, as in a scheduled or unattended run, do not wait for it: release it with phone_release and use another phone, " +
 	"or end the task saying the phone needs the device service restarted. " +
-	"Otherwise ask them with phone_handoff; it ends by itself once the phone is back."
+	"Otherwise ask them with phone_handoff; it ends by itself once the phone is back. " +
+	"To have Pinky restart it by itself next time, without the password, they can turn on Restart device service without a password in Settings › Phones."
 
 // connectStep is the history step of phone_connect. own says the task
 // left the background display the person chose for the phone's own
@@ -1021,6 +1022,7 @@ func withUnknownApps(res *Result, unknown []unknownApp) *Result {
 // firstScreen reads the whole screen for a new lease, or says which step
 // the phone waits for.
 func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
+	g.recoverLost(ctx, l)
 	g.mu.Lock()
 	if waitingLocked(l.dev) {
 		res := setupResultLocked(l.dev, fmt.Sprintf("Connected to %s for “%s”. The phone is connected but waits for a step before Pinky can use it.",

@@ -324,6 +324,7 @@ func (g *Gateway) gateOnce(l *lease, approvalID string, action, fresh bool) *Res
 	// (switchWait).
 	wctx, cancel := context.WithTimeout(l.ctx, max(g.opt.CallBudget-switchReserve, g.opt.CallBudget/2))
 	defer cancel()
+	g.recoverLost(wctx, l) // the device service lost it (servicerestart.go)
 	g.mu.Lock()
 	d := l.dev
 	for !l.ended && g.waitMovingLocked(wctx, d) {
@@ -1634,8 +1635,14 @@ func (g *Gateway) pendingResult(l *lease, info approval.Info) *Result {
 		what, info.Title, info.ID, approval.Human(left))
 	g.mu.Lock()
 	lost := info.Kind == approval.KindHandoff && waitingLocked(l.dev) && l.dev.info.Setup == driver.SetupDeviceService
+	quiet := l.dev.quietRestart
 	g.mu.Unlock()
-	if lost {
+	switch {
+	case lost && quiet:
+		// Pinky restarts the service by itself (servicerestart.go).
+		msg += " The phone still waits for the computer's device service, which Pinky restarts by itself without a password, as the person allowed: " +
+			"the handoff ends once the phone is back. If it stays lost for minutes, release the phone with phone_release and use another one, or end the task."
+	case lost:
 		// Only a person at the computer can bring the phone back; an agent
 		// nobody watches would wait out the whole handoff.
 		msg += " The phone still waits for the computer's device service to be restarted, which needs a person at the computer and its administrator password. " +
