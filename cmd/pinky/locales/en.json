@@ -8976,6 +8976,10 @@
   "@ruleActionCommits": {
     "description": "What the Commits rule covers, inside \"Always allow commits in Dinely\"."
   },
+  "ruleActionCredentials": "typing passwords and codes",
+  "@ruleActionCredentials": {
+    "description": "What the Passwords and codes rule covers, inside \"Always allow typing passwords and codes in Dinely\" on a phone where the person allows passwords (Settings › Safety)."
+  },
   "ruleActionEveryAction": "every action",
   "@ruleActionEveryAction": {
     "description": "What the Every action rule covers, inside \"Always allow every action in Dinely\"."
@@ -9052,9 +9056,9 @@
   "@ruleCommits": {
     "description": "The name of the policy rule that asks before deletions, posts and other commits."
   },
-  "ruleCredentials": "credentials",
+  "ruleCredentials": "Passwords and codes",
   "@ruleCredentials": {
-    "description": "The name of the built-in rule that denies typing into password and one-time-code fields."
+    "description": "The name of the built-in rule about typing into password and one-time-code fields, as approvals and steps name it: it refuses, or asks on a phone where the person allows passwords (Settings › Safety)."
   },
   "ruleEveryAction": "Every action",
   "@ruleEveryAction": {
@@ -10484,9 +10488,17 @@
   "@settingsSafetyVirtualCredentials": {
     "description": "Settings › Safety: the switch that lets agents type passwords and one-time codes on virtual phones (emulators and Simulators on this computer). Off by default."
   },
-  "settingsSafetyVirtualCredentialsDesc": "Agents may type passwords and one-time codes on emulators and Simulators on this computer, to test sign-ins with test accounts. On phones they never can.",
+  "settingsSafetyVirtualCredentialsDesc": "Agents may type passwords and one-time codes on emulators and Simulators on this computer, to test sign-ins with test accounts.",
   "@settingsSafetyVirtualCredentialsDesc": {
-    "description": "Settings › Safety: the line under Allow passwords on virtual phones. Phones means real phones, as opposed to virtual ones."
+    "description": "Settings › Safety: the line under Allow passwords on virtual phones."
+  },
+  "settingsSafetyPhoneCredentials": "Allow passwords on phones",
+  "@settingsSafetyPhoneCredentials": {
+    "description": "Settings › Safety: the switch that lets agents type passwords and one-time codes on real phones, asking the person in each app. Off by default."
+  },
+  "settingsSafetyPhoneCredentialsDesc": "Agents may type passwords and one-time codes their task gives them on your phones, to sign in with test accounts. Pinky asks you each time, unless you always allow it in that app. Never the phone's own passcode.",
+  "@settingsSafetyPhoneCredentialsDesc": {
+    "description": "Settings › Safety: the line under Allow passwords on phones. Phones means real phones, as opposed to emulators and Simulators. Always allow is the approval card's choice; the phone's own passcode is the one that unlocks it."
   },
   "settingsSafetyIntro": "Pinky checks every action before it reaches the phone. Agents can't change these settings.",
   "@settingsSafetyIntro": {

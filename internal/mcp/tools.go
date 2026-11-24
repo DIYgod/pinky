@@ -469,8 +469,9 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_type", Title: "Type text",
 		Description: "Type text into a field (ref) or the focused field, replacing its text unless append is set; submit presses Enter. " +
-			"Pinky never types into password or one-time-code fields (blocked_by_policy, rule credentials): call phone_handoff so the person fills them. " +
-			"On a virtual phone the person may allow it in Settings › Safety; then type only what the task gives you.",
+			"Password and one-time-code fields are refused (blocked_by_policy, rule credentials) unless the person allows them in Settings › Safety: " +
+			"on a virtual phone they then go through, on a phone each one asks the person (approval_pending) unless they always allow it in that app. " +
+			"Type only what the task gives you, pass ref, and never the phone's own passcode; otherwise call phone_handoff so the person fills them.",
 		InputSchema: schema[typeIn](func(p map[string]*jsonschema.Schema) { max := 16384; p["text"].MaxLength = &max; patchSettle(p) }),
 		Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in typeIn) (*sdk.CallToolResult, any, error) {

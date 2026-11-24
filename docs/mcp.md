@@ -267,7 +267,7 @@ When another app is in front than on the screen the agent last received, and not
 
 The policy checks every element under the finger, not only the smallest: tapping a price label inside a Pay button counts as tapping Pay.
 
-A passcode keypad that the app draws where screenshots do not reach (iOS marks its keys `not_in_screenshot`; nine or more of them carry a digit) takes no taps, by `ref` or by `x`,`y`, in `phone_batch` too: every key of it, Face ID and delete included, may enter or spend a passcode attempt while the person sees blank space. Such taps are refused like typing a password (`blocked_by_policy`, rule `credentials`), and on a virtual phone go through under the same switch ([below](#phone_type)); call `phone_handoff`.
+A passcode keypad that the app draws where screenshots do not reach (iOS marks its keys `not_in_screenshot`; nine or more of them carry a digit) takes no taps, by `ref` or by `x`,`y`, in `phone_batch` too: every key of it, Face ID and delete included, may enter or spend a passcode attempt while the person sees blank space. Such taps are refused like typing a password (`blocked_by_policy`, rule `credentials`), and on a virtual phone go through under the same switch ([below](#phone_type)); on a phone they stay refused whatever the switches say. Call `phone_handoff`.
 
 ### phone_type
 
@@ -278,7 +278,11 @@ A passcode keypad that the app draws where screenshots do not reach (iOS marks i
 | `append` | boolean | Keep the field's text |
 | `submit` | boolean | Press Enter afterwards |
 
-Typing into password and one-time-code fields is refused (`blocked_by_policy`, rule `credentials`). So is typing without `ref` when no field reports focus and the screen has such a field. The one exception is a virtual phone, an emulator or a Simulator on this computer, while the person has turned on Settings › Safety › **Allow passwords on virtual phones** (`virtual_credentials` in rules.yaml, off by default), for testing sign-ins with test accounts: there these go through, and agents should type only what their task gives them. Phones are refused either way.
+Typing into password and one-time-code fields is refused (`blocked_by_policy`, rule `credentials`). So is typing without `ref` when no field reports focus and the screen has such a field. The person may allow it for signing in with test accounts, and agents should then type only what their task gives them:
+
+- On a virtual phone, an emulator or a Simulator on this computer, with Settings › Safety › **Allow passwords on virtual phones** on (`virtual_credentials` in rules.yaml, off by default), these go through.
+- On a phone, with Settings › Safety › **Allow passwords on phones** on (`phone_credentials` in rules.yaml, off by default), typing by `ref` into such a field asks the person (`approval_pending`, rule `credentials`; the card says "Type into “Password”?", without the text). **Allow for this task** covers the rest of the task in that app, and **Always allow** keeps it for that app until the person takes it back in Settings › Safety. Typing without `ref` beside such a field stays refused there.
+- Never the phone's own passcode: on a phone Pinky refuses, whatever the switch, a field on a locked phone, in the lock screen or another system app, in Settings, in the system's passcode prompt over an app (iOS's Face ID fallback), in an app it cannot name, or on a screen that names the phone's passcode ("Enter iPhone Passcode", "Confirm your PIN"). The person unlocks the phone.
 
 Pinky reads the field back after typing. Text that reads otherwise, or that went nowhere (no field has focus, or the field reads as before or empty), returns `uncertain` with the reason, and Return is not pressed for `submit`. When the field cannot be read back (an app that draws its own field), Pinky compares what the app shows before and after: the text showing up counts as typed, and an app that shows exactly what it did before returns `uncertain` without pressing Return. On an iPhone that usually means iOS asked the person to Allow Paste, a prompt Pinky cannot see, because the app reads pasted text itself; the message says to call `phone_handoff` so the person can answer Don't Allow and set Settings › the app › Paste from Other Apps to Allow, then to type again. Otherwise, and for a field that hides its text, the result is `settled` with a note saying so.
 

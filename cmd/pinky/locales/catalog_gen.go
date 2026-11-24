@@ -23671,6 +23671,24 @@ func (msgs Messages) RuleActionCommits() string {
 	return Catalog.Format(msgs.locale, "ruleActionCommits", nil)
 }
 
+// RuleActionCredentials says "typing passwords and codes"
+// in the language the app shows.
+//
+// What the Passwords and codes rule covers, inside "Always allow typing
+// passwords and codes in Dinely" on a phone where the person allows
+// passwords (Settings › Safety).
+func RuleActionCredentials() string { return In(i18n.Locale()).RuleActionCredentials() }
+
+// RuleActionCredentials says "typing passwords and codes"
+// in the language of msgs.
+//
+// What the Passwords and codes rule covers, inside "Always allow typing
+// passwords and codes in Dinely" on a phone where the person allows
+// passwords (Settings › Safety).
+func (msgs Messages) RuleActionCredentials() string {
+	return Catalog.Format(msgs.locale, "ruleActionCredentials", nil)
+}
+
 // RuleActionEveryAction says "every action"
 // in the language the app shows.
 //
@@ -23915,18 +23933,20 @@ func (msgs Messages) RuleCommits() string {
 	return Catalog.Format(msgs.locale, "ruleCommits", nil)
 }
 
-// RuleCredentials says "credentials"
+// RuleCredentials says "Passwords and codes"
 // in the language the app shows.
 //
-// The name of the built-in rule that denies typing into password and
-// one-time-code fields.
+// The name of the built-in rule about typing into password and
+// one-time-code fields, as approvals and steps name it: it refuses, or asks
+// on a phone where the person allows passwords (Settings › Safety).
 func RuleCredentials() string { return In(i18n.Locale()).RuleCredentials() }
 
-// RuleCredentials says "credentials"
+// RuleCredentials says "Passwords and codes"
 // in the language of msgs.
 //
-// The name of the built-in rule that denies typing into password and
-// one-time-code fields.
+// The name of the built-in rule about typing into password and
+// one-time-code fields, as approvals and steps name it: it refuses, or asks
+// on a phone where the person allows passwords (Settings › Safety).
 func (msgs Messages) RuleCredentials() string {
 	return Catalog.Format(msgs.locale, "ruleCredentials", nil)
 }
@@ -28507,7 +28527,6 @@ func (msgs Messages) SettingsSafetyVirtualCredentials() string {
 // in the language the app shows.
 //
 // Settings › Safety: the line under Allow passwords on virtual phones.
-// Phones means real phones, as opposed to virtual ones.
 func SettingsSafetyVirtualCredentialsDesc() string {
 	return In(i18n.Locale()).SettingsSafetyVirtualCredentialsDesc()
 }
@@ -28516,9 +28535,50 @@ func SettingsSafetyVirtualCredentialsDesc() string {
 // in the language of msgs.
 //
 // Settings › Safety: the line under Allow passwords on virtual phones.
-// Phones means real phones, as opposed to virtual ones.
 func (msgs Messages) SettingsSafetyVirtualCredentialsDesc() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyVirtualCredentialsDesc", nil)
+}
+
+// SettingsSafetyPhoneCredentials says "Allow passwords on phones"
+// in the language the app shows.
+//
+// Settings › Safety: the switch that lets agents type passwords and
+// one-time codes on real phones, asking the person in each app. Off by
+// default.
+func SettingsSafetyPhoneCredentials() string {
+	return In(i18n.Locale()).SettingsSafetyPhoneCredentials()
+}
+
+// SettingsSafetyPhoneCredentials says "Allow passwords on phones"
+// in the language of msgs.
+//
+// Settings › Safety: the switch that lets agents type passwords and
+// one-time codes on real phones, asking the person in each app. Off by
+// default.
+func (msgs Messages) SettingsSafetyPhoneCredentials() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPhoneCredentials", nil)
+}
+
+// SettingsSafetyPhoneCredentialsDesc says "Agents may type passwords and one-time codes their task gives them on your phones, to sign in with test accounts. Pin…"
+// in the language the app shows.
+//
+// Settings › Safety: the line under Allow passwords on phones. Phones
+// means real phones, as opposed to emulators and Simulators. Always allow
+// is the approval card's choice; the phone's own passcode is the one that
+// unlocks it.
+func SettingsSafetyPhoneCredentialsDesc() string {
+	return In(i18n.Locale()).SettingsSafetyPhoneCredentialsDesc()
+}
+
+// SettingsSafetyPhoneCredentialsDesc says "Agents may type passwords and one-time codes their task gives them on your phones, to sign in with test accounts. Pin…"
+// in the language of msgs.
+//
+// Settings › Safety: the line under Allow passwords on phones. Phones
+// means real phones, as opposed to emulators and Simulators. Always allow
+// is the approval card's choice; the phone's own passcode is the one that
+// unlocks it.
+func (msgs Messages) SettingsSafetyPhoneCredentialsDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPhoneCredentialsDesc", nil)
 }
 
 // SettingsSafetyIntro says "Pinky checks every action before it reaches the phone. Agents can't change these settings."
