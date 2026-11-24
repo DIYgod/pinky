@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Connecting or removing Codex in Settings › Agents no longer deletes a comment written right above the next table in Codex's `config.toml`. Thanks @pseudoyu.
+
 ## 2026.1124.5 (2026-11-24)
 
 - Connecting or removing Codex in Settings › Agents now works when Codex's `config.toml` has prompts with triple quotes or table names with `#` or brackets. Thanks @yuearc.
