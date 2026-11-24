@@ -38,6 +38,14 @@ func TestSetTOMLServer(t *testing.T) {
 		name: "single-line strings with triple quotes and escaped multi-line quotes",
 		in:   "prompt = \"avoid ''' and \\\"\\\"\\\" fences\"\ndoc = \"\"\"\nexample: \\\"\\\"\\\"\n[mcp_servers.pinky]\n\"\"\"\n\n[mcp_servers.pinky]\ncommand = \"old\"\n\n[profiles.\"c#dev[0]\"]\nmodel = \"z\"\n",
 		want: "prompt = \"avoid ''' and \\\"\\\"\\\" fences\"\ndoc = \"\"\"\nexample: \\\"\\\"\\\"\n[mcp_servers.pinky]\n\"\"\"\n\n" + testTable + "\n[profiles.\"c#dev[0]\"]\nmodel = \"z\"\n",
+	}, {
+		name: "the comment over the next table stays with it",
+		in:   "[mcp_servers.pinky]\ncommand = \"old\"\n\n# GitHub, for work\n[mcp_servers.github]\ncommand = \"gh\"\n",
+		want: testTable + "\n# GitHub, for work\n[mcp_servers.github]\ncommand = \"gh\"\n",
+	}, {
+		name: "the comment over its own sub-table goes with it",
+		in:   "[mcp_servers.pinky]\ncommand = \"old\"\n# its environment\n[mcp_servers.pinky.env]\nA = \"1\"\n\n[other]\na = 1\n",
+		want: testTable + "\n[other]\na = 1\n",
 	}}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -83,6 +91,10 @@ func TestDeleteTOMLServer(t *testing.T) {
 		name: "Windows line ends", changed: true,
 		in:   "a = 1\r\n\r\n[mcp_servers.pinky]\r\ncommand = \"p\"\r\n",
 		want: "a = 1\r\n",
+	}, {
+		name: "the comment over the next table stays", changed: true,
+		in:   "a = 1\n\n" + testTable + "\n# GitHub, for work\n[mcp_servers.github]\ncommand = \"gh\"\n",
+		want: "a = 1\n\n# GitHub, for work\n[mcp_servers.github]\ncommand = \"gh\"\n",
 	}, {
 		name: "not there",
 		in:   "a = 1\n",

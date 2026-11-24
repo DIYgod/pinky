@@ -250,11 +250,17 @@ func tomlTable(lines []string, inString []bool, key []string) [][2]int {
 		if !header {
 			continue
 		}
+		ours := k != nil && hasPrefix(k, key)
 		if open >= 0 {
-			spans = append(spans, [2]int{open, i})
+			// Comments right over another table's header are about that table.
+			end := i
+			for !ours && end-1 > open && !inString[end-1] && strings.HasPrefix(strings.TrimSpace(lines[end-1]), "#") {
+				end--
+			}
+			spans = append(spans, [2]int{open, end})
 			open = -1
 		}
-		if k != nil && hasPrefix(k, key) {
+		if ours {
 			open = i
 		}
 	}
