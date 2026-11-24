@@ -37,11 +37,12 @@ type Device struct {
 	// noVideo says why the phone's video encoder failed, if it did; the
 	// main session then runs without video (input, typing and the
 	// clipboard still work) and Stream fails until videoRetry has passed.
-	noVideo   string
-	noVideoAt time.Time
-	videoSeen bool // a session on this device delivered a frame
-	hevcSeen  bool // an H.265 session delivered a frame
-	noHEVC    bool // the phone has no working H.265 encoder: use H.264
+	noVideo     string
+	noVideoAt   time.Time
+	videoSeen   bool // a session on this device delivered a frame
+	hevcSeen    bool // an H.265 session delivered a frame
+	noHEVC      bool // the phone has no working hardware H.265 encoder: use H.264
+	hevcChecked bool // dumpsys media.player was checked for a hardware H.265 encoder
 
 	dumpMu   sync.Mutex // uiautomator allows one dump at a time
 	dumpFile bool       // this phone cannot dump to /dev/tty
@@ -186,6 +187,12 @@ func (d *Device) undark() bool {
 
 // baseOptions are the session options when no stream asked for others.
 func (d *Device) baseOptions() scrcpy.Options {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.baseOptionsLocked()
+}
+
+func (d *Device) baseOptionsLocked() scrcpy.Options {
 	o := scrcpy.Options{
 		MaxSize:      d.cfg.MaxSize,
 		MaxFPS:       float64(d.cfg.MaxFPS),
@@ -198,9 +205,10 @@ func (d *Device) baseOptions() scrcpy.Options {
 		// the Mi 10 Pro (1200 Mbit/s link), less while it dozes. scrcpy's
 		// 8 Mbit/s at 60 frames a second queued up for seconds there, so
 		// the mirror lagged behind the phone. Ask for 2.5 Mbit/s at 30
-		// frames a second, in H.265, which keeps more picture in it. The
-		// resolution stays: the mirror and the agent's coordinates are in
-		// the phone's pixels. Measurements: docs/notes/integration.md.
+		// frames a second, in H.265 when a hardware encoder is present,
+		// which keeps more picture in it. The resolution stays: the mirror
+		// and the agent's coordinates are in the phone's pixels.
+		// Measurements: docs/notes/integration.md.
 		if o.VideoBitRate == 0 {
 			o.VideoBitRate = wifiBitRate
 		}
@@ -230,6 +238,42 @@ func (d *Device) baseOptions() scrcpy.Options {
 	return o
 }
 
+// checkHEVCEncoder disables automatic H.265 when the device's encoder table
+// lists no hardware-accelerated video/hevc encoder. Android 10+ includes the
+// software encoder c2.android.hevc.encoder: scrcpy starts it without an
+// EncoderError, scales the stream down to at most 512x512, and on Android 13
+// emulators leaks native heap in media.swcodec until the guest hits OOM.
+func (d *Device) checkHEVCEncoder(ctx context.Context) {
+	if d.info.Connection != "wifi" || d.cfg.VideoCodec != "" || d.client == nil {
+		return
+	}
+	d.mu.Lock()
+	skip := d.closed || d.hevcChecked || d.noHEVC || d.hevcSeen || d.noVideo != ""
+	d.mu.Unlock()
+	if skip {
+		return
+	}
+	cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	out, err := d.client.Shell(cctx, d.info.ID, "dumpsys media.player")
+	cancel()
+	if err != nil {
+		return
+	}
+	hw, ok := hasHardwareHEVCEncoder(string(out))
+	if !ok {
+		return
+	}
+	d.mu.Lock()
+	if !d.hevcChecked {
+		d.hevcChecked = true
+		if !hw && !d.noHEVC {
+			d.noHEVC = true
+			d.cfg.logf("android: %s: no hardware H.265 encoder; using H.264", d.info.ID)
+		}
+	}
+	d.mu.Unlock()
+}
+
 // The stream over wireless debugging, and through Tailscale (see
 // baseOptions).
 const (
@@ -257,6 +301,9 @@ const videoRetry = time.Minute
 // does, and so does its own screenrecord), the device falls back to a
 // session without video, so input still works, and logs why once.
 func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, error) {
+	if want == nil || want.VideoCodec == "h265" {
+		d.checkHEVCEncoder(ctx)
+	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.closed {
@@ -273,6 +320,11 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 		}
 		noVideo = false // try again
 	}
+	if want != nil && want.VideoCodec == "h265" && d.noHEVC {
+		cp := *want
+		cp.VideoCodec = ""
+		want = &cp
+	}
 	if l := d.main; l != nil && !l.ended() {
 		if want == nil || l.video && sameVideo(l.opt, *want) {
 			return l, nil
@@ -281,7 +333,7 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 		// After the gesture in progress, so that no tap is cut off.
 		l.replace(errors.New("android: session restarted with new options"))
 	}
-	opt := d.baseOptions()
+	opt := d.baseOptionsLocked()
 	if want != nil {
 		opt = *want
 	}
