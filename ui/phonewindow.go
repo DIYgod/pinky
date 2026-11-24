@@ -278,6 +278,7 @@ func (a *app) windowLive(d gateway.DeviceView) bool {
 // keys under it.
 func (a *app) phoneWindowView(c *mg.Context, id string) {
 	p := applyTheme(c)
+	a.unseen = c.WindowHidden()
 	pw := a.phoneWins[id]
 	if pw == nil {
 		return

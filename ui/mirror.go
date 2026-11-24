@@ -82,6 +82,12 @@ type mirror struct {
 	wheelTick bool         // wheel's finger is gliding, a tick to come
 	pinch     *mirrorPinch // two fingers are down (mirrorpinch.go)
 	compose   string       // an input method's composition
+
+	// pointerOn and lookedAt track recent pointer/input activity on the
+	// phone's page so a locked iPhone stays live while in use (pageStill).
+	pointerOn bool
+	lookedAt  time.Time
+	lookDue   bool // timer pending to recheck pageStill after pageLookFor
 }
 
 // surface is where a mirror shows. One mirror, and its one stream, may show
@@ -96,15 +102,23 @@ const (
 )
 
 // mirrorFor returns the phone's mirror, opening its stream if needed: a
-// still opens it again, showing its picture until the stream's first.
+// still opens it again, showing its picture until the stream's first. A
+// build of a window that shows nothing (unseen) opens none.
 func (a *app) mirrorFor(id string) *mirror {
 	m := a.mirrors[id]
 	if m == nil {
 		m = &mirror{a: a, id: id}
 		a.mirrors[id] = m
-		m.open()
+		if a.unseen {
+			m.state = "still"
+		} else {
+			m.open()
+		}
 	}
 	m.used = a.buildSeq
+	if a.unseen {
+		return m
+	}
 	if m.state == "still" {
 		m.open()
 	}
@@ -161,13 +175,14 @@ func (a *app) stillFor(id string) *mirror {
 	return m
 }
 
-// sweepMirrors lets go of the mirrors this build did not show. A phone's
+// sweepMirrors lets go of the mirrors this build did not show, and of
+// all of them while nothing of the main window shows on screen (unseen). A phone's
 // own mirror that has a picture holds it, so that All phones shows it
 // again without opening the stream for it; agents' displays, and phones
 // gone or offline, close.
 func (a *app) sweepMirrors() {
 	for id, m := range a.mirrors {
-		if m.used == a.buildSeq || a.inWindow(m) {
+		if (m.used == a.buildSeq && !a.unseen) || a.inWindow(m) {
 			continue
 		}
 		if d := a.device(m.id); !m.agent && m.bitmap != nil && d != nil && d.Info.State == driver.StateOnline && d.Status != gateway.DeviceOffline {
@@ -179,6 +194,19 @@ func (a *app) sweepMirrors() {
 		m.close()
 		delete(a.mirrors, id)
 	}
+}
+
+// hideSettle is how long the main window stays marked unseen after hiding
+// or minimizing: macOS updates WindowHidden ~0.3 s later, so without this
+// window an intervening build would reopen the streams.
+const hideSettle = time.Second
+
+// mainHid closes mirrors when the main window hides or minimizes, and
+// keeps builds from reopening them for hideSettle while WindowHidden catches up.
+func (a *app) mainHid() {
+	a.hidAt = time.Now()
+	a.closeMirrors()
+	time.AfterFunc(hideSettle, func() { a.post(func() {}) })
 }
 
 // closeMirrors closes the mirrors as the main window hides or minimizes,
@@ -543,12 +571,25 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 		way = a.waitingWay(t, step)
 	}
 	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
+	if where == onPage && !m.agent {
+		// Keep a locked iPhone live while hovered and briefly after (pageStill).
+		// pageStill ran earlier in this build, so rebuild when hover changes.
+		on := scr.Hovered()
+		if on || m.pointerOn {
+			m.lookedAt = time.Now()
+		}
+		if on != m.pointerOn {
+			a.post(func() {})
+		}
+		m.pointerOn = on
+	}
 	switch {
 	case m.agent:
 		scr.Label(locales.MirrorAgentScreenLabel(agentOrTheAgent(t), d.Info.Name))
 	case !tile:
 		scr.Focusable().FocusRing(false).Cursor(mg.CursorPointer).Label(locales.MirrorScreenLabel(d.Info.Name)).
 			HandleInput(func(ev mg.InputEvent) bool {
+				m.lookedAt = time.Now()
 				// The event's position is on this surface, at its size.
 				m.boxW, m.boxH = m.boxes[where][0], m.boxes[where][1]
 				m.inputOn = where
