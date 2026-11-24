@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1124.11 (2026-11-24)
 
 - Opening an app on an iPhone no longer fails when the connection to the phone drops for a moment, for example right after another tool installed an app: Pinky tries again by itself.
 - On an iPhone, opening an app while a notification banner comes in no longer marks all of the app's buttons and text as missing from the screenshot.
