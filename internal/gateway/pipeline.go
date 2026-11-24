@@ -1391,6 +1391,11 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	case p.hasPt:
 		point = p.point
 	}
+	if p.secret && a.Tool == "tap" {
+		// A key of the app's hidden passcode keypad: the card shows neither
+		// which nor where, as its step does not (secret.go).
+		target, point = screen.Rect{}, screen.Point{}
+	}
 	// What the card and history show: the text typed into a password
 	// field hidden (secret.go). The binding keeps the action itself.
 	sa, sc := shown(a, c, p)
@@ -1466,6 +1471,9 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 		label = p.decider.Label
 	case p.target != nil:
 		label = p.target.Label
+	}
+	if p.secret && a.Tool == "tap" && label != "" {
+		label = secretKey // a key of the passcode keypad
 	}
 	switch {
 	case v.Has(policy.Payment) && label != "":
