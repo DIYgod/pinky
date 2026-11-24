@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在 Mac 上，打开「设置 › 手机 › 免密码重启设备服务」后，任务正在使用的 iPhone 在 Wi-Fi 上被 macOS 丢失时，Pinky 会自己把它找回来，不再每次要你输入管理员密码。这个开关默认关闭，打开或关闭时需要输入一次密码。
+
 ## 2026.1125.1 (2026-11-25)
 
 - iPhone 的连接方式是「自动」并装了 iPhone 上的 Pinky 时，任务打开相机会临时改用 iPhone 上的 Pinky，相机不再黑屏。在别的 App 里扫码（比如微信）仍要 Agent 自己要求改用这种连接。
