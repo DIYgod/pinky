@@ -403,6 +403,13 @@ type app struct {
 	sel       string // the selected phone, or allPhones
 	selShown  string // the selection the sidebar last scrolled into view
 
+	// unseen is true while the window being built isn't visible
+	// (hidden, minimized, or covered). Builds skip opening streams then,
+	// and the main window's sweep lets go of its mirrors so an unwatched
+	// iPhone can stop its stream and sleep.
+	unseen bool
+	hidAt  time.Time // when the main window last hid or minimized (mainHid)
+
 	mirrors map[string]*mirror
 	shots   map[string]*mg.Bitmap // approval screenshots by need ID
 	// An approval's screenshot shown larger: in viewer, a window beside
@@ -632,8 +639,8 @@ func (a *app) ready() {
 	})
 	// Hidden or minimized, the mirrors stop streaming; shown again, the
 	// view builds anew and opens them.
-	a.main.OnHide(a.closeMirrors)
-	a.main.OnMinimize(a.closeMirrors)
+	a.main.OnHide(a.mainHid)
+	a.main.OnMinimize(a.mainHid)
 	a.main.OnShow(a.main.Invalidate)
 	a.main.OnRestore(a.main.Invalidate)
 	a.main.OnFocus(func() { a.focused = true; a.regularApp(); a.syncPanel() })
