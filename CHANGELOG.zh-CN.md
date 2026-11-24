@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- iPhone 的连接方式是「自动」并装了 iPhone 上的 Pinky 时，任务打开相机会临时改用 iPhone 上的 Pinky，相机不再黑屏。在别的 App 里扫码（比如微信）仍要 Agent 自己要求改用这种连接。
+
 ## 2026.1124.11 (2026-11-24)
 
 - iPhone 与电脑的连接短暂中断时（比如刚用别的工具装完 App），打开 App 不会再失败，Pinky 会自动再试一次。
