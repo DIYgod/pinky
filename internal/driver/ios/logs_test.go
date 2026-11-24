@@ -36,6 +36,11 @@ func TestLookupResult(t *testing.T) {
 	if b, _ := lookupResult(m, "dev.pinky.example"); b.Dev {
 		t.Error("a build without get-task-allow is a development build")
 	}
+	// App Store, TestFlight and ad hoc builds say false.
+	m["LookupResult"].(map[string]any)["dev.pinky.example"].(map[string]any)["Entitlements"] = map[string]any{"get-task-allow": false}
+	if b, _ := lookupResult(m, "dev.pinky.example"); b.Dev {
+		t.Error("a build with get-task-allow false is a development build")
+	}
 	if _, ok := lookupResult(m, "com.someone.else"); ok {
 		t.Error("found an app that is not there")
 	}

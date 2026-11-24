@@ -644,7 +644,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		Description: "Install, update, uninstall or stop (force-quit) an app, to try a build you made. install takes files in the phone's folder on the computer that phone_files names " +
 			"(from another computer, phone_files upload them first): an .apk or the split APKs of one app for Android; an .ipa or .app folder, development-signed for this iPhone, for an iPhone. " +
 			"Installing over an installed app updates it and keeps its data. install and uninstall always ask the person (up to 45 s, then approval_pending with an approval_id to repeat the call with); stop does not. " +
-			"Pinky's own apps, system apps, finance apps, password managers and blocked apps return blocked_by_policy.",
+			"Pinky's own apps, system apps, finance apps, password managers and blocked apps return blocked_by_policy. " +
+			"Read-only refuses install and uninstall, and stop of anything but a development build (debuggable on Android, signed with get-task-allow on an iPhone).",
 		InputSchema: schema[appIn](func(p map[string]*jsonschema.Schema) { enum(p["action"], "install", "uninstall", "stop") }),
 		Annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(true), OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in appIn) (*sdk.CallToolResult, any, error) {
