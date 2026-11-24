@@ -846,6 +846,12 @@ type LogResult struct {
 	// From is when the lines start: the time asked for, or later when the
 	// phone has nothing older (an iPhone listens from the first call).
 	From time.Time
+	// Hidden counts lines that passed the query but were left out, apart
+	// from Max, as noise Pinky's own screen reads make in the app's log (an
+	// iPhone's accessibility string-table lookups). They all carry the tag
+	// HiddenTag, and a Filter that names it keeps them.
+	Hidden    int
+	HiddenTag string
 }
 
 // CrashReport is one crash of an app.
