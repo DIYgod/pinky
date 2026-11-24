@@ -2078,6 +2078,7 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 	ctx, cancel := g.callCtx(ctx, l)
 	defer cancel()
 	out := &Result{Status: StatusSettled}
+	secrets := batchSecrets(g, l, req.Steps)
 	// The longest step so far: the next step starts only while the call's
 	// budget has room for one like it (budget.go).
 	var longest time.Duration
@@ -2091,6 +2092,7 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 		if a.Intent != "" {
 			c.Intent = a.Intent
 		}
+		c.Intent = scrubSecrets(c.Intent, secrets)
 		start := time.Now()
 		r := g.finish(l, g.act(ctx, l, c, a))
 		longest = max(longest, time.Since(start))
