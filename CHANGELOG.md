@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- You can now let agents type passwords and one-time codes that their task gives them on your phones, for signing in with test accounts: turn on Settings › Safety › Allow passwords on phones. Pinky asks you each time, unless you always allow it in that app, and never types a phone's own passcode.
+- Passwords and codes typed into sign-in fields now show as •••••• in Activity, approvals, history and exports, on virtual phones too, and Pinky masks the ones that earlier versions kept.
+
 ## 2026.1125.2 (2026-11-25)
 
 - On a Mac, Settings › Phones › Restart device service without a password lets Pinky bring back an iPhone that macOS loses on Wi-Fi by itself while a task uses it, instead of asking for your administrator password each time. It is off by default; turning it on or off asks for the password once.
