@@ -34,11 +34,48 @@ func readTOML(src []byte) (map[string]any, error) {
 // bareKey is a key that needs no quotes.
 var bareKey = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// tomlHeader matches a table's header line, [a.b], with its key.
-var tomlHeader = regexp.MustCompile(`^\s*\[\s*([^\[\]]+?)\s*\]\s*(#.*)?$`)
-
 // tomlArrayHeader matches the header of an array of tables, [[a.b]].
 var tomlArrayHeader = regexp.MustCompile(`^\s*\[\[`)
+
+// parseHeaderKey reads a standard table header [a.b."c#d"] (# comment),
+// keeping quoted '#', '[' and ']' inside keys intact.
+func parseHeaderKey(line string) ([]string, bool) {
+	s := strings.TrimSpace(strings.TrimRight(line, "\r\n"))
+	if !strings.HasPrefix(s, "[") || strings.HasPrefix(s, "[[") {
+		return nil, false
+	}
+	inQuote := byte(0)
+	closeIdx := -1
+	for i := 1; i < len(s); i++ {
+		c := s[i]
+		if inQuote != 0 {
+			if inQuote == '"' && c == '\\' {
+				i++
+				continue
+			}
+			if c == inQuote {
+				inQuote = 0
+			}
+			continue
+		}
+		if c == '"' || c == '\'' {
+			inQuote = c
+			continue
+		}
+		if c == ']' {
+			closeIdx = i
+			break
+		}
+	}
+	if closeIdx < 0 {
+		return nil, false
+	}
+	tail := strings.TrimSpace(s[closeIdx+1:])
+	if tail != "" && !strings.HasPrefix(tail, "#") {
+		return nil, false
+	}
+	return splitKey(s[1:closeIdx])
+}
 
 // splitKey reads a dotted key, a.b."c d", into its parts.
 func splitKey(s string) ([]string, bool) {
@@ -106,7 +143,7 @@ func hasPrefix(key, prefix []string) bool {
 // tomlLines splits src into lines that keep their line ends, and marks the
 // ones inside a multi-line string, which are never headers.
 func tomlLines(src []byte) (lines []string, inString []bool) {
-	quote := ""
+	quote := "" // `"""` or `'''` when a multi-line string spans across lines
 	for len(src) > 0 {
 		i := bytes.IndexByte(src, '\n')
 		var line string
@@ -117,31 +154,78 @@ func tomlLines(src []byte) (lines []string, inString []bool) {
 		}
 		lines = append(lines, line)
 		inString = append(inString, quote != "")
-		// Follow the multi-line strings: """ … """ and ''' … '''.
-		for rest := line; ; {
-			if quote == "" {
-				a, b := strings.Index(rest, `"""`), strings.Index(rest, `'''`)
-				if c := strings.IndexByte(rest, '#'); c >= 0 && (a < 0 || c < a) && (b < 0 || c < b) {
-					break // a comment
+		// Scan strings and comments left-to-right so single-line strings holding
+		// ''' / """ / # or escaped quotes inside """...""" never confuse state.
+		for j := 0; j < len(line); {
+			if quote == `"""` {
+				if line[j] == '\\' {
+					j += 2
+					continue
 				}
-				switch {
-				case a >= 0 && (b < 0 || a < b):
-					quote, rest = `"""`, rest[a+3:]
-				case b >= 0:
-					quote, rest = `'''`, rest[b+3:]
-				default:
-					rest = ""
+				if strings.HasPrefix(line[j:], `"""`) {
+					// Up to two extra quotes may precede the closing """ (e.g. """a"""").
+					run := 3
+					for j+run < len(line) && line[j+run] == '"' && run < 5 {
+						run++
+					}
+					quote = ""
+					j += run
+					continue
 				}
-			} else {
-				end := strings.Index(rest, quote)
-				if end < 0 {
-					break
-				}
-				quote, rest = "", rest[end+3:]
+				j++
+				continue
 			}
-			if rest == "" {
-				break
+			if quote == `'''` {
+				if strings.HasPrefix(line[j:], `'''`) {
+					run := 3
+					for j+run < len(line) && line[j+run] == '\'' && run < 5 {
+						run++
+					}
+					quote = ""
+					j += run
+					continue
+				}
+				j++
+				continue
 			}
+			c := line[j]
+			if c == '#' {
+				break // comment to end of line
+			}
+			if strings.HasPrefix(line[j:], `"""`) {
+				quote = `"""`
+				j += 3
+				continue
+			}
+			if strings.HasPrefix(line[j:], `'''`) {
+				quote = `'''`
+				j += 3
+				continue
+			}
+			if c == '"' {
+				j++
+				for j < len(line) && line[j] != '"' && line[j] != '\n' {
+					if line[j] == '\\' {
+						j++
+					}
+					j++
+				}
+				if j < len(line) && line[j] == '"' {
+					j++
+				}
+				continue
+			}
+			if c == '\'' {
+				j++
+				for j < len(line) && line[j] != '\'' && line[j] != '\n' {
+					j++
+				}
+				if j < len(line) && line[j] == '\'' {
+					j++
+				}
+				continue
+			}
+			j++
 		}
 	}
 	return lines, inString
@@ -158,8 +242,8 @@ func tomlTable(lines []string, inString []bool, key []string) [][2]int {
 		}
 		header := tomlArrayHeader.MatchString(line)
 		var k []string
-		if m := tomlHeader.FindStringSubmatch(strings.TrimRight(line, "\r\n")); m != nil && !header {
-			if parts, ok := splitKey(m[1]); ok {
+		if !header {
+			if parts, ok := parseHeaderKey(line); ok {
 				k, header = parts, true
 			}
 		}
