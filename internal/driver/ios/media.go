@@ -109,7 +109,28 @@ type media struct {
 	wire    wireStats // what came over the wire, for telling why no picture came
 	lastFIR time.Time // the last keyframe request
 
+	// For probes (media_probe.go). lastFrame is when the last frame came,
+	// atFrame what had come by then; srSent is the packet count of the
+	// phone's last sender report and srCount the reports (both under mu).
+	lastFrame atomic.Int64 // unix nanos
+	atFrame   frameCounts
+	srSent    uint32
+	srCount   int
+	lastPT    atomic.Uint32 // payload type of the last RTP packet
+	lastSSRC  atomic.Uint32 // its SSRC
+	probe     probe         // owned by feedback
+	input     atomic.Pointer[atomic.Int64]
+	probeHold atomic.Int64 // unix nanos before which no probe fails the stream
+	dark      atomic.Pointer[func() bool]
+
 	display int // the display id the stream was asked for
+}
+
+// frameCounts are what had come when the last frame came out.
+type frameCounts struct {
+	packets int    // RTP packets
+	units   int    // access units
+	srSent  uint32 // packets the phone's last sender report counted
 }
 
 type frameMark struct {
@@ -247,7 +268,9 @@ func (m *media) close() {
 		return
 	}
 	close(m.done)
-	m.udp.Close()
+	if m.udp != nil { // tests make streams without one
+		m.udp.Close()
+	}
 	m.mu.Lock()
 	for s := range m.subs {
 		if !s.closed {
@@ -261,6 +284,10 @@ func (m *media) close() {
 
 // stop ends the stream on the device and closes everything.
 func (m *media) stop(ctx context.Context) error {
+	if m.svc == nil { // a test's stream
+		m.close()
+		return nil
+	}
 	err := stopMediaStreams(ctx, m.svc)
 	if err != nil {
 		// The start connection is gone; try a fresh one so the device does
@@ -323,6 +350,10 @@ func (m *media) onRTCP(b []byte) {
 			m.rxMu.Unlock()
 			m.srNTP = ntpTime(sec, frac)
 			m.srTS = binary.BigEndian.Uint32(b[16:20])
+			m.mu.Lock()
+			m.srSent = binary.BigEndian.Uint32(b[20:24]) // the sender's packet count
+			m.srCount++
+			m.mu.Unlock()
 		}
 		b = b[l:]
 	}
@@ -338,6 +369,8 @@ func ntpTime(sec, frac uint32) time.Time {
 func (m *media) onRTP(p rtpPacket, size int) {
 	now := time.Now()
 	m.lastRTP.Store(now.UnixNano())
+	m.lastPT.Store(uint32(p.PT))
+	m.lastSSRC.Store(p.SSRC)
 	m.mu.Lock()
 	m.stats.Packets++
 	m.stats.Bytes += int64(size)
@@ -519,7 +552,10 @@ func (m *media) finishAU() {
 		m.stats.SRDelay = time.Since(sent)
 		m.stats.SRDelaySet = true
 	}
-	m.frameLog = append(m.frameLog, frameMark{at: time.Now(), size: len(data), key: key})
+	now := time.Now()
+	m.lastFrame.Store(now.UnixNano())
+	m.atFrame = frameCounts{packets: m.stats.Packets, units: m.wire.Units, srSent: m.srSent}
+	m.frameLog = append(m.frameLog, frameMark{at: now, size: len(data), key: key})
 	if len(m.frameLog) > 600 {
 		m.frameLog = append(m.frameLog[:0], m.frameLog[len(m.frameLog)-300:]...)
 	}
@@ -661,7 +697,7 @@ func (m *media) sendReceipt(ts uint32) {
 // feedback sends receiver reports every second (the device sets an RTCP
 // timeout, 10 s on iOS 27, and stops the stream without them), repeats
 // keyframe requests while someone waits for one, and fails the stream when
-// that wait stalls (keyWaitLimit).
+// that wait stalls (keyWaitLimit) or a probe finds it broken (probeTick).
 func (m *media) feedback() {
 	t := time.NewTicker(200 * time.Millisecond)
 	defer t.Stop()
@@ -699,9 +735,15 @@ func (m *media) feedback() {
 			lastRR = time.Now()
 			m.udp.WriteTo(m.receiverReport(), m.dst)
 		}
+		// A stream that gives no frame even when asked broke without a
+		// sign (media_probe.go).
+		if err := m.probeTick(time.Now()); err != nil {
+			m.fail(err)
+			return
+		}
 		if waiting {
 			m.mu.Lock()
-			due := time.Since(m.lastFIR) >= 600*time.Millisecond
+			due := time.Since(m.lastFIR) >= keyRepeat
 			m.mu.Unlock()
 			if due {
 				m.requestKeyFrame()
