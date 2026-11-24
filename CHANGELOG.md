@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1125.1 (2026-11-25)
 
 - On an iPhone left on Automatic with Pinky on the iPhone installed, a task that opens the Camera now moves to Pinky on the iPhone, so the camera no longer shows black. A scan inside another app, such as WeChat, still needs the agent to ask for that connection.
 
