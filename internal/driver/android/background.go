@@ -166,7 +166,8 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 		b.w, b.h = natW, natH
 	}
 	// The main display's stream settings: over Wi-Fi, a lower bit rate and
-	// H.265 (see baseOptions).
+	// H.265 when a hardware encoder is available (see baseOptions).
+	d.checkHEVCEncoder(ctx)
 	base := d.baseOptions()
 	if opt.MaxFPS == 0 {
 		opt.MaxFPS = int(base.MaxFPS)
