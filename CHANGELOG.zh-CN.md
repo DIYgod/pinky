@@ -2,6 +2,12 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- iPhone 与电脑的连接短暂中断时（比如刚用别的工具装完 App），打开 App 不会再失败，Pinky 会自动再试一次。
+- 在 iPhone 上打开 App 时恰好弹出通知横幅，App 里的按钮和文字不会再全部被误标为截图里看不到。
+- 只读模式下，智能体现在也能停止开发版 App（Android 上的调试版、iPhone 上开发签名的版本），方便重启正在测试的 App；安装和卸载仍会被拒绝。
+
 ## 2026.1124.10 (2026-11-24)
 
 - 读取 iPhone 上 App 的日志时，不会再被 Pinky 读屏引起的系统日志刷满，App 自己的日志又能看到了；结果里会写明略去了多少行。
