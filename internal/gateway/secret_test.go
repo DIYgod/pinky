@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/demo"
+	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -283,4 +284,115 @@ func typed(hd *hookDev, text string) bool {
 		}
 	}
 	return false
+}
+
+// TestTypedCodeFieldIsNamedMasked types a code on a virtual phone, then
+// taps the field, which now names the code in its label ("Verification
+// code, 804217", as iOS reads it), once without asking and once with every
+// action asking: the steps, the card and history name the field with the
+// mask, not the code.
+func TestTypedCodeFieldIsNamedMasked(t *testing.T) {
+	ctx := context.Background()
+	g, hd := newHookGateway(t, func(o *Options) {
+		o.Policy = loadPolicy(t, t.TempDir())
+		o.DataDir = t.TempDir()
+	})
+	hd.setObserve(func(sc *screen.Screen) {
+		if sc.App.ID != demo.Dinely {
+			return
+		}
+		code := screen.Element{Role: screen.RoleInput, Label: "Verification code", Source: screen.SourceTree,
+			Bounds: screen.Rect{X: 100, Y: 1150, W: 800, H: 120}}
+		if typed(hd, leakCode) {
+			code.Label, code.Content = "Verification code, "+leakCode, leakCode
+		}
+		sc.Elements = append(sc.Elements, code)
+	})
+	pol := g.Policy()
+	if err := pol.SetHideCodes(false); err != nil {
+		t.Fatal(err)
+	}
+	if err := pol.SetVirtualCredentials(true); err != nil {
+		t.Fatal(err)
+	}
+	hd.SetVirtual(true)
+	for deadline := time.Now().Add(3 * time.Second); !g.Devices()[0].Info.Virtual; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the phone did not become virtual")
+		}
+	}
+	s, _ := connect(t, g, "Sign in to the test account")
+	if res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}); res.IsError() {
+		t.Fatalf("launch: %+v", res)
+	}
+	obs := s.Observe(ctx, ObserveRequest{})
+	if res := s.Act(ctx, Call{}, Action{Tool: "type", Ref: ref(t, obs, "Verification code"), Text: leakCode}); res.IsError() || res.Status == StatusBlocked {
+		t.Fatalf("code: %+v", res)
+	}
+	field := "Verification code, " + secretMask
+	obs = s.Observe(ctx, ObserveRequest{})
+	// The agent quotes the field as it read it; its own result keeps it so.
+	quoted := Call{Intent: "Tap Verification code, " + leakCode}
+	res := s.Act(ctx, quoted, Action{Tool: "tap", Ref: ref(t, obs, "Verification code, "+leakCode)})
+	if res.IsError() {
+		t.Fatalf("tap: %+v", res)
+	}
+	if !strings.Contains(res.Screen.Render(), leakCode) {
+		t.Errorf("the agent's result lost the field's text:\n%s", res.Screen.Render())
+	}
+	// With every action asking, the card names the field too.
+	if err := pol.SetPreset(policy.PresetEvery); err != nil {
+		t.Fatal(err)
+	}
+	var card atomic.Value
+	answer(t, g, AllowOnce, func(n NeedView) { card.Store(n) })
+	obs = s.Observe(ctx, ObserveRequest{})
+	if res := s.Act(ctx, quoted, Action{Tool: "tap", Ref: ref(t, obs, "Verification code, "+leakCode)}); res.IsError() || res.Status == StatusBlocked {
+		t.Fatalf("asked tap: %+v", res)
+	}
+	if n, _ := card.Load().(NeedView); n.Title != "Tap “"+field+"”?" || strings.Contains(n.Detail, leakCode) || !strings.Contains(n.Detail, "Tap Verification code, "+secretMask) {
+		t.Errorf("the card: %q · %q", n.Title, n.Detail)
+	}
+
+	var taps int
+	for _, st := range taskSteps(g, s) {
+		if strings.Contains(st.Text+st.Args, leakCode) {
+			t.Errorf("live step %s: %q", st.Tool, st.Text)
+		}
+		if st.Tool == "phone_tap" && strings.Contains(st.Text, "Tapped “"+field+"”") {
+			taps++
+		}
+	}
+	if taps != 2 {
+		t.Errorf("%d taps name the field with the mask:\n%+v", taps, taskSteps(g, s))
+	}
+	s.Release(ctx, ReleaseRequest{})
+	g.Flush()
+	tasks, err := g.History(ctx, HistoryQuery{})
+	if err != nil || len(tasks) == 0 {
+		t.Fatalf("history: %v %v", tasks, err)
+	}
+	for _, task := range tasks {
+		stored, err := g.store.Steps(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range stored {
+			if strings.Contains(strings.Join([]string{st.Text, st.Args, st.Intent, st.ScreenText}, "\n"), leakCode) {
+				t.Errorf("history step %s: %q", st.Tool, st.Text)
+			}
+		}
+		aps, err := g.store.Approvals(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(aps) != 1 {
+			t.Errorf("approvals %+v", aps)
+		}
+		for _, a := range aps {
+			if strings.Contains(a.Title+a.Note, leakCode) || !strings.Contains(a.Title, field) {
+				t.Errorf("history approval: %q", a.Title)
+			}
+		}
+	}
 }

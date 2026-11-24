@@ -1463,9 +1463,9 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 	label := ""
 	switch {
 	case p.decider != nil:
-		label = p.decider.Label
+		label = shownLabel(p.decider)
 	case p.target != nil:
-		label = p.target.Label
+		label = shownLabel(p.target)
 	}
 	switch {
 	case v.Has(policy.Payment) && label != "":
@@ -2945,7 +2945,7 @@ func question(a Action, p *prep) string { return sayAction(a, p, true) }
 func sayAction(a Action, p *prep, ask bool) string {
 	label := ""
 	if p != nil && p.target != nil && p.target.Label != "" {
-		label = "“" + clip(p.target.Label, 60) + "”"
+		label = "“" + clip(shownLabel(p.target), 60) + "”"
 	}
 	if p != nil && p.secret {
 		a = hideSecret(a)
