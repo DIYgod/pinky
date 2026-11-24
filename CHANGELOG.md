@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1124.8 (2026-11-24)
 
 - An Android phone connected over Wi-Fi that has only a software H.265 encoder now sends its picture in H.264. Before, its picture came out small and blurry, and an Android 13 emulator could run out of memory. Thanks @YuHoYe.
 
