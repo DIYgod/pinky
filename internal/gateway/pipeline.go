@@ -2223,6 +2223,10 @@ func (g *Gateway) actionError(l *lease, err error) *Result {
 	case errors.Is(err, driver.ErrOffline):
 		g.setOffline(l.dev, "")
 		return statusResult(StatusUncertain, "The phone dropped during the action, which may or may not have happened. Observe when it is back before anything else; do not repeat it blindly.")
+	case errors.Is(err, driver.ErrConnDropped):
+		// The driver sends only requests that are safe to repeat again
+		// (opening an app), and it already did once.
+		return statusResult(StatusUncertain, "The phone did not answer (%v). This action is safe to repeat: look at the screen, and if it did not happen, simply try again.", err)
 	case errors.Is(err, context.DeadlineExceeded):
 		return statusResult(StatusUncertain, "The phone did not answer in time (%v), so the action may or may not have happened. Observe before anything else; do not repeat it blindly.", err)
 	}

@@ -1536,6 +1536,12 @@ var (
 	// driver returns it from Observe and the actions until the agent stops
 	// working (WorkWatcher).
 	ErrStoppedOnPhone = errors.New("the person stopped this task on the phone")
+	// ErrConnDropped: the connection to the phone closed before the phone
+	// answered a request that is safe to send again (opening an app), and
+	// it did so again when the driver sent the request once more on a new
+	// connection. Whether the phone did it is not known, but the caller
+	// may simply try again.
+	ErrConnDropped = errors.New("the connection to the phone dropped before it answered")
 )
 
 // BusyError is ErrBusy with who holds the phone: By "phone" for Pinky on
