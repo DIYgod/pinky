@@ -688,6 +688,22 @@ func (l *live) position(ctx context.Context, p screen.Point) (scrcpy.Position, e
 	return scrcpy.Position{X: int32(x), Y: int32(y), Width: uint16(vw), Height: uint16(vh)}, nil
 }
 
+// picturePosition maps a point in the video's own pixels, where the
+// mirror's touches are (driver.Toucher), to the frame the server expects:
+// unscaled, since the server maps the frame onto the display itself. On a
+// phone whose video is smaller than its screen (an encoder that takes only
+// a smaller size, a display that renders below what wm size reports), the
+// screen mapping of position would shrink the point a second time.
+func (l *live) picturePosition(ctx context.Context, p screen.Point) (scrcpy.Position, error) {
+	vw, vh, err := l.videoSize(ctx)
+	if err != nil {
+		return scrcpy.Position{}, err
+	}
+	x := min(max(p.X, 0), vw-1)
+	y := min(max(p.Y, 0), vh-1)
+	return scrcpy.Position{X: int32(x), Y: int32(y), Width: uint16(vw), Height: uint16(vh)}, nil
+}
+
 // send writes a control message, mapping failures to driver errors.
 func (l *live) send(msg []byte) error {
 	if err := l.s.Send(msg); err != nil {
