@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1124.2 (2026-11-24)
 
 - An iPhone's tile in All phones now says **Not live** when it shows the phone's last picture instead of its live screen, so it no longer looks like the mirror froze. Open the phone's page to watch it live.
 
