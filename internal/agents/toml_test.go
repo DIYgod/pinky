@@ -1,6 +1,9 @@
 package agents
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 var testServer = Server{Command: `C:\Users\Jane "J" Doe\AppData\Local\Programs\Pinky\Pinky.exe`, Args: []string{"mcp"}}
 
@@ -46,6 +49,34 @@ func TestSetTOMLServer(t *testing.T) {
 		name: "the comment over its own sub-table goes with it",
 		in:   "[mcp_servers.pinky]\ncommand = \"old\"\n# its environment\n[mcp_servers.pinky.env]\nA = \"1\"\n\n[other]\na = 1\n",
 		want: testTable + "\n[other]\na = 1\n",
+	}, {
+		name: "a comment a blank line over the next table stays",
+		in:   "[mcp_servers.pinky]\ncommand = \"old\"\n\n# Profiles\n\n[profiles.fast]\nmodel = \"o3\"\n",
+		want: testTable + "\n# Profiles\n\n[profiles.fast]\nmodel = \"o3\"\n",
+	}, {
+		name: "a table commented out after it stays",
+		in:   "[mcp_servers.pinky]\ncommand = \"old\"\n\n# [mcp_servers.github]\n# command = \"gh\"\n",
+		want: testTable + "\n# [mcp_servers.github]\n# command = \"gh\"\n",
+	}, {
+		name: "a table commented out between it and the next table stays",
+		in:   "[mcp_servers.pinky]\ncommand = \"old\"\n\n# Turned off:\n# [mcp_servers.github]\n# command = \"gh\"\n\n[profiles.fast]\nmodel = \"o3\"\n",
+		want: testTable + "\n# Turned off:\n# [mcp_servers.github]\n# command = \"gh\"\n\n[profiles.fast]\nmodel = \"o3\"\n",
+	}, {
+		name: "a comment right under its last line goes with it",
+		in:   "[mcp_servers.pinky]\ncommand = \"old\"\n# timeout = 60\n\n# Profiles\n\n[profiles.fast]\nmodel = \"o3\"\n",
+		want: testTable + "\n# Profiles\n\n[profiles.fast]\nmodel = \"o3\"\n",
+	}, {
+		name: "a table of only comments goes with them",
+		in:   "[mcp_servers.pinky]\n# command = \"old\"\n\n[other]\na = 1\n",
+		want: testTable + "\n[other]\na = 1\n",
+	}, {
+		name: "a # line in a multi-line string is not a comment",
+		in:   "[mcp_servers.pinky]\ncommand = \"old\"\nnote = \"\"\"\nsee\n# not a comment\"\"\"\n# Profiles\n[profiles.fast]\nmodel = \"o3\"\n",
+		want: testTable + "\n# Profiles\n[profiles.fast]\nmodel = \"o3\"\n",
+	}, {
+		name: "comments after it stay with Windows line ends",
+		in:   "[mcp_servers.pinky]\r\ncommand = \"old\"\r\n\r\n# Profiles\r\n\r\n[profiles.fast]\r\nmodel = \"o3\"\r\n",
+		want: strings.ReplaceAll(testTable, "\n", "\r\n") + "\r\n# Profiles\r\n\r\n[profiles.fast]\r\nmodel = \"o3\"\r\n",
 	}}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -95,6 +126,14 @@ func TestDeleteTOMLServer(t *testing.T) {
 		name: "the comment over the next table stays", changed: true,
 		in:   "a = 1\n\n" + testTable + "\n# GitHub, for work\n[mcp_servers.github]\ncommand = \"gh\"\n",
 		want: "a = 1\n\n# GitHub, for work\n[mcp_servers.github]\ncommand = \"gh\"\n",
+	}, {
+		name: "a comment a blank line over the next table stays", changed: true,
+		in:   "a = 1\n\n" + testTable + "\n# Profiles\n\n[profiles.fast]\nmodel = \"o3\"\n",
+		want: "a = 1\n\n# Profiles\n\n[profiles.fast]\nmodel = \"o3\"\n",
+	}, {
+		name: "a table commented out at the end stays", changed: true,
+		in:   "a = 1\n\n" + testTable + "\n# [mcp_servers.github]\n# command = \"gh\"\n",
+		want: "a = 1\n\n# [mcp_servers.github]\n# command = \"gh\"\n",
 	}, {
 		name: "not there",
 		in:   "a = 1\n",
