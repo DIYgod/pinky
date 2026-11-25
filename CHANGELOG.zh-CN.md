@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1125.8 (2026-11-25)
 
 - 用「在新窗口中打开」打开的手机单独窗口现在没有标题栏和菜单栏了，只留下手机画面和下面的按键栏。按住按键栏的空白处就能拖动窗口，点栏末尾的「关闭」（×）或按 ⌘W（Windows 和 Linux 上是 Ctrl+W）就能关掉它。感谢 @QFinn-Penguin 的建议。
 
