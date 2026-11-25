@@ -120,6 +120,9 @@ func TestCredentialFieldHint(t *testing.T) {
 		{"my password is on the desk", "my password is on the desk", "Text message", false},
 		{"DE89 3704", "DE89 3704", "Barcode", false},
 		{"alice", "alice", "User name", false},
+		// A hint that is the text itself names nothing.
+		{"password", "password", "password", false},
+		{"Verification code", "Verification code", "Verification code", false},
 	} {
 		e := &screen.Element{Role: screen.RoleInput, Label: c.label, Content: c.content, Hint: c.hint, States: []string{screen.StateEditable}}
 		if got := IsCredentialField(e); got != c.want {

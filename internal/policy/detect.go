@@ -659,7 +659,11 @@ func fieldName(e *screen.Element) string {
 	name := e.Label
 	if c := e.Content; c != "" {
 		if name == c {
-			name = e.Hint
+			// A hint that is the field's text is no name either: a driver
+			// that falls back to the description may get the text there.
+			if name = e.Hint; name == c {
+				name = ""
+			}
 		} else if n, ok := strings.CutSuffix(name, ", "+c); ok {
 			name = n
 		}
