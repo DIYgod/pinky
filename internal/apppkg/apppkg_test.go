@@ -2,6 +2,7 @@ package apppkg
 
 import (
 	"archive/zip"
+	"encoding/binary"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -230,4 +231,39 @@ func writeZip(t *testing.T, file string, files map[string]string) {
 		t.Fatal(err)
 	}
 	f.Close()
+}
+
+// A type chunk whose header is shorter than a ResTable_type's 20 bytes has
+// no configuration; looking up its entry must not panic.
+func TestTableShortTypeHeader(t *testing.T) {
+	le := binary.LittleEndian
+	typ := make([]byte, 56)
+	le.PutUint16(typ, chunkTableType)
+	le.PutUint16(typ[2:], 16) // header too short for a config
+	le.PutUint32(typ[4:], uint32(len(typ)))
+	typ[8] = 0x01              // type id
+	le.PutUint32(typ[12:], 1)  // one entry
+	le.PutUint32(typ[16:], 20) // entries start, also entry 0's offset
+	le.PutUint16(typ[40:], 8)  // entry at 40: size 8, simple
+	le.PutUint16(typ[48:], 8)  // value: size 8
+	typ[51] = typeString       // data type, data 0
+	pkg := make([]byte, 12, 12+len(typ))
+	le.PutUint16(pkg, chunkTablePackage)
+	le.PutUint16(pkg[2:], 12)
+	le.PutUint32(pkg[4:], uint32(12+len(typ)))
+	le.PutUint32(pkg[8:], 0x7f)
+	pkg = append(pkg, typ...)
+	b := make([]byte, 12, 12+len(pkg))
+	le.PutUint16(b, chunkTable)
+	le.PutUint16(b[2:], 12)
+	le.PutUint32(b[4:], uint32(12+len(pkg)))
+	le.PutUint32(b[8:], 1)
+	b = append(b, pkg...)
+	tb, err := readTable(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := tb.lookupString(0x7f010000); s != "" {
+		t.Errorf("lookup = %q", s)
+	}
 }
