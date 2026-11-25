@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- A phone's own window, opened with Open in a window, now has no title bar or menu bar, only the phone's screen and the bar with its keys under it. Drag the window by an empty part of that bar, and close it with the × at the end of the bar or ⌘W (Ctrl+W on Windows and Linux). Thanks @QFinn-Penguin for the idea.
+
 ## 2026.1125.7 (2026-11-25)
 
 - Installing an Android app whose resource table is damaged no longer makes Pinky quit. Thanks @pseudoyu.
