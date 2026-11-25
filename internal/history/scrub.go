@@ -24,6 +24,22 @@ const secretKey = "•"
 // typing it let through on virtual phones. Open scrubs them once.
 const scrubbedVersion = 8
 
+// clearedVersion is the schema version from which the database's files hold
+// no text from before scrubTypedSecrets. SQLite leaves the old text of a
+// changed row in the file, in space it freed, so Open rebuilds the file
+// once, also when version 8 already masked the steps.
+const clearedVersion = 9
+
+// clearFreed rebuilds the database's file without the space SQLite freed,
+// and empties its write-ahead log into it.
+func clearFreed(db *sql.DB) error {
+	if _, err := db.Exec("VACUUM"); err != nil {
+		return err
+	}
+	_, err := db.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
+	return err
+}
+
 // scrubTypedSecrets masks, in steps from before scrubbedVersion, the text
 // typed into password and code fields and the keys tapped on a hidden
 // passcode keypad: in the step's words, arguments, intent and screen text,
