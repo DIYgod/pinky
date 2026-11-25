@@ -12836,6 +12836,10 @@
   "@phoneOpenWindow": {
     "description": "Item of a phone's ⋯ menu under its mirror and of its right-click menu in the sidebar: opens a window that shows only the phone's live screen and its keys, to use the phone from there. Opened again, the window comes to the front."
   },
+  "phoneWindowClose": "Close",
+  "@phoneWindowClose": {
+    "description": "Tooltip and label of the × button at the end of the bar under the screen in a phone's own window, which has no title bar: closes the window, as ⌘W (Ctrl+W) does."
+  },
   "phoneWindowOnTop": "Keep on top",
   "@phoneWindowOnTop": {
     "description": "Tooltip and label of the pin button in a phone's own window: keeps the window above other apps' windows."

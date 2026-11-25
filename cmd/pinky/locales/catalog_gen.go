@@ -35099,6 +35099,24 @@ func (msgs Messages) PhoneOpenWindow() string {
 	return Catalog.Format(msgs.locale, "phoneOpenWindow", nil)
 }
 
+// PhoneWindowClose says "Close"
+// in the language the app shows.
+//
+// Tooltip and label of the × button at the end of the bar under the screen
+// in a phone's own window, which has no title bar: closes the window, as
+// ⌘W (Ctrl+W) does.
+func PhoneWindowClose() string { return In(i18n.Locale()).PhoneWindowClose() }
+
+// PhoneWindowClose says "Close"
+// in the language of msgs.
+//
+// Tooltip and label of the × button at the end of the bar under the screen
+// in a phone's own window, which has no title bar: closes the window, as
+// ⌘W (Ctrl+W) does.
+func (msgs Messages) PhoneWindowClose() string {
+	return Catalog.Format(msgs.locale, "phoneWindowClose", nil)
+}
+
 // PhoneWindowOnTop says "Keep on top"
 // in the language the app shows.
 //
