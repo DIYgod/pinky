@@ -28,6 +28,97 @@ const (
 	leakCode     = "804217"
 )
 
+// TestStaleRefTypeIsMasked types a password by the ref of a password field
+// after the app left the page that had it, then again after that failure,
+// by the ref of a button, and in a batch whose first step leaves the page:
+// each type fails, and its step keeps neither the password nor the
+// intent's copy of it. A type by a
+// ref Pinky cannot place is not known to go into an ordinary field, so its
+// text is masked the same way.
+func TestStaleRefTypeIsMasked(t *testing.T) {
+	ctx := context.Background()
+	g, hd := newHookGateway(t, func(o *Options) {
+		o.Policy = loadPolicy(t, t.TempDir())
+		o.DataDir = t.TempDir()
+	})
+	var away atomic.Bool
+	hd.setObserve(func(sc *screen.Screen) {
+		if sc.App.ID != demo.Dinely {
+			return
+		}
+		if away.Load() {
+			sc.Elements = append(sc.Elements, screen.Element{Role: screen.RoleButton, Label: "Back", Source: screen.SourceTree,
+				Bounds: screen.Rect{X: 100, Y: 1700, W: 800, H: 120}})
+			return
+		}
+		sc.Elements = append(sc.Elements,
+			screen.Element{Role: screen.RoleButton, Label: "Forgot password?", Source: screen.SourceTree, Bounds: screen.Rect{X: 100, Y: 1100, W: 800, H: 120}},
+			screen.Element{Role: screen.RoleInput, Label: "Password", Source: screen.SourceTree,
+				States: []string{screen.StatePassword}, Bounds: screen.Rect{X: 100, Y: 1300, W: 800, H: 120}})
+	})
+	s, _ := connect(t, g, "Sign in to the test account")
+	if res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}); res.IsError() {
+		t.Fatalf("launch: %+v", res)
+	}
+	call := Call{Intent: "Sign in with " + leakPassword}
+	pw := ref(t, s.Observe(ctx, ObserveRequest{}), "Password")
+	// The app left the sign-in page before the type came, and the agent
+	// tries again after the first failure.
+	away.Store(true)
+	for i := 0; i < 2; i++ {
+		if res := s.Act(ctx, call, Action{Tool: "type", Ref: pw, Text: leakPassword}); res.Error != ErrNotFound {
+			t.Fatalf("typed by a gone ref: %+v", res)
+		}
+	}
+	// A ref that is not a text field: nothing is typed, and the text may
+	// be a password all the same.
+	back := ref(t, s.Observe(ctx, ObserveRequest{}), "Back")
+	if res := s.Act(ctx, call, Action{Tool: "type", Ref: back, Text: leakPassword}); res.Error != ErrInvalidArgument {
+		t.Fatalf("typed into a button: %+v", res)
+	}
+	// A batch whose first step leaves the sign-in page.
+	away.Store(false)
+	obs := s.Observe(ctx, ObserveRequest{})
+	pw = ref(t, obs, "Password")
+	hd.OnInput(func(demo.Input) { away.Store(true) })
+	res := s.Batch(ctx, BatchRequest{Call: call, Steps: []Action{
+		{Tool: "tap", Ref: ref(t, obs, "Forgot password?")}, {Tool: "type", Ref: pw, Text: leakPassword},
+	}})
+	if len(res.Steps) != 2 || res.Steps[1].Error != ErrNotFound {
+		t.Fatalf("batch: %+v", res)
+	}
+
+	var failed int
+	for _, st := range taskSteps(g, s) {
+		if st.Tool == "phone_type" && strings.Contains(st.Text+st.Args, leakPassword) {
+			t.Errorf("live step %s: %q · %s", st.Tool, st.Text, st.Args)
+		}
+		if st.Text == "Failed: Typed “"+secretMask+"”" {
+			failed++
+		}
+	}
+	if failed != 4 {
+		t.Errorf("%d failed steps with the mask:\n%+v", failed, taskSteps(g, s))
+	}
+	s.Release(ctx, ReleaseRequest{})
+	g.Flush()
+	tasks, err := g.History(ctx, HistoryQuery{})
+	if err != nil || len(tasks) == 0 {
+		t.Fatalf("history: %v %v", tasks, err)
+	}
+	for _, task := range tasks {
+		steps, err := g.store.Steps(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range steps {
+			if st.Tool == "phone_type" && strings.Contains(strings.Join([]string{st.Text, st.Args, st.Intent}, "\n"), leakPassword) {
+				t.Errorf("history step %s: %q · intent %q", st.Tool, st.Text, st.Intent)
+			}
+		}
+	}
+}
+
 // TestTypedSecretsAreNeverKept types a password and a code on a phone
 // (refused, then asked and allowed) and on a virtual phone (allowed), by
 // ref and without, taps an app's hidden passcode keypad, and fails a type
