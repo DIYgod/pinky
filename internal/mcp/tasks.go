@@ -352,7 +352,7 @@ func (s *Server) taskDevice(ref string) (string, *sdk.CallToolResult) {
 	}
 	switch len(online) {
 	case 0:
-		return "", render(&gateway.Result{Error: gateway.ErrDeviceOffline, Message: "No phone is connected to Pinky. Ask the person to connect one."})
+		return "", render(&gateway.Result{Error: gateway.ErrDeviceOffline, Message: gateway.NoPhoneMessage(devs)})
 	case 1:
 		return online[0], nil
 	}
