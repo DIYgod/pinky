@@ -276,6 +276,133 @@ func TestHideTyped(t *testing.T) {
 	}
 }
 
+// TestBatchIntentIsMasked runs batches whose intent names what a step
+// types. Every step keeps and shows the intent without the password: the
+// tap before the type and the one after it, a step's own intent, and a
+// batch that reaches the password field only on its next screen, typing
+// there without ref. An email typed by ref into an ordinary field stays in
+// the intent.
+func TestBatchIntentIsMasked(t *testing.T) {
+	ctx := context.Background()
+	g, hd := newHookGateway(t, func(o *Options) {
+		o.Policy = loadPolicy(t, t.TempDir())
+		o.DataDir = t.TempDir()
+	})
+	var nextScreen atomic.Int64 // taps after which the password page shows; 0 for the sign-in page
+	taps := func() int64 {
+		var n int64
+		for _, in := range hd.Inputs() {
+			if in.Kind == "tap" {
+				n++
+			}
+		}
+		return n
+	}
+	hd.setObserve(func(sc *screen.Screen) {
+		if sc.App.ID != demo.Dinely {
+			return
+		}
+		if n := nextScreen.Load(); n > 0 {
+			// The email page, then, after a tap on Next, the password page
+			// with its field focused.
+			if taps() < n {
+				sc.Elements = append(sc.Elements,
+					screen.Element{Role: screen.RoleButton, Label: "Next", Source: screen.SourceTree, Bounds: screen.Rect{X: 100, Y: 1300, W: 800, H: 120}})
+				return
+			}
+			sc.Elements = append(sc.Elements,
+				screen.Element{Role: screen.RoleInput, Label: "Password", Source: screen.SourceTree,
+					States: []string{screen.StatePassword, screen.StateFocused}, Bounds: screen.Rect{X: 100, Y: 1300, W: 800, H: 120}},
+				screen.Element{Role: screen.RoleButton, Label: "Sign in", Source: screen.SourceTree, Bounds: screen.Rect{X: 100, Y: 1500, W: 800, H: 120}})
+			return
+		}
+		sc.Elements = append(sc.Elements,
+			screen.Element{Role: screen.RoleInput, Label: "Email", Source: screen.SourceTree, Bounds: screen.Rect{X: 100, Y: 1000, W: 800, H: 120}},
+			screen.Element{Role: screen.RoleInput, Label: "Password", Source: screen.SourceTree,
+				States: []string{screen.StatePassword}, Bounds: screen.Rect{X: 100, Y: 1300, W: 800, H: 120}})
+	})
+	if err := g.Policy().SetVirtualCredentials(true); err != nil {
+		t.Fatal(err)
+	}
+	hd.SetVirtual(true)
+	for deadline := time.Now().Add(3 * time.Second); !g.Devices()[0].Info.Virtual; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the phone did not become virtual")
+		}
+	}
+	s, _ := connect(t, g, "Sign in to the test account")
+	if res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}); res.IsError() {
+		t.Fatalf("launch: %+v", res)
+	}
+	batch := func(intent string, steps ...Action) {
+		t.Helper()
+		if res := s.Batch(ctx, BatchRequest{Call: Call{Intent: intent}, Steps: steps}); res.IsError() || len(res.Steps) != len(steps) {
+			t.Fatalf("batch %q: %+v", intent, res)
+		}
+	}
+	const (
+		withPassword = "Sign in with " + leakPassword
+		masked       = "Sign in with " + secretMask
+		mine         = "Sign in as sam@example.com"
+	)
+	obs := s.Observe(ctx, ObserveRequest{})
+	pw, email := ref(t, obs, "Password"), ref(t, obs, "Email")
+	batch(withPassword, Action{Tool: "tap", Ref: pw}, Action{Tool: "type", Ref: pw, Text: leakPassword},
+		Action{Tool: "tap", Ref: email, Intent: "Done with " + leakPassword})
+	batch(mine, Action{Tool: "type", Ref: email, Text: "sam@example.com"}, Action{Tool: "tap", Ref: pw})
+	// The password field is on the next screen, which the agent has not read.
+	nextScreen.Store(taps() + 1)
+	obs = s.Observe(ctx, ObserveRequest{})
+	batch(withPassword, Action{Tool: "tap", Ref: ref(t, obs, "Next")}, Action{Tool: "type", Text: leakPassword},
+		Action{Tool: "key", Key: "enter"})
+
+	want := []string{masked, masked, "Done with " + secretMask, mine, mine, masked, masked, masked}
+	check := func(where string, intents []string) {
+		t.Helper()
+		if len(intents) != len(want) {
+			t.Fatalf("%s: intents %q", where, intents)
+		}
+		for i := range want {
+			if intents[i] != want[i] {
+				t.Errorf("%s: step %d's intent %q, want %q", where, i+1, intents[i], want[i])
+			}
+		}
+	}
+	var live []string
+	for _, st := range taskSteps(g, s) {
+		if strings.Contains(st.Text+st.Args, leakPassword) {
+			t.Errorf("live step %s: %q · %s", st.Tool, st.Text, st.Args)
+		}
+		if i := strings.Index(st.Args, `"intent":"`); i >= 0 {
+			rest := st.Args[i+len(`"intent":"`):]
+			live = append(live, rest[:strings.Index(rest, `"`)])
+		}
+	}
+	check("live", live)
+	s.Release(ctx, ReleaseRequest{})
+	g.Flush()
+	tasks, err := g.History(ctx, HistoryQuery{})
+	if err != nil || len(tasks) == 0 {
+		t.Fatalf("history: %v %v", tasks, err)
+	}
+	var stored []string
+	for _, task := range tasks {
+		steps, err := g.store.Steps(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, st := range steps {
+			if strings.Contains(strings.Join([]string{st.Text, st.Args, st.Intent, st.ScreenText}, "\n"), leakPassword) {
+				t.Errorf("history step %s: intent %q, args %s", st.Tool, st.Intent, st.Args)
+			}
+			if st.Intent != "" {
+				stored = append(stored, st.Intent)
+			}
+		}
+	}
+	check("history", stored)
+}
+
 // typed reports whether the phone was given text to type.
 func typed(hd *hookDev, text string) bool {
 	for _, in := range hd.Inputs() {

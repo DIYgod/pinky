@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"image"
+	"sort"
 	"strings"
 
 	"github.com/DIYgod/pinky/internal/history"
@@ -154,4 +155,44 @@ func credentialPlaces(w, h int, reads ...*screen.Screen) (boxes []image.Rectangl
 		}
 	}
 	return boxes, unplaced
+}
+
+// batchSecrets returns the texts a batch's type steps may type into a
+// password or code field, longest first. A batch's intent goes with every
+// step, and shown takes a typed password or code out of it only for the
+// step that types it; these are taken out of every step's intent, a step's
+// own included (scrubSecrets).
+//
+// Before the steps run, Pinky can tell only a type step by ref into a field
+// of the screen the agent last read: the text for an ordinary field there
+// is taken as ordinary and stays. A step without ref, or with one that
+// screen lacks, may reach a password or code field on a screen the batch
+// comes to, so its text counts.
+func batchSecrets(g *Gateway, l *lease, steps []Action) []string {
+	g.mu.Lock()
+	seen := l.baseline
+	g.mu.Unlock()
+	var secrets []string
+	for _, a := range steps {
+		if a.Tool != "type" || a.Text == "" {
+			continue
+		}
+		if a.Ref > 0 && seen != nil {
+			if e, ok := seen.Find(a.Ref); ok && !policy.IsCredentialField(&e) {
+				continue
+			}
+		}
+		secrets = append(secrets, a.Text)
+	}
+	// A longer text first, so a shorter one inside it leaves none of it.
+	sort.SliceStable(secrets, func(i, j int) bool { return len(secrets[i]) > len(secrets[j]) })
+	return secrets
+}
+
+// scrubSecrets takes each of secrets out of s (scrubSecret).
+func scrubSecrets(s string, secrets []string) string {
+	for _, secret := range secrets {
+		s = scrubSecret(s, secret)
+	}
+	return s
 }
