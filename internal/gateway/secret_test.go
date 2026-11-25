@@ -396,8 +396,21 @@ func TestHideTyped(t *testing.T) {
 		{Ref: 1, Role: screen.RoleInput, Label: "Verification code, " + leakCode, Content: leakCode, Bounds: screen.Rect{X: 10, Y: 50, W: 80, H: 20}},
 		{Ref: 2, Role: screen.RoleInput, Label: "sam@example.com", Content: "sam@example.com", Bounds: screen.Rect{X: 10, Y: 100, W: 80, H: 20}},
 		{Ref: 3, Role: screen.RoleInput, Label: "Password", Bounds: screen.Rect{X: 10, Y: 150, W: 80, H: 20}, States: []string{screen.StatePassword}},
+		// A password field of Android that shows its text.
+		{Ref: 4, Role: screen.RoleInput, Label: leakPassword, Content: leakPassword, Hint: "Password", Bounds: screen.Rect{X: 10, Y: 10, W: 80, H: 20}},
+		// What OCR read there and did not match to the field, as it misread it;
+		// with the name beside it; and elsewhere.
+		{Role: screen.RoleText, Label: "Hunter2-zq8!", Source: screen.SourceOCR, Bounds: screen.Rect{X: 12, Y: 12, W: 60, H: 14}},
+		{Role: screen.RoleText, Label: "Code " + leakCode, Source: screen.SourceOCR, Bounds: screen.Rect{X: 0, Y: 52, W: 18, H: 14}},
+		{Role: screen.RoleText, Label: "Forgot it?", Source: screen.SourceOCR, Bounds: screen.Rect{X: 12, Y: 180, W: 60, H: 14}},
 	}}
 	got := body(hideTyped(s))
+	if strings.Contains(got, leakPassword) || strings.Contains(got, "zq8") {
+		t.Errorf("a shown password is in history's screen text:\n%s", got)
+	}
+	if !strings.Contains(got, "Forgot it?") {
+		t.Errorf("hid OCR text outside the fields:\n%s", got)
+	}
 	if strings.Contains(got, leakCode) || !strings.Contains(got, `"Verification code, `+secretMask+`"`) || !strings.Contains(got, "sam@example.com") {
 		t.Fatalf("history's screen text:\n%s", got)
 	}
@@ -435,6 +448,9 @@ func TestHideTyped(t *testing.T) {
 	}
 	if !gray(50, 60) {
 		t.Error("the code field is not covered")
+	}
+	if !gray(50, 20) {
+		t.Error("the shown password is not covered")
 	}
 	if gray(50, 110) || gray(50, 160) {
 		t.Error("covered a field with no secret text in it")

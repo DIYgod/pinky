@@ -113,6 +113,17 @@ func hideTyped(s *screen.Screen) *screen.Screen {
 		m := &out.Elements[i]
 		m.Label = maskContent(m.Label, m.Content)
 		m.Content = secretMask
+		// OCR reads the field's pixels too, and a line it misread is an
+		// element of its own.
+		for j := range out.Elements {
+			o := &out.Elements[j]
+			if o.Source != screen.SourceOCR {
+				continue
+			}
+			if o.Label = scrubSecret(o.Label, e.Content); e.Bounds.Contains(o.Bounds.Center()) {
+				o.Label = secretMask
+			}
+		}
 	}
 	if out == nil {
 		return s
