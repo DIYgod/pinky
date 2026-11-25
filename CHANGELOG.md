@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1125.5 (2026-11-25)
 
 - When an agent hands Pinky a task without naming a phone, Pinky now picks the phone the agent would get by connecting: the one online, or else one waiting for you to finish a step. A phone found on Wi-Fi that you haven't confirmed as yours is never picked or shown to agents.
 - Pinky now also clears passwords and codes it masked from the free space of its history file, so no old copy stays on disk.
