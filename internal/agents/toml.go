@@ -252,10 +252,9 @@ func tomlTable(lines []string, inString []bool, key []string) [][2]int {
 		}
 		ours := k != nil && hasPrefix(k, key)
 		if open >= 0 {
-			// Comments right over another table's header are about that table.
 			end := i
-			for !ours && end-1 > open && !inString[end-1] && strings.HasPrefix(strings.TrimSpace(lines[end-1]), "#") {
-				end--
+			if !ours {
+				end = tomlTableEnd(lines, inString, open, i)
 			}
 			spans = append(spans, [2]int{open, end})
 			open = -1
@@ -265,9 +264,36 @@ func tomlTable(lines []string, inString []bool, key []string) [][2]int {
 		}
 	}
 	if open >= 0 {
-		spans = append(spans, [2]int{open, len(lines)})
+		spans = append(spans, [2]int{open, tomlTableEnd(lines, inString, open, len(lines))})
 	}
 	return spans
+}
+
+// tomlTableEnd is where the table whose header is at open ends, when what
+// comes at next is not part of it. Comments right under its last line (or
+// its header) are its own and go with it, unless they run right up to the
+// next table's header, which they are about. After a blank line, comments
+// are about what follows (the next table, a table commented out, or
+// nothing) and stay.
+func tomlTableEnd(lines []string, inString []bool, open, next int) int {
+	comment := func(i int) bool { return strings.HasPrefix(strings.TrimSpace(lines[i]), "#") }
+	last := next // right after the table's last line that is not a comment or blank
+	for last-1 > open && !inString[last-1] && (comment(last-1) || strings.TrimSpace(lines[last-1]) == "") {
+		last--
+	}
+	j := last
+	for j < next && comment(j) {
+		j++
+	}
+	if j == next && next < len(lines) {
+		return last // comments right over the next header
+	}
+	for ; j < next; j++ {
+		if comment(j) {
+			return j
+		}
+	}
+	return next
 }
 
 // tomlString writes s as a TOML basic string.
