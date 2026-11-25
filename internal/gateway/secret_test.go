@@ -223,6 +223,80 @@ func TestTypedSecretsAreNeverKept(t *testing.T) {
 	leaks("the log", logs.String())
 }
 
+// TestKeypadTapCardSaysNoKey taps a key of an app's hidden passcode keypad
+// on a virtual phone, with every action asking: the card's title names no
+// key and the card shows no place, and neither do the step and history.
+func TestKeypadTapCardSaysNoKey(t *testing.T) {
+	ctx := context.Background()
+	g, hd := newHookGateway(t, func(o *Options) {
+		o.Policy = loadPolicy(t, t.TempDir())
+		o.DataDir = t.TempDir()
+	})
+	hd.setObserve(func(sc *screen.Screen) {
+		if sc.App.ID != demo.Dinely {
+			return
+		}
+		for i, l := range []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "FaceID", "0", "Delete"} {
+			sc.Elements = append(sc.Elements, screen.Element{Role: screen.RoleButton, Label: l, Source: screen.SourceTree,
+				States: []string{screen.StateNotInScreenshot}, Bounds: screen.Rect{X: 100 + i%3*250, Y: 1500 + i/3*100, W: 250, H: 100}})
+		}
+	})
+	pol := g.Policy()
+	if err := pol.SetVirtualCredentials(true); err != nil {
+		t.Fatal(err)
+	}
+	hd.SetVirtual(true)
+	for deadline := time.Now().Add(3 * time.Second); !g.Devices()[0].Info.Virtual; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the phone did not become virtual")
+		}
+	}
+	s, _ := connect(t, g, "Sign in to the test account")
+	if res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}); res.IsError() {
+		t.Fatalf("launch: %+v", res)
+	}
+	if err := pol.SetPreset(policy.PresetEvery); err != nil {
+		t.Fatal(err)
+	}
+	var card atomic.Value
+	answer(t, g, AllowOnce, func(n NeedView) { card.Store(n) })
+	obs := s.Observe(ctx, ObserveRequest{})
+	if res := tap(s, ref(t, obs, "8")); res.IsError() || res.Status == StatusBlocked {
+		t.Fatalf("asked keypad tap: %+v", res)
+	}
+	n, _ := card.Load().(NeedView)
+	if n.Title != "Tap “"+secretKey+"”?" || !n.Target.Empty() || n.Point != (screen.Point{}) {
+		t.Errorf("the card names or shows the key: %q, target %+v, point %+v", n.Title, n.Target, n.Point)
+	}
+	for _, st := range taskSteps(g, s) {
+		if st.Tool == "phone_tap" && (strings.Contains(st.Text, "“8”") || !st.Target.Empty() || st.Point != (screen.Point{})) {
+			t.Errorf("the step names or shows the key: %+v", st)
+		}
+	}
+	s.Release(ctx, ReleaseRequest{})
+	g.Flush()
+	tasks, err := g.History(ctx, HistoryQuery{})
+	if err != nil || len(tasks) == 0 {
+		t.Fatalf("history: %v %v", tasks, err)
+	}
+	var approvals int
+	for _, task := range tasks {
+		aps, err := g.store.Approvals(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, a := range aps {
+			approvals++
+			if strings.Contains(a.Title, "“8”") {
+				t.Errorf("history approval: %q", a.Title)
+			}
+		}
+	}
+	if approvals != 1 {
+		t.Errorf("%d approvals", approvals)
+	}
+}
+
 // TestHideTyped: history's screen text shows a code or password field's
 // content as the mask, and its screenshots cover such fields; other fields
 // keep their text.
