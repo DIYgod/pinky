@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1125.6 (2026-11-25)
 
 - On Android, a password you or the app show with "Show password" now stays masked in Activity, approvals, history and pictures, and Pinky asks before an agent types into that field as it does for any password field.
 

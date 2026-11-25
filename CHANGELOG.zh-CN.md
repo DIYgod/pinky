@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1125.6 (2026-11-25)
 
 - 在 Android 上，你或 App 用「显示密码」显示出来的密码，现在在「活动」、审批、历史记录和截图里仍会遮住；智能体要往这个输入框里输入时，Pinky 也会像其他密码框一样先问你。
 
