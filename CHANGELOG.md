@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1125.4 (2026-11-25)
 
 - When no phone is online, agents now hear why: each paired phone with its status, such as Not seen on Wi-Fi, and what usually causes it, so they can tell you what to check.
 - Pinky masks typed passwords and codes in more places: a field named after its code, a batch of steps that types a password, the approval card of a hidden passcode keypad, and a typing step that fails.
