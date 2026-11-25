@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1125.7 (2026-11-25)
 
 - 安装资源表损坏的 Android 应用时，Pinky 不会再退出。感谢 @pseudoyu。
 - 正在等你完成某一步的手机恢复可用时，智能体恰好在这一刻发来的请求现在会等手机连上，不会再偶尔被告知手机离线。
