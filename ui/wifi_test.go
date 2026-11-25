@@ -416,3 +416,65 @@ func TestFoundAndroidWords(t *testing.T) {
 		t.Errorf("foundLine = %q", got)
 	}
 }
+
+// TestQuietRestartSwitch: on a Mac, Settings › Phones has the switch that
+// lets Pinky restart the device service without a password, off at first.
+// Turning it on and off each go to the gateway with the reason macOS shows
+// in its request for the password; declined, it stays as it was, without
+// a notice. Once on, the lost phone's page says no password is needed.
+func TestQuietRestartSwitch(t *testing.T) {
+	defer func(os string) { guideOS = os }(guideOS)
+	guideOS = "darwin"
+	ta, id := foundApp(t, true)
+	ta.settings.IOSWiFi = true
+	ta.page, ta.set.sec = pageSettings, secPhones
+	tt := mg.NewTester(ta.view, 1280, 1600)
+	tt.Frame()
+	mustHave(t, tt, locales.SettingsPhonesQuietRestart(), locales.SettingsPhonesQuietRestartDesc())
+	if ta.quietAllowed() {
+		t.Fatal("allowed before the person turned it on")
+	}
+
+	ta.api.SetRestartError(fmt.Errorf("x: %w", driver.ErrCanceled))
+	if err := tt.Click(locales.SettingsPhonesQuietRestart()); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the declined change", func() bool { return len(ta.api.QuietReasons()) == 1 && !ta.found.quietBusy })
+	if ta.quietAllowed() || len(ta.toasts) != 0 {
+		t.Fatalf("declined: allowed %v, toasts %q", ta.quietAllowed(), ta.toasts)
+	}
+
+	ta.api.SetRestartError(nil)
+	tt.Frame()
+	if err := tt.Click(locales.SettingsPhonesQuietRestart()); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "allowed", func() bool { return len(ta.api.QuietReasons()) == 2 && !ta.found.quietBusy })
+	if got := ta.api.QuietReasons()[1]; got != locales.SettingsPhonesQuietRestartOnReason() || !ta.quietAllowed() {
+		t.Fatalf("reason %q, allowed %v", got, ta.quietAllowed())
+	}
+
+	ta.api.UseFoundPhone(id)
+	ta.api.LoseOnWiFi(id)
+	ta.waitFor(t, "the iPad lost", func() bool { d := ta.device(id); return d != nil && lostOnWiFi(*d) })
+	ta.page, ta.sel = pagePhones, id
+	tt.Frame()
+	mustHave(t, tt, locales.LostRestartNoteQuiet())
+
+	ta.page = pageSettings
+	tt.Frame()
+	if err := tt.Click(locales.SettingsPhonesQuietRestart()); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "turned off", func() bool { return len(ta.api.QuietReasons()) == 3 && !ta.found.quietBusy })
+	if got := ta.api.QuietReasons()[2]; got != locales.SettingsPhonesQuietRestartOffReason() || ta.quietAllowed() {
+		t.Fatalf("reason %q, allowed %v", got, ta.quietAllowed())
+	}
+
+	// Elsewhere than on a Mac, no switch.
+	guideOS = "linux"
+	tt.Frame()
+	if hasText(tt, locales.SettingsPhonesQuietRestart()) {
+		t.Fatal("the switch shows off a Mac")
+	}
+}

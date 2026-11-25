@@ -175,6 +175,10 @@ type Gateway struct {
 	trafficOn    map[string]bool
 	trafficRoute map[string]bool
 	prune        chan struct{} // asks the retention loop to run now
+	// serviceRestarts is when the device service of each platform last
+	// restarted through Pinky, by the person's click or by itself
+	// (servicerestart.go).
+	serviceRestarts map[driver.Platform]time.Time
 
 	cap captureState // Pinky's traffic proxy (capture.go)
 
@@ -503,6 +507,7 @@ func (g *Gateway) discover(ctx context.Context) {
 	}
 	g.listMu.Unlock()
 	wg.Wait()
+	g.restartLost(ctx, nil)
 }
 
 // unopenedGrace is how long a phone the gateway never opened stays listed,

@@ -324,6 +324,7 @@ func (g *Gateway) gateOnce(l *lease, approvalID string, action, fresh bool) *Res
 	// (switchWait).
 	wctx, cancel := context.WithTimeout(l.ctx, max(g.opt.CallBudget-switchReserve, g.opt.CallBudget/2))
 	defer cancel()
+	g.recoverLost(wctx, l) // the device service lost it (servicerestart.go)
 	g.mu.Lock()
 	d := l.dev
 	for !l.ended && g.waitMovingLocked(wctx, d) {
@@ -460,6 +461,12 @@ type prep struct {
 	settleFull bool
 	// follow follows a home screen's page under a drag (dragfollow.go).
 	follow *dragFollow
+	// secret is set when the action may enter a password, a one-time code
+	// or a passcode: typing into such a field, typing where Pinky cannot
+	// tell the field and the screen has one, or a tap on an app's hidden
+	// passcode keypad. What Pinky keeps and shows of it hides the text and
+	// the key (secret.go).
+	secret bool
 }
 
 // personAllowed reports whether an action that runs with verdict v runs
@@ -863,6 +870,9 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		p.input.Scoped, p.input.ScopeApps = true, scope.Apps
 	}
 
+	// Until the field is known, any password or code field on the screen
+	// may be the one typed into.
+	p.secret = a.Tool == "type" && (cur == nil || credentialOnScreen(cur))
 	if rule, blocked := g.policy.Blocked(fg); blocked && !fgAllowed && a.Tool != "launch" && !(a.Tool == "key" && a.Key == "home") {
 		p.desc = describe(a, p)
 		res := &Result{Status: StatusBlocked, Rule: rule,
@@ -909,7 +919,10 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			p.target = hitTest(cur, p.point)
 		}
 		p.hasPt = true
-		if pad, ok := policy.HiddenKeypad(cur); ok && pad.Contains(p.point) && !g.policy.CredentialTypingAllowed(virtual) {
+		pad, onPad := policy.HiddenKeypad(cur)
+		onPad = onPad && pad.Contains(p.point)
+		p.secret = onPad
+		if onPad && !g.policy.CredentialTypingAllowed(virtual) {
 			// The app's own passcode keypad, which the person watching
 			// cannot see: a tap on it enters their passcode.
 			p.input.Target = p.target
@@ -922,6 +935,10 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		if a.Ref > 0 {
 			e, res := byRef(a.Ref)
 			if res != nil {
+				// The field is not known, so the text may be a password, as
+				// for a type refused before the screen is read: the ref may
+				// be of a password field that is gone.
+				p.secret = true
 				return p, res
 			}
 			// An app that draws its own search box shows only its
@@ -929,11 +946,14 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			// that focuses the box. A search button would search instead.
 			placeholder := e.Role != screen.RoleButton && e.Role != screen.RoleLink && policy.IsSearchField(e)
 			if e.Role != screen.RoleInput && !e.Has(screen.StateEditable) && !e.Has(screen.StateFocused) && !placeholder {
+				p.secret = true // nothing is typed, and the text may be a password all the same
 				return p, errResult(ErrInvalidArgument, "[%d] is a %s, not a text field. Nothing was done.", a.Ref, e.Role)
 			}
 			p.target, p.point, p.hasPt = e, e.Bounds.Center(), true
+			p.secret = policy.IsCredentialField(e)
 		} else if f, ok := cur.Focused(); ok {
 			p.target = &f
+			p.secret = policy.IsCredentialField(&f)
 		} else if credentialOnScreen(cur) && !g.policy.CredentialTypingAllowed(virtual) {
 			// The focused field is unknown and might be the password field.
 			return p, &Result{Status: StatusBlocked, Rule: policy.RuleCredentials,
@@ -1060,6 +1080,9 @@ const hiddenKeypadRefusal = "This tap is on the app's passcode keypad, which it 
 	"Call phone_handoff so the person can enter the passcode."
 
 func credentialOnScreen(s *screen.Screen) bool {
+	if s == nil {
+		return false
+	}
 	for i := range s.Elements {
 		e := &s.Elements[i]
 		if (e.Role == screen.RoleInput || e.Has(screen.StateEditable)) && policy.IsCredentialField(e) {
@@ -1373,9 +1396,17 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	case p.hasPt:
 		point = p.point
 	}
+	if p.secret && a.Tool == "tap" {
+		// A key of the app's hidden passcode keypad: the card shows neither
+		// which nor where, as its step does not (secret.go).
+		target, point = screen.Rect{}, screen.Point{}
+	}
+	// What the card and history show: the text typed into a password
+	// field hidden (secret.go). The binding keeps the action itself.
+	sa, sc := shown(a, c, p)
 	detail := l.session.agent.Name
-	if c.Intent != "" {
-		detail += " · " + c.Intent
+	if sc.Intent != "" {
+		detail += " · " + sc.Intent
 	} else {
 		detail += " · " + l.task.title
 	}
@@ -1384,7 +1415,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 		app = appLabel(p.input.Launch) // the card is about the app to open
 	}
 	info := g.approvals.Open(approval.Request{
-		Kind: approval.KindAction, Binding: g.binding(l, a), Rule: v.Rule, Title: approvalTitle(a, p, v),
+		Kind: approval.KindAction, Binding: g.binding(l, a), Rule: v.Rule, Title: approvalTitle(sa, p, v),
 		Detail: detail, App: app, Agent: l.session.agent.Name, TaskID: l.task.id,
 		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Point: point, To: to, Point2: point2, To2: to2, Path: path, Data: takeSnapshot(cur, p, v),
 	})
@@ -1392,7 +1423,11 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 		return info, res
 	}
 	before := g.shotID(g.keepImage(l.dev, cur, shot, false))
-	g.openStep(l, info, "phone_"+a.Tool, a.args(c), "Waiting for you: "+p.desc, target, p.point, before)
+	point = p.point
+	if p.secret && a.Tool == "tap" {
+		target, point = screen.Rect{}, screen.Point{} // which key of the passcode
+	}
+	g.openStep(l, info, "phone_"+a.Tool, sa.args(sc), "Waiting for you: "+p.desc, target, point, before)
 	return info, nil
 }
 
@@ -1438,9 +1473,12 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 	label := ""
 	switch {
 	case p.decider != nil:
-		label = p.decider.Label
+		label = shownLabel(p.decider)
 	case p.target != nil:
-		label = p.target.Label
+		label = shownLabel(p.target)
+	}
+	if p.secret && a.Tool == "tap" && label != "" {
+		label = secretKey // a key of the passcode keypad
 	}
 	switch {
 	case v.Has(policy.Payment) && label != "":
@@ -1634,8 +1672,14 @@ func (g *Gateway) pendingResult(l *lease, info approval.Info) *Result {
 		what, info.Title, info.ID, approval.Human(left))
 	g.mu.Lock()
 	lost := info.Kind == approval.KindHandoff && waitingLocked(l.dev) && l.dev.info.Setup == driver.SetupDeviceService
+	quiet := l.dev.quietRestart
 	g.mu.Unlock()
-	if lost {
+	switch {
+	case lost && quiet:
+		// Pinky restarts the service by itself (servicerestart.go).
+		msg += " The phone still waits for the computer's device service, which Pinky restarts by itself without a password, as the person allowed: " +
+			"the handoff ends once the phone is back. If it stays lost for minutes, release the phone with phone_release and use another one, or end the task."
+	case lost:
 		// Only a person at the computer can bring the phone back; an agent
 		// nobody watches would wait out the whole handoff.
 		msg += " The phone still waits for the computer's device service to be restarted, which needs a person at the computer and its administrator password. " +
@@ -1992,7 +2036,7 @@ func (g *Gateway) executeOn(ctx context.Context, l *lease, c Call, a Action, p *
 		// not have changed yet: its picture would pass for the result.
 		shot = nil
 	}
-	text := body(res.Screen)
+	text := body(hideTyped(res.Screen))
 	if _, blocked := g.policy.Blocked(next.App); blocked {
 		text = "" // allowed for the task: history keeps the steps only
 	}
@@ -2914,7 +2958,13 @@ func question(a Action, p *prep) string { return sayAction(a, p, true) }
 func sayAction(a Action, p *prep, ask bool) string {
 	label := ""
 	if p != nil && p.target != nil && p.target.Label != "" {
-		label = "“" + clip(p.target.Label, 60) + "”"
+		label = "“" + clip(shownLabel(p.target), 60) + "”"
+	}
+	if p != nil && p.secret {
+		a = hideSecret(a)
+		if a.Tool == "tap" && label != "" {
+			label = "“" + secretKey + "”" // a key of the passcode keypad
+		}
 	}
 	tense := func(past, imperative string) string {
 		if ask {

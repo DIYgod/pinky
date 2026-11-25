@@ -2,7 +2,7 @@
 <h1 align="center">Pinky</h1>
 <p align="center"><b>让 AI 用上你的 iPhone 和 Android 手机，关键一步你说了算：可以是 Mac、Windows、Linux 上的任何 Agent，也可以是手机上的 Pinky 自己。</b></p>
 <p align="center"><a href="https://github.com/DIYgod/pinky/releases/latest">下载</a> · <a href="#开始使用">开始使用</a> · <a href="#常见问题">常见问题</a> · <a href="https://discord.gg/S27b7SHjng">Discord</a></p>
-<p align="center"><a href="README.md">English</a> · 简体中文 · <a href="README.ja.md">日本語</a> · <a href="README.tr.md">Türkçe</a></p>
+<p align="center"><a href="README.md">English</a> · 简体中文 · <a href="README.ja.md">日本語</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.vi.md">Tiếng Việt</a></p>
 <p align="center"><img src="assets/readme/demo-zh.gif" width="760" alt="Claude Code 在短信里输入回复，Pinky 扣住「发送」这一下，等你允许后才发出去"><br><sub>在 Android 16 模拟器上真实运行的 Claude Code。Pinky 默认只在付款前询问，这次还设了发消息前也要问。</sub></p>
 
 Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者一段脚本）通过 MCP 操作真实的 iPhone 或 Android 手机。你在电脑上看着它干活，有风险的步骤由你批准，随时可以接管，事后还能回看。Pinky 也能用你选的 AI 模型自己完成任务：在电脑上交给它，或者直接在手机上的 Pinky 应用里让它做，完全不用电脑。不管任务由谁来做，审批都由 Pinky 的网关执行，不靠给 Agent 的指令。
@@ -139,6 +139,8 @@ iPhone 或 iPad 和电脑在同一个 Wi-Fi 下，并且电脑在 Wi-Fi 上列�
 
 在 Mac 上，系统的设备服务 usbmuxd 在和 Wi-Fi 上的 iPhone 的连接断过一次之后（比如手机的 Wi-Fi 关了又开），可能会把它弄丢，最长约一小时都不再找它，「访达」里也看不到。Pinky 发现你用的手机明明在网络上却不再被列出时，会显示「Wi-Fi 上找不到」，并在它的页面上提供「重启设备服务…」：你确认后，macOS 会要求输入管理员密码，所有 iPhone 和 iPad（包括插着线的）都会断开一两秒。在「终端」里运行 `sudo killall usbmuxd` 效果相同。这一步只有坐在电脑前的人才能做，所以当智能体的任务在等这样一台手机时，Pinky 会把重启按钮放进「待你处理」并发一条通知，同时告诉智能体：没人在电脑前就别等了。刚拔线的手机，Pinky 大约 10 秒内就会给出提示；其他情况下会等一分钟，因为熄屏后醒来的手机会自己回来。拔线后这台电脑在 Wi-Fi 上完全看不到的手机，会显示「Wi-Fi 上看不到」，并说明可能的原因：手机熄屏了、连的是另一个网络或者网络会把设备互相隔开（访客网络、一些路由器）、开着 VPN，或者 Pinky 没有「本地网络」权限。
 
+不想每次输密码的话，可以在「设置 › 手机」里打开「免密码重启设备服务」（在 Mac 上通过 Wi-Fi 使用 iPhone 时才显示）。Pinky 会要求输入一次管理员密码，添加一条规则 `/etc/sudoers.d/pinky-usbmuxd`：只允许你的账户以 root 身份免密码运行 `/usr/bin/killall usbmuxd` 这一条命令，别的都不行；放进去之前会先用 `visudo` 检查。之后点「重启设备服务…」不再要密码；智能体的任务正在用的手机被 usbmuxd 弄丢时，Pinky 也会自己重启它：最多每 5 分钟一次，不会在手机执行操作的过程中重启，并且会告诉智能体它重启过。关掉这个开关会删除这条规则，同样要输入一次密码。
+
 在 Linux 和 Windows 上，系统的设备服务不会自己列出 Wi-Fi 上的 iPhone 和 iPad：Linux 上（`usbmuxd` 软件包）只列出插着线的，Windows 上（Apple Devices 或 iTunes）只在手机同时插着线时才列出。所以在这两个系统上，Pinky 通过 Wi-Fi 使用手机时，会在系统的设备服务前面运行一个自己的小设备服务：它在网络上找到和这台电脑配对过的手机，直接连过去，插线手机的事都交给系统的设备服务。这时 Pinky 和 iPhone、iPad 之间的所有连接都经过它，插着线的也一样。除了系统自带的（Linux 上是 `usbmuxd`，Windows 上是 Apple Devices），不用另外安装或设置什么。如果你运行了一个自己就能列出 Wi-Fi 上手机的设备服务（比如 netmuxd），并带上指向它的 `USBMUXD_SOCKET_ADDRESS`（`unix:///socket/路径` 或 `tcp://127.0.0.1:端口`）启动 Pinky，Pinky 就用它，不再运行自己的。
 
 Pinky 打开手机、或者在有线和 Wi-Fi 之间切换时，会显示「正在连接」或「正在切换到 Wi-Fi」，而不是离线。通过 Wi-Fi 时，Pinky 从实时画面识别文字，不再用截图（Wi-Fi 下截一张图约 5 秒）。没设锁屏密码的 iPhone 或 iPad 读不出“已锁定”，所以它休眠掉线后再出现时，Pinky 要等它连续在线 30 秒才连接。
@@ -186,7 +188,7 @@ iOS 27 以下的 iPhone，只能通过手机上一个运行 WebDriverAgent 的�
   | 17.3 及更早 | | 不支持：17.4 之前的连接需要管理员权限，iOS 16 及更早还需要当前 Xcode 已不再包含的开发者磁盘映像 | |
 
   iPhone 上的 Pinky 内含 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你重新安装（在装有 Xcode 的 Mac 上点 Pinky 里的「重新安装」，或运行 `pinkyctl helper install`）；到期后，手机会显示为「需要设置」并说明原因，而不是启动失败（[怎么重新安装](docs/notes/ios.md#when-the-signature-of-pinky-on-the-iphone-runs-out)）。
-- **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。这时 iOS 也不让 App 使用相机和麦克风，所以相机里是黑的，扫不了码。反过来也一样：有 App 正在使用相机或麦克风时（比如通话、FaceTime、相机、语音备忘录），iOS 27 不让 Pinky 通过 Device Hub 显示这台 iPhone。这时它的页面会显示「相机或麦克风正在使用中」和处理方法，通话结束或那个 App 关掉后，Pinky 会自动连接。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。再装上 iPhone 上的 Pinky，连接方式保持「自动」（「设置 › 手机」）：任务平时走 CoreDevice，打开星展银行 digibank 或招商银行时，或者 Agent 要求时，Pinky 会把这个任务临时切到不共享屏幕的 iPhone 上的 Pinky，任务结束后再切回 CoreDevice。也可以让这台 iPhone 的所有任务都通过 iPhone 上的 Pinky 连接。
+- **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。这时 iOS 也不让 App 使用相机和麦克风，所以相机里是黑的，扫不了码。反过来也一样：有 App 正在使用相机或麦克风时（比如通话、FaceTime、相机、语音备忘录），iOS 27 不让 Pinky 通过 Device Hub 显示这台 iPhone。这时它的页面会显示「相机或麦克风正在使用中」和处理方法，通话结束或那个 App 关掉后，Pinky 会自动连接。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。再装上 iPhone 上的 Pinky，连接方式保持「自动」（「设置 › 手机」）：任务平时走 CoreDevice，打开星展银行 digibank、招商银行或相机时，或者 Agent 要求时（在别的 App 里扫码，比如微信扫一扫，要 Agent 自己要求），Pinky 会把这个任务临时切到不共享屏幕的 iPhone 上的 Pinky，任务结束后再切回 CoreDevice。也可以让这台 iPhone 的所有任务都通过 iPhone 上的 Pinky 连接。
 - **模拟器**：iOS 模拟器（Mac 上要装 Xcode）和 Android 模拟器（来自 Android Studio）也能当手机用。「添加手机 › 虚拟手机」列出这台电脑上的模拟器：点「启动」启动一台，运行起来后它就作为手机出现，标着「模拟器」；点「关闭」关掉它。Pinky 启动的 Android 模拟器没有声音，这样蓝牙耳机不会被切到麦克风模式。只有你能启动模拟器，Agent 没有这个工具。实时画面、录屏、审批和规则都和真机一样。Pinky 像 Android Studio 那样找 Android SDK（先看 `ANDROID_HOME`，再看 `ANDROID_SDK_ROOT`，最后是 Android Studio 默认的安装位置），找到后 Android 模拟器用起来就像一台插着线的 Android 手机。iOS 模拟器第一次用时，Pinky 会用你的 Xcode 构建 Appium 的 WebDriverAgent：源码来自固定的一个版本，构建前先校验文件，不签名，也不需要 Apple ID。这需要 20 秒到几分钟，构建结果一直沿用到 Xcode 更新。Pinky 不会创建模拟器，也不会下载系统映像：请在 Xcode（Window › Devices and Simulators）或 Android Studio 的 Device Manager 里创建（[详情](docs/notes/ios.md#ios-simulators)）。
 - **锁着的手机**：Pinky 从不让手机一直亮着，只在每一步之前唤醒屏幕。在「设置 › 手机」里保存手机的 PIN 码，就能在电脑上用 Touch ID 解锁。Agent 永远看不到 PIN 码。Android 上，这在 AOSP 风格的锁屏上验证过（Mi 10 Pro 上的 LineageOS，Android 10、16 和 17 模拟器）；小米、三星、OPPO、一加、vivo、荣耀和华为的锁屏只有根据已知信息写的测试覆盖，Pinky 读不准 PIN 码键盘时什么都不会输入（[详情](docs/notes/integration.md#unlocking-other-android-phones)）。
 - **双指缩放**：Agent 可以用两根手指放大、缩小地图、照片和网页，也可以双指旋转它们。你在 Pinky 的手机画面上也可以：在触控板上双指捏合（Linux 上仅限 Wayland），或者像 Xcode 的 Simulator 那样按住 Option（Windows 和 Linux 上是 Alt）拖动，第二根手指会出现在屏幕中心另一侧、和指针相对的位置。和你的其他触摸一样，这会让 Agent 暂停。iPhone 通过 iPhone 上的 Pinky 双指缩放。iOS 27 选「自动」时，无论是 Agent 还是你双指缩放，Pinky 都会换到 iPhone 上的 Pinky（你的第一次捏合只会触发切换，要等几秒），用完再换回来；没装 iPhone 上的 Pinky 时不能双指缩放，Agent 会收到说明。
@@ -218,7 +220,7 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 
 自己没有 Agent？Pinky 可以自己在一台手机上把任务做完。在「设置 › 智能体」的「交给 Pinky」里选一个服务，填上它的 API 密钥。DeepSeek、通义千问、Kimi、智谱 GLM、硅基流动、火山方舟、OpenRouter、Anthropic、OpenAI、Gemini、Ollama 和 LM Studio 都有现成的设置；其他兼容 Anthropic 或 OpenAI API 的服务，填上服务地址和模型名称也能用。保存时会马上检查模型，出了问题会说清楚是什么问题。密钥和手机的 PIN 码一样，保存在 Mac 的钥匙串、Windows 凭据管理器或你的密钥环里，只发送给这个服务。「用量」里可以看到 Pinky 自己的智能体今天、最近 7 天和最近 30 天用了多少 token，按服务和模型分开列，知道价格的还会显示费用；这些数据只存在你的电脑上。
 
-然后在手机页面「任务」顶部写下任务，比如「定一个 7:00 的闹钟」，点「开始」（或按 ⌘↩，Windows 和 Linux 上是 Ctrl+Enter）；在「所有手机」里要先选手机。点「询问屏幕」会开始一个关于手机当前画面的任务。Pinky 会以「Pinky」这个 Agent 的身份一步步操作，和其他 Agent 走同一条路：你的规则、审批、已屏蔽的应用、「接管」、「全部停止」和录屏对它都有效，它的任务也会记在「活动」里。它从不输入密码和一次性验证码（除非你允许了在虚拟手机上输入，而且任务里给了），遇到时会把手机交给你。点「停止」会立刻结束任务。它工作时，你可以在任务框里给它发消息，Pinky 读到之前都可以修改或撤回；任务结束后，点「继续」可以发一条新消息让它接着做。
+然后在手机页面「任务」顶部写下任务，比如「定一个 7:00 的闹钟」，点「开始」（或按 ⌘↩，Windows 和 Linux 上是 Ctrl+Enter）；在「所有手机」里要先选手机。点「询问屏幕」会开始一个关于手机当前画面的任务。Pinky 会以「Pinky」这个 Agent 的身份一步步操作，和其他 Agent 走同一条路：你的规则、审批、已屏蔽的应用、「接管」、「全部停止」和录屏对它都有效，它的任务也会记在「活动」里。它从不输入密码和一次性验证码（除非你在「设置 › 安全」里允许了，而且任务里给了），遇到时会把手机交给你。点「停止」会立刻结束任务。它工作时，你可以在任务框里给它发消息，Pinky 读到之前都可以修改或撤回；任务结束后，点「继续」可以发一条新消息让它接着做。
 
 每个任务做到 100 步、20 分钟或 2 美元就会停下，以先到者为准；这些上限可以在「设置 › 智能体」里改，等你操作的时间不算在内。费用按 Anthropic 的价格计算；Pinky 不知道价格的模型，按每百万 token 1 美元计算。「交给 Pinky」一次只用一台手机：更复杂的事，还是接入一个 Agent（[详情](docs/notes/builtin-agent.md)）。
 
@@ -287,7 +289,7 @@ Windows 上 Agent 通过命名管道连接 Pinky，Claude、Codex 桌面版这�
 <details>
 <summary><b>哪些东西 Agent 看不到？</b></summary>
 
-银行、钱包和密码管理器类 App（Pinky 自带一份名单，可以在「设置 › 安全」里从手机上的应用中挑选添加）：Agent 拿不到它们的画面，它们的通知也会被藏起来，下拉通知栏和锁屏上也一样。别的界面上出现被屏蔽的 App 时，比如通知栏或横幅里它的通知、最近任务里它的卡片，Agent 只会读到那里有东西被隐藏了，Agent 拿到的截图和「活动」里的截图也会用灰块遮住（录屏里保持原样，所以录屏留在你的电脑上：只有你在某次导出时允许，Agent 才拿得到）。Agent 不能往密码框和验证码框里输入。想在模拟器上用测试账号测试登录时，可以在「设置 › 安全 › 允许在虚拟手机上输入密码」里放开（默认关闭），真机上始终不行。Agent 在任务中需要用银行或钱包 App 时，Pinky 会先问你。你允许的话，Agent 在这次任务剩下的时间里可以打开和读取这个 App，你的规则在那里照样会问，Pinky 也不会留下它的截图和录屏：只有画面上才有的文字，Pinky 在内存里看一眼画面识别出来，只把文字交给 Agent，不给图。密码管理器不会提供这个选项。
+银行、钱包和密码管理器类 App（Pinky 自带一份名单，可以在「设置 › 安全」里从手机上的应用中挑选添加）：Agent 拿不到它们的画面，它们的通知也会被藏起来，下拉通知栏和锁屏上也一样。别的界面上出现被屏蔽的 App 时，比如通知栏或横幅里它的通知、最近任务里它的卡片，Agent 只会读到那里有东西被隐藏了，Agent 拿到的截图和「活动」里的截图也会用灰块遮住（录屏里保持原样，所以录屏留在你的电脑上：只有你在某次导出时允许，Agent 才拿得到）。Agent 不能往密码框和验证码框里输入。想用测试账号登录、并把密码和验证码写在任务里时，可以放开：模拟器上打开「设置 › 安全 › 允许在虚拟手机上输入密码」，真机上打开「允许在手机上输入密码」，之后每次都会先问你，除非你在那个 App 里选了「始终允许」（可以在「始终允许的操作」里撤销）。两项都默认关闭。无论怎么设置，Pinky 都不会输入手机自己的锁屏密码。Agent 在这类输入框里输入的内容，在「活动」、审批和导出中都显示为 ••••••，「活动」里的截图也会遮住这个输入框（录屏里是手机当时显示的样子）。Agent 在任务中需要用银行或钱包 App 时，Pinky 会先问你。你允许的话，Agent 在这次任务剩下的时间里可以打开和读取这个 App，你的规则在那里照样会问，Pinky 也不会留下它的截图和录屏：只有画面上才有的文字，Pinky 在内存里看一眼画面识别出来，只把文字交给 Agent，不给图。密码管理器不会提供这个选项。
 
 一次性验证码会在 Agent 读到之前被打码：不管是在短信、邮件、通知里还是屏幕上别的地方，「您的验证码为 482913」到 Agent 那里都是「您的验证码为 ••••••」，Agent 拿到的截图和「活动」里的截图也会用灰块把验证码遮住。价格、电话号码、日期和跟验证码无关的文字里的数字都保持原样。录屏里的验证码保持原样，所以录屏留在你的电脑上：只有你在 Agent 导出某次任务报告时允许，它才拿得到。可以在「设置 › 安全 › 对智能体隐藏验证码」里关掉。
 

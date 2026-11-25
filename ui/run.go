@@ -56,9 +56,9 @@ type Options struct {
 	Settings   *Settings
 	OnSettings func(old, s Settings)
 	// GatewaySettings reads again what the gateway keeps of Settings ›
-	// Safety (Preset, HideCodes, VirtualCredentials, ReadOnly and
-	// BlockedApps), which hand
-	// edits of rules.yaml and apps.yaml change while Pinky runs. since is
+	// Safety (Preset, HideCodes, VirtualCredentials, PhoneCredentials,
+	// ReadOnly and BlockedApps), which hand edits of rules.yaml and
+	// apps.yaml change while Pinky runs. since is
 	// the version of the policy it returned last, -1 at first; ok is false
 	// while the policy is still at it. The client calls it off the main
 	// thread every two seconds while Settings shows, and shows what it
@@ -180,8 +180,11 @@ type Settings struct {
 	// VirtualCredentials lets agents type passwords and one-time codes on
 	// virtual phones (policy.File.VirtualCredentials).
 	VirtualCredentials bool
-	KeepDays           int
-	Record             bool
+	// PhoneCredentials lets agents type passwords and one-time codes on
+	// phones, asking the person in each app (policy.File.PhoneCredentials).
+	PhoneCredentials bool
+	KeepDays         int
+	Record           bool
 	// SmallerRecordings makes each task's recording smaller when the task
 	// ends (internal/recording.Smaller); off keeps the phone's own stream.
 	SmallerRecordings bool

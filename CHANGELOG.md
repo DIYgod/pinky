@@ -2,6 +2,24 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1125.4 (2026-11-25)
+
+- When no phone is online, agents now hear why: each paired phone with its status, such as Not seen on Wi-Fi, and what usually causes it, so they can tell you what to check.
+- Pinky masks typed passwords and codes in more places: a field named after its code, a batch of steps that types a password, the approval card of a hidden passcode keypad, and a typing step that fails.
+
+## 2026.1125.3 (2026-11-25)
+
+- You can now let agents type passwords and one-time codes that their task gives them on your phones, for signing in with test accounts: turn on Settings › Safety › Allow passwords on phones. Pinky asks you each time, unless you always allow it in that app, and never types a phone's own passcode.
+- Passwords and codes typed into sign-in fields now show as •••••• in Activity, approvals, history and exports, on virtual phones too, and Pinky masks the ones that earlier versions kept.
+
+## 2026.1125.2 (2026-11-25)
+
+- On a Mac, Settings › Phones › Restart device service without a password lets Pinky bring back an iPhone that macOS loses on Wi-Fi by itself while a task uses it, instead of asking for your administrator password each time. It is off by default; turning it on or off asks for the password once.
+
+## 2026.1125.1 (2026-11-25)
+
+- On an iPhone left on Automatic with Pinky on the iPhone installed, a task that opens the Camera now moves to Pinky on the iPhone, so the camera no longer shows black. A scan inside another app, such as WeChat, still needs the agent to ask for that connection.
+
 ## 2026.1124.11 (2026-11-24)
 
 - Opening an app on an iPhone no longer fails when the connection to the phone drops for a moment, for example right after another tool installed an app: Pinky tries again by itself.

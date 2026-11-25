@@ -3790,7 +3790,7 @@
   "@connectionAuto": {
     "description": "Settings › Phones, an iPhone's connection choice: the first choice, which goes by the iOS version."
   },
-  "connectionAutoDesc": "On iOS 27 and later, without Pinky on the iPhone. If Pinky on the iPhone is installed, a task moves to it for apps that refuse screen sharing (DBS digibank, China Merchants Bank) and comes back afterwards. Older iPhones use it when they have it.",
+  "connectionAutoDesc": "On iOS 27 and later, without Pinky on the iPhone. If Pinky on the iPhone is installed, a task moves to it for apps that refuse screen sharing (DBS digibank, China Merchants Bank) and for the Camera, and comes back afterwards. Older iPhones use it when they have it.",
   "@connectionAutoDesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what Automatic does."
   },
@@ -6756,6 +6756,16 @@
       }
     }
   },
+  "lostConfirmMessageQuiet": "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two, and tasks on them wait. You allowed this without a password in Settings › Phones.",
+  "@lostConfirmMessageQuiet": {
+    "description": "The message of the dialog that asks before Pinky restarts macOS's device service, once the person allowed restarts without a password (settingsPhonesQuietRestart). phone is the lost iPhone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
   "lostConfirmTitle": "Restart the device service?",
   "@lostConfirmTitle": {
     "description": "The dialog that asks before Pinky restarts macOS's device service."
@@ -6795,6 +6805,10 @@
   "lostRestartNote": "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an administrator's password.",
   "@lostRestartNote": {
     "description": "Under the Restart device service button."
+  },
+  "lostRestartNoteQuiet": "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. No password needed: you allowed it in Settings › Phones.",
+  "@lostRestartNoteQuiet": {
+    "description": "Under the Restart device service button, once the person allowed restarts without a password (settingsPhonesQuietRestart)."
   },
   "lostRestarted": "Restarted the device service. {phone} shows up again in a few seconds.",
   "@lostRestarted": {
@@ -8962,6 +8976,10 @@
   "@ruleActionCommits": {
     "description": "What the Commits rule covers, inside \"Always allow commits in Dinely\"."
   },
+  "ruleActionCredentials": "typing passwords and codes",
+  "@ruleActionCredentials": {
+    "description": "What the Passwords and codes rule covers, inside \"Always allow typing passwords and codes in Dinely\" on a phone where the person allows passwords (Settings › Safety)."
+  },
   "ruleActionEveryAction": "every action",
   "@ruleActionEveryAction": {
     "description": "What the Every action rule covers, inside \"Always allow every action in Dinely\"."
@@ -9038,9 +9056,9 @@
   "@ruleCommits": {
     "description": "The name of the policy rule that asks before deletions, posts and other commits."
   },
-  "ruleCredentials": "credentials",
+  "ruleCredentials": "Passwords and codes",
   "@ruleCredentials": {
-    "description": "The name of the built-in rule that denies typing into password and one-time-code fields."
+    "description": "The name of the built-in rule about typing into password and one-time-code fields, as approvals and steps name it: it refuses, or asks on a phone where the person allows passwords (Settings › Safety)."
   },
   "ruleEveryAction": "Every action",
   "@ruleEveryAction": {
@@ -9862,6 +9880,32 @@
   "@settingsPhonesWiFiDesc": {
     "description": "Settings › Phones: under settingsPhonesWiFi."
   },
+  "settingsPhonesQuietRestart": "Restart device service without a password",
+  "@settingsPhonesQuietRestart": {
+    "description": "Settings › Phones, on a Mac: the switch that lets Pinky restart macOS's device service (usbmuxd) by itself, without the administrator password, when it lost an iPhone on Wi-Fi that a task uses. Agents are told this name, in English."
+  },
+  "settingsPhonesQuietRestartDesc": "macOS's device service (usbmuxd) sometimes loses an iPhone or iPad on Wi-Fi for up to an hour. With this on, Pinky restarts it by itself when that happens to a phone a task uses, without asking for the administrator password: at most once every 5 minutes, and not while a phone is in the middle of an action. Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two each time. Turning this on or off asks for the password once.",
+  "@settingsPhonesQuietRestartDesc": {
+    "description": "Settings › Phones: under settingsPhonesQuietRestart."
+  },
+  "settingsPhonesQuietRestartOnReason": "Pinky wants to let your account restart the device service (usbmuxd) without a password, so that it can bring back an iPhone this Mac loses on Wi-Fi.",
+  "@settingsPhonesQuietRestartOnReason": {
+    "description": "Shown in macOS's own request for an administrator's password when the person turns settingsPhonesQuietRestart on."
+  },
+  "settingsPhonesQuietRestartOffReason": "Pinky wants to remove the rule that lets your account restart the device service (usbmuxd) without a password.",
+  "@settingsPhonesQuietRestartOffReason": {
+    "description": "Shown in macOS's own request for an administrator's password when the person turns settingsPhonesQuietRestart off."
+  },
+  "settingsPhonesQuietRestartFailed": "Couldn't change how the device service restarts: {error}",
+  "@settingsPhonesQuietRestartFailed": {
+    "description": "A notice when turning settingsPhonesQuietRestart on or off failed. error is what went wrong.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "visudo: syntax error"
+      }
+    }
+  },
   "settingsPrivacyCannotDelete": "This gateway cannot delete its history",
   "@settingsPrivacyCannotDelete": {
     "description": "Settings › Privacy: the tooltip of the disabled Delete… button when the gateway cannot delete its history."
@@ -10444,9 +10488,17 @@
   "@settingsSafetyVirtualCredentials": {
     "description": "Settings › Safety: the switch that lets agents type passwords and one-time codes on virtual phones (emulators and Simulators on this computer). Off by default."
   },
-  "settingsSafetyVirtualCredentialsDesc": "Agents may type passwords and one-time codes on emulators and Simulators on this computer, to test sign-ins with test accounts. On phones they never can.",
+  "settingsSafetyVirtualCredentialsDesc": "Agents may type passwords and one-time codes on emulators and Simulators on this computer, to test sign-ins with test accounts.",
   "@settingsSafetyVirtualCredentialsDesc": {
-    "description": "Settings › Safety: the line under Allow passwords on virtual phones. Phones means real phones, as opposed to virtual ones."
+    "description": "Settings › Safety: the line under Allow passwords on virtual phones."
+  },
+  "settingsSafetyPhoneCredentials": "Allow passwords on phones",
+  "@settingsSafetyPhoneCredentials": {
+    "description": "Settings › Safety: the switch that lets agents type passwords and one-time codes on real phones, asking the person in each app. Off by default."
+  },
+  "settingsSafetyPhoneCredentialsDesc": "Agents may type passwords and one-time codes their task gives them on your phones, to sign in with test accounts. Pinky asks you each time, unless you always allow it in that app. Never the phone's own passcode.",
+  "@settingsSafetyPhoneCredentialsDesc": {
+    "description": "Settings › Safety: the line under Allow passwords on phones. Phones means real phones, as opposed to emulators and Simulators. Always allow is the approval card's choice; the phone's own passcode is the one that unlocks it."
   },
   "settingsSafetyIntro": "Pinky checks every action before it reaches the phone. Agents can't change these settings.",
   "@settingsSafetyIntro": {

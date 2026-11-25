@@ -17773,6 +17773,26 @@ func (msgs Messages) LostConfirmMessage(phone string) string {
 	return Catalog.Format(msgs.locale, "lostConfirmMessage", map[string]any{"phone": phone})
 }
 
+// LostConfirmMessageQuiet says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language the app shows.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service, once the person allowed restarts without a password
+// (settingsPhonesQuietRestart). phone is the lost iPhone's name.
+func LostConfirmMessageQuiet(phone string) string {
+	return In(i18n.Locale()).LostConfirmMessageQuiet(phone)
+}
+
+// LostConfirmMessageQuiet says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language of msgs.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service, once the person allowed restarts without a password
+// (settingsPhonesQuietRestart). phone is the lost iPhone's name.
+func (msgs Messages) LostConfirmMessageQuiet(phone string) string {
+	return Catalog.Format(msgs.locale, "lostConfirmMessageQuiet", map[string]any{"phone": phone})
+}
+
 // LostConfirmTitle says "Restart the device service?"
 // in the language the app shows.
 //
@@ -17877,6 +17897,22 @@ func LostRestartNote() string { return In(i18n.Locale()).LostRestartNote() }
 // Under the Restart device service button.
 func (msgs Messages) LostRestartNote() string {
 	return Catalog.Format(msgs.locale, "lostRestartNote", nil)
+}
+
+// LostRestartNoteQuiet says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. No password needed: yo…"
+// in the language the app shows.
+//
+// Under the Restart device service button, once the person allowed restarts
+// without a password (settingsPhonesQuietRestart).
+func LostRestartNoteQuiet() string { return In(i18n.Locale()).LostRestartNoteQuiet() }
+
+// LostRestartNoteQuiet says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. No password needed: yo…"
+// in the language of msgs.
+//
+// Under the Restart device service button, once the person allowed restarts
+// without a password (settingsPhonesQuietRestart).
+func (msgs Messages) LostRestartNoteQuiet() string {
+	return Catalog.Format(msgs.locale, "lostRestartNoteQuiet", nil)
 }
 
 // LostRestarted says "Restarted the device service. {phone} shows up again in a few seconds."
@@ -23635,6 +23671,24 @@ func (msgs Messages) RuleActionCommits() string {
 	return Catalog.Format(msgs.locale, "ruleActionCommits", nil)
 }
 
+// RuleActionCredentials says "typing passwords and codes"
+// in the language the app shows.
+//
+// What the Passwords and codes rule covers, inside "Always allow typing
+// passwords and codes in Dinely" on a phone where the person allows
+// passwords (Settings › Safety).
+func RuleActionCredentials() string { return In(i18n.Locale()).RuleActionCredentials() }
+
+// RuleActionCredentials says "typing passwords and codes"
+// in the language of msgs.
+//
+// What the Passwords and codes rule covers, inside "Always allow typing
+// passwords and codes in Dinely" on a phone where the person allows
+// passwords (Settings › Safety).
+func (msgs Messages) RuleActionCredentials() string {
+	return Catalog.Format(msgs.locale, "ruleActionCredentials", nil)
+}
+
 // RuleActionEveryAction says "every action"
 // in the language the app shows.
 //
@@ -23879,18 +23933,20 @@ func (msgs Messages) RuleCommits() string {
 	return Catalog.Format(msgs.locale, "ruleCommits", nil)
 }
 
-// RuleCredentials says "credentials"
+// RuleCredentials says "Passwords and codes"
 // in the language the app shows.
 //
-// The name of the built-in rule that denies typing into password and
-// one-time-code fields.
+// The name of the built-in rule about typing into password and
+// one-time-code fields, as approvals and steps name it: it refuses, or asks
+// on a phone where the person allows passwords (Settings › Safety).
 func RuleCredentials() string { return In(i18n.Locale()).RuleCredentials() }
 
-// RuleCredentials says "credentials"
+// RuleCredentials says "Passwords and codes"
 // in the language of msgs.
 //
-// The name of the built-in rule that denies typing into password and
-// one-time-code fields.
+// The name of the built-in rule about typing into password and
+// one-time-code fields, as approvals and steps name it: it refuses, or asks
+// on a phone where the person allows passwords (Settings › Safety).
 func (msgs Messages) RuleCredentials() string {
 	return Catalog.Format(msgs.locale, "ruleCredentials", nil)
 }
@@ -26605,6 +26661,96 @@ func (msgs Messages) SettingsPhonesWiFiDesc() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesWiFiDesc", nil)
 }
 
+// SettingsPhonesQuietRestart says "Restart device service without a password"
+// in the language the app shows.
+//
+// Settings › Phones, on a Mac: the switch that lets Pinky restart macOS's
+// device service (usbmuxd) by itself, without the administrator password,
+// when it lost an iPhone on Wi-Fi that a task uses. Agents are told this
+// name, in English.
+func SettingsPhonesQuietRestart() string { return In(i18n.Locale()).SettingsPhonesQuietRestart() }
+
+// SettingsPhonesQuietRestart says "Restart device service without a password"
+// in the language of msgs.
+//
+// Settings › Phones, on a Mac: the switch that lets Pinky restart macOS's
+// device service (usbmuxd) by itself, without the administrator password,
+// when it lost an iPhone on Wi-Fi that a task uses. Agents are told this
+// name, in English.
+func (msgs Messages) SettingsPhonesQuietRestart() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestart", nil)
+}
+
+// SettingsPhonesQuietRestartDesc says "macOS's device service (usbmuxd) sometimes loses an iPhone or iPad on Wi-Fi for up to an hour. With this on, Pinky re…"
+// in the language the app shows.
+//
+// Settings › Phones: under settingsPhonesQuietRestart.
+func SettingsPhonesQuietRestartDesc() string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartDesc()
+}
+
+// SettingsPhonesQuietRestartDesc says "macOS's device service (usbmuxd) sometimes loses an iPhone or iPad on Wi-Fi for up to an hour. With this on, Pinky re…"
+// in the language of msgs.
+//
+// Settings › Phones: under settingsPhonesQuietRestart.
+func (msgs Messages) SettingsPhonesQuietRestartDesc() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartDesc", nil)
+}
+
+// SettingsPhonesQuietRestartOnReason says "Pinky wants to let your account restart the device service (usbmuxd) without a password, so that it can bring back an…"
+// in the language the app shows.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart on.
+func SettingsPhonesQuietRestartOnReason() string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartOnReason()
+}
+
+// SettingsPhonesQuietRestartOnReason says "Pinky wants to let your account restart the device service (usbmuxd) without a password, so that it can bring back an…"
+// in the language of msgs.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart on.
+func (msgs Messages) SettingsPhonesQuietRestartOnReason() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartOnReason", nil)
+}
+
+// SettingsPhonesQuietRestartOffReason says "Pinky wants to remove the rule that lets your account restart the device service (usbmuxd) without a password."
+// in the language the app shows.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart off.
+func SettingsPhonesQuietRestartOffReason() string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartOffReason()
+}
+
+// SettingsPhonesQuietRestartOffReason says "Pinky wants to remove the rule that lets your account restart the device service (usbmuxd) without a password."
+// in the language of msgs.
+//
+// Shown in macOS's own request for an administrator's password when the
+// person turns settingsPhonesQuietRestart off.
+func (msgs Messages) SettingsPhonesQuietRestartOffReason() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartOffReason", nil)
+}
+
+// SettingsPhonesQuietRestartFailed says "Couldn't change how the device service restarts: {error}"
+// in the language the app shows.
+//
+// A notice when turning settingsPhonesQuietRestart on or off failed. error
+// is what went wrong.
+func SettingsPhonesQuietRestartFailed(error string) string {
+	return In(i18n.Locale()).SettingsPhonesQuietRestartFailed(error)
+}
+
+// SettingsPhonesQuietRestartFailed says "Couldn't change how the device service restarts: {error}"
+// in the language of msgs.
+//
+// A notice when turning settingsPhonesQuietRestart on or off failed. error
+// is what went wrong.
+func (msgs Messages) SettingsPhonesQuietRestartFailed(error string) string {
+	return Catalog.Format(msgs.locale, "settingsPhonesQuietRestartFailed", map[string]any{"error": error})
+}
+
 // SettingsPrivacyCannotDelete says "This gateway cannot delete its history"
 // in the language the app shows.
 //
@@ -28381,7 +28527,6 @@ func (msgs Messages) SettingsSafetyVirtualCredentials() string {
 // in the language the app shows.
 //
 // Settings › Safety: the line under Allow passwords on virtual phones.
-// Phones means real phones, as opposed to virtual ones.
 func SettingsSafetyVirtualCredentialsDesc() string {
 	return In(i18n.Locale()).SettingsSafetyVirtualCredentialsDesc()
 }
@@ -28390,9 +28535,50 @@ func SettingsSafetyVirtualCredentialsDesc() string {
 // in the language of msgs.
 //
 // Settings › Safety: the line under Allow passwords on virtual phones.
-// Phones means real phones, as opposed to virtual ones.
 func (msgs Messages) SettingsSafetyVirtualCredentialsDesc() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyVirtualCredentialsDesc", nil)
+}
+
+// SettingsSafetyPhoneCredentials says "Allow passwords on phones"
+// in the language the app shows.
+//
+// Settings › Safety: the switch that lets agents type passwords and
+// one-time codes on real phones, asking the person in each app. Off by
+// default.
+func SettingsSafetyPhoneCredentials() string {
+	return In(i18n.Locale()).SettingsSafetyPhoneCredentials()
+}
+
+// SettingsSafetyPhoneCredentials says "Allow passwords on phones"
+// in the language of msgs.
+//
+// Settings › Safety: the switch that lets agents type passwords and
+// one-time codes on real phones, asking the person in each app. Off by
+// default.
+func (msgs Messages) SettingsSafetyPhoneCredentials() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPhoneCredentials", nil)
+}
+
+// SettingsSafetyPhoneCredentialsDesc says "Agents may type passwords and one-time codes their task gives them on your phones, to sign in with test accounts. Pin…"
+// in the language the app shows.
+//
+// Settings › Safety: the line under Allow passwords on phones. Phones
+// means real phones, as opposed to emulators and Simulators. Always allow
+// is the approval card's choice; the phone's own passcode is the one that
+// unlocks it.
+func SettingsSafetyPhoneCredentialsDesc() string {
+	return In(i18n.Locale()).SettingsSafetyPhoneCredentialsDesc()
+}
+
+// SettingsSafetyPhoneCredentialsDesc says "Agents may type passwords and one-time codes their task gives them on your phones, to sign in with test accounts. Pin…"
+// in the language of msgs.
+//
+// Settings › Safety: the line under Allow passwords on phones. Phones
+// means real phones, as opposed to emulators and Simulators. Always allow
+// is the approval card's choice; the phone's own passcode is the one that
+// unlocks it.
+func (msgs Messages) SettingsSafetyPhoneCredentialsDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPhoneCredentialsDesc", nil)
 }
 
 // SettingsSafetyIntro says "Pinky checks every action before it reaches the phone. Agents can't change these settings."
