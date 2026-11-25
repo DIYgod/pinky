@@ -21,7 +21,7 @@ type netProvider struct {
 	mu          sync.Mutex
 	conn        map[string]string // Info.Connection by id; the demo's is "usb"
 	unplugged   map[string]bool   // not listed
-	listErr     error            // List fails with it
+	listErr     error             // List fails with it
 	forgotten   map[string]bool
 	calls       []string                 // "forget id", "remember id", "disconnect id"
 	gate        map[string]chan struct{} // Open of these phones waits for the channel to close
