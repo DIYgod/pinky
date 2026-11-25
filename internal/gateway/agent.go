@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -577,6 +578,47 @@ func (g *Gateway) deviceListLocked() string {
 	return strings.Join(out, ", ")
 }
 
+// notSeenHelp is what an agent can tell the person about a phone not seen
+// on Wi-Fi (driver.SetupNotOnWiFi), as the Phone screen explains it.
+const notSeenHelp = "Not seen on Wi-Fi: the phone may be asleep (unlock it), on another Wi-Fi network than this computer, " +
+	"or on one that keeps devices apart, as guest networks and some routers do. " +
+	"A VPN on the computer or the phone can hide it too, and so can Pinky not being allowed on the local network " +
+	"(System Settings › Privacy & Security › Local Network). Plugging it in works on any network."
+
+// NoPhoneMessage tells an agent that no phone is online, with the phones
+// of devs that are offline and what their status lines say.
+func NoPhoneMessage(devs []DeviceView) string {
+	msg, help := "No phone is connected to Pinky.", ""
+	var known []string
+	for _, d := range devs {
+		if d.Status != DeviceOffline && d.Status != DeviceConnecting {
+			continue // one found on Wi-Fi, which may not be the person's
+		}
+		known = append(known, fmt.Sprintf("%s (%s)", cmp.Or(d.Info.Name, d.Info.ID), d.StatusLine))
+		if d.Info.Setup == driver.SetupNotOnWiFi {
+			help = " " + notSeenHelp
+		}
+	}
+	if len(known) > 0 {
+		msg += " Phones it knows: " + strings.Join(known, ", ") + "."
+	}
+	return msg + help + " Ask the person to connect one."
+}
+
+// offlineMessageLocked tells an agent that d is offline, and why when its
+// status line says so. The caller holds g.mu.
+func (g *Gateway) offlineMessageLocked(d *device) string {
+	msg := d.name() + " is offline"
+	if _, line := g.statusLocked(d, nil); line != "Offline" {
+		msg += " (" + strings.TrimSuffix(strings.TrimPrefix(line, "Offline · "), ".") + ")"
+	}
+	msg += "."
+	if d.info.Setup == driver.SetupNotOnWiFi {
+		msg += " " + notSeenHelp
+	}
+	return msg
+}
+
 // Connect implements phone_connect: it leases a device for a task and
 // returns the first screen.
 func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
@@ -637,7 +679,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		switch len(online) {
 		case 0:
 			g.mu.Unlock()
-			return errResult(ErrDeviceOffline, "No phone is connected to Pinky. Ask the person to connect one.")
+			return errResult(ErrDeviceOffline, "%s", NoPhoneMessage(g.Devices()))
 		case 1:
 			d = online[0]
 		default:
@@ -661,8 +703,9 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			s.agent.Name, d.name(), approval.Human(stopHold))
 	}
 	if !d.online && !waitsForStep(d.info.State) {
+		msg := g.offlineMessageLocked(d)
 		g.mu.Unlock()
-		return errResult(ErrDeviceOffline, "%s is offline.", d.name())
+		return errResult(ErrDeviceOffline, "%s", msg)
 	}
 	if res := g.busyElsewhereLocked(s, d, title); res != nil {
 		g.mu.Unlock()
