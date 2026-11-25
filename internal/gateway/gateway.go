@@ -632,13 +632,14 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	moved := info.State == driver.StateOnline && d.dev != nil && from != "" && info.Connection != "" && info.Connection != from
 	if moved {
 		d.moving = time.Now().Add(moveWait)
-	}
-	g.mu.Unlock()
-	if moved {
+		g.mu.Unlock()
 		g.log.Info("device moving", "device", d.id, "from", from, "to", info.Connection)
 		g.setOffline(d, movingWhy(info.Connection))
+		g.mu.Lock()
 	}
-	g.mu.Lock()
+	// Else g.mu stays held until the phone is marked opening below: a call
+	// in between would find a phone listed online that is neither open nor
+	// opening, and tell its agent it is offline (a lost phone coming back).
 	if d.switching != "" && waitsForStep(info.State) {
 		// Moving to another connection for a task, it waits for the
 		// person (the passcode before the helper starts): the task's
