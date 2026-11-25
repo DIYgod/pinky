@@ -17,8 +17,27 @@ import (
 // was. As with JSON, the change is checked by reading the file before and
 // after it.
 
+// utf8BOM is the byte order mark some Windows editors put at the start of
+// a file. Codex reads past it, as Pinky does for JSON settings.
+const utf8BOM = "\xef\xbb\xbf"
+
+// cutBOM returns src without its byte order mark, and the mark it had.
+func cutBOM(src []byte) (bom string, rest []byte) {
+	if rest, ok := bytes.CutPrefix(src, []byte(utf8BOM)); ok {
+		return utf8BOM, rest
+	}
+	return "", src
+}
+
 // readTOML reads a TOML file into maps; an empty file is an empty table.
 func readTOML(src []byte) (map[string]any, error) {
+	_, src = cutBOM(src)
+	return parseTOML(src)
+}
+
+// parseTOML reads TOML whose byte order mark was cut: a second mark is
+// not valid, as Codex finds too.
+func parseTOML(src []byte) (map[string]any, error) {
 	v := map[string]any{}
 	if err := toml.Unmarshal(src, &v); err != nil {
 		var de *toml.DecodeError
@@ -252,10 +271,9 @@ func tomlTable(lines []string, inString []bool, key []string) [][2]int {
 		}
 		ours := k != nil && hasPrefix(k, key)
 		if open >= 0 {
-			// Comments right over another table's header are about that table.
 			end := i
-			for !ours && end-1 > open && !inString[end-1] && strings.HasPrefix(strings.TrimSpace(lines[end-1]), "#") {
-				end--
+			if !ours {
+				end = tomlTableEnd(lines, inString, open, i)
 			}
 			spans = append(spans, [2]int{open, end})
 			open = -1
@@ -265,9 +283,36 @@ func tomlTable(lines []string, inString []bool, key []string) [][2]int {
 		}
 	}
 	if open >= 0 {
-		spans = append(spans, [2]int{open, len(lines)})
+		spans = append(spans, [2]int{open, tomlTableEnd(lines, inString, open, len(lines))})
 	}
 	return spans
+}
+
+// tomlTableEnd is where the table whose header is at open ends, when what
+// comes at next is not part of it. Comments right under its last line (or
+// its header) are its own and go with it, unless they run right up to the
+// next table's header, which they are about. After a blank line, comments
+// are about what follows (the next table, a table commented out, or
+// nothing) and stay.
+func tomlTableEnd(lines []string, inString []bool, open, next int) int {
+	comment := func(i int) bool { return strings.HasPrefix(strings.TrimSpace(lines[i]), "#") }
+	last := next // right after the table's last line that is not a comment or blank
+	for last-1 > open && !inString[last-1] && (comment(last-1) || strings.TrimSpace(lines[last-1]) == "") {
+		last--
+	}
+	j := last
+	for j < next && comment(j) {
+		j++
+	}
+	if j == next && next < len(lines) {
+		return last // comments right over the next header
+	}
+	for ; j < next; j++ {
+		if comment(j) {
+			return j
+		}
+	}
+	return next
 }
 
 // tomlString writes s as a TOML basic string.
@@ -314,7 +359,8 @@ func tomlServer(key []string, srv Server, nl string) string {
 // setTOMLServer returns src with the table key (as mcp_servers.pinky) set
 // to srv, in place of the one there or at the end of the file.
 func setTOMLServer(src []byte, key []string, srv Server) ([]byte, error) {
-	before, err := readTOML(src)
+	bom, src := cutBOM(src)
+	before, err := parseTOML(src)
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +406,7 @@ func setTOMLServer(src []byte, key []string, srv Server) ([]byte, error) {
 		}
 	}
 	res := []byte(out.String())
-	after, err := readTOML(res)
+	after, err := parseTOML(res)
 	if err != nil {
 		return nil, fmt.Errorf("the change would break the file: %w", err)
 	}
@@ -371,18 +417,20 @@ func setTOMLServer(src []byte, key []string, srv Server) ([]byte, error) {
 	if !reflect.DeepEqual(without(after, key[:len(key)-1], key[len(key)-1], before), without(before, key[:len(key)-1], key[len(key)-1], before)) {
 		return nil, errors.New("the change would alter more than Pinky's entry")
 	}
-	return res, nil
+	return append([]byte(bom), res...), nil
 }
 
 // deleteTOMLServer returns src without the table key and its sub-tables;
 // changed is false when there was none.
 func deleteTOMLServer(src []byte, key []string) (out []byte, changed bool, err error) {
-	before, err := readTOML(src)
+	orig := src
+	bom, src := cutBOM(src)
+	before, err := parseTOML(src)
 	if err != nil {
 		return nil, false, err
 	}
 	if _, ok := lookup(before, key...); !ok {
-		return src, false, nil
+		return orig, false, nil
 	}
 	lines, inString := tomlLines(src)
 	spans := tomlTable(lines, inString, key)
@@ -411,7 +459,7 @@ func deleteTOMLServer(src []byte, key []string) (out []byte, changed bool, err e
 		}
 		res = append(res, nl...)
 	}
-	after, err := readTOML(res)
+	after, err := parseTOML(res)
 	if err != nil {
 		return nil, false, fmt.Errorf("the change would break the file: %w", err)
 	}
@@ -423,7 +471,7 @@ func deleteTOMLServer(src []byte, key []string) (out []byte, changed bool, err e
 	if !reflect.DeepEqual(pruneEmpty(after, path), pruneEmpty(without(before, path, key[len(key)-1], before), path)) {
 		return nil, false, errors.New("the change would alter more than Pinky's entry")
 	}
-	return res, true, nil
+	return append([]byte(bom), res...), true, nil
 }
 
 func toAny(ss []string) []any {

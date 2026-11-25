@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1125.5 (2026-11-25)
+
+- When an agent hands Pinky a task without naming a phone, Pinky now picks the phone the agent would get by connecting: the one online, or else one waiting for you to finish a step. A phone found on Wi-Fi that you haven't confirmed as yours is never picked or shown to agents.
+- Pinky now also clears passwords and codes it masked from the free space of its history file, so no old copy stays on disk.
+- Reconnecting or removing Codex no longer deletes the comments after Pinky's section in Codex's config.toml, and Pinky now reads a config.toml that starts with a byte order mark.
+- On a Mac, Pinky builds its iPhone app only from the kit made for its own release, and downloads the kit again when the copy it has doesn't match.
+
 ## 2026.1125.4 (2026-11-25)
 
 - When no phone is online, agents now hear why: each paired phone with its status, such as Not seen on Wi-Fi, and what usually causes it, so they can tell you what to check.
