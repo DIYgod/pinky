@@ -649,8 +649,9 @@ func IsCredentialField(e *screen.Element) bool {
 }
 
 // fieldName is what a text field is called: its label without the text
-// typed into it (screen.Element.Content), and without an identifier that
-// stands in for a missing label, which counts as an identifier instead.
+// typed into it (screen.Element.Content), or its hint where the text is all
+// of the label (Android), and without an identifier that stands in for a
+// missing label, which counts as an identifier instead.
 // What someone wrote says nothing about what the field is for: a message
 // that mentions "the code review", or an address bar showing a page about
 // codes, is no code field (GitHub issue #67).
@@ -658,7 +659,7 @@ func fieldName(e *screen.Element) string {
 	name := e.Label
 	if c := e.Content; c != "" {
 		if name == c {
-			name = ""
+			name = e.Hint
 		} else if n, ok := strings.CutSuffix(name, ", "+c); ok {
 			name = n
 		}

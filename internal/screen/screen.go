@@ -86,6 +86,11 @@ type Element struct {
 	// empty field that shows its hint. The policy judges what a field is by
 	// its name, not by what someone wrote in it. It is never shown to agents.
 	Content string
+	// Hint is, for a text field whose Label is the text typed into it and so
+	// lacks its name (Android), the hint the text stands in place of. It
+	// names the field to the policy, as the hint of an empty field does in
+	// Label. It is never shown to agents.
+	Hint string
 	// Masked is set when Pinky masked a one-time code in Label (policy);
 	// pictures of the screen cover Bounds. It is never shown to agents.
 	Masked bool
