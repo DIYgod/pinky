@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vietnamese. Pinky is the app's name in every language. The debug page's
+     strings stay English: it is for Pinky's tests. -->
+<resources>
+    <string name="app_name">Pinky</string>
+    <string name="service_label">Pinky</string>
+    <string name="service_description">Dịch vụ trợ năng mà Pinky bật để ứng dụng Pinky trên máy tính của bạn có thể điều khiển điện thoại này: nó đọc màn hình và chạm, nhập và vuốt cho các tác vụ bạn giao cho Pinky. Pinky sẽ hỏi trước khi bật dịch vụ, và Android giữ một chỉ báo trên màn hình trong khi nó chạy.</string>
+</resources>
