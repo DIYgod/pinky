@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1125.9 (2026-11-25)
 
 - 智能体要安装的 iPhone 应用如果带有恶意构造的 Info.plist，Pinky 不会再因此退出。现在 Info.plist 或描述文件超过 1 MB 的应用会被拒绝安装，正常的这类文件只有几十 KB。感谢 @pseudoyu。
 
