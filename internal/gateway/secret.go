@@ -50,7 +50,13 @@ func hideSecret(a Action) Action {
 
 // shown returns the action and call as Pinky keeps and shows them: for a
 // secret action (prep.secret), the text masked and taken out of the intent.
+// An action on a password or code field that holds text has that text taken
+// out of its intent too: the agent may quote the field as it read it ("Tap
+// Verification code, 804217").
 func shown(a Action, c Call, p *prep) (Action, Call) {
+	if p != nil && p.target != nil && typedSecret(p.target) {
+		c.Intent = scrubSecret(c.Intent, p.target.Content)
+	}
 	if p == nil || !p.secret {
 		return a, c
 	}
@@ -74,6 +80,16 @@ func scrubSecret(s, secret string) string {
 // code: a credential field with text in it.
 func typedSecret(e *screen.Element) bool {
 	return e.Content != "" && (e.Role == screen.RoleInput || e.Has(screen.StateEditable)) && policy.IsCredentialField(e)
+}
+
+// shownLabel returns e's label as steps and approval cards show it: a
+// password or code field that holds text names it with the mask for the
+// text, as the screen text history keeps does (hideTyped).
+func shownLabel(e *screen.Element) string {
+	if typedSecret(e) {
+		return maskContent(e.Label, e.Content)
+	}
+	return e.Label
 }
 
 // hideTyped returns s with what its password and code fields hold masked,
