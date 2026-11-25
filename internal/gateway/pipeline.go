@@ -935,6 +935,10 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		if a.Ref > 0 {
 			e, res := byRef(a.Ref)
 			if res != nil {
+				// The field is not known, so the text may be a password, as
+				// for a type refused before the screen is read: the ref may
+				// be of a password field that is gone.
+				p.secret = true
 				return p, res
 			}
 			// An app that draws its own search box shows only its
@@ -942,6 +946,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			// that focuses the box. A search button would search instead.
 			placeholder := e.Role != screen.RoleButton && e.Role != screen.RoleLink && policy.IsSearchField(e)
 			if e.Role != screen.RoleInput && !e.Has(screen.StateEditable) && !e.Has(screen.StateFocused) && !placeholder {
+				p.secret = true // nothing is typed, and the text may be a password all the same
 				return p, errResult(ErrInvalidArgument, "[%d] is a %s, not a text field. Nothing was done.", a.Ref, e.Role)
 			}
 			p.target, p.point, p.hasPt = e, e.Bounds.Center(), true
@@ -1391,6 +1396,11 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	case p.hasPt:
 		point = p.point
 	}
+	if p.secret && a.Tool == "tap" {
+		// A key of the app's hidden passcode keypad: the card shows neither
+		// which nor where, as its step does not (secret.go).
+		target, point = screen.Rect{}, screen.Point{}
+	}
 	// What the card and history show: the text typed into a password
 	// field hidden (secret.go). The binding keeps the action itself.
 	sa, sc := shown(a, c, p)
@@ -1463,9 +1473,12 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 	label := ""
 	switch {
 	case p.decider != nil:
-		label = p.decider.Label
+		label = shownLabel(p.decider)
 	case p.target != nil:
-		label = p.target.Label
+		label = shownLabel(p.target)
+	}
+	if p.secret && a.Tool == "tap" && label != "" {
+		label = secretKey // a key of the passcode keypad
 	}
 	switch {
 	case v.Has(policy.Payment) && label != "":
@@ -2945,7 +2958,7 @@ func question(a Action, p *prep) string { return sayAction(a, p, true) }
 func sayAction(a Action, p *prep, ask bool) string {
 	label := ""
 	if p != nil && p.target != nil && p.target.Label != "" {
-		label = "“" + clip(p.target.Label, 60) + "”"
+		label = "“" + clip(shownLabel(p.target), 60) + "”"
 	}
 	if p != nil && p.secret {
 		a = hideSecret(a)
