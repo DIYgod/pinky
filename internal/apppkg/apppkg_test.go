@@ -194,7 +194,9 @@ func TestPackApp(t *testing.T) {
 		t.Errorf("read back %+v %v", a, err)
 	}
 
-	os.Symlink("/etc/passwd", filepath.Join(app, "link"))
+	if err := os.Symlink("/etc/passwd", filepath.Join(app, "link")); err != nil {
+		t.Skip("no symbolic links here:", err)
+	}
 	bad := filepath.Join(dir, "bad.ipa")
 	if err := PackApp(app, bad); err == nil || !strings.Contains(err.Error(), "symbolic link") {
 		t.Errorf("symlink: %v", err)
