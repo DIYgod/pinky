@@ -771,7 +771,7 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, 
 		}
 		out = append(out, screen.Element{
 			Role: role, Label: label, Bounds: r, States: states,
-			Source: screen.SourceTree, Path: paths[i], ID: e.Ident, Content: raxContent(e, role),
+			Source: screen.SourceTree, Path: paths[i], ID: e.Ident, Content: raxContent(e, role), Hint: raxHint(e, role),
 		})
 	}
 	var over []occluder
@@ -1060,6 +1060,16 @@ func raxContent(e raxElement, role string) string {
 		return ""
 	}
 	return value
+}
+
+// raxHint is a text field's placeholder, which names it to the policy
+// where raxLabel names it by its typed text (screen.Element.Hint): a field
+// with no label, such as a web page's password field that shows its text.
+func raxHint(e raxElement, role string) string {
+	if role != screen.RoleInput {
+		return ""
+	}
+	return strings.TrimSpace(e.Placeholder)
 }
 
 func appendState(states []string, s string) []string {
