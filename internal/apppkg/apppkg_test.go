@@ -267,3 +267,21 @@ func TestTableShortTypeHeader(t *testing.T) {
 		t.Errorf("lookup = %q", s)
 	}
 }
+
+// An Info.plist nested a few million levels deep overflows the plist
+// parser's stack, a crash no recover catches: Pinky must refuse it unread.
+func TestReadIOSAppDeepInfo(t *testing.T) {
+	dir := t.TempDir()
+	deep := strings.Repeat("(", 4<<20-1)
+	ipa := filepath.Join(dir, "Deep.ipa")
+	writeZip(t, ipa, map[string]string{"Payload/Deep.app/Info.plist": deep})
+	if _, err := ReadIOSApp(ipa); err == nil || !strings.Contains(err.Error(), "too large") {
+		t.Errorf("ipa: %v", err)
+	}
+	app := filepath.Join(dir, "Deep.app")
+	os.MkdirAll(app, 0o755)
+	os.WriteFile(filepath.Join(app, "Info.plist"), []byte(deep), 0o644)
+	if _, err := ReadIOSApp(app); err == nil || !strings.Contains(err.Error(), "too large") {
+		t.Errorf("app: %v", err)
+	}
+}
