@@ -468,14 +468,14 @@ func TestLanguageSetting(t *testing.T) {
 	tt := mg.NewTester(ta.view, 1280, 820)
 	tt.Frame()
 	tags, labels := languageChoices()
-	if len(tags) != 4 || tags[0] != "" || labels[0] != "System" {
+	if len(tags) != 5 || tags[0] != "" || labels[0] != "System" {
 		t.Fatalf("choices %q %q", tags, labels)
 	}
 	got := map[string]string{}
 	for i := 1; i < len(tags); i++ {
 		got[tags[i]] = labels[i]
 	}
-	want := map[string]string{"en": "English", "ja": i18n.Autonym("ja"), "zh-Hans": i18n.Autonym("zh-Hans")}
+	want := map[string]string{"en": "English", "ja": i18n.Autonym("ja"), "vi": i18n.Autonym("vi"), "zh-Hans": i18n.Autonym("zh-Hans")}
 	if len(got) != len(want) {
 		t.Fatalf("choices %q %q", tags, labels)
 	}
@@ -498,6 +498,12 @@ func TestLanguageSetting(t *testing.T) {
 	ja := locales.In("ja")
 	if !tt.HasText(ja.SettingsLanguage()) || !tt.HasText(ja.SettingsAdvancedDevMode()) || languageNow() != "ja" {
 		t.Errorf("after picking Japanese: Language row %v, now %q", tt.HasText(ja.SettingsLanguage()), languageNow())
+	}
+	pickLanguage("vi")
+	tt.Frame()
+	vi := locales.In("vi")
+	if !tt.HasText(vi.SettingsLanguage()) || !tt.HasText(vi.SettingsAdvancedDevMode()) || languageNow() != "vi" {
+		t.Errorf("after picking Vietnamese: Language row %v, now %q", tt.HasText(vi.SettingsLanguage()), languageNow())
 	}
 	pickLanguage("")
 	tt.Frame()
