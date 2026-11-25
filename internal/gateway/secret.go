@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"image"
+	"sort"
 	"strings"
 
 	"github.com/DIYgod/pinky/internal/history"
@@ -50,7 +51,13 @@ func hideSecret(a Action) Action {
 
 // shown returns the action and call as Pinky keeps and shows them: for a
 // secret action (prep.secret), the text masked and taken out of the intent.
+// An action on a password or code field that holds text has that text taken
+// out of its intent too: the agent may quote the field as it read it ("Tap
+// Verification code, 804217").
 func shown(a Action, c Call, p *prep) (Action, Call) {
+	if p != nil && p.target != nil && typedSecret(p.target) {
+		c.Intent = scrubSecret(c.Intent, p.target.Content)
+	}
 	if p == nil || !p.secret {
 		return a, c
 	}
@@ -74,6 +81,16 @@ func scrubSecret(s, secret string) string {
 // code: a credential field with text in it.
 func typedSecret(e *screen.Element) bool {
 	return e.Content != "" && (e.Role == screen.RoleInput || e.Has(screen.StateEditable)) && policy.IsCredentialField(e)
+}
+
+// shownLabel returns e's label as steps and approval cards show it: a
+// password or code field that holds text names it with the mask for the
+// text, as the screen text history keeps does (hideTyped).
+func shownLabel(e *screen.Element) string {
+	if typedSecret(e) {
+		return maskContent(e.Label, e.Content)
+	}
+	return e.Label
 }
 
 // hideTyped returns s with what its password and code fields hold masked,
@@ -138,4 +155,44 @@ func credentialPlaces(w, h int, reads ...*screen.Screen) (boxes []image.Rectangl
 		}
 	}
 	return boxes, unplaced
+}
+
+// batchSecrets returns the texts a batch's type steps may type into a
+// password or code field, longest first. A batch's intent goes with every
+// step, and shown takes a typed password or code out of it only for the
+// step that types it; these are taken out of every step's intent, a step's
+// own included (scrubSecrets).
+//
+// Before the steps run, Pinky can tell only a type step by ref into a field
+// of the screen the agent last read: the text for an ordinary field there
+// is taken as ordinary and stays. A step without ref, or with one that
+// screen lacks, may reach a password or code field on a screen the batch
+// comes to, so its text counts.
+func batchSecrets(g *Gateway, l *lease, steps []Action) []string {
+	g.mu.Lock()
+	seen := l.baseline
+	g.mu.Unlock()
+	var secrets []string
+	for _, a := range steps {
+		if a.Tool != "type" || a.Text == "" {
+			continue
+		}
+		if a.Ref > 0 && seen != nil {
+			if e, ok := seen.Find(a.Ref); ok && !policy.IsCredentialField(&e) {
+				continue
+			}
+		}
+		secrets = append(secrets, a.Text)
+	}
+	// A longer text first, so a shorter one inside it leaves none of it.
+	sort.SliceStable(secrets, func(i, j int) bool { return len(secrets[i]) > len(secrets[j]) })
+	return secrets
+}
+
+// scrubSecrets takes each of secrets out of s (scrubSecret).
+func scrubSecrets(s string, secrets []string) string {
+	for _, secret := range secrets {
+		s = scrubSecret(s, secret)
+	}
+	return s
 }

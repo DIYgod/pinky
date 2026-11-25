@@ -1,7 +1,11 @@
 package history
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -108,5 +112,88 @@ func TestOpenScrubsTypedSecrets(t *testing.T) {
 	got, _ = s.Steps(ctx, "t1")
 	if len(got) != 7 || !strings.Contains(got[6].Text, pw) {
 		t.Errorf("scrubbed again: %+v", got)
+	}
+}
+
+// TestOpenClearsScrubbedSecrets: the database's files hold none of the
+// masked passwords, not even in the space SQLite freed when it rewrote the
+// steps, whether this Pinky masks them or an earlier one (version 8) did.
+func TestOpenClearsScrubbedSecrets(t *testing.T) {
+	const pw = "hunter2-Secret"
+	ctx := context.Background()
+	dir := t.TempDir()
+	inFiles := func() (n int) {
+		files, err := filepath.Glob(filepath.Join(dir, "pinky.db*"))
+		if err != nil || len(files) == 0 {
+			t.Fatal(files, err)
+		}
+		for _, f := range files {
+			if strings.HasSuffix(f, "-shm") {
+				continue // the log's index: no text
+			}
+			b, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			n += bytes.Count(b, []byte(pw))
+		}
+		return n
+	}
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().Truncate(time.Millisecond)
+	for i := range 50 {
+		p := fmt.Sprintf("%s-%d", pw, i)
+		if err := s.SaveStep(ctx, Step{TaskID: "t1", Index: i, Tool: "phone_type", Args: `{"text":"` + p + `"}`, Intent: "Sign in with " + p,
+			Text: "Typed “" + p + "” into “Password”", ScreenText: `[12] input "Password, ` + p + `"`, Started: now}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.db.Exec("PRAGMA user_version = 7"); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	if inFiles() == 0 {
+		t.Fatal("the steps are not in the files to begin with")
+	}
+
+	if s, err = Open(dir); err != nil {
+		t.Fatal(err)
+	}
+	if n := inFiles(); n != 0 {
+		t.Errorf("%d left in the files once opened", n)
+	}
+	s.Close()
+	if n := inFiles(); n != 0 {
+		t.Errorf("%d left in the files once closed", n)
+	}
+
+	// As version 8 left it: the steps masked, the old text in freed space.
+	if s, err = Open(dir); err != nil {
+		t.Fatal(err)
+	}
+	for i := range 50 {
+		if _, err := s.db.Exec(`UPDATE steps SET screen_text = ? WHERE idx = ?`, strings.Repeat(fmt.Sprintf("%s-%d ", pw, i), 20), i); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.db.Exec(`UPDATE steps SET screen_text = ''; PRAGMA user_version = 8`); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	if inFiles() == 0 {
+		t.Fatal("no text is left in freed space to begin with")
+	}
+	if s, err = Open(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if n := inFiles(); n != 0 {
+		t.Errorf("%d left in the files of a version 8 history", n)
+	}
+	if got, err := s.Steps(ctx, "t1"); err != nil || len(got) != 50 {
+		t.Errorf("%d steps %v", len(got), err)
 	}
 }

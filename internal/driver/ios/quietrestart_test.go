@@ -29,7 +29,8 @@ type quietProvider struct {
 
 func newQuietProvider(t *testing.T) *quietProvider {
 	t.Helper()
-	q := &quietProvider{Provider: NewProvider(), rule: filepath.Join(t.TempDir(), "sudoers.d", "pinky-usbmuxd")}
+	// With slashes on Windows too: the rule's path goes into a shell command.
+	q := &quietProvider{Provider: NewProvider(), rule: filepath.ToSlash(filepath.Join(t.TempDir(), "sudoers.d", "pinky-usbmuxd"))}
 	q.quiet = quietRestart{path: q.rule, anyOS: true, userFn: func() (string, error) { return "diygod", nil },
 		sudoFn: func(_ context.Context, args ...string) ([]byte, error) {
 			q.sudo = append(q.sudo, args)

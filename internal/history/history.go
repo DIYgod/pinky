@@ -31,8 +31,9 @@ import (
 // version 4 removed_devices, version 5 paused_devices, version 6
 // recording_removals, version 7 traffic_devices, traffic_routes and
 // traffic_blocklist, version 8 nothing new but steps whose typed passwords
-// and codes are masked (scrubbedVersion); all versions open the same way.
-const schemaVersion = 8
+// and codes are masked (scrubbedVersion), version 9 nothing new but a file
+// rebuilt without them (clearedVersion); all versions open the same way.
+const schemaVersion = 9
 
 const schema = `
 CREATE TABLE IF NOT EXISTS devices (
@@ -218,7 +219,13 @@ func Open(dir string) (*Store, error) {
 			return nil, fmt.Errorf("history: mask typed passwords: %w", err)
 		}
 	}
-	if _, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", schemaVersion)); err != nil {
+	opened := schemaVersion
+	if version < clearedVersion && clearFreed(db) != nil {
+		// No room for it, say: history opens all the same, and the next
+		// Open tries again.
+		opened = scrubbedVersion
+	}
+	if _, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", opened)); err != nil {
 		db.Close()
 		return nil, err
 	}
