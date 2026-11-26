@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- `pinky devices` 现在会拒绝它不接受的词（比如手机名），说明是哪个词并以状态码 2 退出；以前它会把这个词连同后面的选项一起忽略，`pinky devices pixel-9 --json` 输出的是表格，退出码还是 0。不认识的选项只报一次错，同样以 2 退出；`pinky devices -h` 会显示这个命令的用法。感谢 @6moran。
+
 ## 2026.1126.1 (2026-11-26)
 
 - Mac 连着 iPhone 自己的「个人热点」、设备服务连不上这台 iPhone 时，Pinky 现在会把它显示为「个人热点上找不到」，并提示用线插上，或者让 Mac 和 iPhone 都连到同一个 Wi-Fi，不要用它的热点；不再提供在这里没用的「重启设备服务…」。感谢 @SamuelZ12 反馈。
