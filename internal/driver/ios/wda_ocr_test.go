@@ -2,6 +2,7 @@ package ios
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"image/color"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // Over Wi-Fi, OCR reads a frame of WDA's MJPEG server instead of the
@@ -75,5 +77,58 @@ func TestWDAOCRPicture(t *testing.T) {
 	frames.Store(0)
 	if _, from, _ := d.ocrPicture(ctx); from != "screenshot" || frames.Load() != 0 {
 		t.Fatalf("usb: from %q, %d frames", from, frames.Load())
+	}
+}
+
+// The field report of 2026-11-26 (an iPad on iPadOS 26 over Wi-Fi): a read
+// of Settings, opened over a game that runs in landscape, gave Settings'
+// elements with OCR lines of the game's notice, from a picture that still
+// showed the game. OCR's lines are placed by their share of the picture,
+// so a picture turned the other way than the tree is another screen than
+// the tree's, and would put every line in the wrong place: the read leaves
+// its text out.
+func TestWDAOCRPictureTurnedAway(t *testing.T) {
+	srv := httptest.NewServer(&fakeWDA{app: `{"bundleId":"com.apple.Preferences","name":"Settings","pid":8}`})
+	defer srv.Close()
+	var turned atomic.Bool
+	// The panel as it is, 8×12, tagged as turned for landscape: the game.
+	game := withEXIF(t, jpegBytes(t, 8, 12, color.Black), 6, binary.BigEndian)
+	settings := jpegBytes(t, 8, 12, color.White)
+	mj := mjpegServer(t, func(time.Duration) []byte {
+		if turned.Load() {
+			return game
+		}
+		return settings
+	})
+	d := &WDADevice{c: newWDAURL(srv.URL, mj.URL), width: 100, height: 200, scale: 1,
+		info: driver.Info{Connection: "wifi"},
+		recognize: func([]byte) ([]ocrLine, error) {
+			return []ocrLine{{Text: "Update notice", Confidence: 1, X: 0.1, Y: 0.5, W: 0.5, H: 0.05}}, nil
+		}}
+	read := func() *screen.Screen {
+		t.Helper()
+		s, err := d.Observe(context.Background(), driver.ObserveOptions{OCR: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	notice := func(s *screen.Screen) bool {
+		for _, e := range s.Elements {
+			if e.Source == screen.SourceOCR && e.Label == "Update notice" {
+				return true
+			}
+		}
+		return false
+	}
+
+	// A picture of the tree's screen: its text is read.
+	if s := read(); !notice(s) {
+		t.Fatalf("portrait picture, portrait tree: %s", s.Render())
+	}
+	// The landscape game's picture under Settings' portrait tree.
+	turned.Store(true)
+	if s := read(); notice(s) || s.App.ID != "com.apple.Preferences" || len(s.Elements) != 1 {
+		t.Fatalf("landscape picture, portrait tree: %s", s.Render())
 	}
 }

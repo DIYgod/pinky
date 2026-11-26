@@ -477,6 +477,8 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 		locked   bool
 		lines    []ocrLine
 		ocrDone  bool
+		picWide  bool // OCR's picture is wider than it is tall
+		picSized bool // and its size was read
 		pictured sync.WaitGroup
 		gate     *captureGate
 		tm       wdaTimes
@@ -525,6 +527,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 			if err != nil {
 				return
 			}
+			picWide, picSized = pictureWide(pic)
 			if l, err := d.readText(pic); err == nil {
 				lines, ocrDone = l, true
 			}
@@ -608,10 +611,33 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 			return s, nil
 		}
 	}
+	if ocrDone && picSized && picWide != (w > h) {
+		// OCR's picture is turned the other way than the tree: another
+		// screen than the tree's, such as the last app's before the one in
+		// front turned the screen (field report, an iPad on iPadOS 26,
+		// 2026-11-26: Settings' elements came with a landscape game's
+		// text). Its lines, placed by their share of the picture, would all
+		// land in the wrong places.
+		ocrDone = false
+		if d.log != nil {
+			d.log.Info("iphone: OCR's picture is turned the other way than the tree; its text is left out",
+				"device", d.info.ID, "app", s.App.ID, "from", tm.from)
+		}
+	}
 	if ocrDone {
 		addOCR(s, lines)
 	}
 	return s, nil
+}
+
+// pictureWide reports whether a picture (JPEG or PNG) is wider than it is
+// tall; sized is false when its size cannot be read.
+func pictureWide(b []byte) (wide, sized bool) {
+	c, _, err := image.DecodeConfig(bytes.NewReader(b))
+	if err != nil || c.Width <= 0 || c.Height <= 0 || c.Width == c.Height {
+		return false, false
+	}
+	return c.Width > c.Height, true
 }
 
 // addOCR adds the text OCR read that no element of s shows; text where OCR

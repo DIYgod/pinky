@@ -943,6 +943,8 @@ A field report from an iPad (iPadOS 26, WebDriverAgent over Wi-Fi, Pinky 2026.11
 
 The OCR lines of item 3, the game's notice turned upright, show that a frame taken after this settle still had the game's picture and EXIF tag. Unit-tested with a fake WDA and MJPEG server (`TestWDASettleAfterGap`, `TestWDASettleWaitsForTheTurn`). **Not tried on a phone.**
 
+**OCR's text from another screen** (`wda_device.go`, `Observe`). A read takes OCR's picture as soon as WDA names the app in front (`captureGate.early`), long before the tree comes, and nothing compared the two: item 3's picture was the game's, turned for landscape, under Settings' portrait tree. OCR's lines are placed by their share of the picture, so a picture turned the other way than the tree is another screen than the tree's and would put every line in the wrong place. Such a read now leaves OCR's text out, and the log says so ("OCR's picture is turned the other way than the tree"). Two screens turned the same way are not told apart here; the settle above is what waits for those. Unit-tested in `TestWDAOCRPictureTurnedAway`.
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.
