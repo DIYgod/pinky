@@ -35,7 +35,7 @@ func checker(x, y int) byte { return byte(255 * ((x + y) & 1)) }
 // as it shows its stream's.
 func yuvMirror(ta *testApp, id string, pic *video.YUV) *mirror {
 	m := &mirror{a: ta.app, id: id, state: "playing", bitmap: showPlanes(nil, pic),
-		frame: &video.Frame{YUV: pic, Width: pic.Width, Height: pic.Height}, pics: 1,
+		frame: &video.Frame{YUV: pic, Width: pic.Width, Height: pic.Height}, halves: halvings{pic: pic, n: 1},
 		picW: pic.Width, picH: pic.Height, used: ta.buildSeq, retry: time.Now().Add(time.Hour)}
 	ta.mirrors[id] = m
 	return m
@@ -85,34 +85,34 @@ func TestMirrorLevel(t *testing.T) {
 // bitmap does not show, which MyGo reads until the bitmap's next picture.
 func TestMirrorHalvesOnce(t *testing.T) {
 	pic := lumaYUV(1206, 2622, checker)
-	m := &mirror{bitmap: showPlanes(nil, pic), frame: &video.Frame{YUV: pic, Width: 1206, Height: 2622}, pics: 1}
+	m := &mirror{bitmap: showPlanes(nil, pic), frame: &video.Frame{YUV: pic, Width: 1206, Height: 2622}, halves: halvings{pic: pic, n: 1}}
 	window := mg.Rect{W: 184, H: 400}
-	bm, src := m.pictureFor(window, 1)
+	bm, src := m.halves.pictureFor(m.bitmap, m.turn, window, 1)
 	if w, h := bm.Size(); w != 302 || h != 656 || src != (mg.Rect{W: 301.5, H: 655.5}) {
 		t.Fatalf("the window shows a bitmap of %d×%d, its part %v; want 302×656, 301.5×655.5", w, h, src)
 	}
-	if l := m.halves; l[0].pic != 1 || l[1].pic != 1 || l[2].pic != 0 || l[0].bitmap != nil {
+	if l := m.halves.levels; l[0].pic != 1 || l[1].pic != 1 || l[2].pic != 0 || l[0].bitmap != nil {
 		t.Fatalf("pictures halved once, twice and three times: %d, %d, %d; the first shown: %v", l[0].pic, l[1].pic, l[2].pic, l[0].bitmap != nil)
 	}
-	if got := m.halves[1].planes[m.halves[1].cur].Planes[0][:4]; !bytes.Equal(got, []byte{128, 128, 128, 128}) {
+	if got := m.halves.levels[1].planes[m.halves.levels[1].cur].Planes[0][:4]; !bytes.Equal(got, []byte{128, 128, 128, 128}) {
 		t.Errorf("the checkerboard halved twice is %v, want 128s", got)
 	}
 	// Marked, the planes tell whether they are made again.
 	for k := range 2 {
-		l := &m.halves[k]
+		l := &m.halves.levels[k]
 		l.planes[l.cur].Planes[0][0] = 7
 	}
-	if again, _ := m.pictureFor(mg.Rect{W: 180, H: 391}, 1); again != bm {
+	if again, _ := m.halves.pictureFor(m.bitmap, m.turn, mg.Rect{W: 180, H: 391}, 1); again != bm {
 		t.Error("two surfaces that show the picture halved twice show different bitmaps")
 	}
-	if once, _ := m.pictureFor(window, 2); once == nil || once == bm || once == m.bitmap {
+	if once, _ := m.halves.pictureFor(m.bitmap, m.turn, window, 2); once == nil || once == bm || once == m.bitmap {
 		t.Fatal("the window on Retina does not show the picture halved once")
 	}
-	if full, src := m.pictureFor(mg.Rect{W: 603, H: 1311}, 2); full != m.bitmap || src != (mg.Rect{}) {
+	if full, src := m.halves.pictureFor(m.bitmap, m.turn, mg.Rect{W: 603, H: 1311}, 2); full != m.bitmap || src != (mg.Rect{}) {
 		t.Errorf("a box as large as the picture shows %p, part %v; want the picture's own bitmap %p", full, src, m.bitmap)
 	}
 	for k := range 2 {
-		if l := &m.halves[k]; l.planes[l.cur].Planes[0][0] != 7 {
+		if l := &m.halves.levels[k]; l.planes[l.cur].Planes[0][0] != 7 {
 			t.Errorf("the picture halved %d times was made again for the same picture", k+1)
 		}
 	}
@@ -121,34 +121,36 @@ func TestMirrorHalvesOnce(t *testing.T) {
 	// bitmaps do not show, which keep the picture before.
 	var kept [2][]byte
 	for k := range 2 {
-		l := &m.halves[k]
+		l := &m.halves.levels[k]
 		kept[k] = bytes.Clone(l.planes[l.shows].Planes[0])
 	}
 	next := lumaYUV(1206, 2622, func(x, y int) byte { return 200 })
-	m.frame, m.pics = &video.Frame{YUV: next, Width: 1206, Height: 2622}, 2
+	m.frame = &video.Frame{YUV: next, Width: 1206, Height: 2622}
 	m.bitmap = showPlanes(m.bitmap, next)
-	m.halved(2)
+	m.halves.next(next)
+	m.halves.halved(2)
 	for k := range 2 {
-		if l := &m.halves[k]; l.cur == l.shows || !bytes.Equal(l.planes[l.shows].Planes[0], kept[k]) {
+		if l := &m.halves.levels[k]; l.cur == l.shows || !bytes.Equal(l.planes[l.shows].Planes[0], kept[k]) {
 			t.Errorf("the new picture halved %d times went into the planes its bitmap shows", k+1)
 		}
 	}
-	if bm, _ := m.pictureFor(window, 1); bm != m.halves[1].bitmap || m.halves[1].shown != 2 || m.halves[1].shows != m.halves[1].cur {
+	if bm, _ := m.halves.pictureFor(m.bitmap, m.turn, window, 1); bm != m.halves.levels[1].bitmap || m.halves.levels[1].shown != 2 || m.halves.levels[1].shows != m.halves.levels[1].cur {
 		t.Error("the window does not show the new picture halved twice")
 	}
-	if l := &m.halves[0]; l.shown != 1 || !bytes.Equal(l.planes[l.shows].Planes[0], kept[0]) {
+	if l := &m.halves.levels[0]; l.shown != 1 || !bytes.Equal(l.planes[l.shows].Planes[0], kept[0]) {
 		t.Error("the bitmap of the picture halved once, which no surface drew since, does not keep the picture before")
 	}
-	if got := m.halves[1].planes[m.halves[1].cur].Planes[0][:2]; !bytes.Equal(got, []byte{200, 200}) {
+	if got := m.halves.levels[1].planes[m.halves.levels[1].cur].Planes[0][:2]; !bytes.Equal(got, []byte{200, 200}) {
 		t.Errorf("the new picture halved twice is %v, want 200s", got)
 	}
 
 	// Pictures of another size, as when the phone turns: the planes keep
 	// up, the size each bitmap shows with them.
 	turned := lumaYUV(2622, 1206, checker)
-	m.frame, m.pics, m.turn = &video.Frame{YUV: turned, Width: 2622, Height: 1206, Turn: 1}, 3, 1
+	m.frame, m.turn = &video.Frame{YUV: turned, Width: 2622, Height: 1206, Turn: 1}, 1
 	m.bitmap = showPlanes(m.bitmap, turned)
-	if bm, src := m.pictureFor(window, 1); src != (mg.Rect{W: 655.5, H: 301.5}) {
+	m.halves.next(turned)
+	if bm, src := m.halves.pictureFor(m.bitmap, m.turn, window, 1); src != (mg.Rect{W: 655.5, H: 301.5}) {
 		w, h := bm.Size()
 		t.Errorf("the turned picture shows as a bitmap of %d×%d, its part %v; want 656×302, 655.5×301.5", w, h, src)
 	}
@@ -202,7 +204,7 @@ func TestMirrorSmallShowsAverage(t *testing.T) {
 		}
 	}
 	for k, want := range []uint64{1, 1, 0} {
-		if l := m.halves[k]; l.pic != want || l.shown != want {
+		if l := m.halves.levels[k]; l.pic != want || l.shown != want {
 			t.Errorf("the picture halved %d times: made for picture %d, shown for %d; want %d", k+1, l.pic, l.shown, want)
 		}
 	}
