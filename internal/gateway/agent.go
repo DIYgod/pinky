@@ -816,6 +816,8 @@ func setupResultLocked(d *device, first string) *Result {
 		msg += " The person may be on a call: ask them with phone_handoff to end it or close that app when they can, saying why; the handoff ends by itself once the phone is ready."
 	case driver.SetupDeviceService:
 		msg += " " + deviceServiceHelpLocked(d)
+	case driver.SetupOwnHotspot:
+		msg += " " + ownHotspotHelp
 	default:
 		msg += " Ask the person to do it with phone_handoff, saying what to do; the handoff ends by itself once the phone is ready."
 	}
@@ -837,6 +839,15 @@ const deviceServiceHelp = "Only a person at this computer can fix it: they click
 	"or end the task saying the phone needs the device service restarted. " +
 	"Otherwise ask them with phone_handoff; it ends by itself once the phone is back. " +
 	"To have Pinky restart it by itself next time, without the password, they can turn on Restart device service without a password in Settings › Phones."
+
+// ownHotspotHelp is what an agent can do about a phone the computer's
+// device service does not reach because the computer is on the phone's own
+// Personal Hotspot (driver.SetupOwnHotspot): restarting the service does
+// not help, and only a person can bring the phone back.
+const ownHotspotHelp = "This computer is on the phone's own Personal Hotspot, where the computer's device service does not reach the phone, " +
+	"and restarting the service does not help. Ask the person with phone_handoff to plug the phone in with a cable, " +
+	"or to put the computer and the phone on the same other Wi-Fi network, saying why; the handoff ends by itself once the phone is ready. " +
+	"If nobody is at the computer, as in a scheduled or unattended run, do not wait for it: release it with phone_release and use another phone, or end the task."
 
 // connectStep is the history step of phone_connect. own says the task
 // left the background display the person chose for the phone's own

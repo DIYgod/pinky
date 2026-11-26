@@ -1671,10 +1671,23 @@ func (g *Gateway) pendingResult(l *lease, info approval.Info) *Result {
 	msg := fmt.Sprintf("Still waiting for the person to %s (%s). Nothing was done yet. Repeat the same call with approval_id %q; the person has %s left.",
 		what, info.Title, info.ID, approval.Human(left))
 	g.mu.Lock()
-	lost := info.Kind == approval.KindHandoff && waitingLocked(l.dev) && l.dev.info.Setup == driver.SetupDeviceService
-	quiet := l.dev.quietRestart
+	waiting := info.Kind == approval.KindHandoff && waitingLocked(l.dev)
+	lost := waiting && l.dev.info.Setup == driver.SetupDeviceService
+	hotspot := waiting && l.dev.info.Setup == driver.SetupOwnHotspot
+	quiet, inVain := l.dev.quietRestart, restartInVainLocked(l.dev)
 	g.mu.Unlock()
 	switch {
+	case hotspot:
+		// Restarts never help there (driver.SetupOwnHotspot).
+		msg += " The phone is still out of reach on its own Personal Hotspot, where restarting the computer's device service does not help: " +
+			"a person brings it back with a cable, or with the computer and the phone on the same other Wi-Fi network. " +
+			"If nobody is at the computer, as in a scheduled or unattended run, stop waiting: release the phone with phone_release and use another one, or end the task."
+	case lost && inVain:
+		// Pinky's restart did not bring it back, and it does not restart
+		// again for it (servicerestart.go).
+		msg += " The phone is still lost, and Pinky's restart of the computer's device service did not bring it back: " +
+			"a person brings it back with a cable, or by checking its network. " +
+			"If nobody is at the computer, as in a scheduled or unattended run, stop waiting: release the phone with phone_release and use another one, or end the task."
 	case lost && quiet:
 		// Pinky restarts the service by itself (servicerestart.go).
 		msg += " The phone still waits for the computer's device service, which Pinky restarts by itself without a password, as the person allowed: " +

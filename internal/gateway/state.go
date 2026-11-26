@@ -140,6 +140,11 @@ type device struct {
 	// itself for the phone (servicerestart.go).
 	quietRestart     bool
 	serviceRestarted time.Time
+	// serviceListedAt is when its provider last listed it from the device
+	// service's own list (serviceListed): a restart since which it has not
+	// is one that did not bring it back (restartInVainLocked). inVainLogged
+	// is the restart last logged as such.
+	serviceListedAt, inVainLogged time.Time
 	// opened is set once the gateway opened the phone. One it never
 	// opened is forgotten a while after its provider stops listing it
 	// (discover, unopenedGrace).

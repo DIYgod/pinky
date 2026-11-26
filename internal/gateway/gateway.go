@@ -617,6 +617,11 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	d.nameV.Store(info.Name)
 	d.provider = p
 	d.unlistedAt = time.Time{}
+	if serviceListed(info) {
+		// A restart since which the device service has not listed it did
+		// not bring it back (servicerestart.go).
+		d.serviceListedAt = time.Now()
+	}
 	if waitsForStep(old.State) && info.State == driver.StateOffline {
 		// It no longer waits: a lease kept while it did has the grace of
 		// any phone that drops from now (expireOffline).
