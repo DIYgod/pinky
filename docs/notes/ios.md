@@ -927,6 +927,22 @@ A field report from an iPhone 13 mini (iOS 27.0.1, the helper over Wi-Fi, bankin
 
 Unit-tested with a fake WDA that holds `/source` (`TestWDAStalledTree`, `TestWDASlowTreeReadsShallow`, `TestWDATreeJoinsOnlyAfterInput`, `TestWDABackWithoutTree`, `TestTreeBy`) and in the gateway (`TestTreeTooSlow`, `TestSlowSwitchAnswersInTime`, `TestSlowFailingSwitchGoesBack`, `TestCallOnMovingPhoneAnswersInTime`). **Not tried on a phone.** Open questions for the next field test: whether WDA serves `/wda/activeAppInfo` and `/wda/locked` while a snapshot runs (if it runs routes one at a time on the main thread, a stalled tree holds them too and a read without the tree may not name the app, so it takes no picture); whether depth 30 is shallow enough to make Ethena's list fast, and deep enough to keep its rows; whether `customSnapshotTimeout` would end XCTest's snapshot sooner on the phone; and the slow-read log's new `tree` and `tree_timed_out` fields on the 20 to 40 s reads of item 2.
 
+## App switches that turn an iPad (2026-11-26)
+
+A field report from an iPad (iPadOS 26, WebDriverAgent over Wi-Fi, Pinky 2026.1126.2): four rounds of switching between Settings and a game that runs only in landscape (`com.tencent.smoba`), the iPad standing upright, turning Bluetooth off and on.
+
+1. `phone_launch` Settings returned `settled` (settle 3 s) with Settings' elements where they were halfway through the turn: the Bluetooth switch at 206,879 instead of 1154,680, the "Bluetooth, On" row at 810,360 instead of 320,953. Taps by ref missed ("[97] is still on after the tap"); one or two `phone_observe` (wait_ms 1500–2000) later the places were right. The first round was a `phone_batch` (launch Settings with settle_ms 1000, tap [97], launch the game), which went on after the tap that did nothing.
+2. Refs changed while the screen did not: the switch went [97] → [145] → [97] and the row [41] → [78], and twice a tap on a ref returned `not_found` ("[145] is not on the screen anymore. Nothing was done.") with the switch's label and place unchanged.
+3. The launch's OCR lines were the game's update notice, under Settings' elements.
+4. After `phone_key` home the header said `app: DockFolderViewService · keyboard shown`, over OCR's home screen icons.
+
+**Settling** (`settle_frames.go`). `WDADevice.WaitSettled` counted the screen settled once the MJPEG frames had been the same for 250 ms, 500 ms or more after the call. Read from the code, two things pass that test while the screen is not settled:
+
+- *A gap in the frames.* The quiet stretch was measured from the last frame that differed, so frames that stopped coming counted as still, and the next frame, the same as the one before the gap, settled the screen at once. WDA's MJPEG server sends frames of a still screen too (15 a second) and leaves them out only when it could not take a picture, which an app switch that turns the screen may well cause. Now no frame for `settleQuiet` (250 ms) or more starts the quiet stretch again.
+- *The last app's still picture.* Right after `/wda/apps/activate` returns, the screen can still show the game (a still notice, here) before Settings turns it, and nothing told the two apart. The frames' EXIF tag says which way they are turned, and `GET /rotation` which way the app in front is: once the frames are still, `frameFits` reads `GET /rotation` (fresh, not `interfaceTurn`'s second-old answer) and counts them only when the upright frame is wide exactly when the app is in landscape. Otherwise the wait goes on, and a screen that does not turn by the limit is not settled: the result says `settle: timeout`, no `phone_batch` step starts from that read, and the next action waits for the rest of the settle first (`settleOwed`). When `GET /rotation` fails, or a frame's size cannot be read, the frames count as before. It costs one `GET /rotation` per settle.
+
+The OCR lines of item 3, the game's notice turned upright, show that a frame taken after this settle still had the game's picture and EXIF tag. Unit-tested with a fake WDA and MJPEG server (`TestWDASettleAfterGap`, `TestWDASettleWaitsForTheTurn`). **Not tried on a phone.**
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.

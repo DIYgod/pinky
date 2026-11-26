@@ -20,11 +20,27 @@ import (
 
 // frame is one picture from a frameSource. key identifies its encoded
 // bytes, so a picture that did not change is not decoded or encoded again.
-// turn puts the picture the right way up.
+// turn puts the picture the right way up. size, when set, reads the
+// picture's size as encoded, before the turn, without decoding it.
 type frame struct {
 	key    uint64
 	decode func() (image.Image, error)
 	turn   quarter
+	size   func() (int, int, error)
+}
+
+// wide reports whether the frame, turned the right way up, is wider than
+// it is tall; ok is false when its size is unknown.
+func (f frame) wide() (wide, ok bool) {
+	if f.size == nil {
+		return false, false
+	}
+	w, h, err := f.size()
+	if err != nil || w <= 0 || h <= 0 || w == h {
+		return false, false
+	}
+	w, h = turnSize(w, h, f.turn)
+	return w > h, true
 }
 
 // frameSource yields the phone's picture, one frame at a time.

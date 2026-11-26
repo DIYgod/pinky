@@ -1094,19 +1094,28 @@ func (d *WDADevice) interfaceTurn(ctx context.Context) quarter {
 	if at := d.uiAt.Load(); at != 0 && time.Since(time.Unix(0, at)) < rotationFresh {
 		return quarter(d.ui.Load()-1) & 3
 	}
+	if q, ok := d.turnNow(ctx); ok {
+		return q
+	}
+	if n := d.ui.Load(); n > 0 {
+		return quarter(n-1) & 3
+	}
+	return 0
+}
+
+// turnNow reads GET /rotation now, and keeps the answer for interfaceTurn;
+// false when WDA does not say.
+func (d *WDADevice) turnNow(ctx context.Context) (quarter, bool) {
 	rctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	z, err := d.c.rotation(rctx)
 	cancel()
 	if err != nil {
-		if n := d.ui.Load(); n > 0 {
-			return quarter(n-1) & 3
-		}
-		return 0
+		return 0, false
 	}
 	q := quarter((z/90)%4+4) & 3
 	d.ui.Store(int32(q) + 1)
 	d.uiAt.Store(time.Now().UnixNano())
-	return q
+	return q, true
 }
 
 // pictureTurn is the turn XCTest's pictures need beyond their own EXIF tag:
