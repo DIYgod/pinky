@@ -65,6 +65,11 @@ type Action struct {
 	// list shapes a swipe by direction that phone_read_list sends
 	// (read_list.go); nil for every other swipe.
 	list *listSwipe
+	// seen, for a phone_batch step, is the screen the agent had received
+	// when the batch began: the screen the step's refs come from. The
+	// steps before it end on screens the agent sees only once the batch
+	// returns (prepare's relocate).
+	seen *screen.Screen
 }
 
 // listSwipe shapes a phone_read_list swipe: area, when set, takes the
@@ -884,6 +889,14 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		e, ok := cur.Find(ref)
 		if !ok {
 			e, ok = relocate(seen, cur, ref)
+		}
+		if !ok && a.seen != nil && a.seen != seen {
+			// A phone_batch step whose ref the screen the step before it
+			// ended on lacks: its refs come from the screen the agent had
+			// when the batch began (field report, an iPad on iPadOS 26,
+			// 2026-11-26: refs that changed between the two made a step
+			// "not on the screen anymore" with its element in place).
+			e, ok = relocate(a.seen, cur, ref)
 		}
 		if !ok {
 			return nil, g.attachScreen(l, errResult(ErrNotFound, "[%d] is not on the screen anymore. Nothing was done.", ref), cur)

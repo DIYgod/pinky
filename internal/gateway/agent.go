@@ -2133,6 +2133,10 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 	defer cancel()
 	out := &Result{Status: StatusSettled}
 	secrets := batchSecrets(g, l, req.Steps)
+	// The screen the agent took the steps' refs from (Action.seen).
+	g.mu.Lock()
+	seen := l.baseline
+	g.mu.Unlock()
 	// The longest step so far: the next step starts only while the call's
 	// budget has room for one like it (budget.go).
 	var longest time.Duration
@@ -2142,6 +2146,7 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 			outOfTime = true
 			break
 		}
+		a.seen = seen
 		c := Call{Device: req.Device, Intent: req.Intent, ApprovalID: a.ApprovalID, Progress: req.Progress, reuse: i > 0}
 		if a.Intent != "" {
 			c.Intent = a.Intent

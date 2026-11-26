@@ -947,6 +947,8 @@ The OCR lines of item 3, the game's notice turned upright, show that a frame tak
 
 **Refs that change on a screen that does not** (`wda_observe.go`, `wdaTreeApp`). A ref is keyed by an element's role, label, id and path, and every element's path began with the app `GET /wda/activeAppInfo` named. WDA answers that request apart from `/source`, the read ignored its errors, and on this iPad it named view services such as `DockFolderViewService` (item 4): an answer that named another app than the tree's, or none, gave every element of the same tree a new ref, and the next read gave the old ones back, as in item 2, where the switch's and the row's refs changed together. Paths now begin with the tree's own app, its root's label. Unit-tested in `TestWDAPathsFromTheTree`.
 
+That alone would not give `not_found`: a tap whose ref the fresh read lacks finds its element again by label, id and place in the screen the agent last received (`relocate`, `internal/gateway`). But in a `phone_batch` every step after the first looked in the screen the step before it ended on, which the agent had not seen yet: when the refs changed between the agent's screen and that one, the step's ref was in neither, and the element in its place was "not on the screen anymore". A batch's steps now look in the screen the agent had when the batch began too (`Action.seen`). Unit-tested in `TestBatchRefSurvivesAncestryChange`.
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.
