@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- When Pinky shows a phone's screen small, as in a narrow window from Open in a window or in All phones, it now scales the picture down smoothly, so thin lines and text no longer break up. The difference is largest on displays that aren't high-resolution. Thanks @QFinn-Penguin for reporting it.
+
 ## 2026.1126.2 (2026-11-26)
 
 - `pinky devices` now refuses a word it doesn't take, such as a phone's name: it says which word and exits with status 2, instead of ignoring the word and every flag after it (`pinky devices pixel-9 --json` printed the table and exited 0). A flag it doesn't have is reported once and also exits 2, and `pinky devices -h` prints the command's usage. Thanks @6moran.
