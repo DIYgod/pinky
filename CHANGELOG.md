@@ -2,6 +2,23 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1126.7 (2026-11-26)
+
+- When a task can't move an iPhone to Pinky on the iPhone, Pinky moves it back to CoreDevice, and the task's step now waits until the phone is back there instead of failing as offline. Thanks @pseudoyu.
+
+## 2026.1126.6 (2026-11-26)
+
+- With Pinky on the iPhone, opening an app that turns the screen, such as Settings over a landscape game, no longer reports the screen settled halfway through the turn, while elements were still in the wrong places and taps on them could miss.
+- With Pinky on the iPhone, the text read from the screen right after switching between a landscape and a portrait app no longer comes from the app before it.
+- With Pinky on the iPhone, elements no longer get new numbers on a screen that hasn't changed.
+- A batch of steps no longer says that an element still on the screen is not on the screen anymore.
+- A batch of steps now stops at a tap that left its switch or checkbox as it was, instead of going on with the steps after it.
+- With Pinky on the iPhone, an iPad back on its home screen is now seen as the Home Screen, and no longer said to show a keyboard.
+
+## 2026.1126.5 (2026-11-26)
+
+- `pinky update`, `pinky mcp` and `pinky daemon` now refuse a word they don't take, as `pinky devices` does: they say which word and exit with status 2, instead of ignoring the word and every flag after it. `pinky update now --check` could install the update it was only asked to look for, and `pinky mcp stdio --fake` could start Pinky with the real phones instead of the fake ones. Thanks @pseudoyu.
+
 ## 2026.1126.4 (2026-11-26)
 
 - When you watch a task's recording in Activity, Pinky now scales the picture down smoothly too, as it does the phone's screen, so thin lines and text no longer break up. The difference shows on displays that aren't high-resolution, and on any display for recordings kept at Original size (Settings › Privacy › Recording size).

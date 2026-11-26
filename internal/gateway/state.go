@@ -39,6 +39,10 @@ type device struct {
 	// the way it is moving to now, and switchBack puts it back after the
 	// task.
 	taskWay, switching string
+	// switchGen counts the moves to another connection switchTo began, and
+	// openGen is what it was when the open under way began: only a failed
+	// open that the current move began ends that move's wait (open).
+	switchGen, openGen uint64
 	// helper: an iPhone or iPad has the WebDriverAgent helper installed,
 	// as checkHelper found when it last came online (helperneed.go).
 	helper     bool
