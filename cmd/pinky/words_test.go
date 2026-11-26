@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -12,8 +13,16 @@ import (
 // it was asked only to look for, and `pinky mcp stdio --fake` started a
 // gateway with the real phones.
 func TestStrayWord(t *testing.T) {
-	// A Pinky of its own, should a command get past the check.
-	t.Setenv("PINKY_HOME", filepath.Join(t.TempDir(), "h"))
+	// A Pinky home under a file, which no command can make: should a
+	// command get past the check, it fails at once. Else `pinky daemon`
+	// would start a gateway on the real phones, as --fake is dropped, and
+	// `pinky mcp` would start this test binary in the background as the
+	// gateway (os.Executable).
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PINKY_HOME", filepath.Join(file, "h"))
 	for _, c := range []struct {
 		name string
 		run  func([]string) error
