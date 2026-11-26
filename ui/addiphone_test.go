@@ -199,7 +199,7 @@ func TestAddIPhoneStuck(t *testing.T) {
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUnlock})
 	ta.waitFor(t, "the unlock step", func() bool { tt.Frame(); return hasText(tt, "Unlock the iPhone so Pinky can finish.") })
 
-	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUpdate, OSVersion: "16.7"})
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUpdate, OSVersion: "15.7"})
 	ta.waitFor(t, "an old iOS", func() bool { tt.Frame(); return hasText(tt, "needs a newer iOS") })
 }
 

@@ -7,7 +7,7 @@
 
 Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者一段脚本）通过 MCP 操作真实的 iPhone 或 Android 手机。你在电脑上看着它干活，有风险的步骤由你批准，随时可以接管，事后还能回看。Pinky 也能用你选的 AI 模型自己完成任务：在电脑上交给它，或者直接在手机上的 Pinky 应用里让它做，完全不用电脑。不管任务由谁来做，审批都由 Pinky 的网关执行，不靠给 Agent 的指令。
 
-- **全平台**：一个应用，macOS（Apple 芯片和 Intel）、Windows、Linux 都能用。能操作 Android 手机（Android 10 到 17）和 iOS 17.4 及以上的 iPhone：iOS 27 及以上手机上什么都不用装；iOS 17.4 到 26 要在装有 Xcode 的 Mac 上装一次 iPhone 上的 Pinky，iOS 27 上也可以选择用它（在 iOS 27、iOS 27 以下的真机和模拟器上都试过；[详情](#手机)）。
+- **全平台**：一个应用，macOS（Apple 芯片和 Intel）、Windows、Linux 都能用。能操作 Android 手机（Android 10 到 17）和 iOS 16 及以上的 iPhone。iOS 27 及以上手机上什么都不用装。iOS 17.4 到 26 要在装有 Xcode 的 Mac 上装一次 iPhone 上的 Pinky。iOS 16 到 17.3 通过 USB 使用 WebDriverAgent，设置时需要 Xcode（[详情](#手机)）。
 - **小巧原生**：窗口由 [MyGo](https://github.com/egoist/mygo) 在 GPU 上绘制，没有 Electron，也没有 webview：安装包 16–22 MB，在 Mac 上空闲时内存约 70 MB，CPU 0%。
 - **任何 Agent，一键接入**：在「设置 › 智能体」里点一下就能接入 Claude Code、Claude Desktop、Codex、Cursor 等；任何支持 MCP 的 Agent 都能用，在同一台电脑上或者通过 HTTP 都行。
 - **手机上的 Pinky，不用电脑也能做事**：Android 和 iPhone 上的 Pinky 应用能用你选的模型自己完成任务，DeepSeek、通义千问、Kimi、智谱 GLM、Claude、GPT、Gemini 都行，也可以用 Ollama 或 LM Studio 里的本地模型。打字或说出任务，或者把内容分享给它都可以；在 Android 上，还能用悬浮按钮或电源键问它屏幕上的内容，让它在隐藏的后台屏幕上干活，你照常用手机（[怎么设置](#pinky-on-the-phone)）。
@@ -26,7 +26,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 </tr>
 <tr>
 <td width="50%" valign="top"><img src="assets/readme/card-recording-zh.jpg" width="100%" alt="每一步都有记录：一次任务的步骤和它的录屏"><br><b>每次运行都有记录。</b>每一步都用大白话记下来，配上截图和录屏，录屏上每一步都有标记，还能导出成 HTML 报告。这些都只存在你的电脑上。</td>
-<td width="50%" valign="top"><img src="assets/readme/card-iphone-zh.jpg" width="100%" alt="iPhone 上也一样：Pinky 扣住照片里的「删除」，等你点「允许」"><br><b>iPhone 也一样。</b>同样的网关、审批和记录，iOS 17.4 及以上都能用（<a href="#手机">能做什么</a>）。图里是 iOS 模拟器，设了删除前要问。</td>
+<td width="50%" valign="top"><img src="assets/readme/card-iphone-zh.jpg" width="100%" alt="iPhone 上也一样：Pinky 扣住照片里的「删除」，等你点「允许」"><br><b>iPhone 也一样。</b>同样的网关、审批和记录，iOS 16 及以上都能用（<a href="#手机">能做什么</a>）。图里是 iOS 模拟器，设了删除前要问。</td>
 </tr>
 </table>
 
@@ -44,7 +44,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 | **Windows** | Windows 10 或 11，64 位（x64） |
 | **Linux** | 64 位 PC（x86-64），Ubuntu 20.04、Debian 11 或更新的系统（glibc 2.29 或更高），以及 GTK 3 |
 | **Android 手机** | Android 10 到 17，一根 USB 线。Pinky 自带 adb；Windows 上个别手机要装 USB 驱动，Linux 上要开放 USB 访问权限（[见下文](#windows-和-linux-上的-usb)） |
-| **iPhone 或 iPad** | iOS 17.4 或更高版本，设置时需要一根 USB 线；之后也可以通过 Wi-Fi 使用（[见下文](#通过-wi-fi-使用-iphone-和-ipad)）。Pinky 会自己准备好 iPhone，用的是 Apple 的开发者磁盘映像：它随 Xcode 提供，你也可以让 Pinky 从第三方镜像下载（[见下文](#iphone)）。iOS 17.4 到 26 还要装 iPhone 上的 Pinky（[见下文](#ios-174-到-26-的-iphone)） |
+| **iPhone 或 iPad** | iOS 16 或更高版本，需要一根 USB 线。iOS 17.4 起，设置后也可以通过 [Wi-Fi](#通过-wi-fi-使用-iphone-和-ipad) 连接，Pinky 可以挂载 [Apple 的开发者磁盘映像](#iphone)。iOS 17.4 到 26 使用 [iPhone 上的 Pinky](#ios-174-到-26-的-iphone)。iOS 16 到 17.3 [通过 USB 使用 WebDriverAgent](#ios-16-到-173-的-iphone) |
 | **模拟器** | 可选，代替手机或者和手机一起用：装了 Xcode 的 Mac 上的 iOS 模拟器，或者 Android Studio 的 Android 模拟器。模拟器在它们那里创建，由 Pinky 启动（[见下文](#手机)） |
 | **Agent** | 任何能用 MCP 服务器的 Agent，比如 Claude Code、Claude Desktop、Codex 或 Cursor |
 
@@ -147,7 +147,11 @@ Pinky 打开手机、或者在有线和 Wi-Fi 之间切换时，会显示「正�
 
 #### iOS 17.4 到 26 的 iPhone
 
-iOS 27 以下的 iPhone，只能通过手机上一个运行 WebDriverAgent 的应用接收来自电脑的点按和输入：iPhone 上的 Pinky，也就是 Pinky 自己的 App，要在装有 Xcode 的 Mac 上用你自己的 Apple ID 签名并安装一次：插上 iPhone，在 Pinky 里它的页面上点「安装 iPhone 上的 Pinky」（或者在「添加手机 › 连接旧款 iPhone」里点），或者在「终端」运行 `pinkyctl helper install`。两种方式都会构建、签名并装好；在 Pinky 窗口里装时，每一步都会显示出来，Xcode 等手机解锁时也会提醒你（[怎么装](docs/notes/ios.md#installing-pinky-on-the-iphone)）。电脑上的 Pinky 使用这台手机时，iPhone 上的 App 会显示出来。2026 年 11 月之前 Pinky 装的是「Pinky 助手」，它照样能用；构建不了 iPhone 上的 Pinky 时，Pinky 仍会装 Pinky 助手（`pinkyctl helper install --helper-only` 指定装它）。用免费 Apple ID 的话，每 7 天要重新安装一次：到期前两天，手机页面和体检会提醒你，点「重新安装」即可；到期后，手机会显示为「需要设置」并说明原因（[怎么重新安装](docs/notes/ios.md#when-the-signature-of-pinky-on-the-iphone-runs-out)）。Pinky 助手已经在 Windows 上、用一台 iOS 18.7.11 的 iPhone XS Max 试过（有线和 Wi-Fi）；iPhone 上的 Pinky 已在 iOS 27.0.1 的 iPhone 13 mini 上覆盖 Pinky 助手装好，电脑能启动和停止它的测试服务；在 iOS 17.4 到 26 上还没试过。不装它的话，Pinky 只能显示和读取屏幕（限 Mac）、打开 App，不能点按、滑动或输入。不支持 iOS 17.3 及更早版本。
+iOS 17.4 到 26 的 iPhone 通过手机上一个运行 WebDriverAgent 的应用接收来自电脑的点按和输入：iPhone 上的 Pinky，也就是 Pinky 自己的 App，要在装有 Xcode 的 Mac 上用你自己的 Apple ID 签名并安装一次：插上 iPhone，在 Pinky 里它的页面上点「安装 iPhone 上的 Pinky」（或者在「添加手机 › 连接旧款 iPhone」里点），或者在「终端」运行 `pinkyctl helper install`。两种方式都会构建、签名并装好；在 Pinky 窗口里装时，每一步都会显示出来，Xcode 等手机解锁时也会提醒你（[怎么装](docs/notes/ios.md#installing-pinky-on-the-iphone)）。电脑上的 Pinky 使用这台手机时，iPhone 上的 App 会显示出来。2026 年 11 月之前 Pinky 装的是「Pinky 助手」，它照样能用；构建不了 iPhone 上的 Pinky 时，Pinky 仍会装 Pinky 助手（`pinkyctl helper install --helper-only` 指定装它）。用免费 Apple ID 的话，每 7 天要重新安装一次：到期前两天，手机页面和体检会提醒你，点「重新安装」即可；到期后，手机会显示为「需要设置」并说明原因（[怎么重新安装](docs/notes/ios.md#when-the-signature-of-pinky-on-the-iphone-runs-out)）。Pinky 助手已经在 Windows 上、用一台 iOS 18.7.11 的 iPhone XS Max 试过（有线和 Wi-Fi）；iPhone 上的 Pinky 已在 iOS 27.0.1 的 iPhone 13 mini 上覆盖 Pinky 助手装好，电脑能启动和停止它的测试服务；在 iOS 17.4 到 26 上还没试过。不装它的话，Pinky 只能显示和读取屏幕（限 Mac）、打开 App，不能点按、滑动或输入。
+
+#### iOS 16 到 17.3 的 iPhone
+
+用 USB 连接 iPhone。iOS 16 上，在装有 Xcode 的 Mac 上打开「添加手机 › iPhone / iPad」，点击「安装 iPhone 上的 Pinky」。Pinky 会用你的 Apple 开发团队构建、签名并安装 iOS 16 助手。iOS 17.0 到 17.3 上，在 Xcode 中启动已签名的 WebDriverAgentRunner 测试，并在使用 Pinky 时保持测试运行。[设置与验证方法](docs/notes/ios.md#iphones-on-ios-16-to-173)。
 
 ### 3. 把 Pinky 接入你的 Agent
 
@@ -185,7 +189,7 @@ iOS 27 以下的 iPhone，只能通过手机上一个运行 WebDriverAgent 的�
   | 27 及以上 | Xcode 的 Device Hub 协议；手机上什么都不装 | 除双指缩放外的全部功能。输入文字时会先粘贴，再把你的剪贴板恢复原样 | iPhone 13 mini，iOS 27.0.1 |
   | 17.4 及以上，装了 iPhone 上的 Pinky | 内含 WebDriverAgent 的 iPhone 上的 Pinky（或以前装的 Pinky 助手），在装有 Xcode 的 Mac 上从 Pinky 窗口或用 `pinkyctl helper install` 装一次（[怎么装](docs/notes/ios.md#installing-pinky-on-the-iphone)）：iOS 17.4 到 26 自动使用，iOS 27 上由你选 | 全部功能，而且手机不共享屏幕，所以拒绝屏幕共享的银行 App 照常能用（测试中有星展银行 digibank 和招商银行）。比 Device Hub 慢：读一次主屏幕约 7 秒（Device Hub 不到 0.5 秒），点一下要 0.5 到 0.8 秒。它启动前，iOS 偶尔会要求在手机上输入锁屏密码。实时画面在 macOS 和 Windows 上都能用 | 用 iPhone 上的 Pinky：iPhone 13 mini，iOS 27.0.1，已装好，电脑能启动和停止它的测试服务。用 Pinky 助手：iPhone 13 mini，iOS 27.0.1，选了它；iPhone XS Max，iOS 18.7.11，在 Windows 上试过实时画面（有线和 Wi-Fi），以及它的按键和滑动；iOS 18.5 和 26.5 模拟器 |
   | 17.4 到 26，不装 iPhone 上的 Pinky | 只用开发者服务；什么都不装 | 看画面（每秒几帧，限 macOS 和 Windows）、读屏幕（位置靠 OCR，限 macOS）、打开 App 和链接。不能点按、滑动、输入或回到主屏幕：没有 iPhone 上的 Pinky，手机不接受输入 | 同样的服务在 iOS 27.0.1 上测过；还没在 iOS 27 以下的真机上试过 |
-  | 17.3 及更早 | | 不支持：17.4 之前的连接需要管理员权限，iOS 16 及更早还需要当前 Xcode 已不再包含的开发者磁盘映像 | |
+  | 16 到 17.3 | [借助 Xcode 设置](#ios-16-到-173-的-iphone)，再通过 USB 连接 WebDriverAgent | 通过 WebDriverAgent 读屏、截图和输入 | 见[验证记录](docs/notes/ios.md#iphones-on-ios-16-to-173) |
 
   iPhone 上的 Pinky 内含 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你重新安装（在装有 Xcode 的 Mac 上点 Pinky 里的「重新安装」，或运行 `pinkyctl helper install`）；到期后，手机会显示为「需要设置」并说明原因，而不是启动失败（[怎么重新安装](docs/notes/ios.md#when-the-signature-of-pinky-on-the-iphone-runs-out)）。
 - **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。这时 iOS 也不让 App 使用相机和麦克风，所以相机里是黑的，扫不了码。反过来也一样：有 App 正在使用相机或麦克风时（比如通话、FaceTime、相机、语音备忘录），iOS 27 不让 Pinky 通过 Device Hub 显示这台 iPhone。这时它的页面会显示「相机或麦克风正在使用中」和处理方法，通话结束或那个 App 关掉后，Pinky 会自动连接。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。再装上 iPhone 上的 Pinky，连接方式保持「自动」（「设置 › 手机」）：任务平时走 CoreDevice，打开星展银行 digibank、招商银行或相机时，或者 Agent 要求时（在别的 App 里扫码，比如微信扫一扫，要 Agent 自己要求），Pinky 会把这个任务临时切到不共享屏幕的 iPhone 上的 Pinky，任务结束后再切回 CoreDevice。也可以让这台 iPhone 的所有任务都通过 iPhone 上的 Pinky 连接。

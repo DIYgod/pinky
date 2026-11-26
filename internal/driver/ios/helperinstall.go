@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	goios "github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/installationproxy"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -115,7 +116,7 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	if o.BundleID != "" && !bundleID.MatchString(strings.TrimSuffix(strings.TrimSpace(o.BundleID), ".xctrunner")) {
 		return fmt.Errorf("%q is not a bundle id: letters, digits and hyphens, in parts joined by dots", o.BundleID)
 	}
-	phones, err := listPhones(ctx, x)
+	phones, err := helperPhones(ctx, x, o.Phone)
 	if err != nil {
 		return err
 	}
@@ -131,6 +132,10 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 
 	// The helper already on the phone: the new one keeps its team and id.
 	runner, rerr := phoneRunner(ctx, x, ph.UDID)
+	if ph.lockdown.DeviceID != 0 && !strings.HasPrefix(runner.BundleID, "pinky.") {
+		// Use a Pinky-owned bundle for iOS 16 and leave other runners installed.
+		runner = wdaRunner{}
+	}
 	switch {
 	case rerr != nil:
 		fmt.Fprintf(out, "Could not look for a helper on the phone (%v); going on.\n", rerr)
@@ -206,18 +211,29 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	defer logf.Close()
 	fmt.Fprintf(out, "Building WebDriverAgent %s with Xcode %s for team %s, bundle id %s. This takes a minute or two.\n", wdaVersion, x.Version, team, bid)
 	xr := xcodeRunner{x: x, log: logf, out: out, progress: o.Progress}
+	build := func(updates bool) []string {
+		if ph.lockdown.DeviceID != 0 {
+			return legacyHelperBuildArgs(src, dd, team, bid, updates)
+		}
+		return helperBuildArgs(src, dd, ph.UDID, team, bid, updates)
+	}
+	if ph.lockdown.DeviceID != 0 {
+		if err := prepareLegacyWDAProject(src); err != nil {
+			return err
+		}
+	}
 	progress(driver.HelperBuilding)
-	tail, err := xr.run(ctx, driver.HelperBuilding, helperBuildArgs(src, dd, ph.UDID, team, bid, false), nil)
+	tail, err := xr.run(ctx, driver.HelperBuilding, build(false), nil)
 	if err != nil && ctx.Err() == nil && !o.LocalSigning && needsProvisioning(tail) {
 		fmt.Fprintln(out, "No profile on this Mac signs Pinky on the iPhone for this phone; letting Xcode get one from Apple (it may register the phone with your team).")
-		tail, err = xr.run(ctx, driver.HelperBuilding, helperBuildArgs(src, dd, ph.UDID, team, bid, true), nil)
+		tail, err = xr.run(ctx, driver.HelperBuilding, build(true), nil)
 	}
 	if err != nil {
 		return xcodeFailed(ctx, "building Pinky on the iPhone", err, tail, logPath, o.LocalSigning)
 	}
 	products := filepath.Join(dd, "Build", "Products")
 	app := runnerAppIn(products)
-	if app == "" || xctestrun(products) == "" {
+	if app == "" || (ph.lockdown.DeviceID == 0 && xctestrun(products) == "") {
 		return helperErr("", errors.New("Xcode built WebDriverAgent but made no runner app"), logPath)
 	}
 	profile, err := embeddedProfile(app)
@@ -230,6 +246,15 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 			e.Hint = "Run this without --local-signing, or add the phone to your team in Xcode."
 		}
 		return e
+	}
+	if ph.lockdown.DeviceID != 0 {
+		progress(driver.HelperInstalling)
+		if err := installLegacyHelper(ctx, xr, ph, app, bid, tmp, logPath); err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "Installed WebDriverAgent on %s. Its signature lasts until %s.\n", ph.Name, helperDate(profile.Expires))
+		installs.note(ph.UDID, helperRecord{Team: team, BundleID: bid, Expires: profile.Expires})
+		return nil
 	}
 
 	// Pinky's name and icon, then the signature again.
@@ -466,6 +491,7 @@ type helperPhone struct {
 	UDID, Name, OS string
 	DeveloperMode  string // "enabled", "disabled", or "" when unknown
 	Reachable      bool   // devicectl can reach it now
+	lockdown       goios.DeviceEntry
 }
 
 // listPhones lists the iPhones and iPads paired with this Mac.

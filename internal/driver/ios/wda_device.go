@@ -204,7 +204,18 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 		return nil, err
 	}
 	s := &wdaStart{base: base, c: newWDAUSB(base)}
+	kind, _ := pathFor(parseVersion(info.OSVersion))
+	if kind.usbWDAOnly() && base.Properties.ConnectionType != "USB" {
+		info = wdaUSBSetup(info)
+		return nil, &driver.SetupError{Setup: info.Setup, Detail: info.Detail, Err: driver.ErrOffline}
+	}
 	if s.ready(ctx) {
+		return s, nil
+	}
+	if kind.usbWDAOnly() {
+		if err := s.startUSB(ctx, info, kind); err != nil {
+			return nil, err
+		}
 		return s, nil
 	}
 	app, err := findRunnerApp(base)
@@ -222,7 +233,7 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	if bind != "127.0.0.1" {
 		s.c = newWDATunnel(l.tunnel)
 	}
-	s.run, s.l = startWDA(l.entry, base, app, bind), l
+	s.run, s.l = startWDA(l.entry, base, app, bind, false), l
 	return s, nil
 }
 
@@ -1188,7 +1199,8 @@ func (d *WDADevice) Close() error {
 		if d.run != nil {
 			d.run.stop()
 		} else if d.leftover != "" {
-			if endHelper(d.entry, d.entry, d.leftover, d.log) && d.leftoverEnded != nil {
+			kind, _ := pathFor(parseVersion(d.info.OSVersion))
+			if endHelper(d.entry, d.entry, d.leftover, d.log, kind == pathLockdownWDA) && d.leftoverEnded != nil {
 				d.leftoverEnded()
 			}
 		}

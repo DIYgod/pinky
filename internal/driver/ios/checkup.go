@@ -56,9 +56,11 @@ func (d *WDADevice) Checkup(ctx context.Context) (driver.Checkup, error) {
 	checks := []func(context.Context) driver.Check{d.checkHelper,
 		func(ctx context.Context) driver.Check { return checkScreenshot(ctx, d.Screenshot) }}
 	if d.entry.Properties.SerialNumber != "" { // not a simulator
-		checks = append(checks,
-			func(context.Context) driver.Check { return checkDevMode(d.entry) },
-			func(ctx context.Context) driver.Check { return checkImage(ctx, d.l, d.imageDir, false) })
+		checks = append(checks, func(context.Context) driver.Check { return checkDevMode(d.entry) })
+		kind, _ := pathFor(parseVersion(d.info.OSVersion))
+		if !kind.usbWDAOnly() {
+			checks = append(checks, func(ctx context.Context) driver.Check { return checkImage(ctx, d.l, d.imageDir, false) })
+		}
 	}
 	return runChecks(ctx, d.info, checks...)
 }

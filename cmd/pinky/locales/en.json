@@ -1010,7 +1010,7 @@
   "@addPhoneIPhoneTitle": {
     "description": "Add phone › iPhone: the title."
   },
-  "addPhoneIPhoneTooOld": "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update.",
+  "addPhoneIPhoneTooOld": "This iPhone runs iOS {version}. Pinky needs iOS 16 or later. Update it in Settings › General › Software Update.",
   "@addPhoneIPhoneTooOld": {
     "description": "Add phone › iPhone: the text of the box shown when the iPhone's iOS is too old. version is its iOS version. Settings, General and Software Update are the iPhone's own words.",
     "placeholders": {
@@ -3840,7 +3840,7 @@
   "@connectionCoreDeviceDesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what CoreDevice gives and costs."
   },
-  "connectionIOSTooOld": "Pinky needs iOS 17.4 or later; this iPhone runs iOS {version}.",
+  "connectionIOSTooOld": "Pinky needs iOS 16 or later. This iPhone runs iOS {version}.",
   "@connectionIOSTooOld": {
     "description": "Settings › Phones, an iPhone's connection choice: why no way works on this iPhone. version is its iOS version.",
     "placeholders": {
@@ -3900,9 +3900,21 @@
   "@connectionWDA": {
     "description": "Settings › Phones, an iPhone's connection choice: the way through Pinky on the iPhone. WebDriverAgent is a name. Pinky on the iPhone is what the computer calls Pinky's iPhone app, named just Pinky on the iPhone itself (Pinky on the phone names the Android app the same way), which hosts WebDriverAgent; older installs are the app Pinky Helper, which works the same."
   },
-  "connectionWDADesc": "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky on the iPhone installed once from a Mac with Xcode, and now and then iOS asks on the iPhone for its passcode before it starts. The live picture and reading the screen are slower.",
+  "connectionWDADesc": "Works from iOS 16, with USB and separate Xcode setup below iOS 17.4. It does not share the screen, so banking apps that refuse screen sharing keep working. Now and then iOS asks for its passcode before it starts. The live picture and reading the screen are slower.",
   "@connectionWDADesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what Pinky on the iPhone gives and costs."
+  },
+  "legacyWDAExternal": "Start the signed WebDriverAgentRunner test from Xcode and keep it running while Pinky is connected.",
+  "@legacyWDAExternal": {
+    "description": "Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name of an Xcode test target."
+  },
+  "legacyWDALockdown": "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation.",
+  "@legacyWDALockdown": {
+    "description": "Setup for an iPhone on iOS 16. WebDriverAgentRunner is the name of an Xcode test target."
+  },
+  "legacyWDAUSB": "Connect this iPhone to the computer with a USB cable to use WebDriverAgent.",
+  "@legacyWDAUSB": {
+    "description": "Setup and connection settings for a pre-iOS 17.4 iPhone that requires a USB cable."
   },
   "dayOtherYear": "{day, date, ::yMMMMd}",
   "@dayOtherYear": {

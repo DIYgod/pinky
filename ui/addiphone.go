@@ -142,7 +142,8 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 	heading(c, locales.AddPhoneIPhoneTitle(), locales.AddPhoneIPhoneDetail())
 	a.foundBox(c)
 	// Which steps need the cable, while Pinky also uses iPhones over Wi-Fi.
-	wifi := a.settings.IOSWiFi
+	usbOnly := d != nil && usbOnlyIPhone(d.Info.OSVersion)
+	wifi := a.settings.IOSWiFi && !usbOnly
 	onWiFi := d != nil && d.Info.Connection == "wifi"
 
 	if d != nil && d.Info.Setup == driver.SetupUpdate {
@@ -243,7 +244,11 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			}
 		})
 		row(iphonePrepare, locales.AddPhoneIPhoneStepPrepare(), func() {
-			guideText(c, locales.AddPhoneIPhoneStepPrepareDetail())
+			if usbOnly {
+				guideText(c, locales.LegacyWDAUSB())
+			} else {
+				guideText(c, locales.AddPhoneIPhoneStepPrepareDetail())
+			}
 			switch d.Info.Setup {
 			case driver.SetupPreparing:
 				guideWaiting(c, locales.AddPhoneIPhoneStepPreparing())
@@ -281,6 +286,16 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 						a.chooseConnection()
 					}
 				})
+			case driver.SetupWDAUSB, driver.SetupWDAExternal:
+				title, text, _ := setupWords(*d, d.Info.Setup, a.canInstallHelper())
+				guideProblem(c, title, text)
+				if d.Info.Setup == driver.SetupWDAExternal {
+					mg.Row(c).Children(func() {
+						if linkButton(c, locales.CheckHelperHow()).Clicked() {
+							openURL(c, legacyWDADocs, func(error) {})
+						}
+					})
+				}
 			case driver.SetupNoDiskImage:
 				// Apple's image comes with Xcode; Pinky does not ship it.
 				if guideOS == "darwin" {

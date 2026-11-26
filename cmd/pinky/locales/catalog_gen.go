@@ -3091,7 +3091,7 @@ func (msgs Messages) AddPhoneIPhoneTitle() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneTitle", nil)
 }
 
-// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update."
+// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 16 or later. Update it in Settings › General › Software Update."
 // in the language the app shows.
 //
 // Add phone › iPhone: the text of the box shown when the iPhone's iOS is
@@ -3101,7 +3101,7 @@ func AddPhoneIPhoneTooOld(version string) string {
 	return In(i18n.Locale()).AddPhoneIPhoneTooOld(version)
 }
 
-// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update."
+// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 16 or later. Update it in Settings › General › Software Update."
 // in the language of msgs.
 //
 // Add phone › iPhone: the text of the box shown when the iPhone's iOS is
@@ -11083,7 +11083,7 @@ func (msgs Messages) ConnectionCoreDeviceDesc() string {
 	return Catalog.Format(msgs.locale, "connectionCoreDeviceDesc", nil)
 }
 
-// ConnectionIOSTooOld says "Pinky needs iOS 17.4 or later; this iPhone runs iOS {version}."
+// ConnectionIOSTooOld says "Pinky needs iOS 16 or later. This iPhone runs iOS {version}."
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: why no way works on
@@ -11092,7 +11092,7 @@ func ConnectionIOSTooOld(version string) string {
 	return In(i18n.Locale()).ConnectionIOSTooOld(version)
 }
 
-// ConnectionIOSTooOld says "Pinky needs iOS 17.4 or later; this iPhone runs iOS {version}."
+// ConnectionIOSTooOld says "Pinky needs iOS 16 or later. This iPhone runs iOS {version}."
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: why no way works on
@@ -11251,20 +11251,68 @@ func (msgs Messages) ConnectionWDA() string {
 	return Catalog.Format(msgs.locale, "connectionWDA", nil)
 }
 
-// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky on th…"
+// ConnectionWDADesc says "Works from iOS 16, with USB and separate Xcode setup below iOS 17.4. It does not share the screen, so banking apps th…"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
 // iPhone gives and costs.
 func ConnectionWDADesc() string { return In(i18n.Locale()).ConnectionWDADesc() }
 
-// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky on th…"
+// ConnectionWDADesc says "Works from iOS 16, with USB and separate Xcode setup below iOS 17.4. It does not share the screen, so banking apps th…"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
 // iPhone gives and costs.
 func (msgs Messages) ConnectionWDADesc() string {
 	return Catalog.Format(msgs.locale, "connectionWDADesc", nil)
+}
+
+// LegacyWDAExternal says "Start the signed WebDriverAgentRunner test from Xcode and keep it running while Pinky is connected."
+// in the language the app shows.
+//
+// Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name
+// of an Xcode test target.
+func LegacyWDAExternal() string { return In(i18n.Locale()).LegacyWDAExternal() }
+
+// LegacyWDAExternal says "Start the signed WebDriverAgentRunner test from Xcode and keep it running while Pinky is connected."
+// in the language of msgs.
+//
+// Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name
+// of an Xcode test target.
+func (msgs Messages) LegacyWDAExternal() string {
+	return Catalog.Format(msgs.locale, "legacyWDAExternal", nil)
+}
+
+// LegacyWDALockdown says "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked durin…"
+// in the language the app shows.
+//
+// Setup for an iPhone on iOS 16. WebDriverAgentRunner is the name of an
+// Xcode test target.
+func LegacyWDALockdown() string { return In(i18n.Locale()).LegacyWDALockdown() }
+
+// LegacyWDALockdown says "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked durin…"
+// in the language of msgs.
+//
+// Setup for an iPhone on iOS 16. WebDriverAgentRunner is the name of an
+// Xcode test target.
+func (msgs Messages) LegacyWDALockdown() string {
+	return Catalog.Format(msgs.locale, "legacyWDALockdown", nil)
+}
+
+// LegacyWDAUSB says "Connect this iPhone to the computer with a USB cable to use WebDriverAgent."
+// in the language the app shows.
+//
+// Setup and connection settings for a pre-iOS 17.4 iPhone that requires a
+// USB cable.
+func LegacyWDAUSB() string { return In(i18n.Locale()).LegacyWDAUSB() }
+
+// LegacyWDAUSB says "Connect this iPhone to the computer with a USB cable to use WebDriverAgent."
+// in the language of msgs.
+//
+// Setup and connection settings for a pre-iOS 17.4 iPhone that requires a
+// USB cable.
+func (msgs Messages) LegacyWDAUSB() string {
+	return Catalog.Format(msgs.locale, "legacyWDAUSB", nil)
 }
 
 // DayOtherYear says "{day, date, ::yMMMMd}"
