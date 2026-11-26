@@ -1168,7 +1168,9 @@ func (d *WDADevice) interfaceTurn(ctx context.Context) quarter {
 }
 
 // turnNow reads GET /rotation now, and keeps the answer for interfaceTurn;
-// false when WDA does not say.
+// false when WDA does not say: the request failed, or its z is no quarter
+// turn (WDA says -1 when it does not know the app's orientation, which
+// interfaceTurn takes as upright, as it always has).
 func (d *WDADevice) turnNow(ctx context.Context) (quarter, bool) {
 	rctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	z, err := d.c.rotation(rctx)
@@ -1179,7 +1181,7 @@ func (d *WDADevice) turnNow(ctx context.Context) (quarter, bool) {
 	q := quarter((z/90)%4+4) & 3
 	d.ui.Store(int32(q) + 1)
 	d.uiAt.Store(time.Now().UnixNano())
-	return q, true
+	return q, z%90 == 0
 }
 
 // pictureTurn is the turn XCTest's pictures need beyond their own EXIF tag:

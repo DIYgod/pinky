@@ -23,17 +23,28 @@ import (
 //     still screen too, 15 a second, and leaves them out only when it could
 //     not take a picture, as while the screen turns. Frames on both sides of
 //     a gap may be the same while the screen moved in between, so the quiet
-//     stretch starts again after one.
+//     stretch starts again after one. A gap is measured against the
+//     stream's own pace (gapPace), not 15 a second: over Wi-Fi the frames
+//     may come much slower.
 //   - Still frames turned the other way than the app in front: the last
 //     app's picture, before the new one has turned the screen. The frames'
 //     EXIF tag says which way they are turned and GET /rotation which way
 //     the app in front is (frameFits).
 
+// gapPace is how many times the stream's usual interval between frames a
+// wait must last, besides settleQuiet, to count as a gap in the frames.
+// WDA's frames are 20 to 300 KB (more on an iPad), the tunnel over Wi-Fi
+// carries about 1 MB/s (wda_ocr.go) and the recorder may read the same
+// stream, so frames may come 3 or 4 a second: were every wait of
+// settleQuiet a gap, no settle on such a stream would end before its limit.
+const gapPace = 3
+
 // frameSettle waits until frames from next stop changing, or until limit.
-// next returns each frame's key as it arrives. No frame for settleQuiet or
-// more starts the quiet stretch again. ready, when not nil, is asked once
-// the frames are still: false means the still picture is not the screen
-// to wait for yet, and the wait goes on.
+// next returns each frame's key as it arrives. A gap in the frames, no
+// frame for settleQuiet and gapPace times their usual interval, starts the
+// quiet stretch again. ready, when not nil, is asked once the frames are
+// still: false means the still picture is not the screen to wait for yet,
+// and the wait goes on.
 func frameSettle(ctx context.Context, limit time.Duration, next func(context.Context) (uint64, error), ready func(context.Context) bool) (bool, error) {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(ctx, limit)
@@ -41,6 +52,8 @@ func frameSettle(ctx context.Context, limit time.Duration, next func(context.Con
 	var last uint64
 	changed, prev := start, start
 	seen := false
+	var pace time.Duration // the usual interval between frames, once paced
+	paced := false
 	for {
 		key, err := next(ctx)
 		now := time.Now()
@@ -50,7 +63,17 @@ func frameSettle(ctx context.Context, limit time.Duration, next func(context.Con
 			}
 			return false, err
 		}
-		if !seen || key != last || now.Sub(prev) >= settleQuiet {
+		gap := false
+		if seen {
+			wait := now.Sub(prev)
+			gap = paced && wait >= settleQuiet && wait >= gapPace*pace
+			if paced {
+				pace = (3*pace + wait) / 4 // a stream that slows down for good is no gap for long
+			} else {
+				pace, paced = wait, true
+			}
+		}
+		if !seen || key != last || gap {
 			last, seen, changed = key, true, now
 		}
 		prev = now

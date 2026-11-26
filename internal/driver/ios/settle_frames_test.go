@@ -44,14 +44,15 @@ func mjpegServer(t *testing.T, pick func(since time.Duration) []byte) *httptest.
 // A gap in the frames is no stillness: WDA's MJPEG server sends frames of
 // a still screen too, and leaves them out only when it cannot take a
 // picture, as while an app turns the screen. The same frame on both sides
-// of a gap starts the quiet stretch again.
+// of a gap starts the quiet stretch again, once a few frames set the
+// stream's pace.
 func TestWDASettleAfterGap(t *testing.T) {
 	srv := httptest.NewServer(&fakeWDA{}) // no GET /rotation
 	defer srv.Close()
 	still := jpegBytes(t, 8, 12, color.White)
 	const gapEnds = 800 * time.Millisecond
 	mj := mjpegServer(t, func(since time.Duration) []byte {
-		if since > 60*time.Millisecond && since < gapEnds {
+		if since > 150*time.Millisecond && since < gapEnds {
 			return nil
 		}
 		return still
@@ -61,6 +62,54 @@ func TestWDASettleAfterGap(t *testing.T) {
 	ok, err := d.WaitSettled(context.Background(), 3*time.Second)
 	if took := time.Since(start); err != nil || !ok || took < gapEnds+settleQuiet {
 		t.Fatalf("settled %v (%v) after %v, want true %v after the gap", ok, err, took, settleQuiet)
+	}
+}
+
+// Over Wi-Fi the frames may come only 3 or 4 a second (WDA's frames are
+// large, the tunnel slow): a wait of settleQuiet between them is then the
+// stream's pace, no gap, and a still screen settles as it did before gaps
+// counted.
+func TestWDASettleSlowStream(t *testing.T) {
+	srv := httptest.NewServer(&fakeWDA{}) // no GET /rotation
+	defer srv.Close()
+	still := jpegBytes(t, 8, 12, color.White)
+	var sent atomic.Int64
+	sent.Store(-1)
+	mj := mjpegServer(t, func(since time.Duration) []byte {
+		n := int64(since / (300 * time.Millisecond)) // a frame every 300 ms
+		if sent.Swap(n) == n {
+			return nil
+		}
+		return still
+	})
+	d := &WDADevice{c: newWDAURL(srv.URL, mj.URL)}
+	start := time.Now()
+	ok, err := d.WaitSettled(context.Background(), 3*time.Second)
+	if took := time.Since(start); err != nil || !ok || took >= 1500*time.Millisecond {
+		t.Fatalf("still frames 300 ms apart: settled %v (%v) after %v, want true within 1.5 s", ok, err, took)
+	}
+}
+
+// GET /rotation's z is -1 when WDA does not know which way the app in
+// front is turned. That says nothing, rather than upright: still frames
+// turned for landscape count.
+func TestWDASettleUnknownRotation(t *testing.T) {
+	f := &fakeWDA{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/rotation" {
+			fmt.Fprint(w, `{"value":{"x":-1,"y":-1,"z":-1}}`)
+			return
+		}
+		f.ServeHTTP(w, r)
+	}))
+	defer srv.Close()
+	landscape := withEXIF(t, jpegBytes(t, 8, 12, color.White), 6, binary.BigEndian)
+	mj := mjpegServer(t, func(time.Duration) []byte { return landscape })
+	d := &WDADevice{c: newWDAURL(srv.URL, mj.URL)}
+	start := time.Now()
+	ok, err := d.WaitSettled(context.Background(), 2*time.Second)
+	if took := time.Since(start); err != nil || !ok || took >= time.Second {
+		t.Fatalf("landscape frames, rotation unknown: settled %v (%v) after %v, want true once still", ok, err, took)
 	}
 }
 
