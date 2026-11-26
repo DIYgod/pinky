@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/recording"
 	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/secret"
 )
@@ -662,6 +665,113 @@ func TestUnlockWindowEndsWithThePhoneAndPinky(t *testing.T) {
 	if err := g.OpenUnlockWindow("pixel", time.Hour); err == nil {
 		t.Fatal("opened a window on a closed gateway")
 	}
+}
+
+// unlockVideoDev is a phone whose stream the test feeds and which takes
+// fakePIN; entering runs while its own screen shows the PIN pad.
+type unlockVideoDev struct {
+	*videoDev
+	entering func()
+}
+
+func (u *unlockVideoDev) Unlock(_ context.Context, pin string) error {
+	if pin != fakePIN {
+		return fmt.Errorf("still locked: %w", driver.ErrLocked)
+	}
+	if u.entering != nil {
+		u.entering()
+	}
+	u.SetLocked(false)
+	return nil
+}
+
+// The window enters the PIN as Unlock does: only on the lock screen, with
+// no agent action running meanwhile, and nothing of the PIN pad recorded.
+func TestUnlockWindowEntersThePINAsUnlockDoes(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("only on the lock screen", func(t *testing.T) {
+		// Unlocked on the phone after the gateway saw it locked: the PIN
+		// would go into the app in front.
+		g, x := windowGateway(t, fakePIN)
+		s, _ := connect(t, g, "Lunch")
+		if err := g.OpenUnlockWindow("pixel", time.Hour); err != nil {
+			t.Fatal(err)
+		}
+		lockPhone(t, g, x)
+		x.SetLocked(false)
+		g.mu.Lock()
+		l := s.leases["pixel"]
+		g.mu.Unlock()
+		if r := g.windowUnlock(l, "", false); r != windowNoNeed {
+			t.Fatalf("result %v, want windowNoNeed", r)
+		}
+		if n := len(x.enteredPINs()); n != 0 {
+			t.Fatalf("entered a PIN on an unlocked phone: %d times", n)
+		}
+		if steps := windowSteps(g, s); len(steps) != 0 || unlockUntil(g).IsZero() {
+			t.Fatalf("steps %+v, window until %v", steps, unlockUntil(g))
+		}
+	})
+
+	t.Run("nothing else meanwhile, nothing recorded", func(t *testing.T) {
+		u := &unlockVideoDev{videoDev: newVideoDev("pixel")}
+		g := newVideoGateway(t, u.videoDev, func(o *Options) {
+			o.Providers = []driver.Provider{videoProvider{demo.NewProvider(driver.Android, u.Device), u}}
+			o.Policy = testPolicy(t)
+			o.UnlockWindowPIN = func(context.Context, string, time.Duration) (string, error) { return fakePIN, nil }
+		})
+		g.SetRecording(true)
+		s, _ := connect(t, g, "Lunch")
+		id := taskID(t, g, s)
+		st := newStreamer(t, u.open(t))
+		st.config()
+		st.pictures(10, true)
+		home := s.Observe(ctx, ObserveRequest{})
+		mustStatus(t, home, StatusSettled)
+		if err := g.OpenUnlockWindow("pixel", time.Hour); err != nil {
+			t.Fatal(err)
+		}
+		var actFree atomic.Bool
+		u.entering = func() {
+			st.pictures(6, true) // the PIN pad
+			g.mu.Lock()
+			d := g.devices["pixel"]
+			g.mu.Unlock()
+			// Every agent action takes d.act.
+			if d.act.TryLock() {
+				d.act.Unlock()
+				actFree.Store(true)
+			}
+		}
+		// No lock poll runs here (DiscoverEvery): the tap's own read finds
+		// the phone locked.
+		u.SetLocked(true)
+		mustStatus(t, tap(s, ref(t, home, "Dinely")), StatusSettled)
+		if actFree.Load() {
+			t.Fatal("an agent action could run while the PIN went in")
+		}
+		if u.Current() != "dinely" {
+			t.Fatalf("screen %q", u.Current())
+		}
+		st.pictures(5, true)
+		mustStatus(t, s.Observe(ctx, ObserveRequest{}), StatusSettled)
+		if err := g.Stop("pixel"); err != nil {
+			t.Fatal(err)
+		}
+		g.Flush()
+		rec, err := g.Recording(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		info, err := recording.Probe(rec.Path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Frames != 15 {
+			t.Fatalf("recorded %d frames, want the 10 before the lock and the 5 after the unlock", info.Frames)
+		}
+	})
 }
 
 // The PIN never reaches the log or a step; the failures say why.
