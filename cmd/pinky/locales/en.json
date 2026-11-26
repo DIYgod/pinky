@@ -3900,17 +3900,17 @@
   "@connectionWDA": {
     "description": "Settings › Phones, an iPhone's connection choice: the way through Pinky on the iPhone. WebDriverAgent is a name. Pinky on the iPhone is what the computer calls Pinky's iPhone app, named just Pinky on the iPhone itself (Pinky on the phone names the Android app the same way), which hosts WebDriverAgent; older installs are the app Pinky Helper, which works the same."
   },
-  "connectionWDADesc": "Works from iOS 16, with USB and separate Xcode setup below iOS 17.4. It does not share the screen, so banking apps that refuse screen sharing keep working. Now and then iOS asks for its passcode before it starts. The live picture and reading the screen are slower.",
+  "connectionWDADesc": "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16 to 17.3, WebDriverAgent needs USB and separate Xcode setup. It does not share the screen, so banking apps that refuse screen sharing keep working. Now and then iOS asks for its passcode on the iPhone before it starts. The live picture and reading the screen are slower.",
   "@connectionWDADesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what Pinky on the iPhone gives and costs."
   },
-  "legacyWDAExternal": "Start the signed WebDriverAgentRunner test from Xcode and keep it running while Pinky is connected.",
+  "legacyWDAExternal": "Set USE_IP=127.0.0.1 in Xcode's test scheme before starting the signed WebDriverAgentRunner test. Without it, anyone on the same Wi-Fi could control and watch this iPhone through WebDriverAgent. Keep the test running while Pinky is connected, then stop it in Xcode.",
   "@legacyWDAExternal": {
     "description": "Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name of an Xcode test target."
   },
   "legacyWDALockdown": "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation.",
   "@legacyWDALockdown": {
-    "description": "Setup for an iPhone on iOS 16. WebDriverAgentRunner is the name of an Xcode test target."
+    "description": "Setup for an iPhone on iOS 16."
   },
   "legacyWDAUSB": "Connect this iPhone to the computer with a USB cable to use WebDriverAgent.",
   "@legacyWDAUSB": {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -311,7 +312,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				}
 				// The person chose to offer a third-party copy too, after
 				// the official ways and only on a click.
-				a.mirrorOffer(c)
+				a.mirrorOffer(c, d.Info.OSVersion)
 			case driver.SetupDiskImageRefused:
 				// Apple will not sign the image on this computer: trying
 				// it again cannot help, a newer one can.
@@ -328,7 +329,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				// Apple refuses Xcode's image or one in Pinky's folder, only
 				// on a click.
 				if refusedOffersMirror(d.Info.DiskImage) {
-					a.mirrorOffer(c)
+					a.mirrorOffer(c, d.Info.OSVersion)
 				}
 				guideNote(c, note)
 			case driver.SetupInstallHelper:
@@ -394,6 +395,16 @@ type diskImageDownloader interface {
 	DownloadDiskImage(ctx context.Context, progress func(done, total int64)) error
 }
 
+type legacyDiskImageDownloader interface {
+	LegacyDiskImageMirror(version string) (driver.DiskImageMirror, bool)
+	DownloadLegacyDiskImage(ctx context.Context, version string, progress func(done, total int64)) error
+}
+
+func parseIOSMajor(version string) int {
+	major, _ := strconv.Atoi(strings.SplitN(version, ".", 2)[0])
+	return major
+}
+
 // diskDownload is the download the person started from the steps.
 type diskDownload struct {
 	seq         int64
@@ -410,12 +421,19 @@ var dlSeq atomic.Int64
 // mirrorOffer offers the developer disk image from the third-party mirror:
 // where it comes from and that it is not Apple, a Download button, the
 // progress, and what to do when it fails.
-func (a *app) mirrorOffer(c *mg.Context) {
+func (a *app) mirrorOffer(c *mg.Context, version string) {
 	dl, ok := a.api.(diskImageDownloader)
 	if !ok {
 		return
 	}
 	m, ok := dl.DiskImageMirror()
+	legacy, legacyOK := a.api.(legacyDiskImageDownloader)
+	if parseIOSMajor(version) == 16 {
+		if !legacyOK {
+			return
+		}
+		m, ok = legacy.LegacyDiskImageMirror(version)
+	}
 	if !ok {
 		return
 	}
@@ -445,7 +463,7 @@ func (a *app) mirrorOffer(c *mg.Context) {
 			}
 			mg.Row(c).Children(func() {
 				if button(c, label, btnOpt{}).Clicked() {
-					a.downloadDiskImage(dl)
+					a.downloadDiskImage(dl, legacy, version)
 				}
 			})
 		}
@@ -454,13 +472,13 @@ func (a *app) mirrorOffer(c *mg.Context) {
 
 // downloadDiskImage downloads the image in the background, reporting its
 // progress a few times a second.
-func (a *app) downloadDiskImage(dl diskImageDownloader) {
+func (a *app) downloadDiskImage(dl diskImageDownloader, legacy legacyDiskImageDownloader, version string) {
 	st := &a.add.dl
 	seq := dlSeq.Add(1)
 	*st = diskDownload{seq: seq, running: true}
 	go func() {
 		var last time.Time
-		err := dl.DownloadDiskImage(a.ctx, func(done, total int64) {
+		progress := func(done, total int64) {
 			if now := time.Now(); now.Sub(last) >= 200*time.Millisecond || done == total {
 				last = now
 				a.post(func() {
@@ -469,7 +487,13 @@ func (a *app) downloadDiskImage(dl diskImageDownloader) {
 					}
 				})
 			}
-		})
+		}
+		var err error
+		if parseIOSMajor(version) == 16 {
+			err = legacy.DownloadLegacyDiskImage(a.ctx, version, progress)
+		} else {
+			err = dl.DownloadDiskImage(a.ctx, progress)
+		}
 		a.post(func() {
 			if st.seq == seq {
 				st.running, st.finished, st.err = false, err == nil, err

@@ -54,6 +54,9 @@ type HelperInstall struct {
 	// Dir is Pinky's WebDriverAgent folder, which keeps the source
 	// archive the Simulators' builds use too.
 	Dir string
+	// DiskImageDir is Pinky's folder for developer disk images, including
+	// a downloaded iOS 16 image when Xcode no longer ships one.
+	DiskImageDir string
 	// Phone is the phone's UDID or name; "" for the only one.
 	Phone string
 	// Team is the Apple developer team to sign with; "" for the team of
@@ -248,8 +251,16 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 		return e
 	}
 	if ph.lockdown.DeviceID != 0 {
+		// Brand the signed build before the legacy packager replaces its
+		// host executable and signs the complete app again.
+		if _, err := brandLegacyRunner(ctx, x, app); err != nil {
+			return fmt.Errorf("giving the iOS 16 app Pinky's name and icon: %w", err)
+		}
+		if err := resignApp(ctx, x, app); err != nil {
+			return fmt.Errorf("signing the branded iOS 16 app: %w", err)
+		}
 		progress(driver.HelperInstalling)
-		if err := installLegacyHelper(ctx, xr, ph, app, bid, tmp, logPath); err != nil {
+		if err := installLegacyHelper(ctx, xr, ph, app, bid, tmp, logPath, o.DiskImageDir); err != nil {
 			return err
 		}
 		fmt.Fprintf(out, "Installed WebDriverAgent on %s. Its signature lasts until %s.\n", ph.Name, helperDate(profile.Expires))

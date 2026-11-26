@@ -11251,14 +11251,14 @@ func (msgs Messages) ConnectionWDA() string {
 	return Catalog.Format(msgs.locale, "connectionWDA", nil)
 }
 
-// ConnectionWDADesc says "Works from iOS 16, with USB and separate Xcode setup below iOS 17.4. It does not share the screen, so banking apps th…"
+// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16 to 17.3, WebDriverAgent needs USB and…"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
 // iPhone gives and costs.
 func ConnectionWDADesc() string { return In(i18n.Locale()).ConnectionWDADesc() }
 
-// ConnectionWDADesc says "Works from iOS 16, with USB and separate Xcode setup below iOS 17.4. It does not share the screen, so banking apps th…"
+// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16 to 17.3, WebDriverAgent needs USB and…"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
@@ -11267,14 +11267,14 @@ func (msgs Messages) ConnectionWDADesc() string {
 	return Catalog.Format(msgs.locale, "connectionWDADesc", nil)
 }
 
-// LegacyWDAExternal says "Start the signed WebDriverAgentRunner test from Xcode and keep it running while Pinky is connected."
+// LegacyWDAExternal says "Set USE_IP=127.0.0.1 in Xcode's test scheme before starting the signed WebDriverAgentRunner test. Without it, anyone …"
 // in the language the app shows.
 //
 // Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name
 // of an Xcode test target.
 func LegacyWDAExternal() string { return In(i18n.Locale()).LegacyWDAExternal() }
 
-// LegacyWDAExternal says "Start the signed WebDriverAgentRunner test from Xcode and keep it running while Pinky is connected."
+// LegacyWDAExternal says "Set USE_IP=127.0.0.1 in Xcode's test scheme before starting the signed WebDriverAgentRunner test. Without it, anyone …"
 // in the language of msgs.
 //
 // Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name
@@ -11286,15 +11286,13 @@ func (msgs Messages) LegacyWDAExternal() string {
 // LegacyWDALockdown says "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked durin…"
 // in the language the app shows.
 //
-// Setup for an iPhone on iOS 16. WebDriverAgentRunner is the name of an
-// Xcode test target.
+// Setup for an iPhone on iOS 16.
 func LegacyWDALockdown() string { return In(i18n.Locale()).LegacyWDALockdown() }
 
 // LegacyWDALockdown says "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked durin…"
 // in the language of msgs.
 //
-// Setup for an iPhone on iOS 16. WebDriverAgentRunner is the name of an
-// Xcode test target.
+// Setup for an iPhone on iOS 16.
 func (msgs Messages) LegacyWDALockdown() string {
 	return Catalog.Format(msgs.locale, "legacyWDALockdown", nil)
 }

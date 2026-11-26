@@ -73,6 +73,8 @@ type Provider struct {
 	// For tests: probes for USB-only WebDriverAgent and its lockdown service.
 	usbWDAStatus        func(context.Context, goios.DeviceEntry) bool
 	lockdownXCTestReady func(context.Context, goios.DeviceEntry) error
+	legacyImageFind     func(string) string
+	legacyImagePrepare  func(context.Context, goios.DeviceEntry, string, string) error
 
 	// For tests: how a phone is inspected, and the clock.
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
@@ -426,7 +428,7 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 	p.mu.Unlock()
 	if s == nil {
 		var err error
-		if s, err = startWDAFor(ctx, info); err != nil {
+		if s, err = startWDAFor(ctx, info, p.DiskImageDir); err != nil {
 			return nil, err
 		}
 		if s.run != nil {

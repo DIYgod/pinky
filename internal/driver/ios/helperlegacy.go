@@ -106,7 +106,7 @@ func prepareLegacyWDAProject(src string) error {
 	return os.WriteFile(project, legacyWDAIcon.ReplaceAll(body, nil), 0o644)
 }
 
-func installLegacyHelper(ctx context.Context, xr xcodeRunner, ph helperPhone, app, bid, tmp, logPath string) error {
+func installLegacyHelper(ctx context.Context, xr xcodeRunner, ph helperPhone, app, bid, tmp, logPath, imageDir string) error {
 	for _, name := range []string{"RunnerHost.m", "package.sh"} {
 		body, err := legacyWDAPackager.ReadFile("legacywda/" + name)
 		if err != nil {
@@ -123,7 +123,7 @@ func installLegacyHelper(ctx context.Context, xr xcodeRunner, ph helperPhone, ap
 		fmt.Fprintln(xr.log, string(output))
 		return helperErr("", fmt.Errorf("packaging the iOS 16 runner: %w: %s", err, xcodeErrors(string(output))), logPath)
 	}
-	if err := prepareLegacyHelperImage(ctx, xr.x, ph); err != nil {
+	if err := prepareLegacyImage(ctx, ph.lockdown, ph.OS, imageDir); err != nil {
 		return helperErr("", err, logPath)
 	}
 	fmt.Fprintf(xr.out, "Installing and starting WebDriverAgent on %s over USB. Keep the phone unlocked.\n", ph.Name)
@@ -172,17 +172,16 @@ func installLegacyHelper(ctx context.Context, xr xcodeRunner, ph helperPhone, ap
 	}
 }
 
-func prepareLegacyHelperImage(ctx context.Context, x xcode, ph helperPhone) error {
-	if probeLockdownXCTest(ctx, ph.lockdown) == nil {
+func prepareLegacyImage(ctx context.Context, e goios.DeviceEntry, version, ownDir string) error {
+	if probeLockdownXCTest(ctx, e) == nil {
 		return nil
 	}
-	dir := filepath.Join(x.Developer, "Platforms", "iPhoneOS.platform", "DeviceSupport")
-	img := legacyImageIn(dir, parseVersion(ph.OS))
+	img := legacyImagePath(ownDir, parseVersion(version))
 	if img == "" {
-		return fmt.Errorf("no compatible developer disk image for iOS %s in %s", ph.OS, dir)
+		return fmt.Errorf("no compatible developer disk image for iOS %s: %w", version, errNoDiskImage)
 	}
 	_, err := bounded(ctx, helperStartTimeout, func() (bool, error) {
-		m, err := imagemounter.NewImageMounter(ph.lockdown)
+		m, err := imagemounter.NewImageMounter(e)
 		if err != nil {
 			return false, err
 		}
@@ -196,7 +195,24 @@ func prepareLegacyHelperImage(ctx context.Context, x xcode, ph helperPhone) erro
 	if err != nil {
 		return fmt.Errorf("mounting the iOS 16 developer disk image: %w", err)
 	}
-	return probeLockdownXCTest(ctx, ph.lockdown)
+	if err := probeLockdownXCTest(ctx, e); err != nil {
+		return fmt.Errorf("the iOS 16 developer disk image did not make XCTest available: %w", err)
+	}
+	return nil
+}
+
+func legacyImagePath(ownDir string, version osVersion) string {
+	if x, err := findXcode(); err == nil {
+		if img := legacyImageIn(filepath.Join(x.Developer, "Platforms", "iPhoneOS.platform", "DeviceSupport"), version); img != "" {
+			return img
+		}
+	}
+	if ownDir != "" {
+		if img := legacyImageIn(filepath.Join(ownDir, "LegacyDiskImages"), version); img != "" {
+			return img
+		}
+	}
+	return ""
 }
 
 func legacyImageIn(dir string, version osVersion) string {

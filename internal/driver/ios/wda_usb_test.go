@@ -17,7 +17,7 @@ func TestInspectUSBWDA(t *testing.T) {
 		wantState                 driver.State
 	}{
 		{"16 installed", "16.5", "", false, true, true, driver.StateOnline},
-		{"16 missing developer services", "16.5", driver.SetupInstallHelper, false, true, false, driver.StateNeedsSetup},
+		{"16 missing developer services", "16.5", driver.SetupDiskImage, false, true, false, driver.StateNeedsSetup},
 		{"16 missing runner", "16.5", driver.SetupInstallHelper, false, false, true, driver.StateNeedsSetup},
 		{"16 missing profile", "16.5", driver.SetupInstallHelper, false, true, true, driver.StateNeedsSetup},
 		{"17 already running", "17.3.1", "", true, true, false, driver.StateOnline},
@@ -26,6 +26,10 @@ func TestInspectUSBWDA(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			p := NewProvider()
 			p.usbWDAStatus = func(context.Context, goios.DeviceEntry) bool { return test.running }
+			p.legacyImageFind = func(string) string { return "/tmp/test/DeveloperDiskImage.dmg" }
+			p.legacyImagePrepare = func(context.Context, goios.DeviceEntry, string, string) error {
+				return errors.New("the disk image could not be mounted")
+			}
 			p.findRunner = func(goios.DeviceEntry) (string, error) {
 				if test.installed {
 					return "com.example.WebDriverAgentRunner.xctrunner", nil
@@ -54,6 +58,31 @@ func TestInspectUSBWDA(t *testing.T) {
 				t.Error("the installed runner's signing expiration was not reported")
 			}
 		})
+	}
+}
+
+func TestInspectUSBWDARemountsAfterRestart(t *testing.T) {
+	p := NewProvider()
+	p.usbWDAStatus = func(context.Context, goios.DeviceEntry) bool { return false }
+	p.findRunner = func(goios.DeviceEntry) (string, error) {
+		return "com.example.WebDriverAgentRunner.xctrunner", nil
+	}
+	p.lockdownXCTestReady = func(context.Context, goios.DeviceEntry) error { return errors.New("image unmounted") }
+	p.legacyImageFind = func(string) string { return "/tmp/test/DeveloperDiskImage.dmg" }
+	mounted := false
+	p.legacyImagePrepare = func(context.Context, goios.DeviceEntry, string, string) error { mounted = true; return nil }
+	p.helperFn = func(context.Context, goios.DeviceEntry, wdaRunner) (time.Time, error) {
+		return time.Now().Add(time.Hour), nil
+	}
+	info := driver.Info{OSVersion: "16.5.1", State: driver.StateOnline}
+	got := p.inspectUSBWDA(t.Context(), goios.DeviceEntry{}, info, pathLockdownWDA)
+	if !mounted || got.State != driver.StateOnline {
+		t.Fatalf("inspect after reboot = %+v; mounted = %v", got, mounted)
+	}
+	p.legacyImageFind = func(string) string { return "" }
+	got = p.inspectUSBWDA(t.Context(), goios.DeviceEntry{}, info, pathLockdownWDA)
+	if got.Setup != driver.SetupNoDiskImage {
+		t.Fatalf("missing image = %+v", got)
 	}
 }
 

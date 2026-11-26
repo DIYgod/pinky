@@ -35,6 +35,25 @@ func wdaExternalSetup(info driver.Info, kind pathKind) driver.Info {
 func (p *Provider) inspectUSBWDA(ctx context.Context, e goios.DeviceEntry, info driver.Info, kind pathKind) driver.Info {
 	runner, ready := p.usbWDAAvailable(ctx, e, kind)
 	info.Backend = backendWDA
+	if !ready && kind == pathLockdownWDA {
+		find := p.legacyImageFind
+		if find == nil {
+			find = func(version string) string { return legacyImagePath(p.DiskImageDir, parseVersion(version)) }
+		}
+		if find(info.OSVersion) == "" {
+			return wdaImageSetup(info, fmt.Errorf("no compatible developer disk image for iOS %s: %w", info.OSVersion, errNoDiskImage))
+		}
+		if runner.BundleID != "" {
+			prepare := p.legacyImagePrepare
+			if prepare == nil {
+				prepare = prepareLegacyImage
+			}
+			if err := prepare(ctx, e, info.OSVersion, p.DiskImageDir); err != nil {
+				return wdaImageSetup(info, err)
+			}
+			return p.withHelper(ctx, e, info, runner)
+		}
+	}
 	switch {
 	case !ready:
 		return wdaExternalSetup(info, kind)
@@ -43,6 +62,15 @@ func (p *Provider) inspectUSBWDA(ctx context.Context, e goios.DeviceEntry, info 
 	default:
 		return info
 	}
+}
+
+func wdaImageSetup(info driver.Info, err error) driver.Info {
+	info.State, info.Setup = driver.StateNeedsSetup, driver.SetupDiskImage
+	if errors.Is(err, errNoDiskImage) {
+		info.Setup = driver.SetupNoDiskImage
+	}
+	info.Detail = err.Error()
+	return info
 }
 
 // usbWDAAvailable checks an already-running server first. On iOS 16 only,
@@ -99,7 +127,10 @@ func (s *wdaStart) startUSB(ctx context.Context, info driver.Info, kind pathKind
 		return usbWDAStartError(info, kind, errors.New("WebDriverAgentRunner is not installed"))
 	}
 	if err := probeLockdownXCTest(ctx, s.base); err != nil {
-		return usbWDAStartError(info, kind, fmt.Errorf("reach the lockdown XCTest service: %w", err))
+		if err := prepareLegacyImage(ctx, s.base, info.OSVersion, s.imageDir); err != nil {
+			setup := wdaImageSetup(info, err)
+			return &driver.SetupError{Setup: setup.Setup, Detail: setup.Detail, Err: errors.Join(driver.ErrOffline, err)}
+		}
 	}
 	s.run = startWDA(s.base, s.base, app, wdaBind(s.base, nil), true)
 	return nil

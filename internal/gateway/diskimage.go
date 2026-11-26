@@ -34,3 +34,29 @@ func (g *Gateway) DownloadDiskImage(ctx context.Context, progress func(done, tot
 	}
 	return ErrNoDiskImageDownload
 }
+
+// LegacyDiskImageMirror describes the version-specific iOS 16 image offered
+// when the person is adding that phone.
+func (g *Gateway) LegacyDiskImageMirror(version string) (driver.DiskImageMirror, bool) {
+	for _, p := range g.opt.Providers {
+		if d, ok := p.(interface {
+			LegacyDiskImageMirror(string) (driver.DiskImageMirror, bool)
+		}); ok {
+			return d.LegacyDiskImageMirror(version)
+		}
+	}
+	return driver.DiskImageMirror{}, false
+}
+
+// DownloadLegacyDiskImage downloads the image only after the person chooses
+// Download in Add phone.
+func (g *Gateway) DownloadLegacyDiskImage(ctx context.Context, version string, progress func(done, total int64)) error {
+	for _, p := range g.opt.Providers {
+		if d, ok := p.(interface {
+			DownloadLegacyDiskImage(context.Context, string, func(int64, int64)) error
+		}); ok {
+			return d.DownloadLegacyDiskImage(ctx, version, progress)
+		}
+	}
+	return ErrNoDiskImageDownload
+}

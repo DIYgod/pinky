@@ -190,20 +190,24 @@ var errAutomation = errors.New("the iPhone asks on its screen for its passcode t
 // it and, when Pinky started it, the runner's test run and the tunnel the
 // run goes through.
 type wdaStart struct {
-	base goios.DeviceEntry
-	c    *wdaClient
-	run  *wdaRun
-	l    *link
+	base     goios.DeviceEntry
+	c        *wdaClient
+	run      *wdaRun
+	l        *link
+	imageDir string
 }
 
 // startWDAFor starts the helper's test on a phone, unless WebDriverAgent
 // already answers there (started by Xcode, or by an earlier Pinky).
-func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
+func startWDAFor(ctx context.Context, info driver.Info, imageDir ...string) (*wdaStart, error) {
 	base, err := findEntry(info.ID, info.Connection == "wifi")
 	if err != nil {
 		return nil, err
 	}
 	s := &wdaStart{base: base, c: newWDAUSB(base)}
+	if len(imageDir) > 0 {
+		s.imageDir = imageDir[0]
+	}
 	kind, _ := pathFor(parseVersion(info.OSVersion))
 	if kind.usbWDAOnly() && base.Properties.ConnectionType != "USB" {
 		info = wdaUSBSetup(info)
