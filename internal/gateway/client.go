@@ -64,6 +64,10 @@ func (g *Gateway) Devices() []DeviceView {
 			v.TaskID = d.lease.task.id
 		}
 		v.LeaseGen, v.LeaseEnded = d.leaseGen, d.leaseEnded
+		if w := g.windows[d.id]; w != nil && time.Now().Before(w.until) {
+			v.UnlockUntil = w.until
+		}
+		v.UnlockRefused = g.pinRefused[d.id]
 		out = append(out, v)
 	}
 	return out
@@ -255,7 +259,8 @@ func (g *Gateway) Needs() []NeedView {
 		}
 	}
 	for _, d := range g.sortedDevicesLocked() {
-		if l := d.lease; l != nil && d.locked && d.online && l.bg == nil {
+		// None while an unlock window unlocks the phone at the next step.
+		if l := d.lease; l != nil && d.locked && d.online && l.bg == nil && g.windowForLocked(l, "") == nil {
 			out = append(out, NeedView{ID: unlockNeedPrefix + d.id, Kind: NeedUnlock, DeviceID: d.id, DeviceName: d.name(),
 				Agent: l.session.agent.Name, TaskID: l.task.id, Title: "Unlock " + d.name(),
 				Detail:  fmt.Sprintf("%s is waiting for the phone to unlock · %s", l.session.agent.Name, l.task.title),

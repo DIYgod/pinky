@@ -879,7 +879,13 @@ func (ru *run) work(ctx context.Context) (End, string) {
 	sctx, scancel := context.WithCancel(context.Background())
 	defer scancel()
 	st, ct := sdk.NewInMemoryTransports()
+	// A scheduled run nobody started: an unlock window never unlocks the
+	// phone for it. One the person continued is theirs (attendLocked).
+	unattended := sch != nil && sch.Unattended
 	connect := func(ctx context.Context, t sdk.Transport) error {
+		if unattended {
+			return ru.r.opt.Server.ConnectUnattended(ctx, t, taskID)
+		}
 		return ru.r.opt.Server.ConnectBuiltinTask(ctx, t, taskID)
 	}
 	if ru.req.Agent.Name != "" {
@@ -887,7 +893,9 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		// continues it: its scope, its approval as a new agent, a Stop
 		// that keeps it off the phone.
 		connect = func(ctx context.Context, t sdk.Transport) error {
-			return ru.r.opt.Server.ConnectFor(ctx, t, ru.req.Agent, taskID)
+			agent := ru.req.Agent
+			agent.Unattended = unattended
+			return ru.r.opt.Server.ConnectFor(ctx, t, agent, taskID)
 		}
 	}
 	if err := connect(sctx, st); err != nil {

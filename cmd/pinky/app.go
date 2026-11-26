@@ -87,7 +87,7 @@ func runApp(args []string) error {
 	settings := loadSettings(settingsPath, c.Log)
 	var unlock pinSource
 	unlock.on.Store(settings.UnlockFromComputer)
-	c.PIN = unlock.pin
+	c.PIN, c.UnlockWindowPIN = unlock.pin, unlock.windowPIN
 	// Set when `pinky daemon` takes this app's place (below); it starts
 	// once the gateway here has let go of the socket.
 	var daemon func()
@@ -217,9 +217,11 @@ func runApp(args []string) error {
 		Schedules: schedules,
 		OnSettings: func(old, s ui.Settings) {
 			askCfg.Store(&s)
+			// Before applySettings ends the unlock windows: one the person
+			// confirms meanwhile must not open after (pinSource.windowPIN).
+			unlock.on.Store(s.UnlockFromComputer)
 			applySettings(rg, old, s, c.Log)
 			applyTelemetry(tel, s)
-			unlock.on.Store(s.UnlockFromComputer)
 			stopADB.Store(s.StopADBOnQuit)
 			if err := saveSettings(settingsPath, s); err != nil {
 				c.Log.Warn("save settings", "err", err)
@@ -445,9 +447,43 @@ type pinSource struct {
 	store secret.Store // nil: the system keychain
 }
 
+// errUnlockOff answers a PIN asked for while Settings › Unlock from this
+// computer is off.
+var errUnlockOff = errors.New("unlocking from this computer is off in Settings; unlock on the phone")
+
+// pin hands out the phone's PIN for one unlock (gateway's Unlock).
 func (p *pinSource) pin(ctx context.Context, deviceID string) (string, error) {
+	name, store, err := p.saved(deviceID)
+	if err != nil {
+		return "", err
+	}
+	return store.Reveal(ctx, secret.PINAccount(deviceID), "unlock "+name)
+}
+
+// windowPIN hands out the phone's PIN for an unlock window of length
+// (gateway's OpenUnlockWindow): the prompt names the phone and how long
+// Pinky may unlock it without asking.
+func (p *pinSource) windowPIN(ctx context.Context, deviceID string, length time.Duration) (string, error) {
+	name, store, err := p.saved(deviceID)
+	if err != nil {
+		return "", err
+	}
+	pin, err := store.Reveal(ctx, secret.PINAccount(deviceID), "unlock "+name+" without asking "+forHours(length))
+	if err != nil {
+		return "", err
+	}
+	// Turned off while the person confirmed: no window opens.
 	if !p.on.Load() {
-		return "", errors.New("unlocking from this computer is off in Settings; unlock on the phone")
+		return "", errUnlockOff
+	}
+	return pin, nil
+}
+
+// saved returns the phone's name and the store that holds its PIN, without
+// asking the person, or why there is no PIN to hand out.
+func (p *pinSource) saved(deviceID string) (string, secret.Store, error) {
+	if !p.on.Load() {
+		return "", nil, errUnlockOff
 	}
 	name := deviceID
 	if p.names != nil {
@@ -461,13 +497,20 @@ func (p *pinSource) pin(ctx context.Context, deviceID string) (string, error) {
 	if store == nil {
 		store = secret.System()
 	}
-	account := secret.PINAccount(deviceID)
 	// Without a saved PIN there is nothing to confirm: say so without a
 	// Touch ID prompt.
-	if !store.Has(account) {
-		return "", fmt.Errorf("no PIN is saved for %s; save it in the phone's settings in Pinky: %w", name, secret.ErrNotFound)
+	if !store.Has(secret.PINAccount(deviceID)) {
+		return "", nil, fmt.Errorf("no PIN is saved for %s; save it in the phone's settings in Pinky: %w", name, secret.ErrNotFound)
 	}
-	return store.Reveal(ctx, account, "unlock "+name)
+	return name, store, nil
+}
+
+// forHours says how long an unlock window lasts, for the prompt.
+func forHours(d time.Duration) string {
+	if h := int(d / time.Hour); h != 1 {
+		return fmt.Sprintf("for the next %d hours", h)
+	}
+	return "for the next hour"
 }
 
 // applySettings passes what changed in Settings to the gateway.
@@ -491,6 +534,10 @@ func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
 	}
 	if s.IOSWiFi != old.IOSWiFi {
 		rg.G.SetWiFi(s.IOSWiFi)
+	}
+	if old.UnlockFromComputer && !s.UnlockFromComputer {
+		// Unlock without asking ends with it, on every phone.
+		rg.G.EndUnlockWindows()
 	}
 	if rg.Remote != nil && (s.RemoteAgents != old.RemoteAgents || remoteAddr(s) != remoteAddr(old)) {
 		warn("remote agents", rg.Remote.Set(s.RemoteAgents, remoteAddr(s)))

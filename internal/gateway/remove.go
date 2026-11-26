@@ -141,6 +141,7 @@ func (g *Gateway) RemoveDevice(ctx context.Context, deviceID string, opt RemoveO
 // dropSettingsLocked takes the phone off the list with what the gateway
 // keeps about it in memory. The caller holds g.mu.
 func (g *Gateway) dropSettingsLocked(id string) {
+	g.dropWindowLocked(id)
 	delete(g.devices, id)
 	delete(g.background, id)
 	delete(g.trafficOn, id)

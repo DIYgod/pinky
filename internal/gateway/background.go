@@ -293,7 +293,11 @@ func (g *Gateway) leaveForPhone(ctx context.Context, l *lease, why, nothing stri
 	locked := d.locked
 	g.mu.Unlock()
 	if locked {
-		return nil, statusResult(StatusLocked, "%s, and the phone's own screen is locked, so %s. Call phone_handoff so the person can unlock it.", why, nothing)
+		// An unlock window unlocks it, when one may; the caller holds d.act.
+		if r := g.windowUnlock(l, "", true); !r.unlocked() {
+			return nil, statusResult(StatusLocked, "%s", lockedNote(r, fmt.Sprintf(
+				"%s, and the phone's own screen is locked, so %s. Call phone_handoff so the person can unlock it.", why, nothing)))
+		}
 	}
 	return dev, nil
 }

@@ -559,8 +559,10 @@ type Waker interface {
 }
 
 // Unlocker enters the phone's PIN or passcode on its lock screen. Only the
-// person can trigger it, from the client after Touch ID or the system's
-// equivalent; agents never reach it and never see the PIN. It wakes the
+// person can allow it, from the client after Touch ID or the system's
+// equivalent: for one unlock, or for the agents' steps that find the phone
+// locked during an unlock window they confirmed once (gateway's
+// unlockwindow.go). Agents never reach it and never see the PIN. It wakes the
 // screen, brings up the PIN pad, enters pin and confirms, then returns nil
 // once the lock screen is gone, ErrLocked when it is still there after the
 // PIN was entered (a wrong PIN: one attempt used), or ErrPINNotEntered when

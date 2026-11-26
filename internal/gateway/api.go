@@ -97,6 +97,15 @@ type DeviceView struct {
 	// gateway reads it only while a mirror watches the phone. StatusLine
 	// is then "Screen off".
 	ScreenOff bool
+	// UnlockUntil is when the phone's unlock window ends, zero while it has
+	// none: until then Pinky enters its PIN when an agent's step finds it
+	// locked (Gateway.OpenUnlockWindow).
+	UnlockUntil time.Time
+	// UnlockRefused is set once the phone did not accept the PIN an unlock
+	// window entered, which ended the window, until the phone is unlocked
+	// or a window opens again: the unlock card says so, as after a wrong
+	// PIN from the computer.
+	UnlockRefused bool
 }
 
 // Features are the optional driver capabilities the client has controls for.

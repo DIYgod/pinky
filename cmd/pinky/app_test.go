@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/demo"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/policy"
@@ -289,5 +290,86 @@ func TestPINNeedsTheSetting(t *testing.T) {
 	store.Confirm = func(string) error { return secret.ErrCancelled }
 	if _, err := p.pin(ctx, "pixel"); !errors.Is(err, secret.ErrCancelled) {
 		t.Fatalf("cancelled: %v", err)
+	}
+}
+
+// Unlock without asking (#231) takes the PIN as an unlock does: only with
+// the setting on, a PIN saved and the person's yes to a prompt that names
+// the phone and the length.
+func TestUnlockWindowPIN(t *testing.T) {
+	ctx := context.Background()
+	var reasons []string
+	store := &secret.Memory{Confirm: func(reason string) error { reasons = append(reasons, reason); return nil }}
+	p := pinSource{store: store}
+	store.Save(secret.PINAccount("pixel"), "4711")
+	if _, err := p.windowPIN(ctx, "pixel", 4*time.Hour); !errors.Is(err, errUnlockOff) || len(reasons) != 0 {
+		t.Fatalf("with the setting off: %v, prompts %q", err, reasons)
+	}
+	p.on.Store(true)
+	for length, want := range map[time.Duration]string{
+		time.Hour:     "unlock pixel without asking for the next hour",
+		4 * time.Hour: "unlock pixel without asking for the next 4 hours",
+		8 * time.Hour: "unlock pixel without asking for the next 8 hours",
+	} {
+		reasons = nil
+		if pin, err := p.windowPIN(ctx, "pixel", length); err != nil || pin != "4711" {
+			t.Fatalf("%s: PIN %q, %v", length, pin, err)
+		}
+		if len(reasons) != 1 || reasons[0] != want {
+			t.Fatalf("%s: confirmed for %q", length, reasons)
+		}
+	}
+	reasons = nil
+	if _, err := p.windowPIN(ctx, "ipad", time.Hour); !errors.Is(err, secret.ErrNotFound) || len(reasons) != 0 {
+		t.Fatalf("no saved PIN: %v, prompts %q", err, reasons)
+	}
+	store.Confirm = func(string) error { return secret.ErrCancelled }
+	if _, err := p.windowPIN(ctx, "pixel", time.Hour); !errors.Is(err, secret.ErrCancelled) {
+		t.Fatalf("cancelled: %v", err)
+	}
+	// Turned off while the person confirmed: no PIN for the window.
+	store.Confirm = func(string) error { p.on.Store(false); return nil }
+	if pin, err := p.windowPIN(ctx, "pixel", time.Hour); !errors.Is(err, errUnlockOff) || pin != "" {
+		t.Fatalf("turned off meanwhile: PIN %q, %v", pin, err)
+	}
+}
+
+// Turning Settings › Unlock from this computer off ends unlock without
+// asking on every phone.
+func TestUnlockOffEndsUnlockWindows(t *testing.T) {
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	g, err := gateway.New(gateway.Options{Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)},
+		DataDir: t.TempDir(), NoScreenshots: true, DiscoverEvery: 20 * time.Millisecond,
+		UnlockWindowPIN: func(context.Context, string, time.Duration) (string, error) { return demo.PIN, nil }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	deadline := time.Now().Add(5 * time.Second)
+	for len(g.Devices()) == 0 || g.Devices()[0].Status == gateway.DeviceOffline {
+		if time.Now().After(deadline) {
+			t.Fatal("the demo phone did not come online")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	rg := &runningGateway{G: g, Policy: g.Policy()}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	on := ui.DefaultSettings()
+	on.UnlockFromComputer = true
+	if err := g.OpenUnlockWindow("pixel", 4*time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if until := g.Devices()[0].UnlockUntil; time.Until(until) < 3*time.Hour {
+		t.Fatalf("window until %v", until)
+	}
+	applySettings(rg, on, on, log)
+	if g.Devices()[0].UnlockUntil.IsZero() {
+		t.Fatal("unchanged settings ended the window")
+	}
+	off := on
+	off.UnlockFromComputer = false
+	applySettings(rg, on, off, log)
+	if until := g.Devices()[0].UnlockUntil; !until.IsZero() {
+		t.Fatalf("the window stays until %v", until)
 	}
 }

@@ -482,7 +482,7 @@ func (g *Gateway) firstListScreen(ctx context.Context, l *lease, req ReadListReq
 		return nil, 0, busyOutOfTime(g.opt.CallBudget)
 	}
 	defer d.act.Unlock()
-	if res := g.gate(l, "", true); res != nil {
+	if res := g.gateHeld(l, "", true); res != nil {
 		return nil, 0, res
 	}
 	g.settleOwed(ctx, d)
@@ -495,6 +495,18 @@ func (g *Gateway) firstListScreen(ctx context.Context, l *lease, req ReadListReq
 	}
 	began := time.Now()
 	s, raw, res := g.readListRaw(ctx, l, mode)
+	if res != nil && res.Status == StatusLocked {
+		// It locked since the gateway last looked: an unlock window
+		// unlocks it, when one may, and the list is read after the unlock.
+		switch r := g.windowUnlock(l, "", true); {
+		case r.unlocked():
+			g.settleOwed(ctx, d)
+			began = time.Now()
+			s, raw, res = g.readListRaw(ctx, l, mode)
+		case r == windowFailed:
+			res.Message = lockedNote(r, res.Message)
+		}
+	}
 	took := time.Since(began)
 	if res != nil {
 		return nil, took, res

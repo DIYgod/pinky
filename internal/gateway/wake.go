@@ -16,9 +16,11 @@ import (
 // timeout and lock apply between steps and tasks. Before an agent's call
 // reads or acts on the phone's screen, the gateway wakes it (driver.Waker);
 // a locked phone then shows its lock screen, and the agent gets
-// device_locked as before. Unlocking from the computer (decision 5) enters
-// the saved PIN through driver.Unlocker, only when the person asks in the
-// client, and leaves a step in the task's history, never the PIN.
+// device_locked as before, unless the person opened an unlock window for
+// the phone (unlockwindow.go). Unlocking from the computer (decision 5)
+// enters the saved PIN through driver.Unlocker only when the person asks in
+// the client, or confirmed such a window once, and leaves a step in the
+// task's history, never the PIN.
 
 // wakeFresh is how long a wake counts: the shortest screen timeouts are 15
 // s (Android) and 30 s (iOS), so a phone woken this recently is still on
@@ -122,6 +124,10 @@ func (g *Gateway) Unlock(deviceID string) error {
 	g.recordUnlock(l, start, err)
 	if err != nil {
 		if errors.Is(err, driver.ErrLocked) {
+			// The PIN is wrong: an unlock window would only enter it again.
+			g.mu.Lock()
+			g.endWindowLocked(d.id, "the phone did not accept the PIN")
+			g.mu.Unlock()
 			g.setLocked(d, true)
 			// Both: the client words a wrong PIN by driver.ErrLocked.
 			return fmt.Errorf("%w: %w", ErrWrongPIN, driver.ErrLocked)

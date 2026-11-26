@@ -1,11 +1,15 @@
 package pilot
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/demo"
+	"github.com/DIYgod/pinky/internal/gateway"
 )
 
 func TestScheduled(t *testing.T) {
@@ -134,4 +138,81 @@ func TestScheduledContinue(t *testing.T) {
 	if st.End != Done || st.Met != nil || st.Scheduled == nil || st.Scheduled.Unattended || st.Scheduled.Condition != "" {
 		t.Fatalf("status: %+v, scheduled %+v", st, st.Scheduled)
 	}
+}
+
+// Unlock without asking (#231) never unlocks the phone for a scheduled run
+// nobody started. Once the person continues it, the task is theirs, and
+// the window unlocks the phone for it.
+func TestUnlockWindowSkipsUnattendedRuns(t *testing.T) {
+	h := newHarness(t, func(o *gateway.Options) {
+		o.UnlockWindowPIN = func(context.Context, string, time.Duration) (string, error) { return demo.PIN, nil }
+	})
+	if err := h.g.OpenUnlockWindow("pixel", time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	h.dev.SetLocked(true)
+	for deadline := time.Now().Add(2 * time.Second); h.g.Devices()[0].Status != gateway.DeviceLocked; time.Sleep(5 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the gateway did not see the phone locked")
+		}
+	}
+	locked := func() bool {
+		on, err := h.dev.Locked(context.Background())
+		return on || err != nil
+	}
+	h.api.turns = []func(string, *http.Request) any{
+		func(first string, _ *http.Request) any {
+			if !strings.Contains(first, string(gateway.StatusLocked)) {
+				t.Errorf("the scheduled run's first message without the lock:\n%s", first)
+			}
+			return message("tool_use", 100, use("t1", finishName, map[string]any{
+				"outcome": "failed", "summary": "The phone is locked."}))
+		},
+		func(string, *http.Request) any {
+			reqs := h.api.requests()
+			blocks := lastUser(t, reqs[len(reqs)-1])
+			text, _ := blocks[len(blocks)-1]["text"].(string)
+			if !strings.Contains(text, "is connected again") || strings.Contains(text, string(gateway.StatusLocked)) {
+				t.Errorf("continued on a locked phone:\n%s", text)
+			}
+			return message("tool_use", 100, use("t2", finishName, map[string]any{
+				"outcome": "done", "summary": "The price is 12."}))
+		},
+	}
+	if err := h.r.StartScheduled(Config{}, "pixel", "Check the price", Scheduled{Unattended: true}); err != nil {
+		t.Fatal(err)
+	}
+	if st := h.wait(t); st.End != Failed {
+		t.Fatalf("status: %+v", st)
+	}
+	if !locked() {
+		t.Fatal("unlocked for a scheduled run nobody started")
+	}
+	if s := windowSteps(h.task(t)); len(s) != 0 {
+		t.Fatalf("steps of the scheduled run: %q", s)
+	}
+
+	if err := h.r.Continue("pixel", "Go on"); err != nil {
+		t.Fatal(err)
+	}
+	if st := h.wait(t); st.End != Done {
+		t.Fatalf("status: %+v", st)
+	}
+	if locked() {
+		t.Fatal("still locked for the task the person continued")
+	}
+	if s := windowSteps(h.task(t)); len(s) != 1 || !strings.HasPrefix(s[0], "Unlocked without asking (until ") {
+		t.Fatalf("steps once continued: %q", s)
+	}
+}
+
+// windowSteps are a task's steps of unlocking without asking.
+func windowSteps(tv gateway.TaskView) []string {
+	var out []string
+	for _, s := range tv.Steps {
+		if strings.Contains(s.Text, "without asking") {
+			out = append(out, s.Text)
+		}
+	}
+	return out
 }

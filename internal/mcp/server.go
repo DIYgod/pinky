@@ -153,6 +153,20 @@ func (s *Server) ConnectFor(ctx context.Context, t sdk.Transport, agent gateway.
 	return s.connectBuiltin(ctx, t, &agent, task)
 }
 
+// ConnectUnattended is ConnectBuiltinTask for a run of a scheduled task
+// that nobody started: an unlock window never unlocks the phone for it
+// (gateway.AgentInfo.Unattended).
+func (s *Server) ConnectUnattended(ctx context.Context, t sdk.Transport, task string) error {
+	agent := s.builtinAgent()
+	agent.Unattended = true
+	return s.connectBuiltin(ctx, t, &agent, task)
+}
+
+// builtinAgent is Pinky's own agent, as the person starts it.
+func (s *Server) builtinAgent() gateway.AgentInfo {
+	return gateway.AgentInfo{Name: BuiltinName, Client: strings.TrimSpace("pinky " + s.version), Trusted: true}
+}
+
 func (s *Server) connectBuiltin(ctx context.Context, t sdk.Transport, agent *gateway.AgentInfo, task string) error {
 	ss, err := s.srv.Connect(ctx, t, nil)
 	if err != nil {
@@ -247,9 +261,10 @@ func (s *Server) agentLocked(req *sdk.CallToolRequest, remote bool) gateway.Agen
 	if a, ok := s.builtin[req.Session]; ok {
 		// Each task of Pinky's own agent is a session of its own, which
 		// ends with the task: there is nothing to reconnect to.
-		info := gateway.AgentInfo{Name: BuiltinName, Client: strings.TrimSpace("pinky " + s.version), Trusted: true}
+		info := s.builtinAgent()
 		if a != nil {
-			// Pinky's own agent, doing a task another agent handed it.
+			// Pinky's own agent, doing a task another agent handed it, or a
+			// scheduled run nobody started (ConnectUnattended).
 			info = *a
 		}
 		info.Pilot, info.Continue = true, s.continues[req.Session]

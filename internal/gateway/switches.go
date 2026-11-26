@@ -263,7 +263,7 @@ func (g *Gateway) setSwitches(ctx context.Context, l *lease, req DeviceRequest, 
 	}
 	d.act.Lock()
 	defer d.act.Unlock()
-	if res := g.gate(l, req.ApprovalID, true); res != nil {
+	if res := g.gateHeld(l, req.ApprovalID, true); res != nil {
 		return res
 	}
 	if len(sets) > 0 && g.rotates(sets) {
