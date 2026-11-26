@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1126.6 (2026-11-26)
 
 - 通过 iPhone 上的 Pinky 连接时，打开会让屏幕转向的 App（比如在横屏游戏上打开系统设置），Pinky 不会再在屏幕转到一半时就报告画面已稳定；那时元素还在错误的位置，点按可能落空。
 - 通过 iPhone 上的 Pinky 连接时，在横屏和竖屏 App 之间切换后，读到的屏幕文字不会再来自上一个 App。
