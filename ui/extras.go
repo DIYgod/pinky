@@ -93,6 +93,15 @@ type (
 		SetBackground(deviceID string, on bool) error
 		Background(deviceID string) bool
 	}
+	// unlockWindower opens and ends a phone's unlock window (#231): for 1,
+	// 4 or 8 hours, agents' steps that find the phone locked have Pinky
+	// unlock it without asking (unlockwindow.go). Opening it asks the
+	// person to confirm, as an unlock does; DeviceView.UnlockUntil says
+	// when it ends.
+	unlockWindower interface {
+		OpenUnlockWindow(deviceID string, length time.Duration) error
+		EndUnlockWindow(deviceID string) error
+	}
 	// connectionChooser is how Pinky connects to a phone, for Settings ›
 	// Phones: iPhones can go through CoreDevice or the WebDriverAgent helper.
 	connectionChooser interface {

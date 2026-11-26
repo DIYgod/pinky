@@ -487,6 +487,7 @@ type app struct {
 	early   []func()     // posts made before that
 
 	pin       pinState       // PINs for unlocking from this computer
+	uw        uwState        // unlock without asking, per phone (unlockwindow.go)
 	t         telState       // usage statistics, crash reports and feedback
 	comp      companionState // the Android companion app, per phone
 	bg        bgState        // background displays, per phone
@@ -569,6 +570,7 @@ func newApp(api gateway.API, opt Options) *app {
 	}
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
+	a.uw = uwState{busy: map[string]bool{}, want: map[string]bool{}, refused: map[string]bool{}}
 	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
 		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, failure: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
@@ -823,6 +825,7 @@ func (a *app) afterRefresh(first bool) {
 		}
 	}
 	a.loadPINs()
+	a.noteRefusedPINs()
 	a.setAwake(a.anyRunning())
 	a.setAwayAwake(a.settings.KeepAwakeAway && a.anyAway())
 	a.updateTray()

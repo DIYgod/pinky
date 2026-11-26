@@ -16621,6 +16621,62 @@ func (msgs Messages) GwStepSavedScreenshot(path string) string {
 	return Catalog.Format(msgs.locale, "gwStepSavedScreenshot", map[string]any{"path": path})
 }
 
+// GwStepUnlockWindowFailed says "Unlocking without asking failed. Unlock without asking has ended"
+// in the language the app shows.
+//
+// A step: Pinky could not unlock the locked phone with its saved PIN for an
+// agent's step, so unlock without asking (unlockWindowTitle) ended. Shown
+// only in other languages; in English the gateway's own words show.
+func GwStepUnlockWindowFailed() string { return In(i18n.Locale()).GwStepUnlockWindowFailed() }
+
+// GwStepUnlockWindowFailed says "Unlocking without asking failed. Unlock without asking has ended"
+// in the language of msgs.
+//
+// A step: Pinky could not unlock the locked phone with its saved PIN for an
+// agent's step, so unlock without asking (unlockWindowTitle) ended. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepUnlockWindowFailed() string {
+	return Catalog.Format(msgs.locale, "gwStepUnlockWindowFailed", nil)
+}
+
+// GwStepUnlockWindowNoPad says "Unlocking without asking failed: Pinky could not get to the passcode screen and entered nothing. Unlock without askin…"
+// in the language the app shows.
+//
+// A step: unlocking without asking (unlockWindowTitle) for an agent's step
+// failed before Pinky entered anything, so it ended. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStepUnlockWindowNoPad() string { return In(i18n.Locale()).GwStepUnlockWindowNoPad() }
+
+// GwStepUnlockWindowNoPad says "Unlocking without asking failed: Pinky could not get to the passcode screen and entered nothing. Unlock without askin…"
+// in the language of msgs.
+//
+// A step: unlocking without asking (unlockWindowTitle) for an agent's step
+// failed before Pinky entered anything, so it ended. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStepUnlockWindowNoPad() string {
+	return Catalog.Format(msgs.locale, "gwStepUnlockWindowNoPad", nil)
+}
+
+// GwStepUnlockWindowWrongPIN says "Unlocking without asking failed: the phone did not accept the saved PIN. Unlock without asking has ended"
+// in the language the app shows.
+//
+// A step: the phone refused the saved PIN that unlock without asking
+// (unlockWindowTitle) entered for an agent's step, so it ended and Pinky
+// does not try the PIN again. Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepUnlockWindowWrongPIN() string { return In(i18n.Locale()).GwStepUnlockWindowWrongPIN() }
+
+// GwStepUnlockWindowWrongPIN says "Unlocking without asking failed: the phone did not accept the saved PIN. Unlock without asking has ended"
+// in the language of msgs.
+//
+// A step: the phone refused the saved PIN that unlock without asking
+// (unlockWindowTitle) entered for an agent's step, so it ended and Pinky
+// does not try the PIN again. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepUnlockWindowWrongPIN() string {
+	return Catalog.Format(msgs.locale, "gwStepUnlockWindowWrongPIN", nil)
+}
+
 // GwStepUnlocked says "Unlocked from the computer"
 // in the language the app shows.
 //
@@ -16635,6 +16691,26 @@ func GwStepUnlocked() string { return In(i18n.Locale()).GwStepUnlocked() }
 // Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwStepUnlocked() string {
 	return Catalog.Format(msgs.locale, "gwStepUnlocked", nil)
+}
+
+// GwStepUnlockedWindow says "Unlocked without asking (until {time})"
+// in the language the app shows.
+//
+// A step: Pinky unlocked the locked phone with its saved PIN for an agent's
+// step, as unlock without asking (unlockWindowTitle) allows until time,
+// such as 18:30. Shown only in other languages; in English the gateway's
+// own words show.
+func GwStepUnlockedWindow(time_ string) string { return In(i18n.Locale()).GwStepUnlockedWindow(time_) }
+
+// GwStepUnlockedWindow says "Unlocked without asking (until {time})"
+// in the language of msgs.
+//
+// A step: Pinky unlocked the locked phone with its saved PIN for an agent's
+// step, as unlock without asking (unlockWindowTitle) allows until time,
+// such as 18:30. Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwStepUnlockedWindow(time_ string) string {
+	return Catalog.Format(msgs.locale, "gwStepUnlockedWindow", map[string]any{"time": time_})
 }
 
 // GwStepWaited says "Waited for “{text}”"
@@ -31621,6 +31697,396 @@ func UnlockTryAgainLabel(name string) string { return In(i18n.Locale()).UnlockTr
 // the phone's name.
 func (msgs Messages) UnlockTryAgainLabel(name string) string {
 	return Catalog.Format(msgs.locale, "unlockTryAgainLabel", map[string]any{"name": name})
+}
+
+// UnlockWindowBanner says "Unlock without asking · {left} left"
+// in the language the app shows.
+//
+// Under a phone's mirror while unlock without asking (unlockWindowTitle) is
+// on for it, beside End (unlockWindowEnd). left is how long it stays on,
+// such as unlockWindowHours.
+func UnlockWindowBanner(left string) string { return In(i18n.Locale()).UnlockWindowBanner(left) }
+
+// UnlockWindowBanner says "Unlock without asking · {left} left"
+// in the language of msgs.
+//
+// Under a phone's mirror while unlock without asking (unlockWindowTitle) is
+// on for it, beside End (unlockWindowEnd). left is how long it stays on,
+// such as unlockWindowHours.
+func (msgs Messages) UnlockWindowBanner(left string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowBanner", map[string]any{"left": left})
+}
+
+// UnlockWindowCancel says "Cancel"
+// in the language the app shows.
+//
+// Beside the lengths of unlock without asking (unlockWindowFor): leaves it
+// off, asking for nothing.
+func UnlockWindowCancel() string { return In(i18n.Locale()).UnlockWindowCancel() }
+
+// UnlockWindowCancel says "Cancel"
+// in the language of msgs.
+//
+// Beside the lengths of unlock without asking (unlockWindowFor): leaves it
+// off, asking for nothing.
+func (msgs Messages) UnlockWindowCancel() string {
+	return Catalog.Format(msgs.locale, "unlockWindowCancel", nil)
+}
+
+// UnlockWindowChanged says "Unlock without asking is still off for {name}: it was turned off, or something changed, while you confirmed."
+// in the language the app shows.
+//
+// A notice when unlock without asking did not turn on: while the person
+// confirmed with Touch ID, Windows Hello or the keyring's password, it was
+// ended, Unlock from this computer was turned off, or the phone was
+// removed. name is the phone's name.
+func UnlockWindowChanged(name string) string { return In(i18n.Locale()).UnlockWindowChanged(name) }
+
+// UnlockWindowChanged says "Unlock without asking is still off for {name}: it was turned off, or something changed, while you confirmed."
+// in the language of msgs.
+//
+// A notice when unlock without asking did not turn on: while the person
+// confirmed with Touch ID, Windows Hello or the keyring's password, it was
+// ended, Unlock from this computer was turned off, or the phone was
+// removed. name is the phone's name.
+func (msgs Messages) UnlockWindowChanged(name string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowChanged", map[string]any{"name": name})
+}
+
+// UnlockWindowConfirming says "Waiting for you to confirm…"
+// in the language the app shows.
+//
+// Under the switch Unlock without asking (unlockWindowTitle) while the
+// system asks the person to confirm with Touch ID, Windows Hello or the
+// keyring's password.
+func UnlockWindowConfirming() string { return In(i18n.Locale()).UnlockWindowConfirming() }
+
+// UnlockWindowConfirming says "Waiting for you to confirm…"
+// in the language of msgs.
+//
+// Under the switch Unlock without asking (unlockWindowTitle) while the
+// system asks the person to confirm with Touch ID, Windows Hello or the
+// keyring's password.
+func (msgs Messages) UnlockWindowConfirming() string {
+	return Catalog.Format(msgs.locale, "unlockWindowConfirming", nil)
+}
+
+// UnlockWindowDesc says "Confirm once, and Pinky unlocks the phone for agents' tasks for up to 8 hours. Agents never see the PIN."
+// in the language the app shows.
+//
+// Under the switch Unlock without asking (unlockWindowTitle), in Settings
+// › Phones and in the ⋯ menu under a phone's mirror, while it is off.
+func UnlockWindowDesc() string { return In(i18n.Locale()).UnlockWindowDesc() }
+
+// UnlockWindowDesc says "Confirm once, and Pinky unlocks the phone for agents' tasks for up to 8 hours. Agents never see the PIN."
+// in the language of msgs.
+//
+// Under the switch Unlock without asking (unlockWindowTitle), in Settings
+// › Phones and in the ⋯ menu under a phone's mirror, while it is off.
+func (msgs Messages) UnlockWindowDesc() string {
+	return Catalog.Format(msgs.locale, "unlockWindowDesc", nil)
+}
+
+// UnlockWindowEnd says "End"
+// in the language the app shows.
+//
+// A button beside unlockWindowBanner under a phone's mirror: it ends unlock
+// without asking for the phone at once.
+func UnlockWindowEnd() string { return In(i18n.Locale()).UnlockWindowEnd() }
+
+// UnlockWindowEnd says "End"
+// in the language of msgs.
+//
+// A button beside unlockWindowBanner under a phone's mirror: it ends unlock
+// without asking for the phone at once.
+func (msgs Messages) UnlockWindowEnd() string {
+	return Catalog.Format(msgs.locale, "unlockWindowEnd", nil)
+}
+
+// UnlockWindowEndLabel says "End unlock without asking for {name}"
+// in the language the app shows.
+//
+// The accessibility label of End (unlockWindowEnd). name is the phone's
+// name.
+func UnlockWindowEndLabel(name string) string { return In(i18n.Locale()).UnlockWindowEndLabel(name) }
+
+// UnlockWindowEndLabel says "End unlock without asking for {name}"
+// in the language of msgs.
+//
+// The accessibility label of End (unlockWindowEnd). name is the phone's
+// name.
+func (msgs Messages) UnlockWindowEndLabel(name string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowEndLabel", map[string]any{"name": name})
+}
+
+// UnlockWindowEndWhat says "end unlock without asking for {name}"
+// in the language the app shows.
+//
+// Fills "Couldn't …: <error>" (toastCouldNot), a notice when ending
+// unlock without asking (unlockWindowTitle) for a phone fails: a verb
+// phrase. name is the phone's name.
+func UnlockWindowEndWhat(name string) string { return In(i18n.Locale()).UnlockWindowEndWhat(name) }
+
+// UnlockWindowEndWhat says "end unlock without asking for {name}"
+// in the language of msgs.
+//
+// Fills "Couldn't …: <error>" (toastCouldNot), a notice when ending
+// unlock without asking (unlockWindowTitle) for a phone fails: a verb
+// phrase. name is the phone's name.
+func (msgs Messages) UnlockWindowEndWhat(name string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowEndWhat", map[string]any{"name": name})
+}
+
+// UnlockWindowEndedToast says "Unlock without asking has ended for {name}."
+// in the language the app shows.
+//
+// A notice once the person ended unlock without asking for a phone. name is
+// the phone's name.
+func UnlockWindowEndedToast(name string) string {
+	return In(i18n.Locale()).UnlockWindowEndedToast(name)
+}
+
+// UnlockWindowEndedToast says "Unlock without asking has ended for {name}."
+// in the language of msgs.
+//
+// A notice once the person ended unlock without asking for a phone. name is
+// the phone's name.
+func (msgs Messages) UnlockWindowEndedToast(name string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowEndedToast", map[string]any{"name": name})
+}
+
+// UnlockWindowFailed says "Couldn't turn on unlock without asking for {name}: {detail}"
+// in the language the app shows.
+//
+// A notice when unlock without asking could not be turned on for another
+// reason. name is the phone's name; detail is the error, in English.
+func UnlockWindowFailed(name string, detail string) string {
+	return In(i18n.Locale()).UnlockWindowFailed(name, detail)
+}
+
+// UnlockWindowFailed says "Couldn't turn on unlock without asking for {name}: {detail}"
+// in the language of msgs.
+//
+// A notice when unlock without asking could not be turned on for another
+// reason. name is the phone's name; detail is the error, in English.
+func (msgs Messages) UnlockWindowFailed(name string, detail string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowFailed", map[string]any{"name": name, "detail": detail})
+}
+
+// UnlockWindowFor says "{count, plural, one {# hour} other {# hours}}"
+// in the language the app shows.
+//
+// A button that turns unlock without asking on for this many hours, 1, 4 or
+// 8, once the person confirms.
+func UnlockWindowFor(count int) string { return In(i18n.Locale()).UnlockWindowFor(count) }
+
+// UnlockWindowFor says "{count, plural, one {# hour} other {# hours}}"
+// in the language of msgs.
+//
+// A button that turns unlock without asking on for this many hours, 1, 4 or
+// 8, once the person confirms.
+func (msgs Messages) UnlockWindowFor(count int) string {
+	return Catalog.Format(msgs.locale, "unlockWindowFor", map[string]any{"count": count})
+}
+
+// UnlockWindowHours says "{hours}\u00a0h\u00a0{minutes}\u00a0min"
+// in the language the app shows.
+//
+// How long unlock without asking stays on, an hour or more and not whole
+// hours. minutes has no leading zero. Joined with no-break spaces.
+func UnlockWindowHours(hours string, minutes string) string {
+	return In(i18n.Locale()).UnlockWindowHours(hours, minutes)
+}
+
+// UnlockWindowHours says "{hours}\u00a0h\u00a0{minutes}\u00a0min"
+// in the language of msgs.
+//
+// How long unlock without asking stays on, an hour or more and not whole
+// hours. minutes has no leading zero. Joined with no-break spaces.
+func (msgs Messages) UnlockWindowHours(hours string, minutes string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowHours", map[string]any{"hours": hours, "minutes": minutes})
+}
+
+// UnlockWindowHowLong says "For how long?"
+// in the language the app shows.
+//
+// Before the lengths of unlock without asking (unlockWindowFor), once the
+// person turned its switch on.
+func UnlockWindowHowLong() string { return In(i18n.Locale()).UnlockWindowHowLong() }
+
+// UnlockWindowHowLong says "For how long?"
+// in the language of msgs.
+//
+// Before the lengths of unlock without asking (unlockWindowFor), once the
+// person turned its switch on.
+func (msgs Messages) UnlockWindowHowLong() string {
+	return Catalog.Format(msgs.locale, "unlockWindowHowLong", nil)
+}
+
+// UnlockWindowMinutes says "{minutes}\u00a0min"
+// in the language the app shows.
+//
+// How long unlock without asking stays on, under an hour. Joined with a
+// no-break space.
+func UnlockWindowMinutes(minutes string) string {
+	return In(i18n.Locale()).UnlockWindowMinutes(minutes)
+}
+
+// UnlockWindowMinutes says "{minutes}\u00a0min"
+// in the language of msgs.
+//
+// How long unlock without asking stays on, under an hour. Joined with a
+// no-break space.
+func (msgs Messages) UnlockWindowMinutes(minutes string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowMinutes", map[string]any{"minutes": minutes})
+}
+
+// UnlockWindowNoPIN says "Save the phone's PIN first."
+// in the language the app shows.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on: no PIN is saved for the phone.
+func UnlockWindowNoPIN() string { return In(i18n.Locale()).UnlockWindowNoPIN() }
+
+// UnlockWindowNoPIN says "Save the phone's PIN first."
+// in the language of msgs.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on: no PIN is saved for the phone.
+func (msgs Messages) UnlockWindowNoPIN() string {
+	return Catalog.Format(msgs.locale, "unlockWindowNoPIN", nil)
+}
+
+// UnlockWindowNoUnlock says "This phone can't be unlocked from this computer."
+// in the language the app shows.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on, in the ⋯ menu under a phone's mirror: Pinky cannot enter a PIN on
+// this phone.
+func UnlockWindowNoUnlock() string { return In(i18n.Locale()).UnlockWindowNoUnlock() }
+
+// UnlockWindowNoUnlock says "This phone can't be unlocked from this computer."
+// in the language of msgs.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on, in the ⋯ menu under a phone's mirror: Pinky cannot enter a PIN on
+// this phone.
+func (msgs Messages) UnlockWindowNoUnlock() string {
+	return Catalog.Format(msgs.locale, "unlockWindowNoUnlock", nil)
+}
+
+// UnlockWindowOff says "Turn on Unlock from this computer in Settings › Safety first."
+// in the language the app shows.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on: Settings › Safety › Unlock from this computer
+// (settingsUnlockFromComputer) is off.
+func UnlockWindowOff() string { return In(i18n.Locale()).UnlockWindowOff() }
+
+// UnlockWindowOff says "Turn on Unlock from this computer in Settings › Safety first."
+// in the language of msgs.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on: Settings › Safety › Unlock from this computer
+// (settingsUnlockFromComputer) is off.
+func (msgs Messages) UnlockWindowOff() string {
+	return Catalog.Format(msgs.locale, "unlockWindowOff", nil)
+}
+
+// UnlockWindowOnToast says "Until {time}, Pinky unlocks {name} for agents' tasks without asking."
+// in the language the app shows.
+//
+// A notice once unlock without asking is on for a phone. time is when it
+// ends, as the computer's clock shows it; name is the phone's name.
+func UnlockWindowOnToast(time_ string, name string) string {
+	return In(i18n.Locale()).UnlockWindowOnToast(time_, name)
+}
+
+// UnlockWindowOnToast says "Until {time}, Pinky unlocks {name} for agents' tasks without asking."
+// in the language of msgs.
+//
+// A notice once unlock without asking is on for a phone. time is when it
+// ends, as the computer's clock shows it; name is the phone's name.
+func (msgs Messages) UnlockWindowOnToast(time_ string, name string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowOnToast", map[string]any{"time": time_, "name": name})
+}
+
+// UnlockWindowTitle says "Unlock without asking"
+// in the language the app shows.
+//
+// A switch per phone, in Settings › Phones and in the ⋯ menu under its
+// mirror: once the person confirms with Touch ID, Windows Hello or the
+// keyring's password, Pinky enters the phone's saved PIN for 1, 4 or 8
+// hours whenever an agent's step finds the phone locked, without asking
+// each time.
+func UnlockWindowTitle() string { return In(i18n.Locale()).UnlockWindowTitle() }
+
+// UnlockWindowTitle says "Unlock without asking"
+// in the language of msgs.
+//
+// A switch per phone, in Settings › Phones and in the ⋯ menu under its
+// mirror: once the person confirms with Touch ID, Windows Hello or the
+// keyring's password, Pinky enters the phone's saved PIN for 1, 4 or 8
+// hours whenever an agent's step finds the phone locked, without asking
+// each time.
+func (msgs Messages) UnlockWindowTitle() string {
+	return Catalog.Format(msgs.locale, "unlockWindowTitle", nil)
+}
+
+// UnlockWindowUntil says "Until {time} · {left} left"
+// in the language the app shows.
+//
+// Under the switch Unlock without asking (unlockWindowTitle) while it is
+// on. time is when it ends, such as 18:30; left is how long that is from
+// now, such as unlockWindowHours.
+func UnlockWindowUntil(time_ string, left string) string {
+	return In(i18n.Locale()).UnlockWindowUntil(time_, left)
+}
+
+// UnlockWindowUntil says "Until {time} · {left} left"
+// in the language of msgs.
+//
+// Under the switch Unlock without asking (unlockWindowTitle) while it is
+// on. time is when it ends, such as 18:30; left is how long that is from
+// now, such as unlockWindowHours.
+func (msgs Messages) UnlockWindowUntil(time_ string, left string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowUntil", map[string]any{"time": time_, "left": left})
+}
+
+// UnlockWindowWholeHours says "{hours}\u00a0h"
+// in the language the app shows.
+//
+// How long unlock without asking stays on, in whole hours. Joined with a
+// no-break space.
+func UnlockWindowWholeHours(hours string) string {
+	return In(i18n.Locale()).UnlockWindowWholeHours(hours)
+}
+
+// UnlockWindowWholeHours says "{hours}\u00a0h"
+// in the language of msgs.
+//
+// How long unlock without asking stays on, in whole hours. Joined with a
+// no-break space.
+func (msgs Messages) UnlockWindowWholeHours(hours string) string {
+	return Catalog.Format(msgs.locale, "unlockWindowWholeHours", map[string]any{"hours": hours})
+}
+
+// UnlockWindowWrongPIN says "The phone didn't accept the saved PIN. Unlock it on the phone, or update its PIN, first."
+// in the language the app shows.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on again: the phone refused the saved PIN, and Pinky never tries it again
+// by itself until the phone was unlocked or its PIN changed.
+func UnlockWindowWrongPIN() string { return In(i18n.Locale()).UnlockWindowWrongPIN() }
+
+// UnlockWindowWrongPIN says "The phone didn't accept the saved PIN. Unlock it on the phone, or update its PIN, first."
+// in the language of msgs.
+//
+// Why the switch Unlock without asking (unlockWindowTitle) cannot be turned
+// on again: the phone refused the saved PIN, and Pinky never tries it again
+// by itself until the phone was unlocked or its PIN changed.
+func (msgs Messages) UnlockWindowWrongPIN() string {
+	return Catalog.Format(msgs.locale, "unlockWindowWrongPIN", nil)
 }
 
 // UpdateActionLabel says "{action} Pinky {version}"

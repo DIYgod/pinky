@@ -6262,9 +6262,31 @@
       }
     }
   },
+  "gwStepUnlockWindowFailed": "Unlocking without asking failed. Unlock without asking has ended",
+  "@gwStepUnlockWindowFailed": {
+    "description": "A step: Pinky could not unlock the locked phone with its saved PIN for an agent's step, so unlock without asking (unlockWindowTitle) ended. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepUnlockWindowNoPad": "Unlocking without asking failed: Pinky could not get to the passcode screen and entered nothing. Unlock without asking has ended",
+  "@gwStepUnlockWindowNoPad": {
+    "description": "A step: unlocking without asking (unlockWindowTitle) for an agent's step failed before Pinky entered anything, so it ended. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepUnlockWindowWrongPIN": "Unlocking without asking failed: the phone did not accept the saved PIN. Unlock without asking has ended",
+  "@gwStepUnlockWindowWrongPIN": {
+    "description": "A step: the phone refused the saved PIN that unlock without asking (unlockWindowTitle) entered for an agent's step, so it ended and Pinky does not try the PIN again. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStepUnlocked": "Unlocked from the computer",
   "@gwStepUnlocked": {
     "description": "A step: the phone was unlocked from this computer with its saved PIN. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepUnlockedWindow": "Unlocked without asking (until {time})",
+  "@gwStepUnlockedWindow": {
+    "description": "A step: Pinky unlocked the locked phone with its saved PIN for an agent's step, as unlock without asking (unlockWindowTitle) allows until time, such as 18:30. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "18:30"
+      }
+    }
   },
   "gwStepWaited": "Waited for “{text}”",
   "@gwStepWaited": {
@@ -11585,6 +11607,182 @@
         "example": "Pixel 9"
       }
     }
+  },
+  "unlockWindowBanner": "Unlock without asking · {left} left",
+  "@unlockWindowBanner": {
+    "description": "Under a phone's mirror while unlock without asking (unlockWindowTitle) is on for it, beside End (unlockWindowEnd). left is how long it stays on, such as unlockWindowHours.",
+    "placeholders": {
+      "left": {
+        "type": "String",
+        "example": "3 h 12 min"
+      }
+    }
+  },
+  "unlockWindowCancel": "Cancel",
+  "@unlockWindowCancel": {
+    "description": "Beside the lengths of unlock without asking (unlockWindowFor): leaves it off, asking for nothing."
+  },
+  "unlockWindowChanged": "Unlock without asking is still off for {name}: it was turned off, or something changed, while you confirmed.",
+  "@unlockWindowChanged": {
+    "description": "A notice when unlock without asking did not turn on: while the person confirmed with Touch ID, Windows Hello or the keyring's password, it was ended, Unlock from this computer was turned off, or the phone was removed. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockWindowConfirming": "Waiting for you to confirm…",
+  "@unlockWindowConfirming": {
+    "description": "Under the switch Unlock without asking (unlockWindowTitle) while the system asks the person to confirm with Touch ID, Windows Hello or the keyring's password."
+  },
+  "unlockWindowDesc": "Confirm once, and Pinky unlocks the phone for agents' tasks for up to 8 hours. Agents never see the PIN.",
+  "@unlockWindowDesc": {
+    "description": "Under the switch Unlock without asking (unlockWindowTitle), in Settings › Phones and in the ⋯ menu under a phone's mirror, while it is off."
+  },
+  "unlockWindowEnd": "End",
+  "@unlockWindowEnd": {
+    "description": "A button beside unlockWindowBanner under a phone's mirror: it ends unlock without asking for the phone at once."
+  },
+  "unlockWindowEndLabel": "End unlock without asking for {name}",
+  "@unlockWindowEndLabel": {
+    "description": "The accessibility label of End (unlockWindowEnd). name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockWindowEndWhat": "end unlock without asking for {name}",
+  "@unlockWindowEndWhat": {
+    "description": "Fills \"Couldn't …: <error>\" (toastCouldNot), a notice when ending unlock without asking (unlockWindowTitle) for a phone fails: a verb phrase. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockWindowEndedToast": "Unlock without asking has ended for {name}.",
+  "@unlockWindowEndedToast": {
+    "description": "A notice once the person ended unlock without asking for a phone. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockWindowFailed": "Couldn't turn on unlock without asking for {name}: {detail}",
+  "@unlockWindowFailed": {
+    "description": "A notice when unlock without asking could not be turned on for another reason. name is the phone's name; detail is the error, in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "detail": {
+        "type": "String",
+        "example": "adb: broken pipe"
+      }
+    }
+  },
+  "unlockWindowFor": "{count, plural, one {# hour} other {# hours}}",
+  "@unlockWindowFor": {
+    "description": "A button that turns unlock without asking on for this many hours, 1, 4 or 8, once the person confirms.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "unlockWindowHours": "{hours} h {minutes} min",
+  "@unlockWindowHours": {
+    "description": "How long unlock without asking stays on, an hour or more and not whole hours. minutes has no leading zero. Joined with no-break spaces.",
+    "placeholders": {
+      "hours": {
+        "type": "String",
+        "example": "3"
+      },
+      "minutes": {
+        "type": "String",
+        "example": "12"
+      }
+    }
+  },
+  "unlockWindowHowLong": "For how long?",
+  "@unlockWindowHowLong": {
+    "description": "Before the lengths of unlock without asking (unlockWindowFor), once the person turned its switch on."
+  },
+  "unlockWindowMinutes": "{minutes} min",
+  "@unlockWindowMinutes": {
+    "description": "How long unlock without asking stays on, under an hour. Joined with a no-break space.",
+    "placeholders": {
+      "minutes": {
+        "type": "String",
+        "example": "42"
+      }
+    }
+  },
+  "unlockWindowNoPIN": "Save the phone's PIN first.",
+  "@unlockWindowNoPIN": {
+    "description": "Why the switch Unlock without asking (unlockWindowTitle) cannot be turned on: no PIN is saved for the phone."
+  },
+  "unlockWindowNoUnlock": "This phone can't be unlocked from this computer.",
+  "@unlockWindowNoUnlock": {
+    "description": "Why the switch Unlock without asking (unlockWindowTitle) cannot be turned on, in the ⋯ menu under a phone's mirror: Pinky cannot enter a PIN on this phone."
+  },
+  "unlockWindowOff": "Turn on Unlock from this computer in Settings › Safety first.",
+  "@unlockWindowOff": {
+    "description": "Why the switch Unlock without asking (unlockWindowTitle) cannot be turned on: Settings › Safety › Unlock from this computer (settingsUnlockFromComputer) is off."
+  },
+  "unlockWindowOnToast": "Until {time}, Pinky unlocks {name} for agents' tasks without asking.",
+  "@unlockWindowOnToast": {
+    "description": "A notice once unlock without asking is on for a phone. time is when it ends, as the computer's clock shows it; name is the phone's name.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "18:30"
+      },
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockWindowTitle": "Unlock without asking",
+  "@unlockWindowTitle": {
+    "description": "A switch per phone, in Settings › Phones and in the ⋯ menu under its mirror: once the person confirms with Touch ID, Windows Hello or the keyring's password, Pinky enters the phone's saved PIN for 1, 4 or 8 hours whenever an agent's step finds the phone locked, without asking each time."
+  },
+  "unlockWindowUntil": "Until {time} · {left} left",
+  "@unlockWindowUntil": {
+    "description": "Under the switch Unlock without asking (unlockWindowTitle) while it is on. time is when it ends, such as 18:30; left is how long that is from now, such as unlockWindowHours.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "18:30"
+      },
+      "left": {
+        "type": "String",
+        "example": "3 h 12 min"
+      }
+    }
+  },
+  "unlockWindowWholeHours": "{hours} h",
+  "@unlockWindowWholeHours": {
+    "description": "How long unlock without asking stays on, in whole hours. Joined with a no-break space.",
+    "placeholders": {
+      "hours": {
+        "type": "String",
+        "example": "4"
+      }
+    }
+  },
+  "unlockWindowWrongPIN": "The phone didn't accept the saved PIN. Unlock it on the phone, or update its PIN, first.",
+  "@unlockWindowWrongPIN": {
+    "description": "Why the switch Unlock without asking (unlockWindowTitle) cannot be turned on again: the phone refused the saved PIN, and Pinky never tries it again by itself until the phone was unlocked or its PIN changed."
   },
   "updateActionLabel": "{action} Pinky {version}",
   "@updateActionLabel": {

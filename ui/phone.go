@@ -82,7 +82,7 @@ func (a *app) phonesPage(c *mg.Context) {
 }
 
 // phoneCenter is the middle of the Phone screen: the banner, the mirror
-// and the keys below it.
+// and the keys below it, then unlock without asking's strip while it is on.
 func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	if a.chk.showing == d.Info.ID {
@@ -286,6 +286,11 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		// least height (checkup_iphone.go).
 		availH -= rh + stageGap
 	}
+	// While unlock without asking is on, a strip under the keys says so.
+	strip := a.showsWindow(d)
+	if strip {
+		availH -= windowStripHeight + stageGap
+	}
 	watching := m.agent
 	shown := t
 	if bgTask && !watching {
@@ -344,6 +349,9 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		dockSeparator(c)
 		a.moreControls(c, d, m)
 	})
+	if strip {
+		a.windowStrip(c, d, min(460, availW))
+	}
 }
 
 // controlFor is what the "You're in control" banner says about the phone,
@@ -518,6 +526,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 				a.setBackground(d, on)
 			}
 		})
+		a.windowMenuRow(c, d)
 		if a.canPause() || a.canRemove() {
 			mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
 		}
@@ -529,6 +538,9 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 			}
 		}
 	})
+	if !open && a.uw.choosing == id && a.uw.where == "menu" {
+		a.uw.choosing = "" // the menu closed before a length was picked
+	}
 	a.more[id] = open
 }
 

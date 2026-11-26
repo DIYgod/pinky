@@ -107,10 +107,7 @@ func TestRemovePhoneCancel(t *testing.T) {
 	ta.sync()
 	ta.page, ta.set.sec = pageSettings, secPhones
 	tt := mg.NewTester(ta.view, 1280, 820)
-	if err := tt.Click("Remove Galaxy S25"); err != nil {
-		t.Fatal(err)
-	}
-	tt.Frame()
+	clickSeen(t, tt, "Remove Galaxy S25") // the second phone's rows reach below the window
 	mustHave(t, tt, "Remove Galaxy S25?")
 	if err := tt.Click("Cancel"); err != nil {
 		t.Fatal(err)

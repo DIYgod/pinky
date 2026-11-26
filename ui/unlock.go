@@ -312,7 +312,9 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 	}
 }
 
-// savePIN puts the typed PIN in the keychain and forgets it.
+// savePIN puts the typed PIN in the keychain and forgets it. The phone's
+// unlock window ends first, as it would go on entering the PIN it took
+// (unlockwindow.go).
 func (a *app) savePIN(id, name string) {
 	st := &a.pin
 	pin := st.value
@@ -323,7 +325,11 @@ func (a *app) savePIN(id, name string) {
 	st.value, st.err, st.busy = "", "", true
 	st.gen++
 	store := a.secrets()
+	end, ended := a.windowEnder(id)
 	go func() {
+		if end != nil {
+			end()
+		}
 		err := store.Save(secret.PINAccount(id), pin)
 		a.post(func() {
 			st.busy = false
@@ -337,15 +343,27 @@ func (a *app) savePIN(id, name string) {
 				delete(st.wrong, id)
 				a.toasts = append(a.toasts, locales.PinSavedToast(name))
 			}
+			if ended {
+				a.toasts = append(a.toasts, locales.UnlockWindowEndedToast(name))
+			}
 		})
 	}()
 }
 
+// removePIN deletes the phone's PIN from the keychain, after ending its
+// unlock window, as savePIN does.
 func (a *app) removePIN(id, name string) {
 	store := a.secrets()
+	end, ended := a.windowEnder(id)
 	go func() {
+		if end != nil {
+			end()
+		}
 		err := store.Delete(secret.PINAccount(id))
 		a.post(func() {
+			if ended {
+				a.toasts = append(a.toasts, locales.UnlockWindowEndedToast(name))
+			}
 			if err != nil && !errors.Is(err, secret.ErrNotFound) {
 				a.toasts = append(a.toasts, locales.PinErrRemove(err.Error()))
 				return

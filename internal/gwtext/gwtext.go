@@ -530,28 +530,31 @@ var (
 	reConnected = re(`^Connected to (.*) for “(.*)”(, read only)?(, on the phone's own screen)?$`)
 	reFinished  = re(`^Finished: (.*)$`)
 	reWaited    = re(`^Waited for “(.*)”$`)
-	reAskedYou  = re(`^Asked you: (.*)$`)
-	reYouSaid   = re(`^You said: “(.*)”$`)
-	reAgentSaid = re(`^(.+?) said: “(.*)”$`)
-	reAskedTake = re(`^Asked you to take over: (.*)$`)
-	reListed    = re(`^Listed the phone's Pinky folder \((\d+) files?\)$`)
-	reListedPC  = re(`^Listed the phone's folder on the computer \((\d+) files?\)$`)
-	reInstalled = re(`^Installed “(.*?)”(?: (.+?))? from (“.*)$`)
-	reUpdated   = re(`^Updated “(.*?)”(?: to (.+?))? from (“.*)$`)
-	reRemoved   = re(`^Uninstalled “(.*)”$`)
-	reStopped   = re(`^Stopped “(.*)”$`)
-	reCopied    = re(`^Copied (\d+) files? (from|to) the phone(: .*)?$`)
-	reReceived  = re(`^Received “(.*)” \(([^()]+)\) from the agent$`)
-	reSavedShot = re(`^Saved a screenshot as “(.*)”$`)
-	reGiveVideo = re(`^[Gg]ive (.+) the screen recording of “(.*)”$`)
-	reGiveVids  = re(`^[Gg]ive (.+) the screen recordings of (\d+) tasks$`)
-	reLogLines  = re(`^Read (\d+) log lines? of (.+)$`)
-	reCrashes   = re(`^Read (\d+) crash reports? of (.+)$`)
-	reTraffic   = re(`^Read (\d+) network requests? of (.+)$`)
-	reTraffic1  = re(`^Read network request (\S+) of (.+)$`)
-	reYouDid    = re(`^You (allowed|denied): (.*)$`)
-	reYourNote  = re(`^Your note: (.*)$`)
-	reAlways    = re(`^Always allowed: “(.*?)” in (.+)$`)
+	// Unlock without asking (gateway/unlockwindow.go); its failures are
+	// whole steps of their own.
+	reUnlockedWin = re(`^Unlocked without asking \(until ([^()]+)\)$`)
+	reAskedYou    = re(`^Asked you: (.*)$`)
+	reYouSaid     = re(`^You said: “(.*)”$`)
+	reAgentSaid   = re(`^(.+?) said: “(.*)”$`)
+	reAskedTake   = re(`^Asked you to take over: (.*)$`)
+	reListed      = re(`^Listed the phone's Pinky folder \((\d+) files?\)$`)
+	reListedPC    = re(`^Listed the phone's folder on the computer \((\d+) files?\)$`)
+	reInstalled   = re(`^Installed “(.*?)”(?: (.+?))? from (“.*)$`)
+	reUpdated     = re(`^Updated “(.*?)”(?: to (.+?))? from (“.*)$`)
+	reRemoved     = re(`^Uninstalled “(.*)”$`)
+	reStopped     = re(`^Stopped “(.*)”$`)
+	reCopied      = re(`^Copied (\d+) files? (from|to) the phone(: .*)?$`)
+	reReceived    = re(`^Received “(.*)” \(([^()]+)\) from the agent$`)
+	reSavedShot   = re(`^Saved a screenshot as “(.*)”$`)
+	reGiveVideo   = re(`^[Gg]ive (.+) the screen recording of “(.*)”$`)
+	reGiveVids    = re(`^[Gg]ive (.+) the screen recordings of (\d+) tasks$`)
+	reLogLines    = re(`^Read (\d+) log lines? of (.+)$`)
+	reCrashes     = re(`^Read (\d+) crash reports? of (.+)$`)
+	reTraffic     = re(`^Read (\d+) network requests? of (.+)$`)
+	reTraffic1    = re(`^Read network request (\S+) of (.+)$`)
+	reYouDid      = re(`^You (allowed|denied): (.*)$`)
+	reYourNote    = re(`^Your note: (.*)$`)
+	reAlways      = re(`^Always allowed: “(.*?)” in (.+)$`)
 )
 
 var outcomes = map[string]func() string{
@@ -587,6 +590,12 @@ func stepText(s string) string {
 	switch s {
 	case "Unlocked from the computer":
 		return locales.GwStepUnlocked()
+	case "Unlocking without asking failed: the phone did not accept the saved PIN. Unlock without asking has ended":
+		return locales.GwStepUnlockWindowWrongPIN()
+	case "Unlocking without asking failed: Pinky could not get to the passcode screen and entered nothing. Unlock without asking has ended":
+		return locales.GwStepUnlockWindowNoPad()
+	case "Unlocking without asking failed. Unlock without asking has ended":
+		return locales.GwStepUnlockWindowFailed()
 	case "You took over":
 		return locales.GwStepYouTookOver()
 	case "You stopped the task":
@@ -629,6 +638,9 @@ func stepText(s string) string {
 	}
 	if m := reWaited.FindStringSubmatch(s); m != nil {
 		return locales.GwStepWaited(m[1])
+	}
+	if m := reUnlockedWin.FindStringSubmatch(s); m != nil {
+		return locales.GwStepUnlockedWindow(m[1])
 	}
 	if m := reAskedTake.FindStringSubmatch(s); m != nil {
 		return locales.GwStepAskedTakeOver(m[1])

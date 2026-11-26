@@ -431,6 +431,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 						a.pinForm(c, d, "settings")
 					})
 				}
+				a.windowSettingsRow(c, d)
 				if d.Features.Background {
 					a.backgroundRow(c, d, false)
 				}

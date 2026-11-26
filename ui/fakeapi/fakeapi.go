@@ -155,6 +155,8 @@ type API struct {
 	virt       *virtualState // Simulators and emulators (virtual.go)
 
 	vit *vitalsState // phones' battery and storage (vitals.go)
+
+	uw unlockWindows // unlock without asking (unlockwindow.go)
 }
 
 type device struct {
@@ -183,6 +185,11 @@ type device struct {
 	streams    int    // its streams open now, for DeviceView.Streaming
 	rotation   string // the screen's rotation the person set; "" is portrait
 	screenOff  bool   // its screen is off without a lock screen (SetScreenOff)
+	// unlockUntil is when its unlock window ends, zero without one, and
+	// unlockRefused whether the phone refused the PIN one entered
+	// (unlockwindow.go).
+	unlockUntil   time.Time
+	unlockRefused bool
 }
 
 type task struct {
@@ -434,6 +441,10 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 	}
 	v.Paused = d.paused
 	v.Streaming = d.info.State == driver.StateOnline && !d.paused && d.streams > 0
+	if a.opt.Now().Before(d.unlockUntil) {
+		v.UnlockUntil = d.unlockUntil
+	}
+	v.UnlockRefused = d.unlockRefused
 	switch {
 	case d.paused:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Paused"
@@ -628,7 +639,7 @@ func (a *API) Unlock(deviceID string) error {
 			break
 		}
 	}
-	d.locked = false
+	d.locked, d.unlockRefused = false, false
 	a.mu.Unlock()
 	if n != nil {
 		n.decision <- decision{d: gateway.AllowOnce}

@@ -219,6 +219,13 @@ func (a *app) forgetPhone(id string, history bool) {
 		pin.editing, pin.value, pin.err = "", "", ""
 		pin.gen++
 	}
+	// Its unlock window, which the gateway ended with the phone.
+	delete(a.uw.busy, id)
+	delete(a.uw.want, id)
+	delete(a.uw.refused, id)
+	if a.uw.choosing == id {
+		a.uw.choosing = ""
+	}
 	delete(a.bg.on, id)
 	delete(a.bg.busy, id)
 	delete(a.bg.phone, id)
