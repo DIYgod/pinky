@@ -81,9 +81,10 @@ func TestWDASettleWaitsForTheTurn(t *testing.T) {
 		f.ServeHTTP(w, r)
 	}))
 	defer srv.Close()
-	// The panel as it is, 8×12, tagged as turned for landscape: the game.
+	// The panel as it is, 8×12, tagged as turned for landscape: the game;
+	// tagged up: Settings.
 	game := withEXIF(t, jpegBytes(t, 8, 12, color.Black), 6, binary.BigEndian)
-	settings := jpegBytes(t, 8, 12, color.White)
+	settings := withEXIF(t, jpegBytes(t, 8, 12, color.White), 1, binary.BigEndian)
 	const turnsAt = 900 * time.Millisecond
 	mj := mjpegServer(t, func(since time.Duration) []byte {
 		if since < turnsAt {
@@ -109,5 +110,39 @@ func TestWDASettleWaitsForTheTurn(t *testing.T) {
 	ok, err = d.WaitSettled(ctx, 3*time.Second)
 	if took := time.Since(start); err != nil || !ok || took >= turnsAt {
 		t.Fatalf("landscape app, landscape frames: settled %v (%v) after %v", ok, err, took)
+	}
+}
+
+// A frame without an EXIF orientation tag does not say which way it is
+// turned: the panel as it is and an upright picture look the same. Such
+// frames count once still, under an app in landscape too, as before
+// frameFits: a WebDriverAgent that sent the panel untagged would otherwise
+// leave every settle in a landscape app waiting for the limit. A frame
+// tagged up under an app in landscape is still another app's picture.
+func TestWDASettleUntaggedFrames(t *testing.T) {
+	f := &fakeWDA{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/rotation" {
+			fmt.Fprint(w, `{"value":{"x":0,"y":0,"z":90}}`) // landscape
+			return
+		}
+		f.ServeHTTP(w, r)
+	}))
+	defer srv.Close()
+	panel := jpegBytes(t, 8, 12, color.White) // the panel as it is, 8×12
+	var frame atomic.Value
+	frame.Store(panel)
+	mj := mjpegServer(t, func(time.Duration) []byte { return frame.Load().([]byte) })
+	d := &WDADevice{c: newWDAURL(srv.URL, mj.URL)}
+	ctx := context.Background()
+
+	start := time.Now()
+	ok, err := d.WaitSettled(ctx, 2*time.Second)
+	if took := time.Since(start); err != nil || !ok || took >= time.Second {
+		t.Fatalf("untagged frames under a landscape app: settled %v (%v) after %v, want true once still", ok, err, took)
+	}
+	frame.Store(withEXIF(t, panel, 1, binary.BigEndian))
+	if ok, err := d.WaitSettled(ctx, 700*time.Millisecond); err != nil || ok {
+		t.Fatalf("frames tagged up under a landscape app: settled %v (%v), want false at the limit", ok, err)
 	}
 }

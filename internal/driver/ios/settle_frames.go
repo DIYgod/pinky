@@ -90,7 +90,9 @@ func (d *WDADevice) WaitSettled(ctx context.Context, limit time.Duration) (bool,
 // in front is in landscape and tall when it is not, by GET /rotation, read
 // now (the app that just came to the front may be turned another way than
 // the last read said). It answers true when WDA does not say, or the
-// frame's size is unknown.
+// frame's size or the way it is turned is unknown (frame.wide): a
+// WebDriverAgent that sent the panel without an EXIF orientation tag would
+// otherwise leave every settle in a landscape app waiting for the limit.
 func (d *WDADevice) frameFits(ctx context.Context, f frame) bool {
 	wide, ok := f.wide()
 	if !ok {
