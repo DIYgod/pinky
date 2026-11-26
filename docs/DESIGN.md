@@ -231,7 +231,7 @@ ocr "Delivery in 25–35 min" @200,300
 | `user_took_over` | The person used the phone; returned at once with the current screen | Call `phone_handoff` to wait for control and the note |
 | `paused` | The person paused the agent | Wait with `phone_handoff` |
 | `stopped` | The person pressed Stop; the lease is gone | End the task |
-| `device_locked` | The screen is locked; the person can unlock from the computer or the phone | Call `phone_handoff` |
+| `device_locked` | The screen is locked; the person can unlock from the computer or the phone. While the person lets Pinky unlock the phone without asking, Pinky enters the PIN itself and the agent gets this only when that unlock failed | Call `phone_handoff` |
 | `device_needs_setup` | The phone is connected but waits for a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode, the passcode iOS asks for before automation); the result names the step | Call `phone_handoff`; it ends once the phone is ready |
 
 Errors: `device_offline`, `device_paused` (the person paused Pinky's connection to the phone in Pinky), `device_busy` (Pinky for Android runs a task of its own on the phone), `lease_held`, `scope_denied` (an app outside the agent's scope or the task's allow-list), `not_found` (the ref is gone), `unsupported` (the backend cannot do this, such as `recents` on iPhone).
@@ -461,11 +461,11 @@ A phone that locks mid-task stops the agent, so Pinky avoids the lock where it c
 | Work on a virtual display | Android 13+ | Yes | scrcpy creates its displays with the always-unlocked flag ([source](https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/video/NewDisplayCapture.java)), so apps there should keep running while the phone itself stays locked. Step 0 verifies it; if it holds, background mode moves to M1 |
 | Stay awake while plugged in, screen off | Android | Yes | scrcpy's stay-awake and screen-off options ([docs](https://github.com/Genymobile/scrcpy/blob/master/doc/device.md)); the phone never reaches the lock screen while connected and charging |
 | iPhone Mirroring backend | iOS 18+ with macOS 15+ | Yes | Apple keeps the iPhone locked during mirroring, and the person authenticates on the Mac ([Apple](https://support.apple.com/120421)) |
-| Unlock from the computer | Android; iOS if step 0 shows touches reach the passcode screen | Yes | The PIN is saved in the OS keychain and entered by the gateway after Touch ID or Windows Hello. Agents never see it, only the client UI can trigger it, and every unlock is logged |
+| Unlock from the computer | Android; iOS if step 0 shows touches reach the passcode screen | Yes | The PIN is saved in the OS keychain and entered by the gateway after Touch ID or Windows Hello. Agents never see it, and only the person can allow an unlock: they confirm each unlock, or confirm once to open an unlock window for one phone of up to 8 hours (Unlock without asking), during which the gateway enters the PIN whenever an agent's step finds the phone locked. Every unlock is logged |
 | Extend Unlock with the computer as a trusted Bluetooth device | Android | After one unlock | Keeps the phone unlocked for up to 4 hours at a time ([Google](https://support.google.com/android/answer/9075927)) |
 | No lock screen | Any | Yes | Only for a spare phone used just for automation |
 
-When the phone is locked anyway, actions return `device_locked`; the agent calls `phone_handoff`, and the client shows the locked-phone screen.
+When the phone is locked anyway, actions return `device_locked`; the agent calls `phone_handoff`, and the client shows the locked-phone screen. During an unlock window the gateway unlocks the phone and goes on with the action instead, and answers a `phone_handoff` that asks only for the unlock at once; the agent gets `device_locked` only when that unlock failed, which ends the window, or where the window does not apply, such as while an approval waits on the phone, for a watch-only agent or for a scheduled run.
 
 ### Screen model and OCR
 

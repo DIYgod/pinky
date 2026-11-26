@@ -38,7 +38,7 @@ A run started by a schedule is **unattended**; Run now is not (the person presse
 
   | Reason | Desktop | Android | What happens |
   | --- | --- | --- | --- |
-  | `locked` | The phone reports locked | Screen off or keyguard showing, unless the background screen is set up ([below](#only-while-the-phone-is-free)) | Skipped at once. Pinky never unlocks a phone, turns its screen on, or types a PIN for a schedule. |
+  | `locked` | The phone reports locked | Screen off or keyguard showing, unless the background screen is set up ([below](#only-while-the-phone-is-free)) | Skipped at once. Pinky never unlocks a phone, turns its screen on, or types a PIN for a schedule, not even while the person lets Pinky unlock the phone without asking: the gateway does not use an unlock window for an unattended run (`AgentInfo.Unattended`, through `ConnectUnattended`; [gateway.md](gateway.md#unlock-without-asking)), so a phone that locks during one stops it as before. |
   | `in_use` | The person took over | Screen on, unlocked, touched less than 60 s ago | Waits up to 15 minutes, looking again every minute, then skipped. |
   | `busy` | Another task or agent has the phone | Another task runs | Waits up to 15 minutes, then skipped. |
   | `offline` | Not connected, paused, connecting or waiting for setup | (never) | Skipped at once. |
