@@ -140,6 +140,10 @@ type Result struct {
 	// unread: the action went out and its screen was left unread, as
 	// Call.unread asks.
 	unread bool
+	// unchanged: the step settled, but by the action's own check it did
+	// not take: a tap left its switch or checkbox as it was (unflipped).
+	// phone_batch stops there.
+	unchanged bool
 }
 
 // IsError reports whether the result is an error rather than a status.
@@ -2109,7 +2113,10 @@ func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *
 }
 
 // Batch implements phone_batch: steps run in order and stop at the first
-// one that does not settle.
+// one that does not settle, or that settled but by its own check did not
+// take (Result.unchanged): the steps after it may count on it, and running
+// them would bury the step's note under their results, as a launch of
+// another app did in the field report of 2026-11-26.
 func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 	if len(req.Steps) == 0 {
 		return errResult(ErrInvalidArgument, "steps is empty.")
@@ -2156,7 +2163,7 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 		r := g.finish(l, g.act(ctx, l, c, a))
 		longest = max(longest, time.Since(start))
 		out.Steps = append(out.Steps, r)
-		if r.IsError() || r.Status != StatusSettled {
+		if r.IsError() || r.Status != StatusSettled || r.unchanged {
 			break
 		}
 	}
@@ -2168,6 +2175,9 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 	case outOfTime:
 		out.Message = fmt.Sprintf("Ran %s of %d, then stopped: the phone is answering slowly and the call's %s were running out. Not done: %s; continue with it in a new call.",
 			stepSpan(1, n), total, human(g.opt.CallBudget), stepSpan(n+1, total))
+	case n < total && last.unchanged:
+		out.Message = fmt.Sprintf("Stopped at step %d of %d: the switch it tapped is as it was. Not done: %s.",
+			n, total, stepSpan(n+1, total))
 	case n < total:
 		out.Message = fmt.Sprintf("Stopped at step %d of %d.", n, total)
 	}

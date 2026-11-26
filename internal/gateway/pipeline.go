@@ -2052,6 +2052,7 @@ func (g *Gateway) executeOn(ctx context.Context, l *lease, c Call, a Action, p *
 	}
 	if n := unflipped(a, p, next); n != "" {
 		res.Message = strings.TrimSpace(res.Message + " " + n)
+		res.unchanged = true
 	}
 	if f := p.follow; f != nil && f.note != "" {
 		res.Message = strings.TrimSpace(res.Message + " " + f.note)

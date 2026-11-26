@@ -949,6 +949,8 @@ The OCR lines of item 3, the game's notice turned upright, show that a frame tak
 
 That alone would not give `not_found`: a tap whose ref the fresh read lacks finds its element again by label, id and place in the screen the agent last received (`relocate`, `internal/gateway`). But in a `phone_batch` every step after the first looked in the screen the step before it ended on, which the agent had not seen yet: when the refs changed between the agent's screen and that one, the step's ref was in neither, and the element in its place was "not on the screen anymore". A batch's steps now look in the screen the agent had when the batch began too (`Action.seen`). Unit-tested in `TestBatchRefSurvivesAncestryChange`.
 
+**A batch step that did nothing** (`internal/gateway`, `Session.Batch`). In item 1's batch the tap on [97] missed and said so ("[97] is still on after the tap", `unflipped`), but the step was `settled`, so the batch went on and launched the game, whose screen then stood over the step's note. A step whose tap left its switch or checkbox as it was now stops the batch: "Stopped at step 2 of 3: the switch it tapped is as it was. Not done: step 3." The steps after it were written on the assumption that it took, Pinky knows it did not, and going on can only act on a screen the agent did not plan for and hide the miss. When the check is wrong (a tree that shows the old state a little after the switch turned), the cost is one more call for the steps that did not run. Unit-tested in `TestBatchStopsAtUnchangedSwitch`.
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.
