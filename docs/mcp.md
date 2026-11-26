@@ -165,7 +165,7 @@ note: "<the person's note>"
 | `lease_held` | Another session holds the phone; `holder` names its agent and task |
 | `scope_denied` | The app is outside the agent's scope or the task's app list |
 | `not_found` | The ref is gone, no installed app matches, or no app opens the link |
-| `unsupported` | The phone or backend cannot do this, such as `recents` on iPhone, or `phone_files` `push` on iPhone; or a link several apps open, with none set as the default |
+| `unsupported` | The phone or backend cannot do this, such as `recents` on iPhone, or `phone_files` `pull` on iPhone; or a link several apps open, with none set as the default |
 | `invalid_argument` | Bad or missing arguments, a misused `approval_id`, or no phone connected in this session |
 | `internal` | The call was cancelled, the phone did not answer in time, or the gateway failed |
 
@@ -433,23 +433,23 @@ Returns `settled` with `matched: true` or `matched: false` and the screen change
 
 ### phone_files
 
-Copies files between the phone's Pinky folder (`/sdcard/Pinky` on Android, the only place on the phone agents may reach) and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools; agents that cannot (on another computer, over HTTP) upload files into it. Needs a `phone_connect` lease like the other tools. An iPhone has no Pinky folder: there `list` and `upload` work on the computer's folder only, for apps to install with `phone_app`, and `pull` and `push` return `unsupported`.
+Transfers files and images between the phone and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools; agents that cannot (on another computer, over HTTP) upload files into it. Needs a `phone_connect` lease like the other tools. On Android, `list`, `pull` and `push` work against `/sdcard/Pinky` (the only place on the phone agents may reach). An iPhone has no Pinky folder: there `list` and `upload` work on the computer's folder, `push` saves images (JPEG, PNG, GIF, WebP, BMP or HEIC) into Photos Recents (`driver.MediaImporter`), `clipboard` places one image directly onto the iPhone's clipboard for pasting inside chats or editors without switching apps (`driver.ImageClipboard`), and `pull` returns `unsupported`.
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `action` | `list` \| `pull` \| `push` \| `upload` | `list` (default) shows both sides; `pull` copies from the phone; `push` copies to the phone; `upload` saves a file the agent sends in the computer's folder. With `content` and no `action`, `upload` |
-| `paths` | string[] | Files or folders, relative to the Pinky folder. Default: everything; for `push`, the files that are new or changed on the computer. For `upload`: the one file's name, such as `photo.jpg` or `Pictures/photo.jpg` |
+| `action` | `list` \| `pull` \| `push` \| `clipboard` \| `upload` | `list` (default) shows available files; `pull` copies from Android's Pinky folder; `push` copies to the phone (Android: `/sdcard/Pinky` and Gallery; iPhone: Photos Recents); `clipboard` (iPhone) puts one image file onto the phone's clipboard; `upload` saves a file the agent sends in the computer's folder. With `content` and no `action`, `upload` |
+| `paths` | string[] | Files or folders, relative to the Pinky folder. Default: everything (for `push` on Android, new or changed files; on iPhone, image files). For `upload` or `clipboard`: the one file's name, such as `photo.jpg` or `Pictures/photo.jpg` |
 | `content` | string | For `upload`: the file's bytes in base64 (standard or URL alphabet, padding and line breaks optional, or a `data:…;base64,` URL), up to 10 MB |
 | `replace` | boolean | For `upload`: replace a different file of the same name |
-| `intent` | string | For `push`: one sentence on why, shown on the approval panel |
+| `intent` | string | For `push` or `clipboard`: one sentence on why, shown on the approval panel |
 | `approval_id` | string | From `approval_pending`: repeat the same call with it |
 
 The result lists the folder, then one line per file: `path · size · modified · where`, where `where` is `both` (same size and time), `phone`, `computer` or `differs`. `pull` and `push` list the files they copied and skip files that are the same on both sides; copied files keep their modification time.
 
-- `push` asks the person first (rule `Files`), like an Ask action: up to 45 s, then `approval_pending`. "Allow for this task" covers later pushes in the task. Read-only mode refuses it (`blocked_by_policy`, rule `Read-only`), and read-only and watch-only agents get `scope_denied`: they may only list and pull.
+- `push` and `clipboard` ask the person first (rule `Files`), like an Ask action: up to 45 s, then `approval_pending`. "Allow for this task" covers later pushes and clipboard copies in the task. Read-only mode refuses them (`blocked_by_policy`, rule `Read-only`), and read-only and watch-only agents get `scope_denied`: they may only list and pull.
 - Paths that leave the folder (`..`, absolute paths) are `invalid_argument`; files that are not there are `not_found`. Symbolic links in the computer's folder are not copied, and a pull replaces a link in its way instead of writing through it.
 - Each call is a step in the task's history ("Copied 2 files from the phone: a.txt, b.png").
-- Files pushed to Android show in the phone's gallery and photo pickers: Pinky asks the media scanner for them on Android 10 and earlier, and later versions find them by themselves.
+- Files pushed to Android show in the phone's gallery and photo pickers: Pinky triggers `content call --uri content://media/ --method scan_file` for pushed media on Android 11 and later, and `MEDIA_SCANNER_SCAN_FILE` on Android 10 and earlier.
 
 #### Uploading a file
 

@@ -129,10 +129,11 @@ type Device struct {
 
 	logs appLogs // the apps whose logs a task reads (logs.go)
 
-	typeStats   TypeStats // guarded by mu
-	inputNote   string    // for the agent, about the last Type (TakeInputNote); guarded by mu
-	keysOnly    bool      // Type skips the pasteboard (TypeByKeys); guarded by mu
-	framesAfter time.Time // no frames of the video for pictures until then (capture.go); guarded by mu
+	typeStats      TypeStats   // guarded by mu
+	inputNote      string      // for the agent, about the last Type (TakeInputNote); guarded by mu
+	keysOnly       bool        // Type skips the pasteboard (TypeByKeys); guarded by mu
+	framesAfter    time.Time   // no frames of the video for pictures until then (capture.go); guarded by mu
+	safariNoTunnel atomic.Bool // set when Safari could not reach host IPv6 inside CoreDevice tunnel
 
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.
@@ -999,6 +1000,22 @@ func (d *Device) Drag(ctx context.Context, g driver.Drag) error {
 	return d.gestureSteps(ctx, g.Steps(10*time.Millisecond), nil)
 }
 
+// tapLocked sends a short tap while the caller already holds inputMu.
+func (d *Device) tapLocked(ctx context.Context, p screen.Point) error {
+	return d.gestureStepsLocked(ctx, []driver.DragStep{
+		{P: p},
+		{Wait: 60 * time.Millisecond, P: p},
+	}, nil)
+}
+
+// longPressLocked holds a finger at p for hold while inputMu is held.
+func (d *Device) longPressLocked(ctx context.Context, p screen.Point, hold time.Duration) error {
+	return d.gestureStepsLocked(ctx, []driver.DragStep{
+		{P: p},
+		{Wait: hold, P: p},
+	}, nil)
+}
+
 // gestureSteps puts a finger down at steps[0], then waits each step's Wait
 // and moves the finger to its point (a step that stays put only waits),
 // and lifts it at the last. The finger always comes up, even when ctx
@@ -1006,6 +1023,11 @@ func (d *Device) Drag(ctx context.Context, g driver.Drag) error {
 func (d *Device) gestureSteps(ctx context.Context, steps []driver.DragStep, onDown func()) error {
 	d.inputMu.Lock()
 	defer d.inputMu.Unlock()
+	return d.gestureStepsLocked(ctx, steps, onDown)
+}
+
+// gestureStepsLocked is gestureSteps with inputMu already held by the caller.
+func (d *Device) gestureStepsLocked(ctx context.Context, steps []driver.DragStep, onDown func()) error {
 	// The whole gesture maps through one description of the screen, read
 	// fresh: the person may have turned the device since the last one, or
 	// folded it, which waitInput then follows to the display in use.
