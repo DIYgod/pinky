@@ -2,6 +2,15 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- With Pinky on the iPhone, opening an app that turns the screen, such as Settings over a landscape game, no longer reports the screen settled halfway through the turn, while elements were still in the wrong places and taps on them could miss.
+- With Pinky on the iPhone, the text read from the screen right after switching between a landscape and a portrait app no longer comes from the app before it.
+- With Pinky on the iPhone, elements no longer get new numbers on a screen that hasn't changed.
+- A batch of steps no longer says that an element still on the screen is not on the screen anymore.
+- A batch of steps now stops at a tap that left its switch or checkbox as it was, instead of going on with the steps after it.
+- With Pinky on the iPhone, an iPad back on its home screen is now seen as the Home Screen, and no longer said to show a keyboard.
+
 ## 2026.1126.5 (2026-11-26)
 
 - `pinky update`, `pinky mcp` and `pinky daemon` now refuse a word they don't take, as `pinky devices` does: they say which word and exit with status 2, instead of ignoring the word and every flag after it. `pinky update now --check` could install the update it was only asked to look for, and `pinky mcp stdio --fake` could start Pinky with the real phones instead of the fake ones. Thanks @pseudoyu.

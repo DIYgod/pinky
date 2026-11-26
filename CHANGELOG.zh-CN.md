@@ -2,6 +2,15 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 通过 iPhone 上的 Pinky 连接时，打开会让屏幕转向的 App（比如在横屏游戏上打开系统设置），Pinky 不会再在屏幕转到一半时就报告画面已稳定；那时元素还在错误的位置，点按可能落空。
+- 通过 iPhone 上的 Pinky 连接时，在横屏和竖屏 App 之间切换后，读到的屏幕文字不会再来自上一个 App。
+- 通过 iPhone 上的 Pinky 连接时，元素不会再在屏幕没变的情况下换编号。
+- 批量步骤不会再误报仍在屏幕上的元素已不在屏幕上。
+- 批量步骤点按开关或复选框后，如果它没有变化，现在会停在这一步，不再接着执行后面的步骤。
+- 通过 iPhone 上的 Pinky 连接 iPad 时，回到主屏幕后 Pinky 能认出这是主屏幕，也不会再误报有键盘。
+
 ## 2026.1126.5 (2026-11-26)
 
 - `pinky update`、`pinky mcp` 和 `pinky daemon` 现在也会像 `pinky devices` 一样拒绝它们不接受的词，说明是哪个词并以状态码 2 退出；以前它们会把这个词连同后面的选项一起忽略：`pinky update now --check` 可能直接安装本来只想检查的更新，`pinky mcp stdio --fake` 可能用真手机而不是演示手机启动 Pinky。感谢 @pseudoyu。
