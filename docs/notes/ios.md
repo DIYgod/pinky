@@ -945,6 +945,8 @@ The OCR lines of item 3, the game's notice turned upright, show that a frame tak
 
 **OCR's text from another screen** (`wda_device.go`, `Observe`). A read takes OCR's picture as soon as WDA names the app in front (`captureGate.early`), long before the tree comes, and nothing compared the two: item 3's picture was the game's, turned for landscape, under Settings' portrait tree. OCR's lines are placed by their share of the picture, so a picture turned the other way than the tree is another screen than the tree's and would put every line in the wrong place. Such a read now leaves OCR's text out, and the log says so ("OCR's picture is turned the other way than the tree"). Two screens turned the same way are not told apart here; the settle above is what waits for those. Unit-tested in `TestWDAOCRPictureTurnedAway`.
 
+**Refs that change on a screen that does not** (`wda_observe.go`, `wdaTreeApp`). A ref is keyed by an element's role, label, id and path, and every element's path began with the app `GET /wda/activeAppInfo` named. WDA answers that request apart from `/source`, the read ignored its errors, and on this iPad it named view services such as `DockFolderViewService` (item 4): an answer that named another app than the tree's, or none, gave every element of the same tree a new ref, and the next read gave the old ones back, as in item 2, where the switch's and the row's refs changed together. Paths now begin with the tree's own app, its root's label. Unit-tested in `TestWDAPathsFromTheTree`.
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.
