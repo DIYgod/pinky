@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -130,5 +131,78 @@ func TestWDAOCRPictureTurnedAway(t *testing.T) {
 	turned.Store(true)
 	if s := read(); notice(s) || s.App.ID != "com.apple.Preferences" || len(s.Elements) != 1 {
 		t.Fatalf("landscape picture, portrait tree: %s", s.Render())
+	}
+}
+
+// The field report of 2026-11-26 (an iPad on iPadOS 26 over Wi-Fi): after
+// Home, the header said "app: DockFolderViewService · keyboard shown" over
+// the home screen. WDA named a view service of the home screen's Dock as
+// the app in front, and OCR's one-character lines on the home screen, such
+// as a calendar widget's weekdays, pass for a keyboard's keys. The read
+// names the home screen, whose tree says whether a keyboard shows.
+func TestWDAHomeScreenViewService(t *testing.T) {
+	var app, tree atomic.Value // activeAppInfo's answer ("" fails it), /source's tree
+	f := &fakeWDA{png: jpegBytes(t, 10, 20, color.White)}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/wda/activeAppInfo":
+			a := app.Load().(string)
+			if a == "" {
+				w.WriteHeader(500)
+				fmt.Fprint(w, `{"value":{"error":"unknown error","message":"no app"}}`)
+				return
+			}
+			fmt.Fprintf(w, `{"value":%s}`, a)
+		case strings.HasSuffix(r.URL.Path, "/source"):
+			fmt.Fprintf(w, `{"value":%s}`, tree.Load().(string))
+		default:
+			f.ServeHTTP(w, r)
+		}
+	}))
+	defer srv.Close()
+	// A calendar widget's weekday row, low on the screen and across it.
+	var week []ocrLine
+	for i, day := range []string{"日", "一", "二", "三", "四", "五", "六"} {
+		week = append(week, ocrLine{Text: day, Confidence: 1, X: 0.1 + 0.12*float64(i), Y: 0.7, W: 0.04, H: 0.02})
+	}
+	d := &WDADevice{c: newWDAURL(srv.URL, ""), width: 100, height: 200, scale: 1,
+		recognize: func([]byte) ([]ocrLine, error) { return week, nil }}
+	defer d.trees.close()
+	read := func(what string) *screen.Screen {
+		t.Helper()
+		s, err := d.Observe(context.Background(), driver.ObserveOptions{OCR: true})
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+		return s
+	}
+	home := screen.App{Name: "Home Screen", ID: springBoard}
+	root := func(label, children string) string {
+		return `{"type":"Application","label":"` + label +
+			`","rect":{"x":0,"y":0,"width":100,"height":200},"isVisible":"1","children":[` + children + `]}`
+	}
+
+	tree.Store(root("DockFolderViewService", ""))
+	for _, c := range []struct{ what, app string }{
+		{"named by WDA", `{"bundleId":"com.apple.DockFolderViewService","name":"","pid":90}`},
+		{"named by its tree", ""}, // WDA did not answer
+	} {
+		app.Store(c.app)
+		if s := read(c.what); s.App != home || s.Keyboard || len(s.Elements) != len(week) {
+			t.Errorf("%s: %s", c.what, s.Render())
+		}
+	}
+	// The home screen's keyboard, as Spotlight's search shows it, is in its
+	// tree, and OCR's text of its keys is left out.
+	app.Store(`{"bundleId":"com.apple.springboard","name":"","pid":60}`)
+	tree.Store(root("", `{"type":"Keyboard","rect":{"x":0,"y":120,"width":100,"height":80},"isVisible":"1"}`))
+	if s := read("Spotlight"); s.App != home || !s.Keyboard || len(s.Elements) != 0 {
+		t.Fatalf("Spotlight: %s", s.Render())
+	}
+	// In an app, such lines are a keyboard's keys that its tree may lack.
+	app.Store(`{"bundleId":"com.apple.Preferences","name":"Settings","pid":8}`)
+	tree.Store(root("Settings", ""))
+	if s := read("Settings"); !s.Keyboard {
+		t.Fatalf("Settings: %s", s.Render())
 	}
 }

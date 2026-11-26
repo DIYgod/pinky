@@ -646,7 +646,16 @@ func addOCR(s *screen.Screen, lines []ocrLine) {
 	if len(lines) == 0 {
 		return
 	}
-	if top, kb := keyboardFromOCR(lines); kb {
+	top, kb := keyboardFromOCR(lines)
+	if kb && s.App.ID == springBoard && !s.Keyboard && !s.TreeTooSlow {
+		// On the home screen, the tree says whether a keyboard shows: WDA
+		// lists the keyboard in the tree of the app that shows it. OCR's
+		// one-character lines there are the text of icons and widgets,
+		// such as a calendar's weekdays: "keyboard shown" over the home
+		// screen (field report, an iPad on iPadOS 26, 2026-11-26).
+		kb = false
+	}
+	if kb {
 		noteOCRKeyboard(s, top)
 		kept := lines[:0:0]
 		for _, l := range lines {
@@ -719,9 +728,10 @@ func (d *WDADevice) noteSlowRead(start time.Time, tm wdaTimes, root *wdaNode, oc
 // appInfo names the app in front: by the name the app list knows (the home
 // screen's, in the phone's language) once it has been read, else WDA's
 // active app's, else its element's label, else the app list's (WDA leaves
-// SpringBoard's empty).
+// SpringBoard's empty). A view service of the home screen is the home
+// screen (homeScreenServices).
 func (d *WDADevice) appInfo(ctx context.Context, a wdaApp, root *wdaNode) screen.App {
-	if a.BundleID == springBoard {
+	if a.BundleID == springBoard || homeScreenService(a, root) {
 		return screen.App{Name: "Home Screen", ID: springBoard}
 	}
 	out := screen.App{ID: a.BundleID, Name: d.cachedAppName(a.BundleID)}
@@ -741,6 +751,34 @@ func (d *WDADevice) appInfo(ctx context.Context, a wdaApp, root *wdaNode) screen
 		}
 	}
 	return out
+}
+
+// homeScreenServices are view services of the home screen that WDA names
+// as the app in front of it, by bundle id without "com.apple.". After Home
+// on an iPad (iPadOS 26, field report of 2026-11-26), the header said "app:
+// DockFolderViewService" (the Dock's folders' service) with no bundle id
+// after it, as when WDA names none and the tree's root has that label. Not
+// view services in general: Safari's and the share sheet's lie over the
+// app that opened them.
+var homeScreenServices = map[string]bool{
+	"DockFolderViewService": true,
+}
+
+// homeScreenService reports whether WDA's app in front is one of
+// homeScreenServices: by its bundle id, or when WDA gave none, by its name
+// or else its tree's root label.
+func homeScreenService(a wdaApp, root *wdaNode) bool {
+	if id, ok := strings.CutPrefix(a.BundleID, "com.apple."); ok {
+		return homeScreenServices[id]
+	}
+	if a.BundleID != "" {
+		return false
+	}
+	name := strings.TrimSpace(a.Name)
+	if name == "" && root != nil {
+		name = strings.TrimSpace(strOr(root.Label))
+	}
+	return homeScreenServices[name]
 }
 
 // cachedAppName is the name of an app in the app list already read, without
