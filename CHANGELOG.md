@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1126.1 (2026-11-26)
 
 - When your Mac is on the iPhone's own Personal Hotspot and its device service can't reach the iPhone, Pinky now shows it as Lost on its hotspot and says to plug it in with a cable or to connect the Mac and the iPhone to the same other Wi-Fi network, instead of offering Restart device service…, which doesn't help there. Thanks @SamuelZ12 for reporting it.
 - With Settings › Phones › Restart device service without a password on, Pinky no longer restarts the device service every 5 minutes for an iPhone that a restart didn't bring back, which disconnected every iPhone and iPad on the Mac each time: after one restart that doesn't help, it leaves the phone to you until the Mac lists it again. Restart device service… still works.
