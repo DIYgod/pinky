@@ -502,7 +502,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 				scr.Draw(func(pt *mg.Painter, r mg.Rect) {
 					pl.take(pt)
 					if pl.bitmap != nil {
-						pt.Clip(r, inner, func() { drawTurned(pt, pl.bitmap, r, pl.turn) })
+						pt.Clip(r, inner, func() { drawTurned(pt, pl.bitmap, mg.Rect{}, r, pl.turn) })
 					}
 					// What the step at this moment acted on, for a moment after
 					// its mark.
