@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- You can now let Pinky unlock a phone for agents' tasks without asking each time, for 1, 4 or 8 hours: turn on Unlock without asking for the phone in Settings › Phones or in the ⋯ menu under its picture, and confirm once. It needs the phone's PIN saved and Unlock from this computer on in Settings › Safety. Thanks @ayu2210 for the idea.
+- While it is on, Pinky enters the PIN only when a step of a running task finds the phone locked, never for a scheduled task at its set time, and each unlock shows in the task's Activity. The PIN stays in Pinky's memory only. It ends when the time is up, when you click End on the strip under the phone's picture, when Pinky quits or the PIN changes, and at once if the phone doesn't accept the PIN.
+
 ## 2026.1126.7 (2026-11-26)
 
 - When a task can't move an iPhone to Pinky on the iPhone, Pinky moves it back to CoreDevice, and the task's step now waits until the phone is back there instead of failing as offline. Thanks @pseudoyu.
