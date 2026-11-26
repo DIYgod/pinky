@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- `pinky update`、`pinky mcp` 和 `pinky daemon` 现在也会像 `pinky devices` 一样拒绝它们不接受的词，说明是哪个词并以状态码 2 退出；以前它们会把这个词连同后面的选项一起忽略：`pinky update now --check` 可能直接安装本来只想检查的更新，`pinky mcp stdio --fake` 可能用真手机而不是演示手机启动 Pinky。感谢 @pseudoyu。
+
 ## 2026.1126.4 (2026-11-26)
 
 - 在「活动」里「观看录屏」时，Pinky 现在也会像显示手机画面那样把画面平滑缩小，细线和文字的笔画不再断断续续。在非高分辨率屏幕上能看出区别；如果「设置 › 隐私 › 录屏大小」选的是「原始」，在任何屏幕上都能看出。

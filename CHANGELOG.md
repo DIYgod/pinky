@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- `pinky update`, `pinky mcp` and `pinky daemon` now refuse a word they don't take, as `pinky devices` does: they say which word and exit with status 2, instead of ignoring the word and every flag after it. `pinky update now --check` could install the update it was only asked to look for, and `pinky mcp stdio --fake` could start Pinky with the real phones instead of the fake ones. Thanks @pseudoyu.
+
 ## 2026.1126.4 (2026-11-26)
 
 - When you watch a task's recording in Activity, Pinky now scales the picture down smoothly too, as it does the phone's screen, so thin lines and text no longer break up. The difference shows on displays that aren't high-resolution, and on any display for recordings kept at Original size (Settings › Privacy › Recording size).
