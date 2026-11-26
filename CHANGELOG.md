@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1126.5 (2026-11-26)
 
 - `pinky update`, `pinky mcp` and `pinky daemon` now refuse a word they don't take, as `pinky devices` does: they say which word and exit with status 2, instead of ignoring the word and every flag after it. `pinky update now --check` could install the update it was only asked to look for, and `pinky mcp stdio --fake` could start Pinky with the real phones instead of the fake ones. Thanks @pseudoyu.
 
