@@ -2,7 +2,6 @@ package ios
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -27,7 +26,7 @@ func (p *Provider) legacyImageMissing(e goios.DeviceEntry, info driver.Info) dri
 	switch {
 	case j.running, j.err == nil:
 		info.Setup, info.Detail = driver.SetupPreparing, preparingDetail
-	case errors.Is(j.err, errPhoneLocked):
+	case classifyMountError(j.err) == problemLocked:
 		info.Setup, info.Detail = driver.SetupUnlock, unlockDetail
 	default:
 		return wdaImageSetup(info, j.err)

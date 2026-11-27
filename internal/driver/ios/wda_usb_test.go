@@ -146,7 +146,7 @@ func TestInspectUSBWDABackgroundMountDoesNotOverlap(t *testing.T) {
 			close(started)
 		}
 		<-release
-		return errPhoneLocked
+		return errors.New("ReceiveBytes: device responded with error: DeviceLocked")
 	}
 	info := driver.Info{OSVersion: "16.5.1", State: driver.StateOnline}
 	got := p.inspectUSBWDA(t.Context(), goios.DeviceEntry{}, info, pathLockdownWDA)
@@ -175,6 +175,13 @@ func TestInspectUSBWDABackgroundMountDoesNotOverlap(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	t.Fatalf("locked phone = %+v; want unlock", got)
+}
+
+func TestWDAImageSetupLocked(t *testing.T) {
+	info := wdaImageSetup(driver.Info{}, errors.New("ReceiveBytes: device responded with error: DeviceLocked"))
+	if info.Setup != driver.SetupUnlock || info.Detail != unlockDetail {
+		t.Fatalf("locked iPhone = %+v", info)
+	}
 }
 
 func TestStartEarly17RequiresRunningWDA(t *testing.T) {

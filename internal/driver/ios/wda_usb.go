@@ -68,7 +68,11 @@ func (p *Provider) inspectUSBWDA(ctx context.Context, e goios.DeviceEntry, info 
 
 func wdaImageSetup(info driver.Info, err error) driver.Info {
 	info.State, info.Setup = driver.StateNeedsSetup, driver.SetupDiskImage
-	if errors.Is(err, errNoDiskImage) {
+	switch {
+	case classifyMountError(err) == problemLocked:
+		info.Setup, info.Detail = driver.SetupUnlock, unlockDetail
+		return info
+	case errors.Is(err, errNoDiskImage):
 		info.Setup = driver.SetupNoDiskImage
 	}
 	info.Detail = err.Error()
