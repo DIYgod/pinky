@@ -133,14 +133,21 @@ to the explicitly selected device ID; set PINKY_HDC to an installed
 official HDC tool and PINKY_FFMPEG to the local encoder. Do not replace
 the existing application or share its configuration while testing.
 
-On November 27 neither connected Mac listed a Huawei USB device, and
-HDC reported an empty target list. The November 9 hardware results
-above are historical, not verification of the port. After the owner
-connects and authorizes the phone, first repeat discovery and the
-Calculator/Home device-tagged tests under scripts/devlock.sh. For any
-separate owner-observed third-party app compatibility check, use only
-the owner's explicitly chosen non-sensitive screen and manual operation
-within that app's terms. No messages, account changes, purchases,
-automated interaction with personal conversations, or captured personal
-data should be recorded in test evidence. Native text entry remains
-unsupported; no claim of third-party app compatibility is made.
+## Huawei nova 14 Pro acceptance, November 27, 2026
+
+CoBeing Companion used Pinky's local stdio MCP gateway on macOS to open
+Soul (`com.soul.soulapp`) on a Huawei nova 14 Pro (MIA-AL00) over USB/HDC.
+The read-only session verified the foreground bundle. The send test used
+a separately authorized write-capable session scoped to Soul. Pinky had
+previously rejected the same operation while the client had read-only access.
+
+In the selected conversation, UITest reported focused buttons while the
+ArkUI focus tree identified a native RichEditor. With the driver at
+`9e63c101`, Companion appended one Chinese test message using
+`phone_type` with `append: true` and `submit: false`. When Soul displayed
+the conversation list during verification, the client stopped before Send.
+After reopening the conversation through Pinky, Companion matched the title
+and the retained draft, tapped Send once, then observed the exact text in
+the chat history and the empty composer. The owner did not type, paste or
+tap on the phone. This run verifies local USB operation and the sender's
+chat history; remote transport and recipient-side delivery were not tested.
