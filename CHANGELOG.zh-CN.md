@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1127.2 (2026-11-27)
 
 - Mac 连着 iPhone 自己的「个人热点」、设备服务连不上这台 iPhone 时，Pinky 现在会自己通过热点连上它；只有 iPhone 在热点上也没有应答，才会显示为「个人热点上找不到」。感谢 @SamuelZ12 反馈。
 
