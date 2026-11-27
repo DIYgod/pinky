@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1128.1 (2026-11-28)
 
 - iOS 27 的 iPhone 辅助功能服务卡住、Pinky 读不了屏幕时，Pinky 现在会直接说明：智能体会被告知请你重启 iPhone，这是目前唯一已知的办法（重启 Pinky 或重新连接 iPhone 都没用），iPhone 的「体检」也新增了「读取屏幕」一项。感谢 @checkmatee1 反馈。
 - Pinky 读不到 iPhone 的界面、也认不出前台是哪个 App 时，不再把它当成主屏幕，也就不会再给被屏蔽的 App 截图、识别文字或录屏。

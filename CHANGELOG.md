@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1128.1 (2026-11-28)
 
 - When the accessibility service of an iPhone on iOS 27 gets stuck and Pinky can no longer read its screen, Pinky now says so: agents are told to ask you to restart the iPhone, the only known fix (restarting Pinky or reconnecting the iPhone doesn't help), and the iPhone's Checkup has a new "Reading the screen" item. Thanks @checkmatee1 for reporting it.
 - When Pinky can't read an iPhone's screen and can't tell which app is in front, it no longer takes the screen for the home screen, so it no longer takes screenshots of, reads or records an app you blocked then.
