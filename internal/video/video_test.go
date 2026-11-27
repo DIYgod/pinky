@@ -164,6 +164,39 @@ func TestDecodeTestStream(t *testing.T) {
 	}
 }
 
+func TestLowLatencyFrameDoesNotWaitForNextCapture(t *testing.T) {
+	needFFmpeg(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	captures := 0
+	st, err := LowLatencyFrameStream(ctx, 64, 128, 2, "ffmpeg", func() image.Image {
+		captures++
+		if captures > 1 {
+			// A slow next screenshot must not hold the previous one back.
+			<-ctx.Done()
+			return nil
+		}
+		return image.NewRGBA(image.Rect(0, 0, 64, 128))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { cancel(); st.Close() }()
+	for {
+		select {
+		case pkt, ok := <-st.Packets():
+			if !ok {
+				t.Fatalf("stream ended: %v", st.Err())
+			}
+			if !pkt.Config && pkt.KeyFrame && len(pkt.Data) > 0 {
+				return
+			}
+		case <-ctx.Done():
+			t.Fatal("first picture waited for the next capture")
+		}
+	}
+}
+
 func TestFrameStream(t *testing.T) {
 	needFFmpeg(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

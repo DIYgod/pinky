@@ -459,6 +459,7 @@ system:
   ids:
     - com.android.systemui
     - com.android.launcher
+    - com.ohos.sceneboard
     - com.android.launcher2
     - com.android.launcher3
     - com.google.android.apps.nexuslauncher

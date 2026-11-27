@@ -90,7 +90,6 @@ func (a *app) recognize(d gateway.DeviceView, run *checkupRun) {
 func (a *app) addAndroid(c *mg.Context) {
 	s := &a.add
 	st := &a.droid
-	heading(c, locales.AddAndroidTitle(), locales.AddAndroidDetail())
 	d := a.androidBeingAdded()
 	online := d != nil && d.Info.State == driver.StateOnline
 	var run *checkupRun
@@ -98,6 +97,21 @@ func (a *app) addAndroid(c *mg.Context) {
 		run = a.keepChecked(*d)
 		a.recognize(*d, run)
 	}
+	// Native HarmonyOS exposes HDC, so adb can never finish these steps.
+	// Prefer a newly plugged-in HDC phone to an old Android setup entry,
+	// but keep following a new Android phone when both platforms exist.
+	if native := a.harmonyBeingAdded(); native != nil &&
+		(d == nil || s.known[d.Info.ID]) {
+		heading(c, locales.HarmonyGuideTitle(), locales.HarmonyGuideDetail())
+		s.focus = native.Info.ID
+		if st.brand == "" || st.brand == "other" {
+			st.brand = "huawei"
+		}
+		a.brandPicker(c, nil)
+		a.addHarmony(c, *native)
+		return
+	}
+	heading(c, locales.AddAndroidTitle(), locales.AddAndroidDetail())
 	a.brandPicker(c, d)
 	// adb that does not work keeps any phone from showing up: say so first.
 	if h := a.androidHost(c); h.Missing != "" {
