@@ -120,7 +120,9 @@ func (a *API) LoseOnOwnHotspot(deviceID string) {
 	if d := a.device(deviceID); d != nil {
 		d.info.Connection = "wifi"
 		setStep(&d.info, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupOwnHotspot,
-			Detail: "This Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) does not reach the iPhone over the network."})
+			Detail: "This Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) does not reach the iPhone over the network, " +
+				"and the iPhone does not answer Pinky over the hotspot either. " +
+				"A cable brings it back, or the Mac and the iPhone on the same other Wi-Fi network. Restarting the service does not help."})
 	}
 	a.mu.Unlock()
 	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
