@@ -13114,7 +13114,7 @@
   "@harmonyHDCMissing": {
     "description": "Setup instructions when macOS sees an HDC USB interface but hdc is not installed."
   },
-  "harmonyReady": "Screen reading, taps, swipes, navigation and app launch are available. Automatic text entry is not supported yet; enter text on the phone.",
+  "harmonyReady": "Screen reading, taps, swipes, navigation and app launch are available. Pinky can type into a focused native rich-text editor in append mode. Use the app’s Send button to submit.",
   "@harmonyReady": {
     "description": "Native HarmonyOS connection/control capability in Add phone and the device checkup."
   },

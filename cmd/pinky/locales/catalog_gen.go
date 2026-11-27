@@ -35853,14 +35853,14 @@ func (msgs Messages) HarmonyHDCMissing() string {
 	return Catalog.Format(msgs.locale, "harmonyHDCMissing", nil)
 }
 
-// HarmonyReady says "Screen reading, taps, swipes, navigation and app launch are available. Automatic text entry is not supported yet; ent…"
+// HarmonyReady says "Screen reading, taps, swipes, navigation and app launch are available. Pinky can type into a focused native rich-text…"
 // in the language the app shows.
 //
 // Native HarmonyOS connection/control capability in Add phone and the
 // device checkup.
 func HarmonyReady() string { return In(i18n.Locale()).HarmonyReady() }
 
-// HarmonyReady says "Screen reading, taps, swipes, navigation and app launch are available. Automatic text entry is not supported yet; ent…"
+// HarmonyReady says "Screen reading, taps, swipes, navigation and app launch are available. Pinky can type into a focused native rich-text…"
 // in the language of msgs.
 //
 // Native HarmonyOS connection/control capability in Add phone and the

@@ -76,13 +76,6 @@ func (d *Device) Key(ctx context.Context, key driver.Key) error {
 	return d.input(ctx, "keyEvent", code)
 }
 
-// UITest does not reliably expose input/password metadata on every OS.
-// Keep text injection unavailable until that can be verified, rather than
-// treating an unknown input as a non-password field.
-func (*Device) Type(context.Context, string, driver.TypeOptions) error {
-	return fmt.Errorf("harmony: typing is not supported yet; enter text on the phone: %w", driver.ErrUnsupported)
-}
-
 // Touch coalesces the desktop mirror's raw gesture into one UITest action.
 func (d *Device) Touch(ctx context.Context, action driver.TouchAction, p screen.Point) error {
 	d.touchMu.Lock()

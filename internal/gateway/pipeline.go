@@ -2267,7 +2267,7 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 				return ctx.Err()
 			}
 		}
-		return dev.Type(ctx, a.Text, driver.TypeOptions{Append: a.Append, Submit: a.Submit})
+		return dev.Type(ctx, a.Text, driver.TypeOptions{ForegroundID: p.input.App.ID, Append: a.Append, Submit: a.Submit})
 	case "swipe":
 		return dev.Swipe(ctx, p.from, p.to, p.dur)
 	case "pinch":

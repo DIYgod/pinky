@@ -2184,7 +2184,7 @@
   "harmonyHandshakeNote": "HDC は接続の確立中に一時的に未認証と表示する場合があります。スマホがすでにこのパソコンを信頼していれば、新しい認証の確認画面は表示されません。接続状態に応じてこのページは自動更新されます。",
   "harmonyGuideTitle": "HarmonyOS スマホを接続",
   "harmonyHDCMissing": "このネイティブ HarmonyOS スマホには HarmonyOS SDK の hdc ツールが必要です。PINKY_HDC に実行ファイルを指定して Pinky を再起動してください。Android の ADB や Pinky Companion は利用できません。",
-  "harmonyReady": "画面の読み取り、タップ、スワイプ、ナビゲーション、アプリの起動に対応しています。自動文字入力は未対応のため、スマホで入力してください。",
+  "harmonyReady": "画面の読み取り、タップ、スワイプ、ナビゲーション、アプリの起動に対応しています。フォーカス中のネイティブなリッチテキストエディタには文字を追加入力できます。送信にはアプリの送信ボタンを使用してください。",
   "harmonyControlTitle": "ネイティブ画面操作",
   "harmonyHDCTitle": "パソコンの HDC ツール",
   "harmonyMirrorReady": "スクリーンショットと、毎秒最大 2 回更新する連続スクリーンショットのプレビューを利用できます。",

@@ -54,8 +54,12 @@ the host restores the native coordinate space before encoding. Full-resolution
 agent screenshots and OCR are unchanged. The original display dimensions
 are checked on every scaled capture, so rotation restarts the stream.
 
-Automatic text entry is unsupported until UITest password/input metadata
-can be verified reliably; the person must enter text on the phone.
+Text entry supports appending a single line in a focused ArkUI RichEditor.
+The driver checks the gateway-approved bundle, the foreground window, and
+the native focused leaf before calling UITest. Ambiguous focus and other
+control types return unsupported. Use phone_type with append=true and
+submit=false, verify the draft, then tap the app's Send button. UITest
+may use the phone clipboard for non-ASCII text.
 Recents, background displays, file transfer and physical-input detection
 are also absent. Rotation restarts a preview with its new dimensions.
 

@@ -350,8 +350,9 @@ type TapOptions struct {
 
 // TypeOptions tune Type.
 type TypeOptions struct {
-	Append bool // keep the field's current text
-	Submit bool // press Enter afterwards
+	ForegroundID string // app the gateway checked before typing, when available
+	Append       bool   // keep the field's current text
+	Submit       bool   // press Enter afterwards
 }
 
 // App is an installed app.
