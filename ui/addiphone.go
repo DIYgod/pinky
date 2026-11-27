@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -142,7 +143,8 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 	heading(c, locales.AddPhoneIPhoneTitle(), locales.AddPhoneIPhoneDetail())
 	a.foundBox(c)
 	// Which steps need the cable, while Pinky also uses iPhones over Wi-Fi.
-	wifi := a.settings.IOSWiFi
+	usbOnly := d != nil && usbOnlyIPhone(d.Info.OSVersion)
+	wifi := a.settings.IOSWiFi && !usbOnly
 	onWiFi := d != nil && d.Info.Connection == "wifi"
 
 	if d != nil && d.Info.Setup == driver.SetupUpdate {
@@ -243,7 +245,11 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			}
 		})
 		row(iphonePrepare, locales.AddPhoneIPhoneStepPrepare(), func() {
-			guideText(c, locales.AddPhoneIPhoneStepPrepareDetail())
+			if usbOnly {
+				guideText(c, locales.LegacyWDAUSB())
+			} else {
+				guideText(c, locales.AddPhoneIPhoneStepPrepareDetail())
+			}
 			switch d.Info.Setup {
 			case driver.SetupPreparing:
 				guideWaiting(c, locales.AddPhoneIPhoneStepPreparing())
@@ -281,7 +287,22 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 						a.chooseConnection()
 					}
 				})
+			case driver.SetupWDAUSB, driver.SetupWDAExternal:
+				title, text, _ := setupWords(*d, d.Info.Setup, a.canInstallHelper())
+				guideProblem(c, title, text)
+				if d.Info.Setup == driver.SetupWDAExternal {
+					mg.Row(c).Children(func() {
+						if linkButton(c, locales.CheckHelperHow()).Clicked() {
+							openURL(c, legacyWDADocs, func(error) {})
+						}
+					})
+				}
 			case driver.SetupNoDiskImage:
+				if ios16(d.Info.OSVersion) {
+					guideProblem(c, locales.AddPhoneIPhoneNoImageTitle(), locales.AddPhoneIPhoneNoImageLegacy())
+					a.mirrorOffer(c, d.Info.OSVersion)
+					break
+				}
 				// Apple's image comes with Xcode; Pinky does not ship it.
 				if guideOS == "darwin" {
 					guideProblem(c, locales.AddPhoneIPhoneNoImageTitle(), locales.AddPhoneIPhoneNoImageMac())
@@ -296,7 +317,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				}
 				// The person chose to offer a third-party copy too, after
 				// the official ways and only on a click.
-				a.mirrorOffer(c)
+				a.mirrorOffer(c, d.Info.OSVersion)
 			case driver.SetupDiskImageRefused:
 				// Apple will not sign the image on this computer: trying
 				// it again cannot help, a newer one can.
@@ -313,7 +334,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				// Apple refuses Xcode's image or one in Pinky's folder, only
 				// on a click.
 				if refusedOffersMirror(d.Info.DiskImage) {
-					a.mirrorOffer(c)
+					a.mirrorOffer(c, d.Info.OSVersion)
 				}
 				guideNote(c, note)
 			case driver.SetupInstallHelper:
@@ -379,6 +400,16 @@ type diskImageDownloader interface {
 	DownloadDiskImage(ctx context.Context, progress func(done, total int64)) error
 }
 
+type legacyDiskImageDownloader interface {
+	LegacyDiskImageMirror(version string) (driver.DiskImageMirror, bool)
+	DownloadLegacyDiskImage(ctx context.Context, version string, progress func(done, total int64)) error
+}
+
+func parseIOSMajor(version string) int {
+	major, _ := strconv.Atoi(strings.SplitN(version, ".", 2)[0])
+	return major
+}
+
 // diskDownload is the download the person started from the steps.
 type diskDownload struct {
 	seq         int64
@@ -395,12 +426,19 @@ var dlSeq atomic.Int64
 // mirrorOffer offers the developer disk image from the third-party mirror:
 // where it comes from and that it is not Apple, a Download button, the
 // progress, and what to do when it fails.
-func (a *app) mirrorOffer(c *mg.Context) {
+func (a *app) mirrorOffer(c *mg.Context, version string) {
 	dl, ok := a.api.(diskImageDownloader)
 	if !ok {
 		return
 	}
 	m, ok := dl.DiskImageMirror()
+	legacy, legacyOK := a.api.(legacyDiskImageDownloader)
+	if parseIOSMajor(version) == 16 {
+		if !legacyOK {
+			return
+		}
+		m, ok = legacy.LegacyDiskImageMirror(version)
+	}
 	if !ok {
 		return
 	}
@@ -430,7 +468,7 @@ func (a *app) mirrorOffer(c *mg.Context) {
 			}
 			mg.Row(c).Children(func() {
 				if button(c, label, btnOpt{}).Clicked() {
-					a.downloadDiskImage(dl)
+					a.downloadDiskImage(dl, legacy, version)
 				}
 			})
 		}
@@ -439,13 +477,13 @@ func (a *app) mirrorOffer(c *mg.Context) {
 
 // downloadDiskImage downloads the image in the background, reporting its
 // progress a few times a second.
-func (a *app) downloadDiskImage(dl diskImageDownloader) {
+func (a *app) downloadDiskImage(dl diskImageDownloader, legacy legacyDiskImageDownloader, version string) {
 	st := &a.add.dl
 	seq := dlSeq.Add(1)
 	*st = diskDownload{seq: seq, running: true}
 	go func() {
 		var last time.Time
-		err := dl.DownloadDiskImage(a.ctx, func(done, total int64) {
+		progress := func(done, total int64) {
 			if now := time.Now(); now.Sub(last) >= 200*time.Millisecond || done == total {
 				last = now
 				a.post(func() {
@@ -454,7 +492,13 @@ func (a *app) downloadDiskImage(dl diskImageDownloader) {
 					}
 				})
 			}
-		})
+		}
+		var err error
+		if parseIOSMajor(version) == 16 {
+			err = legacy.DownloadLegacyDiskImage(a.ctx, version, progress)
+		} else {
+			err = dl.DownloadDiskImage(a.ctx, progress)
+		}
 		a.post(func() {
 			if st.seq == seq {
 				st.running, st.finished, st.err = false, err == nil, err

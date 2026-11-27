@@ -133,6 +133,14 @@ var fakeMirror = driver.DiskImageMirror{Name: "github.com/doronz88/DeveloperDisk
 // (gateway.DiskImageMirror).
 func (a *API) DiskImageMirror() (driver.DiskImageMirror, bool) { return fakeMirror, true }
 
+func (a *API) LegacyDiskImageMirror(version string) (driver.DiskImageMirror, bool) {
+	return driver.DiskImageMirror{Name: fakeMirror.Name, Image: "iOS 16 developer disk image", Size: 8_000_000}, true
+}
+
+func (a *API) DownloadLegacyDiskImage(ctx context.Context, version string, progress func(done, total int64)) error {
+	return a.DownloadDiskImage(ctx, progress)
+}
+
 // DownloadDiskImage pretends to download the developer disk image in a
 // couple of seconds at Speed, then moves iPhones that waited for an image,
 // or whose image Apple refused, on to being prepared; it fails halfway

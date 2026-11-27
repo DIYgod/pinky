@@ -123,6 +123,8 @@ func connectionReason(w driver.Connection, d gateway.DeviceView) string {
 		return locales.ConnectionIOSTooOld(d.Info.OSVersion)
 	case "not_installed":
 		return locales.ConnectionNotInstalled()
+	case driver.SetupWDAUSB:
+		return locales.LegacyWDAUSB()
 	case "offline":
 		return locales.ConnectionNoAnswer()
 	}

@@ -300,6 +300,32 @@ func (p *onlyProvider) Open(ctx context.Context, id string) (driver.Device, erro
 	return p.Provider.Open(ctx, id)
 }
 
+func (p *onlyProvider) CanInstallHelper() bool {
+	h, ok := p.Provider.(driver.HelperInstaller)
+	return ok && h.CanInstallHelper()
+}
+
+func (p *onlyProvider) InstallHelper(ctx context.Context, id, team string, progress func(driver.HelperStep)) error {
+	h, ok := p.Provider.(driver.HelperInstaller)
+	if !ok {
+		return driver.ErrUnsupported
+	}
+	if id == "" {
+		phones, err := p.List(ctx)
+		if err != nil {
+			return err
+		}
+		if len(phones) != 1 {
+			return &driver.HelperInstallError{Fix: driver.HelperFixPhone, Err: errors.New("connect one allowed iPhone or select it in Pinky")}
+		}
+		id = phones[0].ID
+	}
+	if !p.allowed(id) {
+		return driver.ErrNotFound
+	}
+	return h.InstallHelper(ctx, id, team, progress)
+}
+
 // onlyPairer is an onlyProvider whose provider pairs phones over Wi-Fi: it
 // keeps pairing available, and a phone the person pairs joins the phones
 // Pinky may use.

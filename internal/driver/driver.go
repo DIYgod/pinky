@@ -130,6 +130,8 @@ const (
 	SetupNoDiskImage   = "no_disk_image"  // the computer has no developer disk image; Detail says where to get one
 	SetupDiskImage     = "disk_image"     // the developer disk image did not mount; Detail says why
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
+	SetupWDAUSB        = "wda_usb"        // connect a pre-17.4 iPhone over USB
+	SetupWDAExternal   = "wda_external"   // prepare or start WebDriverAgent outside Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
 	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
 	// SetupSimulatorHelper: an iOS Simulator that Pinky cannot drive yet,

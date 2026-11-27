@@ -72,6 +72,12 @@ type Provider struct {
 	helpers  map[string]helperRead
 	helperFn func(ctx context.Context, e goios.DeviceEntry, r wdaRunner) (time.Time, error)
 
+	// For tests: probes for USB-only WebDriverAgent and its lockdown service.
+	usbWDAStatus        func(context.Context, goios.DeviceEntry) bool
+	lockdownXCTestReady func(context.Context, goios.DeviceEntry) error
+	legacyImageFind     func(string) string
+	legacyImagePrepare  func(context.Context, goios.DeviceEntry, string, string) error
+
 	// For tests: how a phone is inspected, and the clock.
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
@@ -427,7 +433,7 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 	p.mu.Unlock()
 	if s == nil {
 		var err error
-		if s, err = startWDAFor(ctx, info); err != nil {
+		if s, err = startWDAFor(ctx, info, p.DiskImageDir); err != nil {
 			return nil, err
 		}
 		if s.run != nil {
@@ -555,9 +561,18 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 		}
 		return info
 	}
+	if kind.usbWDAOnly() && info.Connection != "usb" {
+		return wdaUSBSetup(info)
+	}
 	dev, err := bounded(ctx, lockdownTimeout, func() (bool, error) { return imagemounter.IsDevModeEnabled(e) })
 	if err == nil && !dev {
 		return p.devModeOff(e, info)
+	}
+	if kind.usbWDAOnly() {
+		if p.way(info.ID) == backendCoreDevice {
+			return coreDeviceTooOldState(info)
+		}
+		return p.inspectUSBWDA(ctx, e, info, kind)
 	}
 	switch p.way(info.ID) {
 	case backendWDA:
@@ -621,6 +636,19 @@ func (p *Provider) servicesStill(ctx context.Context, e goios.DeviceEntry, k kno
 	check, setup := "display", p.setup
 	if k.info.Backend == backendWDA {
 		check, setup = "developer", p.legacySetup
+		kind, _ := pathFor(parseVersion(k.info.OSVersion))
+		if kind.usbWDAOnly() {
+			if _, ready := p.usbWDAAvailable(ctx, e, kind); !ready {
+				return false
+			}
+			p.mu.Lock()
+			if now, still := p.known[k.info.ID]; still && now.key == k.key {
+				now.at = p.clock()
+				p.known[k.info.ID] = now
+			}
+			p.mu.Unlock()
+			return true
+		}
 	}
 	ok, err := setup(ctx, e)
 	id := e.Properties.SerialNumber
@@ -800,6 +828,13 @@ func (p *Provider) Connections(ctx context.Context, id string) driver.Connection
 	switch {
 	case kind == pathUnsupported:
 		wda.Reason, wda.Detail = "os_version", why
+	case kind.usbWDAOnly():
+		if e.Properties.ConnectionType != "USB" {
+			auto.Available, auto.Reason, auto.Detail = false, driver.SetupWDAUSB, wdaUSBDetail
+			wda.Reason, wda.Detail = auto.Reason, auto.Detail
+		} else {
+			wda.Available = true
+		}
 	default:
 		if rid, err := p.runner(e); err != nil {
 			offline(&wda, err)

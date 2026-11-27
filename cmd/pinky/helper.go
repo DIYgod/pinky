@@ -56,6 +56,7 @@ func runHelper(args []string) error {
 	defer cancel()
 	err = ios.InstallHelper(ctx, ios.HelperInstall{
 		Dir:          filepath.Join(dirs.Data, "WebDriverAgent"),
+		DiskImageDir: filepath.Join(dirs.Data, "DeveloperDiskImages"),
 		Phone:        fs.Arg(0),
 		Team:         *team,
 		BundleID:     *bundleID,

@@ -204,6 +204,18 @@ func infoStrings(name string) ([]byte, error) {
 // whoever installs it meanwhile. A device build must be signed again
 // afterwards.
 func brandRunner(ctx context.Context, x xcode, app string) (bool, error) {
+	return brandRunnerMode(ctx, x, app, false)
+}
+
+// The iOS 16 runner uses the legacy PNG icon files. On an Xcode install
+// without any Simulator runtime, actool writes those files and the icon
+// plist keys but exits with a Simulator error before making Assets.car.
+// Accept that partial result only for this runner, after checking both.
+func brandLegacyRunner(ctx context.Context, x xcode, app string) (bool, error) {
+	return brandRunnerMode(ctx, x, app, true)
+}
+
+func brandRunnerMode(ctx context.Context, x xcode, app string, legacy bool) (bool, error) {
 	info, format, err := readInfo(app)
 	if err != nil {
 		return false, err
@@ -231,7 +243,12 @@ func brandRunner(ctx context.Context, x xcode, app string) (bool, error) {
 	cmd := exec.CommandContext(ctx, x.tool("actool"), actoolArgs(info, cat, out, partialPath)...)
 	cmd.Env = x.env()
 	if b, err := cmd.CombinedOutput(); err != nil {
-		return false, fmt.Errorf("compiling the icon of Pinky on the iPhone with actool: %v: %s", err, strings.TrimSpace(string(b)))
+		if !legacy || !strings.Contains(string(b), "No available simulator runtimes") {
+			return false, fmt.Errorf("compiling the icon of Pinky on the iPhone with actool: %v: %s", err, strings.TrimSpace(string(b)))
+		}
+		if _, pngErr := os.Stat(filepath.Join(out, "AppIcon60x60@2x.png")); pngErr != nil {
+			return false, fmt.Errorf("actool made no legacy iPhone icon: %w", pngErr)
+		}
 	}
 	pb, err := os.ReadFile(partialPath)
 	if err != nil {

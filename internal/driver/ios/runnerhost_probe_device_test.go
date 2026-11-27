@@ -41,7 +41,7 @@ func TestRunnerHostProbe(t *testing.T) {
 	if bind != "127.0.0.1" {
 		c = newWDATunnel(l.tunnel)
 	}
-	run := startWDA(l.entry, base, wdaRunner{BundleID: host}, bind)
+	run := startWDA(l.entry, base, wdaRunner{BundleID: host}, bind, false)
 	defer run.stop()
 	start := time.Now()
 	for time.Since(start) < wdaStartTimeout {

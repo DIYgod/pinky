@@ -430,6 +430,10 @@ func (p *Provider) withHelper(ctx context.Context, e goios.DeviceEntry, info dri
 		return info
 	case exp.IsZero():
 		p.logger().Info("iphone: no provisioning profile on the phone grants Pinky on the iPhone", "device", info.ID, "helper", r.BundleID)
+		kind, _ := pathFor(parseVersion(info.OSVersion))
+		if kind == pathLockdownWDA {
+			return wdaExternalSetup(info, kind)
+		}
 		return info
 	}
 	p.logger().Info("iphone: the provisioning profile of Pinky on the iPhone", "device", info.ID, "helper", r.BundleID, "expires", exp.Local().Format(time.RFC3339))

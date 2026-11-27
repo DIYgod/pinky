@@ -195,3 +195,47 @@ func TestBrandRunner(t *testing.T) {
 		t.Errorf("branding again: changed %v, %v", changed, err)
 	}
 }
+
+func TestBrandRunnerDevice(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("actool runs on macOS")
+	}
+	x, err := findXcode()
+	if err != nil {
+		t.Skip("no Xcode:", err)
+	}
+	app := filepath.Join(t.TempDir(), "WebDriverAgentRunner-Runner.app")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	b, err := plist.Marshal(runnerInfo("iPhoneOS"), plist.XMLFormat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(app, "Info.plist"), b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := brandLegacyRunner(t.Context(), x, app); err != nil {
+		if os.Getenv("CI") != "" {
+			t.Skip("actool cannot run on this runner:", err)
+		}
+		t.Fatal(err)
+	}
+	for _, name := range []string{"AppIcon60x60@2x.png", "zh-Hans.lproj/InfoPlist.strings"} {
+		if _, err := os.Stat(filepath.Join(app, name)); err != nil {
+			t.Error(err)
+		}
+	}
+	info, _, err := readInfo(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !branded(info) || info["CFBundleDisplayName"] != "Pinky Helper" {
+		t.Errorf("iOS 16 runner was not branded: %v", info)
+	}
+	icons, _ := info["CFBundleIcons"].(map[string]any)
+	primary, _ := icons["CFBundlePrimaryIcon"].(map[string]any)
+	if primary["CFBundleIconName"] != "AppIcon" {
+		t.Errorf("iOS 16 runner icon = %v", info["CFBundleIcons"])
+	}
+}

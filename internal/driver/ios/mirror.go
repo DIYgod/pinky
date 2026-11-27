@@ -102,6 +102,11 @@ func (p *Provider) retryNow() {
 			delete(p.prep.jobs, id)
 		}
 	}
+	for id, j := range p.prep.legacyJobs {
+		if !j.running && j.err != nil {
+			delete(p.prep.legacyJobs, id)
+		}
+	}
 	p.prep.mu.Unlock()
 	p.mu.Lock()
 	defer p.mu.Unlock()

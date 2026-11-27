@@ -193,6 +193,7 @@ type wdaRun struct {
 	app         wdaRunner
 	logger      *slog.Logger // what stop did; nil: nothing
 	ended       func()       // called once stop saw the runner gone; nil: none
+	lockdown    bool         // its process is listed and stopped through Instruments
 	stopOnce    sync.Once
 
 	mu  sync.Mutex
@@ -204,21 +205,27 @@ type wdaRun struct {
 // tunnel's entry from 17.4; base is the phone's usbmuxd entry. The run
 // lasts until stop, or until the test ends on the phone (the person closed
 // the runner, a reboot).
-func startWDA(entry, base goios.DeviceEntry, app wdaRunner, bind string) *wdaRun {
+func startWDA(entry, base goios.DeviceEntry, app wdaRunner, bind string, lockdown bool) *wdaRun {
 	bundleID := app.BundleID
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}, entry: entry, base: base, app: app}
+	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}, entry: entry, base: base, app: app, lockdown: lockdown}
 	go func() {
 		defer close(r.done)
 		dir, err := os.MkdirTemp("", "pinky-wda-")
 		if err == nil {
 			defer os.RemoveAll(dir)
 		}
+		env := wdaEnv(bind)
+		if lockdown {
+			// go-ios asks to inject Main Thread Checker, which some
+			// legacy disk images do not contain and WDA does not need.
+			env["DYLD_INSERT_LIBRARIES"] = ""
+		}
 		_, err = testmanagerd.RunTestWithConfig(ctx, testmanagerd.TestConfig{
 			BundleId:           bundleID,
 			TestRunnerBundleId: bundleID,
 			XctestConfigName:   wdaTestBundle,
-			Env:                wdaEnv(bind),
+			Env:                env,
 			Device:             entry,
 			Listener:           testmanagerd.NewTestListener(r.log, r.log, dir),
 		})
@@ -272,7 +279,7 @@ func (r *wdaRun) stop() {
 		if r.app.Path == "" {
 			return
 		}
-		if endHelper(r.entry, r.base, r.app.Path, r.logger) && r.ended != nil {
+		if endHelper(r.entry, r.base, r.app.Path, r.logger, r.lockdown) && r.ended != nil {
 			r.ended()
 		}
 	})
@@ -281,10 +288,16 @@ func (r *wdaRun) stop() {
 // endHelper makes sure the runner from the app at appPath is gone from
 // the phone, for up to wdaEndTimeout, logs what it did to logger, and
 // reports whether the runner is gone.
-func endHelper(entry, base goios.DeviceEntry, appPath string, logger *slog.Logger) bool {
+func endHelper(entry, base goios.DeviceEntry, appPath string, logger *slog.Logger, lockdown bool) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), wdaEndTimeout)
 	defer cancel()
-	killed, err := endRunner(ctx, entry, base, appPath)
+	var killed int
+	var err error
+	if lockdown {
+		killed, err = endLockdownRunner(ctx, base, appPath)
+	} else {
+		killed, err = endRunner(ctx, entry, base, appPath)
+	}
 	lg := logTo(logger)
 	switch {
 	case err != nil:
@@ -295,7 +308,7 @@ func endHelper(entry, base goios.DeviceEntry, appPath string, logger *slog.Logge
 	return err == nil
 }
 
-// runnerProcs lists and kills processes on a phone (appservice, iOS 17+).
+// runnerProcs lists and kills processes on a phone.
 type runnerProcs interface {
 	ListProcesses() ([]appservice.Process, error)
 	KillProcess(pid int) error
@@ -342,6 +355,10 @@ func endRunner(ctx context.Context, entry, base goios.DeviceEntry, appPath strin
 		}
 	}
 	defer pc.Close()
+	return killRunnerProcesses(ctx, pc, appPath)
+}
+
+func killRunnerProcesses(ctx context.Context, pc runnerProcs, appPath string) (int, error) {
 	killed := 0
 	for {
 		var list []appservice.Process

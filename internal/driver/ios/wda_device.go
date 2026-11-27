@@ -190,21 +190,36 @@ var errAutomation = errors.New("the iPhone asks on its screen for its passcode t
 // it and, when Pinky started it, the runner's test run and the tunnel the
 // run goes through.
 type wdaStart struct {
-	base goios.DeviceEntry
-	c    *wdaClient
-	run  *wdaRun
-	l    *link
+	base     goios.DeviceEntry
+	c        *wdaClient
+	run      *wdaRun
+	l        *link
+	imageDir string
 }
 
 // startWDAFor starts the helper's test on a phone, unless WebDriverAgent
 // already answers there (started by Xcode, or by an earlier Pinky).
-func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
+func startWDAFor(ctx context.Context, info driver.Info, imageDir ...string) (*wdaStart, error) {
 	base, err := findEntry(info.ID, info.Connection == "wifi")
 	if err != nil {
 		return nil, err
 	}
 	s := &wdaStart{base: base, c: newWDAUSB(base)}
+	if len(imageDir) > 0 {
+		s.imageDir = imageDir[0]
+	}
+	kind, _ := pathFor(parseVersion(info.OSVersion))
+	if kind.usbWDAOnly() && base.Properties.ConnectionType != "USB" {
+		info = wdaUSBSetup(info)
+		return nil, &driver.SetupError{Setup: info.Setup, Detail: info.Detail, Err: driver.ErrOffline}
+	}
 	if s.ready(ctx) {
+		return s, nil
+	}
+	if kind.usbWDAOnly() {
+		if err := s.startUSB(ctx, info, kind); err != nil {
+			return nil, err
+		}
 		return s, nil
 	}
 	app, err := findRunnerApp(base)
@@ -222,7 +237,7 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	if bind != "127.0.0.1" {
 		s.c = newWDATunnel(l.tunnel)
 	}
-	s.run, s.l = startWDA(l.entry, base, app, bind), l
+	s.run, s.l = startWDA(l.entry, base, app, bind, false), l
 	return s, nil
 }
 
@@ -1263,7 +1278,8 @@ func (d *WDADevice) Close() error {
 		if d.run != nil {
 			d.run.stop()
 		} else if d.leftover != "" {
-			if endHelper(d.entry, d.entry, d.leftover, d.log) && d.leftoverEnded != nil {
+			kind, _ := pathFor(parseVersion(d.info.OSVersion))
+			if endHelper(d.entry, d.entry, d.leftover, d.log, kind == pathLockdownWDA) && d.leftoverEnded != nil {
 				d.leftoverEnded()
 			}
 		}

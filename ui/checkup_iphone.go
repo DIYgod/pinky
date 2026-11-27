@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"time"
 
 	mg "github.com/egoist/mygo/ui"
@@ -21,15 +22,30 @@ import (
 const (
 	helperDocs      = "https://github.com/DIYgod/pinky/blob/main/docs/notes/ios.md#installing-pinky-for-iphone"
 	helperAgainDocs = "https://github.com/DIYgod/pinky/blob/main/docs/notes/ios.md#when-pinky-for-iphones-signature-runs-out"
+	legacyWDADocs   = "https://github.com/DIYgod/pinky/blob/main/docs/notes/ios.md#iphones-on-ios-16-to-173"
 )
 
 // helperLink is how to install an iPhone's helper: again, when Pinky knows
 // when its signature runs out.
 func helperLink(d gateway.DeviceView) string {
+	if usbOnlyIPhone(d.Info.OSVersion) {
+		return legacyWDADocs
+	}
 	if !d.Info.HelperExpires.IsZero() {
 		return helperAgainDocs
 	}
 	return helperDocs
+}
+
+func ios16(version string) bool {
+	major, _, _ := strings.Cut(version, ".")
+	return major == "16"
+}
+
+func usbOnlyIPhone(version string) bool {
+	major, rest, _ := strings.Cut(version, ".")
+	minor, _, _ := strings.Cut(rest, ".")
+	return major == "16" || major == "17" && (minor == "" || minor == "0" || minor == "1" || minor == "2" || minor == "3")
 }
 
 // iphoneCheckTitle names the items only iPhones have; "" for others.
@@ -192,6 +208,9 @@ func setupWords(d gateway.DeviceView, step string, here bool) (title, text, note
 	case driver.SetupPreparing:
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStepPreparing(), ""
 	case driver.SetupNoDiskImage:
+		if ios16(d.Info.OSVersion) {
+			return locales.AddPhoneIPhoneNoImageTitle(), locales.AddPhoneIPhoneNoImageLegacy(), ""
+		}
 		text := locales.AddPhoneIPhoneNoImageMac()
 		if guideOS != "darwin" {
 			text = locales.AddPhoneIPhoneNoImageCopy()
@@ -210,6 +229,10 @@ func setupWords(d gateway.DeviceView, step string, here bool) (title, text, note
 		return locales.AddPhoneIPhoneRefusedTitle(), refusedWords(*d.Info.DiskImage), locales.AddPhoneIPhoneRefusedRetry()
 	case driver.SetupUpdate:
 		return locales.AddPhoneIPhoneTooOldTitle(d.Info.Name), locales.AddPhoneIPhoneTooOld(d.Info.OSVersion), ""
+	case driver.SetupWDAUSB:
+		return locales.CheckHelperTitle(), locales.LegacyWDAUSB(), ""
+	case driver.SetupWDAExternal:
+		return locales.CheckHelperTitle(), locales.LegacyWDAExternal(), ""
 	case driver.SetupMediaInUse:
 		// iOS does not mirror the screen while an app uses the camera or
 		// microphone. The iOS provider no longer lists a phone so (it says
@@ -225,6 +248,9 @@ func setupWords(d gateway.DeviceView, step string, here bool) (title, text, note
 		// Its signature ran out (Info.HelperExpires), or it is missing.
 		if text, ranOut := helperWords(d, timeNow(), here); ranOut {
 			return locales.CheckHelperTitle(), text, ""
+		}
+		if ios16(d.Info.OSVersion) {
+			return locales.CheckHelperTitle(), locales.LegacyWDALockdown(), ""
 		}
 		return locales.CheckHelperTitle(), locales.CheckHelperMissing(), ""
 	}
@@ -638,6 +664,13 @@ func (a *app) iphoneCheckAction(c *mg.Context, d gateway.DeviceView, ck driver.C
 				a.page = pageAddPhone
 				a.add.reset(a)
 				a.add.step, a.add.focus = "iphone", d.Info.ID
+			}
+		})
+		return true
+	case driver.SetupWDAExternal:
+		mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
+			if button(c, locales.CheckHelperHow(), btnOpt{small: true}).Clicked() {
+				openURL(c, legacyWDADocs, func(error) {})
 			}
 		})
 		return true

@@ -101,7 +101,7 @@ func (p *Provider) InstallHelper(ctx context.Context, id, team string, progress 
 	log := p.logger().With("device", id)
 	log.Info("iphone: installing Pinky on the iPhone", "team", team)
 	out := &lineLog{log: log}
-	err := install(ctx, HelperInstall{Dir: p.HelperDir, Phone: id, Team: team, Out: out, Progress: progress})
+	err := install(ctx, HelperInstall{Dir: p.HelperDir, DiskImageDir: p.DiskImageDir, Phone: id, Team: team, Out: out, Progress: progress})
 	out.flush()
 	p.mu.Lock()
 	p.install.running = ""

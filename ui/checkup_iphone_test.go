@@ -127,7 +127,7 @@ func TestIPhoneSetupWords(t *testing.T) {
 	d := gateway.DeviceView{Info: driver.Info{Platform: driver.IOS, Name: "iPhone 8", OSVersion: "16.7"}}
 	for _, step := range []string{driver.SetupTrust, driver.SetupDeveloperMode, driver.SetupUnlock, driver.SetupPreparing,
 		driver.SetupNoDiskImage, driver.SetupDiskImage, driver.SetupDiskImageRefused, driver.SetupUpdate, driver.SetupInstallHelper,
-		driver.SetupOwnHotspot} {
+		driver.SetupOwnHotspot, driver.SetupWDAUSB, driver.SetupWDAExternal} {
 		for _, here := range []bool{false, true} {
 			if title, text, _ := setupWords(d, step, here); title == "" || text == "" {
 				t.Errorf("no words for %q (here %v)", step, here)
@@ -136,6 +136,9 @@ func TestIPhoneSetupWords(t *testing.T) {
 	}
 	if title, _, _ := setupWords(d, "something new", false); title != "" {
 		t.Error("an unknown step should fall back to the driver's words")
+	}
+	if _, text, _ := setupWords(d, driver.SetupNoDiskImage, true); text != locales.AddPhoneIPhoneNoImageLegacy() {
+		t.Errorf("iOS 16 image guidance = %q", text)
 	}
 }
 

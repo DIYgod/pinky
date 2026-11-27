@@ -2431,6 +2431,24 @@ func (msgs Messages) AddPhoneIPhoneNoImageMac() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageMac", nil)
 }
 
+// AddPhoneIPhoneNoImageLegacy says "Current Xcode does not include an iOS 16 developer disk image. In Add phone › iPhone, choose Download to get a matc…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's page when an iOS 16 phone needs a
+// developer disk image. The download offer follows on the Add phone page;
+// current Xcode has no iOS 16 DeviceSupport image.
+func AddPhoneIPhoneNoImageLegacy() string { return In(i18n.Locale()).AddPhoneIPhoneNoImageLegacy() }
+
+// AddPhoneIPhoneNoImageLegacy says "Current Xcode does not include an iOS 16 developer disk image. In Add phone › iPhone, choose Download to get a matc…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's page when an iOS 16 phone needs a
+// developer disk image. The download offer follows on the Add phone page;
+// current Xcode has no iOS 16 DeviceSupport image.
+func (msgs Messages) AddPhoneIPhoneNoImageLegacy() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageLegacy", nil)
+}
+
 // AddPhoneIPhoneNoImageTitle says "This computer has no developer disk image yet"
 // in the language the app shows.
 //
@@ -3091,7 +3109,7 @@ func (msgs Messages) AddPhoneIPhoneTitle() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneTitle", nil)
 }
 
-// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update."
+// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 16 or later. Update it in Settings › General › Software Update."
 // in the language the app shows.
 //
 // Add phone › iPhone: the text of the box shown when the iPhone's iOS is
@@ -3101,7 +3119,7 @@ func AddPhoneIPhoneTooOld(version string) string {
 	return In(i18n.Locale()).AddPhoneIPhoneTooOld(version)
 }
 
-// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update."
+// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 16 or later. Update it in Settings › General › Software Update."
 // in the language of msgs.
 //
 // Add phone › iPhone: the text of the box shown when the iPhone's iOS is
@@ -11083,7 +11101,7 @@ func (msgs Messages) ConnectionCoreDeviceDesc() string {
 	return Catalog.Format(msgs.locale, "connectionCoreDeviceDesc", nil)
 }
 
-// ConnectionIOSTooOld says "Pinky needs iOS 17.4 or later; this iPhone runs iOS {version}."
+// ConnectionIOSTooOld says "Pinky needs iOS 16 or later. This iPhone runs iOS {version}."
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: why no way works on
@@ -11092,7 +11110,7 @@ func ConnectionIOSTooOld(version string) string {
 	return In(i18n.Locale()).ConnectionIOSTooOld(version)
 }
 
-// ConnectionIOSTooOld says "Pinky needs iOS 17.4 or later; this iPhone runs iOS {version}."
+// ConnectionIOSTooOld says "Pinky needs iOS 16 or later. This iPhone runs iOS {version}."
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: why no way works on
@@ -11251,20 +11269,66 @@ func (msgs Messages) ConnectionWDA() string {
 	return Catalog.Format(msgs.locale, "connectionWDA", nil)
 }
 
-// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky on th…"
+// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16, use Install Pinky on the iPhone and …"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
 // iPhone gives and costs.
 func ConnectionWDADesc() string { return In(i18n.Locale()).ConnectionWDADesc() }
 
-// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs Pinky on th…"
+// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16, use Install Pinky on the iPhone and …"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
 // iPhone gives and costs.
 func (msgs Messages) ConnectionWDADesc() string {
 	return Catalog.Format(msgs.locale, "connectionWDADesc", nil)
+}
+
+// LegacyWDAExternal says "Set USE_IP=127.0.0.1 in Xcode's test scheme before starting the signed WebDriverAgentRunner test. Without it, anyone …"
+// in the language the app shows.
+//
+// Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name
+// of an Xcode test target.
+func LegacyWDAExternal() string { return In(i18n.Locale()).LegacyWDAExternal() }
+
+// LegacyWDAExternal says "Set USE_IP=127.0.0.1 in Xcode's test scheme before starting the signed WebDriverAgentRunner test. Without it, anyone …"
+// in the language of msgs.
+//
+// Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name
+// of an Xcode test target.
+func (msgs Messages) LegacyWDAExternal() string {
+	return Catalog.Format(msgs.locale, "legacyWDAExternal", nil)
+}
+
+// LegacyWDALockdown says "Install Pinky on the iPhone from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation."
+// in the language the app shows.
+//
+// Setup for an iPhone on iOS 16.
+func LegacyWDALockdown() string { return In(i18n.Locale()).LegacyWDALockdown() }
+
+// LegacyWDALockdown says "Install Pinky on the iPhone from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation."
+// in the language of msgs.
+//
+// Setup for an iPhone on iOS 16.
+func (msgs Messages) LegacyWDALockdown() string {
+	return Catalog.Format(msgs.locale, "legacyWDALockdown", nil)
+}
+
+// LegacyWDAUSB says "Connect this iPhone to the computer with a USB cable to use WebDriverAgent."
+// in the language the app shows.
+//
+// Setup and connection settings for a pre-iOS 17.4 iPhone that requires a
+// USB cable.
+func LegacyWDAUSB() string { return In(i18n.Locale()).LegacyWDAUSB() }
+
+// LegacyWDAUSB says "Connect this iPhone to the computer with a USB cable to use WebDriverAgent."
+// in the language of msgs.
+//
+// Setup and connection settings for a pre-iOS 17.4 iPhone that requires a
+// USB cable.
+func (msgs Messages) LegacyWDAUSB() string {
+	return Catalog.Format(msgs.locale, "legacyWDAUSB", nil)
 }
 
 // DayOtherYear says "{day, date, ::yMMMMd}"

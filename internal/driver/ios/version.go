@@ -44,17 +44,23 @@ func (v osVersion) String() string {
 //     WebDriverAgent helper when it is installed ("wda"), and otherwise
 //     through the accessibility inspector, with screenshots for the picture
 //     ("accessibility").
-//   - iOS 17.0 to 17.3: the tunnel needs remote pairing over the phone's USB
-//     network interface, which needs administrator rights on the computer.
-//   - iOS 16 and earlier: the developer services come from a developer disk
-//     image for that exact version, which current Xcode no longer includes.
+//   - iOS 17.0 to 17.3: Xcode starts WebDriverAgent. Pinky connects to it
+//     over USB without starting a RemotePairing tunnel of its own.
+//   - iOS 16: Pinky can also start WebDriverAgent over lockdown once a
+//     compatible developer disk image is mounted.
 type pathKind int
 
 const (
 	pathUnsupported pathKind = iota
 	pathCoreDevice
 	pathLegacy
+	pathExternalWDA
+	pathLockdownWDA
 )
+
+func (p pathKind) usbWDAOnly() bool {
+	return p == pathExternalWDA || p == pathLockdownWDA
+}
 
 // Backend names in driver.Info.
 const (
@@ -75,10 +81,12 @@ func pathFor(v osVersion) (pathKind, string) {
 	case v.atLeast(minLegacy.Major, minLegacy.Minor):
 		return pathLegacy, ""
 	case v.Major == 17:
-		return pathUnsupported, fmt.Sprintf("Pinky needs iOS 17.4 or later; this iPhone runs iOS %s. Update it in Settings > General > Software Update.", v)
+		return pathExternalWDA, ""
+	case v.Major == 16:
+		return pathLockdownWDA, ""
 	case v.Major == 0:
 		return pathUnsupported, "Pinky could not read this iPhone's iOS version."
 	default:
-		return pathUnsupported, fmt.Sprintf("Pinky needs iOS 17.4 or later; this iPhone runs iOS %s. Earlier versions need a developer disk image that current Xcode no longer includes.", v)
+		return pathUnsupported, fmt.Sprintf("Pinky needs iOS 16 or later; this iPhone runs iOS %s. Update it in Settings > General > Software Update.", v)
 	}
 }
