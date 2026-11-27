@@ -2830,6 +2830,18 @@
   "@checkNotFound": {
     "description": "A check of the model: HTTP 404."
   },
+  "checkReadingPass": "Pinky has not found the iPhone's accessibility service stuck.",
+  "@checkReadingPass": {
+    "description": "The checkup of an iPhone on iOS 27 or later, reading the screen: passed. Pinky reads the screen's text and elements through the iPhone's accessibility service; this item sends nothing to the phone and only says that no recent read found the service no longer answering."
+  },
+  "checkReadingStuck": "The iPhone's accessibility service has stopped answering, so Pinky can't read the screen, though screenshots and taps still work. Restarting Pinky or reconnecting the iPhone won't help: restart the iPhone, then check again.",
+  "@checkReadingStuck": {
+    "description": "The checkup of an iPhone on iOS 27 or later, reading the screen: failed. The iPhone's accessibility service (axauditd), which Pinky reads the screen's text and elements through, answered no read for minutes while the phone still sent pictures; only restarting the iPhone brings it back, and Pinky never restarts a phone itself. The driver's details (in English) follow."
+  },
+  "checkReadingTitle": "Reading the screen",
+  "@checkReadingTitle": {
+    "description": "The checkup of an iPhone on iOS 27 or later: the item for reading the screen's text and elements through the phone's accessibility service. checkScreenTitle is the item for screenshots and the live picture."
+  },
   "checkRejected": "The service refused the request.",
   "@checkRejected": {
     "description": "A check of the model: another error of the service; settingsAskCheckDetail follows with its words."

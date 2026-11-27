@@ -8113,6 +8113,68 @@ func (msgs Messages) CheckNotFound() string {
 	return Catalog.Format(msgs.locale, "checkNotFound", nil)
 }
 
+// CheckReadingPass says "Pinky has not found the iPhone's accessibility service stuck."
+// in the language the app shows.
+//
+// The checkup of an iPhone on iOS 27 or later, reading the screen: passed.
+// Pinky reads the screen's text and elements through the iPhone's
+// accessibility service; this item sends nothing to the phone and only says
+// that no recent read found the service no longer answering.
+func CheckReadingPass() string { return In(i18n.Locale()).CheckReadingPass() }
+
+// CheckReadingPass says "Pinky has not found the iPhone's accessibility service stuck."
+// in the language of msgs.
+//
+// The checkup of an iPhone on iOS 27 or later, reading the screen: passed.
+// Pinky reads the screen's text and elements through the iPhone's
+// accessibility service; this item sends nothing to the phone and only says
+// that no recent read found the service no longer answering.
+func (msgs Messages) CheckReadingPass() string {
+	return Catalog.Format(msgs.locale, "checkReadingPass", nil)
+}
+
+// CheckReadingStuck says "The iPhone's accessibility service has stopped answering, so Pinky can't read the screen, though screenshots and taps…"
+// in the language the app shows.
+//
+// The checkup of an iPhone on iOS 27 or later, reading the screen: failed.
+// The iPhone's accessibility service (axauditd), which Pinky reads the
+// screen's text and elements through, answered no read for minutes while
+// the phone still sent pictures; only restarting the iPhone brings it back,
+// and Pinky never restarts a phone itself. The driver's details (in
+// English) follow.
+func CheckReadingStuck() string { return In(i18n.Locale()).CheckReadingStuck() }
+
+// CheckReadingStuck says "The iPhone's accessibility service has stopped answering, so Pinky can't read the screen, though screenshots and taps…"
+// in the language of msgs.
+//
+// The checkup of an iPhone on iOS 27 or later, reading the screen: failed.
+// The iPhone's accessibility service (axauditd), which Pinky reads the
+// screen's text and elements through, answered no read for minutes while
+// the phone still sent pictures; only restarting the iPhone brings it back,
+// and Pinky never restarts a phone itself. The driver's details (in
+// English) follow.
+func (msgs Messages) CheckReadingStuck() string {
+	return Catalog.Format(msgs.locale, "checkReadingStuck", nil)
+}
+
+// CheckReadingTitle says "Reading the screen"
+// in the language the app shows.
+//
+// The checkup of an iPhone on iOS 27 or later: the item for reading the
+// screen's text and elements through the phone's accessibility service.
+// checkScreenTitle is the item for screenshots and the live picture.
+func CheckReadingTitle() string { return In(i18n.Locale()).CheckReadingTitle() }
+
+// CheckReadingTitle says "Reading the screen"
+// in the language of msgs.
+//
+// The checkup of an iPhone on iOS 27 or later: the item for reading the
+// screen's text and elements through the phone's accessibility service.
+// checkScreenTitle is the item for screenshots and the live picture.
+func (msgs Messages) CheckReadingTitle() string {
+	return Catalog.Format(msgs.locale, "checkReadingTitle", nil)
+}
+
 // CheckRejected says "The service refused the request."
 // in the language the app shows.
 //

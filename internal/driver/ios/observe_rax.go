@@ -235,7 +235,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 					decoded <- decodeShot(png)
 				}()
 				t = time.Now()
-				lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
+				lines, ocrErr = d.readText(png)
 				st.OCR = time.Since(t)
 				shot = <-decoded
 			}()
@@ -295,14 +295,15 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		Partial:     !st.Complete,
 		CapturedAt:  time.Now(),
 	}
-	s.App = d.screenApp(ctx, els, locked, func(format string, args ...any) {
+	var named bool
+	s.App, named = d.screenApp(ctx, els, locked, func(format string, args ...any) {
 		st.Trace = append(st.Trace, fmt.Sprintf(format, args...))
 	})
 	if web := hasWeb(els); web || st.Complete {
 		// A read that ended early (the app's own two or three elements
 		// before the phone stopped answering) does not tell that a page
 		// is gone.
-		d.noteReadWeb(s.App, web)
+		d.noteReadWeb(web)
 	}
 	if gate != nil {
 		use := gate.late(s)
@@ -341,6 +342,13 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		s.Locked = true
 		lines, shot = nil, nil // a dark screen
 		st.Trace = append(st.Trace, "the screen is off: read as locked")
+	}
+	// What a read that cannot tell the app may name (knownfront.go).
+	switch {
+	case s.Locked:
+		d.forgetFront(start)
+	case named:
+		d.knewFront(s.App, start)
 	}
 	if opt.OCR && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {

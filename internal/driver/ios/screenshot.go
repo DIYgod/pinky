@@ -29,7 +29,22 @@ const (
 
 // ScreenshotPNG returns a PNG of the main display at the size UIKit renders
 // (1125x2436 on an iPhone 13 mini), which is the driver's coordinate space.
+// It notes when the phone last gave one: a phone whose accessibility daemon
+// stopped answering still does (axstuck.go).
 func (d *Device) ScreenshotPNG(ctx context.Context) ([]byte, error) {
+	shot := d.screenshotPNG
+	if d.shotFn != nil {
+		shot = d.shotFn
+	}
+	b, err := shot(ctx)
+	if err == nil {
+		d.lastShot.Store(time.Now().UnixNano())
+	}
+	return b, err
+}
+
+// screenshotPNG is ScreenshotPNG from the phone's screenshot services.
+func (d *Device) screenshotPNG(ctx context.Context) ([]byte, error) {
 	d.mu.Lock()
 	uid := ""
 	if d.multiLocked() {

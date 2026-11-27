@@ -15,10 +15,10 @@ import (
 
 // An iPhone's checkup (driver.Checker): Developer Mode, the developer disk
 // image and whether this computer has one to mount again should it go
-// missing, the
-// WebDriverAgent helper where Pinky drives the phone through it, a
-// screenshot, and the input service. It only reads: no taps, no keys, no
-// settings, nothing mounted.
+// missing, the WebDriverAgent helper where Pinky drives the phone through
+// it, a screenshot, the input service, and on iOS 27 whether screen reads
+// found the accessibility service stuck (axstuck.go). It only reads: no
+// taps, no keys, no settings, nothing mounted.
 
 // imageDirSetter is an opened iPhone that is told where Pinky keeps
 // developer disk images (Provider.Open).
@@ -34,6 +34,7 @@ func (d *Device) Checkup(ctx context.Context) (driver.Checkup, error) {
 		func(context.Context) driver.Check { return checkDevMode(d.cur().base) },
 		func(ctx context.Context) driver.Check { return checkImage(ctx, d.link(), d.imageDir, true) },
 		d.checkScreen,
+		d.checkReading,
 		d.checkInput,
 	)
 }

@@ -11,6 +11,9 @@ import (
 // without a passcode always reads as unlocked, even on its lock screen.
 // iOS 27's developer disk image does not implement CoreDevice's getlockstate.
 func (d *Device) Locked(ctx context.Context) (bool, error) {
+	if d.lockedFn != nil {
+		return d.lockedFn(ctx)
+	}
 	type result struct {
 		v   bool
 		err error

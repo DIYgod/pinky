@@ -146,7 +146,7 @@ func TestAppCandidates(t *testing.T) {
 				t.Errorf("%s (locked %v): ok %v, want %v", c.name, locked, ok, c.ok)
 				continue
 			}
-			got := d.screenApp(ctx, c.els, locked, note)
+			got := appOnly(d.screenApp(ctx, c.els, locked, note))
 			if ok && !slices.Contains(apps, got) {
 				t.Errorf("%s (locked %v): screenApp names %+v, not among %+v", c.name, locked, got, apps)
 			}

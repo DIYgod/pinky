@@ -83,6 +83,61 @@ func TestCheckupOfIPhoneNoLivePicture(t *testing.T) {
 	}
 }
 
+// TestCheckupOfIPhoneReadingStuck: an iPhone whose accessibility service
+// stopped answering (#248) says that only restarting the iPhone helps, with
+// the driver's details, and offers no button: Pinky never restarts a phone.
+func TestCheckupOfIPhoneReadingStuck(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, HoldSetup: true})
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the iPhone", func() bool { return len(ta.devices) > 1 })
+	d := ta.iphoneView(t)
+	ta.api.SetIPhone(d.Info.ID, driver.Info{State: driver.StateOnline})
+	detail := "the accessibility service (axauditd) answered none of 4 screen reads over 3m0s, while the iPhone gave pictures"
+	ta.api.SetCheckup(d.Info.ID, driver.Checkup{System: "iOS 27.2", Checks: []driver.Check{
+		{ID: driver.CheckScreen, Status: driver.CheckPass},
+		{ID: driver.CheckReading, Status: driver.CheckFail, Fix: driver.FixRestartStuck, Detail: detail},
+		{ID: driver.CheckInput, Status: driver.CheckPass},
+	}})
+	ta.sync()
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.openCheckup(ta.iphoneView(t))
+	ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf(d.Info.ID); return r != nil && r.have && !r.running })
+	mustHave(t, tt, locales.CheckReadingTitle(), locales.CheckReadingStuck(), detail, locales.CheckInputIPhonePass())
+	for _, s := range []string{locales.PhoneSetUpIPhone(), locales.CheckHelperHow(), locales.LostRestart(), driver.FixRestartStuck} {
+		if hasText(tt, s) {
+			t.Errorf("the stuck item offers %q: %q", s, tt.Texts())
+		}
+	}
+}
+
+// TestIPhoneReadingWords: the reading item in words, after the screen's.
+func TestIPhoneReadingWords(t *testing.T) {
+	var a app
+	d := gateway.DeviceView{Info: driver.Info{Platform: driver.IOS, State: driver.StateOnline, OSVersion: "27.2"}}
+	if got := checkTitle(driver.CheckReading); got != locales.CheckReadingTitle() {
+		t.Errorf("title = %q", got)
+	}
+	w, ok := a.iphoneCheckWords(d, driver.Check{ID: driver.CheckReading, Status: driver.CheckPass, Detail: "no screen read found it stuck"})
+	if !ok || w.text != locales.CheckReadingPass() || w.detail {
+		t.Errorf("passed: %+v, %v", w, ok)
+	}
+	w, ok = a.iphoneCheckWords(d, driver.Check{ID: driver.CheckReading, Status: driver.CheckFail, Fix: driver.FixRestartStuck})
+	if !ok || w.text != locales.CheckReadingStuck() || !w.detail {
+		t.Errorf("stuck: %+v, %v", w, ok)
+	}
+	if _, ok := a.iphoneCheckWords(d, driver.Check{ID: driver.CheckReading, Status: driver.CheckSkip}); ok {
+		t.Error("an item without words of its own should fall back to the shared ones")
+	}
+	got := sortedChecks([]driver.Check{{ID: driver.CheckReading}, {ID: driver.CheckInput}, {ID: driver.CheckScreen}, {ID: driver.CheckDiskImage}})
+	var ids []string
+	for _, ck := range got {
+		ids = append(ids, ck.ID)
+	}
+	if want := []string{driver.CheckDiskImage, driver.CheckInput, driver.CheckScreen, driver.CheckReading}; strings.Join(ids, ",") != strings.Join(want, ",") {
+		t.Errorf("order = %v, want %v", ids, want)
+	}
+}
+
 // TestCheckupOfIPhoneWaitingForAStep: an iPhone that is not online gets
 // its step (Info.Setup) as the authorized item, in words.
 func TestCheckupOfIPhoneWaitingForAStep(t *testing.T) {

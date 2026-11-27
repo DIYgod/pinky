@@ -83,9 +83,17 @@ type axSession struct {
 	appsGot bool          // appsIn is closed
 	changed atomic.Int64  // unix nanos of the last screen or layout change
 
+	// since is when the session asked for app states: it knows nothing of
+	// what changed before (knownfront.go). Set before the session is used.
+	since time.Time
+
 	done chan struct{}
 	once sync.Once
 }
+
+// errAXDaemon is a session the audit daemon did not take: its handshake
+// failed or got no answer.
+var errAXDaemon = errors.New("accessibility daemon")
 
 func dialAX(ctx context.Context, entry goios.DeviceEntry) (*axSession, error) {
 	type result struct {
@@ -126,7 +134,7 @@ func dialAX(ctx context.Context, entry goios.DeviceEntry) (*axSession, error) {
 	defer cancel()
 	if _, err := a.ch.MethodCallWithContext(cctx, "deviceCapabilities"); err != nil {
 		conn.Close()
-		return nil, fmt.Errorf("accessibility daemon: %w", err)
+		return nil, fmt.Errorf("%w: %w", errAXDaemon, err)
 	}
 	// No on-screen highlight, no selection mode (on iOS 27 it swallows
 	// touches), and app state events on.
@@ -139,7 +147,46 @@ func dialAX(ctx context.Context, entry goios.DeviceEntry) (*axSession, error) {
 	a.ch.MethodCallAsync("deviceSetAppMonitoringEnabled:", false)
 	a.ch.MethodCallAsync("deviceSetAppMonitoringEnabled:", true)
 	a.ch.MethodCallAsync("deviceSetAuditTargetPid:", uint64(0))
+	a.since = time.Now()
 	return a, nil
+}
+
+// listening reports whether the session still gets the daemon's events.
+func (a *axSession) listening() bool {
+	select {
+	case <-a.done:
+		return false
+	case <-a.conn.Closed():
+		return false
+	default:
+		return true
+	}
+}
+
+// events returns the app states the daemon reported to the session and
+// since when the session has listened; ok is false once it stopped
+// listening.
+func (a *axSession) events() (apps []axApp, since time.Time, ok bool) {
+	if !a.listening() {
+		return nil, time.Time{}, false
+	}
+	return a.allApps(), a.since, true
+}
+
+// axPingWait bounds ping. Over USB the daemon answers within milliseconds.
+const axPingWait = 2 * time.Second
+
+// ping asks the daemon for its capabilities, as the session's handshake
+// does, and moves no focus: an answer says the daemon still serves the
+// session, and so would have sent it the apps' states.
+func (a *axSession) ping(ctx context.Context) error {
+	c, cancel := context.WithTimeout(ctx, axPingWait)
+	defer cancel()
+	if _, err := a.ch.MethodCallWithContext(c, "deviceCapabilities"); err != nil {
+		// %v: the gateway would read a deadline in the chain as a slow app.
+		return fmt.Errorf("%w: no answer to a ping: %v", errAXDaemon, err)
+	}
+	return nil
 }
 
 // pump consumes the daemon's events. Element changes are left for walks.
@@ -296,31 +343,35 @@ func handlePID(h []byte) uint64 {
 	return uint64(h[0]) | uint64(h[1])<<8 | uint64(h[2])<<16 | uint64(h[3])<<24
 }
 
-// foreground returns the app the person sees: the one that most recently
-// came to the foreground and is still there, else SpringBoard.
+// besideApp reports whether a process that reports itself in the
+// foreground does so beside the app on screen, not in its place: a UI
+// service, a web view's content process, an extension or helper.
+func besideApp(id string) bool {
+	// WebContent has only three dots in its id, so the helper heuristic
+	// does not exclude it. A web view must not replace its host app when
+	// it reports a newer foreground event.
+	return axBackgroundUI[id] || isWebContent(id) || strings.Count(id, ".") > 3
+}
+
+// foreground returns the app that most recently came to the foreground and
+// is still there, else SpringBoard. It is for diagnostics: a read does not
+// name its app from it, since the daemon reports apps iOS wakes in the
+// background in the foreground too, and a session knows only the changes
+// since it connected (knownfront.go).
 func (a *axSession) foreground() (name, id string) {
 	a.appMu.Lock()
 	defer a.appMu.Unlock()
 	var best *axApp
 	for _, app := range a.apps {
-		if app.state != appForeground || axBackgroundUI[app.id] || app.id == "com.apple.springboard" {
+		if app.state != appForeground || app.id == springBoard || besideApp(app.id) {
 			continue
-		}
-		// WebContent has only three dots in its id, so the helper
-		// heuristic below does not exclude it. A web view must not
-		// replace its host app when it reports a newer foreground event.
-		if isWebContent(app.id) {
-			continue
-		}
-		if strings.Contains(app.id, ".") && strings.Count(app.id, ".") > 3 {
-			continue // extensions and helpers
 		}
 		if best == nil || app.seq > best.seq {
 			best = app
 		}
 	}
 	if best == nil {
-		return "Home Screen", "com.apple.springboard"
+		return "Home Screen", springBoard
 	}
 	return best.name, best.id
 }
@@ -470,6 +521,10 @@ type walkLimits struct {
 
 var errAXWalk = errors.New("accessibility walk")
 
+// errAXNoHandle is a walk whose first focus change named no element: the
+// daemon answered, with nothing to read.
+var errAXNoHandle = errors.New("first element has no handle")
+
 // walk visits every element on the screen in reading order, starting from
 // the first, until the focus comes back to an element it saw. Attributes
 // are read for each element as soon as it arrives, while the daemon still
@@ -500,7 +555,7 @@ func (a *axSession) walk(ctx context.Context, lim walkLimits) ([]axNode, bool, e
 	}
 	first, ok := parseFocus(msg)
 	if !ok {
-		return nil, false, fmt.Errorf("%w: first element has no handle", errAXWalk)
+		return nil, false, fmt.Errorf("%w: %w", errAXWalk, errAXNoHandle)
 	}
 
 	// The daemon answers attribute queries only for the element holding the

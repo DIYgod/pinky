@@ -610,6 +610,13 @@ const (
 	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again), from the client on a Mac with Xcode (HelperInstaller) or with pinkyctl helper install, as it is missing or its profile ran out (Info.HelperExpires); also while Pinky installs it
 )
 
+// An iPhone's checkup item about reading its screen, which goes through
+// the phone's accessibility service (axauditd), and its fix.
+const (
+	CheckReading    = "reading"       // screen reads get answers: the accessibility service is not stuck
+	FixRestartStuck = "restart_stuck" // restart the phone: its accessibility service stopped answering, and only a restart brings it back
+)
+
 // HelperReminder is how long before Info.HelperExpires clients remind the
 // person to install the WebDriverAgent helper again.
 const HelperReminder = 48 * time.Hour

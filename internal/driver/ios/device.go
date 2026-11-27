@@ -80,18 +80,26 @@ type Device struct {
 	hidProbed   bool                  // the HID services were asked for once (probeHIDServices)
 
 	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
+	lastShot  atomic.Int64 // unix nanos of the last screenshot the phone gave
 
-	// The app of the last read remoteAXService answered, and whether it
-	// showed web content (observe.go, noteReadWeb). Under svcMu.
-	readApp screen.App
+	// stuck follows reads that find the accessibility daemon not answering
+	// (axstuck.go).
+	stuck axStuck
+
+	// Whether the last read remoteAXService answered showed web content
+	// (observe.go, noteReadWeb). Under svcMu.
 	readWeb bool
 
 	lastFront   screen.App // the home screen app the last read found in front (appid.go)
 	lastFrontAt time.Time
-	closed      bool
-	done        chan struct{} // closed by Close
-	watchers    int           // stream views open (see idle.go)
-	watchedAt   time.Time     // when one last opened or closed
+	// The app the last read that could tell named, and when that read
+	// began, for reads that cannot (knownfront.go).
+	knownApp  screen.App
+	knownAt   time.Time
+	closed    bool
+	done      chan struct{} // closed by Close
+	watchers  int           // stream views open (see idle.go)
+	watchedAt time.Time     // when one last opened or closed
 
 	inputMu   sync.Mutex // serializes gestures and raw touches
 	restartMu sync.Mutex // one stream restart at a time; guards the two below
@@ -103,6 +111,13 @@ type Device struct {
 	startFn func(ctx context.Context, l *link, id int) (*media, error)
 	// hidFn opens the HID session on a stream (tests); nil: newHIDSession.
 	hidFn func(goios.DeviceEntry) (*hidSession, error)
+	// For tests: the inspector session (nil: axReady's), the lock state
+	// (nil: lockdown's), screenshots (nil: the phone's) and OCR (nil:
+	// recognizeText).
+	inspect   inspector
+	lockedFn  func(context.Context) (bool, error)
+	shotFn    func(context.Context) ([]byte, error)
+	recognize func([]byte) ([]ocrLine, error)
 	// probeStrikes counts the streams in a row that a probe found broken
 	// young (probeYoung): the next waits longer before a probe may fail
 	// it (probeHold). Guarded by mu.

@@ -233,7 +233,7 @@ func iphoneWiFiText(d gateway.DeviceView, ck driver.Check) string {
 // checkOrder is the order items show in; others follow.
 var checkOrder = []string{driver.CheckHost, driver.CheckADB, driver.CheckConnection, driver.CheckAuthorized, driver.CheckCompanion,
 	driver.CheckDeveloperMode, driver.CheckDiskImage, driver.CheckHelper,
-	driver.CheckInput, driver.CheckScreen, driver.CheckBackground, driver.CheckWiFi, driver.CheckLocalNetwork}
+	driver.CheckInput, driver.CheckScreen, driver.CheckReading, driver.CheckBackground, driver.CheckWiFi, driver.CheckLocalNetwork}
 
 func sortedChecks(in []driver.Check) []driver.Check {
 	rank := func(id string) int {

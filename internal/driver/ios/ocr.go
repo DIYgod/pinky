@@ -18,6 +18,14 @@ var ocrLanguages = ocr.Languages
 
 func recognizeText(img []byte, opt ocrOptions) ([]ocrLine, error) { return ocr.Recognize(img, opt) }
 
+// readText reads the text of a picture a read took (tests set recognize).
+func (d *Device) readText(img []byte) ([]ocrLine, error) {
+	if d.recognize != nil {
+		return d.recognize(img)
+	}
+	return recognizeText(img, ocrOptions{Languages: ocrLanguages})
+}
+
 // ocrWarm loads the recognizer's models in the background (ocr.Warm). It is
 // a variable for tests.
 var ocrWarm = ocr.Warm

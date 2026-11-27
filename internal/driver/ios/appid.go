@@ -33,37 +33,40 @@ import (
 const appListWait = time.Second
 
 // screenApp names the app on screen from a read's elements, the first of
-// which is the frontmost application's. note records what it decided, for
+// which is the frontmost application's. named says the elements settled it:
+// the frontmost process is a home screen app, or SpringBoard on the home
+// screen or the lock screen; a read that cannot tell otherwise may name it
+// for a while (knownfront.go). note records what it decided, for
 // ObserveStats.Trace. On a locked phone the lock screen is SpringBoard's,
 // and nothing is beneath it.
-func (d *Device) screenApp(ctx context.Context, els []raxElement, locked bool, note func(string, ...any)) screen.App {
+func (d *Device) screenApp(ctx context.Context, els []raxElement, locked bool, note func(string, ...any)) (app screen.App, named bool) {
 	front := els[0]
-	app, ok := d.appForPID(ctx, uint64(front.Object.PID))
+	found, ok := d.appForPID(ctx, uint64(front.Object.PID))
 	if !ok && strings.TrimSpace(front.Label) != "" {
-		if app, ok = d.appByName(ctx, front.Label); ok {
-			note("app %q found by its name", app.ID)
+		if found, ok = d.appByName(ctx, front.Label); ok {
+			note("app %q found by its name", found.ID)
 		}
 	}
-	if ok && app.ID != springBoard && d.homeScreenApp(ctx, app.ID) {
-		d.sawFront(screen.App{Name: app.Name, ID: app.ID})
-		return screen.App{Name: app.Name, ID: app.ID}
+	if ok && found.ID != springBoard && d.homeScreenApp(ctx, found.ID) {
+		d.sawFront(screen.App{Name: found.Name, ID: found.ID})
+		return screen.App{Name: found.Name, ID: found.ID}, true
 	}
 	// The home screen itself: its icons are on screen. The app that was in
 	// front may still be listed in the foreground for a moment after Home.
-	if ok && app.ID == springBoard && (locked || homeIcons(els)) {
+	if ok && found.ID == springBoard && (locked || homeIcons(els)) {
 		d.sawFront(screen.App{})
-		return screen.App{Name: app.Name, ID: app.ID}
+		return screen.App{Name: found.Name, ID: found.ID}, true
 	}
 	if !locked {
-		if fg, found := d.foregroundApp(ctx); found {
-			note("pid %d (%q) is in front of %s", front.Object.PID, app.ID, fg.ID)
-			return fg
+		if fg, in := d.foregroundApp(ctx); in {
+			note("pid %d (%q) is in front of %s", front.Object.PID, found.ID, fg.ID)
+			return fg, false
 		}
 	}
 	if ok {
-		return screen.App{Name: app.Name, ID: app.ID}
+		return screen.App{Name: found.Name, ID: found.ID}, false
 	}
-	return screen.App{Name: front.Label}
+	return screen.App{Name: front.Label}, false
 }
 
 // sawFront records the home screen app a read found in front, or none.

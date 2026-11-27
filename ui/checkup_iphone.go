@@ -57,6 +57,8 @@ func iphoneCheckTitle(id string) string {
 		return locales.CheckDiskImageTitle()
 	case driver.CheckHelper:
 		return locales.CheckHelperTitle()
+	case driver.CheckReading:
+		return locales.CheckReadingTitle()
 	}
 	return ""
 }
@@ -152,6 +154,19 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 		// Pinky could not open the phone: it sent no live picture. The
 		// driver's details say what came instead (ios.noVideoError).
 		w.text = locales.CheckScreenNoLivePicture()
+		return w, true
+	case driver.CheckReading:
+		switch {
+		case pass:
+			w.text, w.detail = locales.CheckReadingPass(), false
+		case ck.Fix == driver.FixRestartStuck:
+			// Only a restart of the iPhone brings its accessibility
+			// service back, which Pinky never does itself; no button. The
+			// driver's details keep the last error.
+			w.text = locales.CheckReadingStuck()
+		default:
+			return w, false
+		}
 		return w, true
 	case driver.CheckInput:
 		switch {

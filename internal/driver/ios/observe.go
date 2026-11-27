@@ -108,11 +108,13 @@ type ObserveStats struct {
 	CaptureWait time.Duration
 	OCR         time.Duration
 	Total       time.Duration
-	Complete    bool // the walk came back to its start
-	WalkError   error
+	Complete    bool  // the walk came back to its start
+	WalkError   error // the inspector's: its walk, its connection, or its ping
 	OCRError    error
 	RAXError    error    // why the remoteax path was not used
 	Trace       []string // what the remoteax path waited for, with times
+
+	heard bool // the inspector answered during the read (axstuck.go)
 }
 
 // Observe implements driver.Device. It reads the screen through the
@@ -150,11 +152,19 @@ func (d *Device) noteRead(ctx context.Context, total time.Duration, st ObserveSt
 	if st.Shot > 0 || st.OCR > 0 {
 		args = append(args, "picture", st.Shot.Round(time.Millisecond), "ocr", st.OCR.Round(time.Millisecond))
 	}
+	// The agent's words about a stuck daemon are not for the log.
+	var stuck *axStuckError
+	if errors.As(err, &stuck) {
+		args = append(args, "stuck_for", stuck.For.Round(time.Second))
+		err = stuck.Cause
+	}
+	logged := map[string]bool{}
 	for _, e := range []struct {
 		key string
 		err error
 	}{{"remoteax_err", st.RAXError}, {"walk_err", st.WalkError}, {"err", err}} {
-		if e.err != nil {
+		if e.err != nil && !logged[e.err.Error()] {
+			logged[e.err.Error()] = true
 			args = append(args, e.key, e.err.Error())
 		}
 	}
@@ -168,18 +178,22 @@ func (d *Device) observeWithStats(ctx context.Context, opt driver.ObserveOptions
 	var st ObserveStats
 	s, err := d.observeRAX(ctx, opt, &st)
 	if err == nil {
+		d.daemonAnswered()
 		return s, st, nil
 	}
 	if ctx.Err() != nil {
 		return nil, st, ctx.Err()
 	}
+	start := time.Now()
 	st = ObserveStats{RAXError: err}
 	// A locked phone can stop answering accessibility requests (seen with
 	// its screen off after a long session), and the inspector walk then
 	// times out too. What matters on it is that it is locked: say so
 	// rather than fail the read, so the agent hands the phone to the
 	// person instead of retrying.
-	if locked, lerr := d.Locked(ctx); lerr == nil && locked {
+	locked, lerr := d.Locked(ctx)
+	if lerr == nil && locked {
+		d.forgetFront(start)
 		st.Source = "lockdown"
 		return d.lockedScreen(), st, nil
 	}
@@ -188,8 +202,10 @@ func (d *Device) observeWithStats(ctx context.Context, opt driver.ObserveOptions
 		// through lockdown over usbmuxd): say what remoteAXService said.
 		return nil, st, fmt.Errorf("reading the screen: %w", err)
 	}
-	app, web := d.lastReadWeb()
-	return d.observeInspector(ctx, opt, st, !web, app)
+	s, st, err = d.observeInspector(ctx, opt, st, !d.lastReadWeb())
+	// The daemon may be stuck, which only restarting the iPhone mends
+	// (axstuck.go).
+	return s, st, d.followStuck(ctx, st, err, lerr == nil)
 }
 
 // The inspector walk and web pages. The walk moves the phone's
@@ -201,23 +217,27 @@ func (d *Device) observeWithStats(ctx context.Context, opt driver.ObserveOptions
 // rows into a task. A native list (Settings) does not scroll under it.
 //
 // So when the last read remoteAXService answered showed web content, a
-// read it fails for goes without the walk: the picture's text alone,
-// marked partial, under the app that read named. The phone may have left
-// that app since; a read that answers again says so.
+// read it fails for goes without the walk, until one it answers shows
+// none: the picture's text alone, marked partial, under the app knownFront
+// names (knownfront.go), for which the inspector is only pinged. Once it
+// names none (the read that named the app began lastFrontKeep ago, or
+// another app came to the front since), such reads fail until
+// remoteAXService answers again, even after the person left the page: a
+// walk would scroll the page, and nothing else tells the app.
 
-// noteReadWeb remembers the app of a read remoteAXService answered and
-// whether it showed web content.
-func (d *Device) noteReadWeb(app screen.App, web bool) {
+// noteReadWeb remembers whether a read remoteAXService answered showed web
+// content.
+func (d *Device) noteReadWeb(web bool) {
 	d.svcMu.Lock()
-	d.readApp, d.readWeb = app, web
+	d.readWeb = web
 	d.svcMu.Unlock()
 }
 
 // lastReadWeb is what noteReadWeb remembered.
-func (d *Device) lastReadWeb() (screen.App, bool) {
+func (d *Device) lastReadWeb() bool {
 	d.svcMu.Lock()
 	defer d.svcMu.Unlock()
-	return d.readApp, d.readWeb
+	return d.readWeb
 }
 
 func hasWeb(els []raxElement) bool {
@@ -246,41 +266,50 @@ func (d *Device) lockedScreen() *screen.Screen {
 // found anything.
 var errEmptyRead = errors.New("the iPhone answered with an empty screen")
 
-// observeInspector is Observe through the inspector walk and OCR.
+// errAppUnknown is a read that nothing tells the app of (knownfront.go).
+var errAppUnknown = errors.New("cannot tell which app is on screen")
+
+// observeInspector is Observe through the inspector walk and OCR. The
+// screen's app is the one whose process owns the walk's elements (walkApp);
+// when Pinky cannot name that process, or there are no elements, it is
+// what knownFront names, and the screen is partial; when neither names
+// one, the read fails (knownfront.go).
 //
 // With walk false the walk is left out (see "The inspector walk and web
-// pages" above): the screen is the picture's text under the app last, and
-// partial.
-func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions, st ObserveStats, walk bool, last screen.App) (*screen.Screen, ObserveStats, error) {
+// pages" above): the inspector is only pinged, and the screen is the
+// picture's text, partial.
+func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions, st ObserveStats, walk bool) (*screen.Screen, ObserveStats, error) {
 	start := time.Now()
+	st.Source = "inspector"
+	if !walk {
+		st.Source = "picture"
+	}
+	insp, err := d.inspectorReady(ctx)
+	if err != nil {
+		st.WalkError = err
+		return nil, st, err
+	}
 	var wg sync.WaitGroup
 	var nodes []axNode
 	var complete bool
-	var walkErr error
-	var ax *axSession
-	if walk {
-		st.Source = "inspector"
-		var err error
-		if ax, err = d.axReady(ctx); err != nil {
-			return nil, st, err
+	var walkErr error // the walk's, or the ping's
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if !walk {
+			walkErr = insp.ping(ctx)
+			return
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			t := time.Now()
-			nodes, complete, walkErr = ax.walk(ctx, observeLimits)
-			st.Walk = time.Since(t)
-		}()
-	} else {
-		st.Source = "picture"
-		walkErr = st.RAXError
-	}
+		t := time.Now()
+		nodes, complete, walkErr = insp.walk(ctx, observeLimits)
+		st.Walk = time.Since(t)
+	}()
 	var lines []ocrLine
 	var ocrErr error
 	var shotW, shotH int // the picture OCR read, the right way up
 	var pictured sync.WaitGroup
 	// The picture places the elements and adds OCR's text; it waits until
-	// the read may take it (capturegate.go), here once the walk named the
+	// the read may take it (capturegate.go), here once the read named the
 	// app: on this path, a fallback, the walk is the read.
 	gate := newCaptureGate(opt.MayCapture, func() {
 		pictured.Add(1)
@@ -295,7 +324,7 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 			}
 			shotW, shotH = pictureSize(png, pic)
 			t = time.Now()
-			lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
+			lines, ocrErr = d.readText(png)
 			st.OCR = time.Since(t)
 		}()
 	})
@@ -314,20 +343,31 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 		}()
 	}
 	wg.Wait()
+	st.WalkError = walkErr
+	// The daemon answered: with elements, with a first element that had
+	// no handle, or to the ping.
+	st.heard = walkErr == nil || len(nodes) > 0 || errors.Is(walkErr, errAXNoHandle)
 	si := d.screen()
-	appName, appID := last.Name, last.ID
-	if walk {
-		appName, appID = ax.foreground()
-		if app, ok := d.appForPID(ctx, ownerPID(nodes)); ok {
-			appName, appID = app.Name, app.ID
+	app, fromWalk := d.walkApp(ctx, nodes)
+	switch {
+	case locked:
+		d.forgetFront(start)
+		if !fromWalk {
+			app = screen.App{Name: "Home Screen", ID: springBoard} // the lock screen is SpringBoard's
 		}
+	case fromWalk:
+		if app.ID != springBoard && d.homeScreenApp(ctx, app.ID) {
+			d.knewFront(app, start)
+		}
+	case st.heard:
+		app, _ = d.knownFront(insp)
 	}
 	s := &screen.Screen{
 		Width: si.Width, Height: si.Height,
-		App:         screen.App{Name: appName, ID: appID},
+		App:         app,
 		Orientation: orientationOf(si.Width, si.Height),
 		Locked:      locked,
-		Partial:     !walk,
+		Partial:     !fromWalk,
 		CapturedAt:  time.Now(),
 	}
 	use := gate.late(s)
@@ -335,6 +375,11 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	st.Capture, st.CaptureWait = gate.stats()
 	if !use {
 		lines, ocrErr = nil, nil
+	}
+	if app.ID == "" && app.Name == "" {
+		// No app to put the screen under: the gateway let it take no
+		// picture, and it is no screen to show.
+		return nil, st, unnamedError(st, walkErr)
 	}
 	if !d.hasDisplayInfo() && shotW > 0 && shotH > 0 {
 		// Without display info (below iOS 27) the screenshot, which is
@@ -350,16 +395,19 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 			// Nothing to show is not a screen: the phone's services did not
 			// answer (seen over Wi-Fi after a session dropped), and an
 			// empty read would tell the agent the screen is blank.
-			if walkErr == nil {
-				walkErr = errEmptyRead
+			err := walkErr
+			if err == nil {
+				err = st.RAXError
 			}
-			return nil, st, walkErr
+			if err == nil {
+				err = errEmptyRead
+			}
+			return nil, st, err
 		}
 		// Without the tree the screen is still worth reading: fall back to
 		// OCR text alone.
 		opt.OCR = true
 	}
-	st.WalkError = walkErr
 	st.OCRError = ocrErr
 	st.Complete = complete
 
@@ -384,7 +432,7 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 		}
 		s.Elements = append(s.Elements, screen.Element{
 			Role: role, Label: label, States: states, Source: screen.SourceTree,
-			Path: appID, ID: n.ident,
+			Path: app.ID, ID: n.ident,
 		})
 		match = append(match, cp.first)
 	}
@@ -483,22 +531,81 @@ func (d *Device) appForPID(ctx context.Context, pid uint64) (driver.App, bool) {
 // pidRecheck is how long a process that is no app is not looked up again.
 const pidRecheck = 30 * time.Second
 
-// ownerPID is the process that owns most of the walked elements: the app
-// on screen.
-func ownerPID(nodes []axNode) uint64 {
+// unnamedError is the error of a fallback read that names no app: the
+// inspector's when it did not answer either, else that nothing tells the
+// app, after why remoteAXService was not used.
+func unnamedError(st ObserveStats, inspector error) error {
+	if !st.heard && inspector != nil {
+		return inspector
+	}
+	if st.RAXError == nil {
+		return errAppUnknown
+	}
+	return fmt.Errorf("%w; %w", st.RAXError, errAppUnknown)
+}
+
+// walkApp names the app of a walk's elements: the app of the process that
+// owns most of them. When that is a web view's content process, which is
+// no app, it is the home screen app among the other owners: the page's
+// host, whose bars and buttons are its own (the process list tells web
+// content apart, as markWebContent does). ok is false when it names none.
+func (d *Device) walkApp(ctx context.Context, nodes []axNode) (app screen.App, ok bool) {
+	owners := ownerPIDs(nodes)
+	if len(owners) == 0 {
+		return screen.App{}, false
+	}
+	if a, ok := d.appForPID(ctx, owners[0]); ok {
+		return screen.App{Name: a.Name, ID: a.ID}, true
+	}
+	if !d.webProcess(ctx, owners[0]) {
+		return screen.App{}, false
+	}
+	for _, pid := range owners[1:] {
+		if a, ok := d.appForPID(ctx, pid); ok && a.ID != springBoard && d.homeScreenApp(ctx, a.ID) {
+			return screen.App{Name: a.Name, ID: a.ID}, true
+		}
+	}
+	return screen.App{}, false
+}
+
+// ownerPIDs lists the processes that own walked elements, the one that
+// owns most first.
+func ownerPIDs(nodes []axNode) []uint64 {
 	count := map[uint64]int{}
-	var best uint64
+	var pids []uint64
 	for _, n := range nodes {
 		p := handlePID(n.handle)
 		if p == 0 {
 			continue
 		}
-		count[p]++
-		if count[p] > count[best] {
-			best = p
+		if count[p] == 0 {
+			pids = append(pids, p)
 		}
+		count[p]++
 	}
-	return best
+	sort.SliceStable(pids, func(i, j int) bool { return count[pids[i]] > count[pids[j]] })
+	return pids
+}
+
+// webProcess reports whether process pid is WebKit's web content, by the
+// process list (webCache).
+func (d *Device) webProcess(ctx context.Context, pid uint64) bool {
+	pids := []int{int(pid)}
+	d.svcMu.Lock()
+	stale := d.web.stale(pids, time.Now())
+	d.svcMu.Unlock()
+	if len(stale) > 0 {
+		procs, err := d.processPaths(ctx)
+		if err != nil {
+			return false
+		}
+		d.svcMu.Lock()
+		d.web.learn(pids, procs, time.Now())
+		d.svcMu.Unlock()
+	}
+	d.svcMu.Lock()
+	defer d.svcMu.Unlock()
+	return d.web.m[int(pid)].web
 }
 
 // norm folds a string for matching: lower case, letters and digits only.

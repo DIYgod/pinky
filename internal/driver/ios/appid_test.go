@@ -43,35 +43,36 @@ func TestScreenApp(t *testing.T) {
 	icon := raxElement{Object: &axpObject{PID: 37, ID: 2}, Type: xcIcon, Visible: true, HasFrame: true, Label: "Clock"}
 	note := func(string, ...any) {}
 	for _, c := range []struct {
-		name string
-		d    *Device
-		els  []raxElement
-		want screen.App
+		name  string
+		d     *Device
+		els   []raxElement
+		want  screen.App
+		named bool // the elements settle it (knownfront.go)
 	}{
 		{"an app found by its process",
 			appDevice(map[uint64]driver.App{900: {ID: "com.apple.Preferences", Name: "Settings"}}, nil),
-			[]raxElement{front(900, "Settings")}, screen.App{Name: "Settings", ID: "com.apple.Preferences"}},
+			[]raxElement{front(900, "Settings")}, screen.App{Name: "Settings", ID: "com.apple.Preferences"}, true},
 		{"the first read of a session, when the process lookup failed (item 27)",
 			appDevice(nil, []uint64{901}),
-			[]raxElement{front(901, "Plasma One")}, screen.App{Name: "Plasma One", ID: "to.plasma.one.application"}},
+			[]raxElement{front(901, "Plasma One")}, screen.App{Name: "Plasma One", ID: "to.plasma.one.application"}, true},
 		{"Face ID in front of an app: SpringBoard is frontmost (item 14)",
 			appDevice(map[uint64]driver.App{37: sb}, nil, "sg.trust"),
-			[]raxElement{front(37, " ")}, screen.App{Name: "Trust", ID: "sg.trust"}},
+			[]raxElement{front(37, " ")}, screen.App{Name: "Trust", ID: "sg.trust"}, false},
 		{"Face ID in front of an app: a process with no name",
 			appDevice(nil, []uint64{902}, "com.apple.CoreAuthUI", "sg.trust"),
-			[]raxElement{front(902, "")}, screen.App{Name: "Trust", ID: "sg.trust"}},
+			[]raxElement{front(902, "")}, screen.App{Name: "Trust", ID: "sg.trust"}, false},
 		{"the home screen while the last app is still listed in the foreground",
 			appDevice(map[uint64]driver.App{37: sb}, nil, "sg.trust"),
-			[]raxElement{front(37, " "), icon}, screen.App{Name: "Home Screen", ID: springBoard}},
+			[]raxElement{front(37, " "), icon}, screen.App{Name: "Home Screen", ID: springBoard}, true},
 		{"the home screen",
 			appDevice(map[uint64]driver.App{37: sb}, nil),
-			[]raxElement{front(37, " ")}, screen.App{Name: "Home Screen", ID: springBoard}},
+			[]raxElement{front(37, " ")}, screen.App{Name: "Home Screen", ID: springBoard}, false},
 		{"two apps share the name: no id is guessed",
 			appDevice(nil, []uint64{903}),
-			[]raxElement{front(903, "Twin")}, screen.App{Name: "Twin"}},
+			[]raxElement{front(903, "Twin")}, screen.App{Name: "Twin"}, false},
 	} {
-		if got := c.d.screenApp(ctx, c.els, false, note); got != c.want {
-			t.Errorf("%s: %+v, want %+v", c.name, got, c.want)
+		if got, named := c.d.screenApp(ctx, c.els, false, note); got != c.want || named != c.named {
+			t.Errorf("%s: %+v (named %v), want %+v (named %v)", c.name, got, named, c.want, c.named)
 		}
 	}
 }
@@ -84,21 +85,21 @@ func TestScreenAppFromLastRead(t *testing.T) {
 	sb := driver.App{ID: springBoard, Name: "Home Screen", System: true}
 	trust := driver.App{ID: "sg.trust", Name: "Trust"}
 	d := appDevice(map[uint64]driver.App{37: sb, 950: trust}, nil)
-	if got := d.screenApp(ctx, []raxElement{front(950, "Trust")}, false, note); got.ID != "sg.trust" {
+	if got := appOnly(d.screenApp(ctx, []raxElement{front(950, "Trust")}, false, note)); got.ID != "sg.trust" {
 		t.Fatalf("Trust read as %+v", got)
 	}
 	faceID := []raxElement{front(37, " ")}
-	if got := d.screenApp(ctx, faceID, false, note); got.ID != "sg.trust" {
+	if got := appOnly(d.screenApp(ctx, faceID, false, note)); got.ID != "sg.trust" {
 		t.Errorf("Face ID over Trust read as %+v", got)
 	}
-	if got := d.screenApp(ctx, faceID, true, note); got.ID != springBoard {
+	if got := appOnly(d.screenApp(ctx, faceID, true, note)); got.ID != springBoard {
 		t.Errorf("a locked phone read as %+v", got)
 	}
 	// The daemon saw Trust leave the foreground after that read.
 	d.foreground = func(context.Context) []axApp {
 		return []axApp{{id: "sg.trust", state: 4, at: time.Now().Add(time.Second)}}
 	}
-	if got := d.screenApp(ctx, faceID, false, note); got.ID != springBoard {
+	if got := appOnly(d.screenApp(ctx, faceID, false, note)); got.ID != springBoard {
 		t.Errorf("after Trust left: %+v", got)
 	}
 	// The home screen with its icons forgets the app.
@@ -106,7 +107,7 @@ func TestScreenAppFromLastRead(t *testing.T) {
 	d.screenApp(ctx, []raxElement{front(950, "Trust")}, false, note)
 	icon := raxElement{Object: &axpObject{PID: 37, ID: 2}, Type: xcIcon, Visible: true, HasFrame: true}
 	d.screenApp(ctx, []raxElement{front(37, " "), icon}, false, note)
-	if got := d.screenApp(ctx, faceID, false, note); got.ID != springBoard {
+	if got := appOnly(d.screenApp(ctx, faceID, false, note)); got.ID != springBoard {
 		t.Errorf("after the home screen: %+v", got)
 	}
 }
@@ -125,14 +126,14 @@ func TestScreenAppIgnoresBackgroundWakes(t *testing.T) {
 	}
 	time.Sleep(time.Millisecond)
 	d.screenApp(ctx, []raxElement{front(960, "Settings")}, false, note) // a read after the wake
-	if got := d.screenApp(ctx, []raxElement{front(37, " ")}, false, note); got.ID != "com.apple.Preferences" {
+	if got := appOnly(d.screenApp(ctx, []raxElement{front(37, " ")}, false, note)); got.ID != "com.apple.Preferences" {
 		t.Errorf("an overlay over Settings read as %+v; want the app the last read found", got)
 	}
 	// An app that comes to the foreground after the last read is the one.
 	d.foreground = func(context.Context) []axApp {
 		return []axApp{{id: "sg.trust", state: appForeground, at: time.Now().Add(time.Second)}}
 	}
-	if got := d.screenApp(ctx, []raxElement{front(37, " ")}, false, note); got.ID != "sg.trust" {
+	if got := appOnly(d.screenApp(ctx, []raxElement{front(37, " ")}, false, note)); got.ID != "sg.trust" {
 		t.Errorf("Face ID over an app opened since: %+v", got)
 	}
 }
@@ -148,3 +149,6 @@ func TestExecutablePath(t *testing.T) {
 		}
 	}
 }
+
+// appOnly is the app screenApp names, for tests that do not look at named.
+func appOnly(app screen.App, _ bool) screen.App { return app }
