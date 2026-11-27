@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -79,7 +80,7 @@ func TestHelpIsNotAUsageError(t *testing.T) {
 			}
 		}
 	}
-	for _, cmd := range []string{"task", "helper"} {
+	for _, cmd := range []string{"task", "helper", "companion"} {
 		for _, arg := range []string{"help", "-h", "--help"} {
 			if code := exitCode(dispatch(cmd, []string{arg})); code != 0 {
 				t.Errorf("%s %s: exit %d; want 0", cmd, arg, code)
@@ -94,6 +95,42 @@ func TestHelpIsNotAUsageError(t *testing.T) {
 		{"task", []string{"bogus"}},
 		{"task", []string{"status"}},
 		{"task", []string{"run"}},
+	} {
+		if code := exitCode(dispatch(tc.cmd, tc.args)); code != exitTaskError {
+			t.Errorf("%s %q: exit %d; want %d", tc.cmd, tc.args, code, exitTaskError)
+		}
+	}
+}
+
+// TestUsageIsSaid: a command that takes no flags defines none, so the flag
+// package's own usage is a bare "Usage of pinky token:" with nothing under
+// it. token, quit and companion say what they do instead.
+func TestUsageIsSaid(t *testing.T) {
+	for _, tc := range []struct{ cmd, usage string }{
+		{"token", tokenUsage},
+		{"quit", quitUsage},
+		{"companion", companionUsage},
+	} {
+		if !strings.HasPrefix(tc.usage, "Usage: pinkyctl "+tc.cmd) || !strings.Contains(strings.TrimSpace(tc.usage), "\n\n") {
+			t.Errorf("%s: usage %q does not say how to use it", tc.cmd, tc.usage)
+		}
+	}
+}
+
+// TestNoWordsForACommandThatTakesNone: token and quit take nothing, and
+// companion one command and one phone: a word more is a usage error, 2,
+// before the command runs, as `pinky devices pixel-9` is.
+func TestNoWordsForACommandThatTakesNone(t *testing.T) {
+	for _, tc := range []struct {
+		cmd  string
+		args []string
+	}{
+		{"token", []string{"foo"}},
+		{"quit", []string{"foo"}},
+		{"token", []string{"--json"}},
+		{"companion", nil},
+		{"companion", []string{"bogus"}},
+		{"companion", []string{"install", "one", "two"}},
 	} {
 		if code := exitCode(dispatch(tc.cmd, tc.args)); code != exitTaskError {
 			t.Errorf("%s %q: exit %d; want %d", tc.cmd, tc.args, code, exitTaskError)

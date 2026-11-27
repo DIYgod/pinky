@@ -209,11 +209,49 @@ Environment:
 `)
 }
 
+// quitUsage is what `pinky quit -h` prints, and what a word the command
+// does not take ends with.
+const quitUsage = `Usage: pinkyctl quit
+
+Asks the running Pinky, the app's or the daemon's, to quit, and waits until
+its socket goes away. Agents do not start it again until you open it.
+`
+
+// tokenUsage is what `pinky token -h` prints, and what a word the command
+// does not take ends with.
+const tokenUsage = `Usage: pinkyctl token
+
+Prints the agent token, which agents that connect over HTTP send as a bearer
+token, and makes one when there is none yet.
+`
+
+// noArgsUsageError refuses a word fs left, for a command that takes no
+// words and no flags, with the exit status of a usage error, 2, as
+// `pinky devices` refuses one.
+func noArgsUsageError(fs *flag.FlagSet) error {
+	if fs.NArg() == 0 {
+		return nil
+	}
+	fmt.Fprintf(fs.Output(), "%s: unexpected %q: it takes nothing, no words and no flags\n\n", fs.Name(), fs.Arg(0))
+	fs.Usage()
+	return &exitError{code: 2}
+}
+
 // runQuit asks the running gateway, the app's or the daemon's, to quit, and
 // waits until its socket goes away.
 func runQuit(args []string) error {
 	fs := flag.NewFlagSet("pinky quit", flag.ContinueOnError)
+	fs.Usage = func() { fmt.Fprint(fs.Output(), quitUsage) }
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
+		// The flag package said why, once, with the usage above; main
+		// printing it again would say it twice. A bad flag is a usage
+		// error, as in `pinky devices`: 2.
+		return &exitError{code: 2}
+	}
+	if err := noArgsUsageError(fs); err != nil {
 		return err
 	}
 	dirs, err := api.DefaultDirs()
@@ -249,7 +287,16 @@ func runQuit(args []string) error {
 // connect over HTTP send it as a bearer token; `pinky mcp` reads it itself.
 func runToken(args []string) error {
 	fs := flag.NewFlagSet("pinky token", flag.ContinueOnError)
+	fs.Usage = func() { fmt.Fprint(fs.Output(), tokenUsage) }
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
+		// Said once, with the usage above: a bad flag is a usage error,
+		// 2, as in `pinky devices`.
+		return &exitError{code: 2}
+	}
+	if err := noArgsUsageError(fs); err != nil {
 		return err
 	}
 	dirs, err := api.DefaultDirs()

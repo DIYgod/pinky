@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -27,17 +28,55 @@ func bundledCompanion() (string, int, error) {
 	return apk, v.Code, nil
 }
 
+// companionUsage is what `pinky companion -h` prints, and what a command
+// line the command cannot use ends with.
+const companionUsage = `Usage: pinkyctl companion install [phone id or name]
+
+Installs or updates Pinky on an Android phone, Pinky's app for Android
+phones, which reads the screen much faster than uiautomator. Pinky never
+installs it on its own; with Update automatically on, the app updates an
+installed one while the phone is free.
+`
+
+// companionUsageError ends `pinky companion` with the exit status of a
+// usage error, 2, after saying why, if it has a why, and printing its
+// usage, as `pinky task` does.
+func companionUsageError(why string) error {
+	if why != "" {
+		fmt.Fprintf(os.Stderr, "pinky companion: %s\n\n", why)
+	}
+	fmt.Fprint(os.Stderr, companionUsage)
+	return &exitError{code: 2}
+}
+
 // runCompanion is `pinky companion install [phone]`: it installs or updates
 // Pinky on the phone, which reads the screen much faster than uiautomator.
 // Pinky never installs it on its own; with Update automatically on, the app
 // updates an installed one while the phone is free (docs/notes/updates.md).
 func runCompanion(args []string) error {
-	if len(args) == 0 || args[0] != "install" {
-		return errors.New("usage: pinky companion install [phone id or name]")
+	if len(args) > 0 {
+		switch args[0] {
+		case "help", "-h", "-help", "--help":
+			fmt.Fprint(os.Stdout, companionUsage)
+			return nil
+		}
+	}
+	if len(args) == 0 {
+		return companionUsageError("it needs a command: install")
+	}
+	if args[0] != "install" {
+		return companionUsageError(fmt.Sprintf("it has no command %q: install is the one", args[0]))
 	}
 	fs := flag.NewFlagSet("pinky companion install", flag.ContinueOnError)
+	fs.Usage = func() { fmt.Fprint(fs.Output(), companionUsage) }
 	if err := fs.Parse(args[1:]); err != nil {
-		return err
+		if errors.Is(err, flag.ErrHelp) {
+			return err
+		}
+		return &exitError{code: 2} // the flag package said why
+	}
+	if fs.NArg() > 1 {
+		return companionUsageError(fmt.Sprintf("install takes one phone at most, not %q", fs.Arg(1)))
 	}
 	apk, err := android.FindCompanionAPK()
 	if err != nil {
