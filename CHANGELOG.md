@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Preparing iOS Simulators now works with Xcode 26.2 and 26.3: building WebDriverAgent for them used to fail over a file those versions of Xcode don't have. Thanks @lxxself for reporting it.
+
 ## 2026.1127.4 (2026-11-27)
 
 - Pinky no longer restarts an iPhone's live picture while the phone's screen stays still. These restarts also slowed down the agent's next screen read. Thanks @SamuelZ12 for reporting it.
