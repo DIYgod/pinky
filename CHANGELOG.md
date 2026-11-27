@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- When your Mac is on the iPhone's own Personal Hotspot, where the Mac's device service can't reach the iPhone, Pinky now connects to the iPhone over the hotspot by itself, and shows it as Lost on its hotspot only when the iPhone doesn't answer there either. Thanks @SamuelZ12 for reporting it.
+
 ## 2026.1127.1 (2026-11-27)
 
 - `pinky token -h`, `pinky quit -h` and `pinky companion -h` now say what the command does and exit with status 0 (`pinky companion -h` used to fail). A word or flag these commands don't take, or `pinky companion` without `install`, now gets the reason and exit status 2, as in `pinky devices`; `pinky token` and `pinky quit` used to ignore extra words. Thanks @6moran.
