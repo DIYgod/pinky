@@ -150,12 +150,10 @@ func TestUnlockWindowSkipsUnattendedRuns(t *testing.T) {
 	if err := h.g.OpenUnlockWindow("pixel", time.Hour); err != nil {
 		t.Fatal(err)
 	}
+	// The run's first read sees the lock. Waiting for the gateway's lock
+	// poll would not do: with no task on the phone it reads the lock only
+	// every few seconds (idleLockEvery).
 	h.dev.SetLocked(true)
-	for deadline := time.Now().Add(2 * time.Second); h.g.Devices()[0].Status != gateway.DeviceLocked; time.Sleep(5 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatal("the gateway did not see the phone locked")
-		}
-	}
 	locked := func() bool {
 		on, err := h.dev.Locked(context.Background())
 		return on || err != nil
