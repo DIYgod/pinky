@@ -7,6 +7,8 @@ import (
 	"io"
 	"net"
 	"net/netip"
+	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"testing"
@@ -176,10 +178,24 @@ func TestPickAddr(t *testing.T) {
 }
 
 // TestServePairDirByOS: the Mux hands out pair records from PairDir to its
-// clients everywhere but on Windows.
+// clients on Linux, not on Windows, and not on macOS, where it has no
+// PairDir. Without one it reads no pair record, not the current folder's.
 func TestServePairDirByOS(t *testing.T) {
-	if got, want := New("unix:///nonexistent", nil).ServePairDir, runtime.GOOS != "windows"; got != want {
+	m := New("unix:///nonexistent", nil)
+	if got, want := m.ServePairDir, runtime.GOOS != "windows" && runtime.GOOS != "darwin"; got != want {
 		t.Errorf("ServePairDir = %v on %s", got, runtime.GOOS)
+	}
+	if got, want := m.PairDir == "", runtime.GOOS == "darwin"; got != want {
+		t.Errorf("PairDir = %q on %s", m.PairDir, runtime.GOOS)
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "PAIRED.plist"), []byte("a pair record"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(dir)
+	m.PairDir = ""
+	if data, err := m.pairFile("PAIRED"); err == nil {
+		t.Errorf("read %q without a PairDir", data)
 	}
 }
 

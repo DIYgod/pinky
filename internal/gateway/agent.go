@@ -850,10 +850,12 @@ const deviceServiceHelp = "Only a person at this computer can fix it: they click
 
 // ownHotspotHelp is what an agent can do about a phone the computer's
 // device service does not reach because the computer is on the phone's own
-// Personal Hotspot (driver.SetupOwnHotspot): restarting the service does
-// not help, and only a person can bring the phone back.
+// Personal Hotspot, and that does not answer Pinky there either
+// (driver.SetupOwnHotspot): restarting the service does not help, and only
+// a person can bring the phone back.
 const ownHotspotHelp = "This computer is on the phone's own Personal Hotspot, where the computer's device service does not reach the phone, " +
-	"and restarting the service does not help. Ask the person with phone_handoff to plug the phone in with a cable, " +
+	"and the phone does not answer Pinky over the hotspot either; restarting the service does not help. " +
+	"Ask the person with phone_handoff to plug the phone in with a cable, " +
 	"or to put the computer and the phone on the same other Wi-Fi network, saying why; the handoff ends by itself once the phone is ready. " +
 	"If nobody is at the computer, as in a scheduled or unattended run, do not wait for it: release it with phone_release and use another phone, or end the task."
 

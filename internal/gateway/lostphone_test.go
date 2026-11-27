@@ -137,7 +137,9 @@ func TestOwnHotspotPhone(t *testing.T) {
 	p := &stepProvider{dev: demo.NewDevice("iphone", "iPhone 17", driver.IOS)}
 	away := driver.Info{ID: "iphone", Platform: driver.IOS, Name: "iPhone 17", Model: "iPhone 17", Connection: "wifi",
 		State: driver.StateNeedsSetup, Setup: driver.SetupOwnHotspot,
-		Detail: "This Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) does not reach the iPhone over the network."}
+		Detail: "This Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) does not reach the iPhone over the network, " +
+			"and the iPhone does not answer Pinky over the hotspot either. " +
+			"A cable brings it back, or the Mac and the iPhone on the same other Wi-Fi network. Restarting the service does not help."}
 	p.list(&away)
 	g, err := New(Options{Providers: []driver.Provider{p}, Policy: testPolicy(t), TrustNewAgents: true,
 		MaxBlock: 100 * time.Millisecond, ReconnectGrace: 50 * time.Millisecond, SettleMax: 200 * time.Millisecond,

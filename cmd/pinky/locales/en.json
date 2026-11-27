@@ -5776,7 +5776,7 @@
   },
   "gwStatusLostOnHotspot": "Lost on its hotspot",
   "@gwStatusLostOnHotspot": {
-    "description": "A phone's status line: this Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) doesn't reach the iPhone over the network; a cable or another Wi-Fi network brings it back. Shown only in other languages; in English the gateway's own words show."
+    "description": "A phone's status line: this Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) doesn't reach the iPhone over the network, and the iPhone doesn't answer Pinky there either; a cable or another Wi-Fi network brings it back. Shown only in other languages; in English the gateway's own words show."
   },
   "gwStatusLostOnWiFi": "Lost on Wi-Fi",
   "@gwStatusLostOnWiFi": {
@@ -6806,9 +6806,9 @@
       }
     }
   },
-  "lostHotspotDetail": "This Mac is connected to {phone}'s own Personal Hotspot, where macOS's device service (usbmuxd) doesn't reach it over the network. Plug it in with a cable, or connect this Mac and {phone} to the same other Wi-Fi network. Restarting the device service doesn't help here.",
+  "lostHotspotDetail": "This Mac is connected to {phone}'s own Personal Hotspot, where macOS's device service (usbmuxd) doesn't reach it over the network, and it doesn't answer Pinky over the hotspot either. Plug it in with a cable, or connect this Mac and {phone} to the same other Wi-Fi network. Restarting the device service doesn't help here.",
   "@lostHotspotDetail": {
-    "description": "Under lostHotspotTitle, and in Add phone and the checkup. Personal Hotspot is Apple's name for the iPhone's feature that shares its internet connection (Settings › Personal Hotspot). phone is its name.",
+    "description": "Under lostHotspotTitle, and in Add phone and the checkup. Personal Hotspot is Apple's name for the iPhone's feature that shares its internet connection (Settings › Personal Hotspot). Shown only when Pinky can't reach the iPhone over the hotspot by itself either. phone is its name.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -6818,7 +6818,7 @@
   },
   "lostHotspotTitle": "This Mac can't reach {phone} on its Personal Hotspot",
   "@lostHotspotTitle": {
-    "description": "The page of an iPhone that macOS's device service doesn't reach because this Mac is connected to that iPhone's own Personal Hotspot (Apple's name for the feature). phone is its name.",
+    "description": "The page of an iPhone that macOS's device service doesn't reach because this Mac is connected to that iPhone's own Personal Hotspot (Apple's name for the feature), and that doesn't answer Pinky over the hotspot either. phone is its name.",
     "placeholders": {
       "phone": {
         "type": "String",
