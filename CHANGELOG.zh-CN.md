@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1127.4 (2026-11-27)
 
 - iPhone 屏幕静止不动时，Pinky 不会再重启实时画面。以前这种重启还会拖慢智能体下一次读取屏幕。感谢 @SamuelZ12 反馈。
 
