@@ -157,10 +157,11 @@ func TestLostPhonePrivateAddress(t *testing.T) {
 
 // TestLostPhoneOwnHotspot: a phone usbmuxd does not list, whose record
 // names its address on its own Personal Hotspot (172.20.10.1) while this
-// Mac has an address on that network, is listed as on its own hotspot after
-// the same wait as a lost one, and logged once (#235). With this Mac on
-// another network, or the phone only a client of a hotspot (another
-// 172.20.10.x), it is lost as before.
+// Mac has an address on that network, and that no usbmuxd of Pinky's own
+// reaches there (none here: WiFiMux is off; TestHotspotMuxNoAnswer), is
+// listed as on its own hotspot after the same wait as a lost one, and
+// logged once (#235). With this Mac on another network, or the phone only
+// a client of a hotspot (another 172.20.10.x), it is lost as before.
 func TestLostPhoneOwnHotspot(t *testing.T) {
 	const instance = "08:87:c7:2a:8a:db@fe80::a87:c7ff:fe2a:8adb-supportsRP-26"
 	w := newWiFiProvider(entry("iphone", 7, "Network"))

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"sync"
 	"syscall"
@@ -35,6 +36,22 @@ import (
 // When USBMUXD_SOCKET_ADDRESS is set already (netmuxd, usbmuxd2 or
 // another usbmuxd the person runs), Pinky uses that one and leaves the
 // network to it.
+//
+// On macOS Apple's usbmuxd lists phones on Wi-Fi itself, and Pinky runs a
+// usbmuxd of its own for one case only: a Mac on an iPhone's own Personal
+// Hotspot (#235), where usbmuxd dials only the phone's IPv6 link-local
+// address and gives up, while lockdown answers at the phone's address
+// there, hotspotPhone. Once lostPhones finds such a phone (lost.go: its
+// records name that address, and this Mac has one in hotspotNet),
+// hotspotMux starts the usbmuxd, at once, and a search for those phones
+// only, at that address only; everything else, phones on a cable or on
+// another network among them, goes on to Apple's usbmuxd through it. The
+// search stops when Wi-Fi is turned off or this Mac has been off the
+// hotspot for hotspotLeave (leaveHotspot), and the phones there leave the
+// list; the usbmuxd and USBMUXD_SOCKET_ADDRESS stay until Pinky quits. Its
+// socket is in a new 0700 folder in TMPDIR, this user's own (muxBase), and
+// it reads pair records only through Apple's usbmuxd, which keeps them
+// where only its own account can read them (netmux.LockdownDir is "").
 //
 // The variable is set for the whole process, so every process Pinky starts
 // inherits it: the update helper and the Pinky it starts after an update,
@@ -66,15 +83,40 @@ type muxState struct {
 	mu      sync.Mutex
 	mux     *netmux.Mux
 	stop    context.CancelFunc // ends the search while it runs
+	done    chan struct{}      // closed once the last search ended
 	skipped bool               // USBMUXD_SOCKET_ADDRESS was set, or the socket failed
+	on      bool               // Pinky uses phones over Wi-Fi, as wifiMux was last told
+	hotspot map[string]bool    // macOS: the phones the search looks for on their own Personal Hotspot
+	away    time.Time          // macOS: since when this Mac has had no address on the hotspot, while the search runs
 
 	// For tests.
-	anyOS    bool
+	anyOS    bool // as on Linux, on any system
+	macOS    bool // as on macOS, on any system
 	browseFn func() (netmux.Source, error)
 	pairFn   func(udid string) (netmux.PairInfo, error)
 	probeFn  func(ctx context.Context, addr netip.Addr) bool
-	dir      string // where the socket goes instead of a new folder
-	pairs    string // where the pair records are instead of netmux.LockdownDir
+	localFn  func() []netip.Addr // this computer's addresses
+	dir      string              // where the socket goes instead of a new folder
+	pairs    string              // where the pair records are instead of netmux.LockdownDir
+	upstream string              // the system's usbmuxd instead of go-ios's default
+}
+
+// everywhere reports whether the provider looks for every phone on Wi-Fi
+// itself, as on Linux and Windows (ownMuxOS).
+func (m *muxState) everywhere() bool { return !m.macOS && (ownMuxOS() || m.anyOS) }
+
+// hotspotOnly reports whether it looks only for phones whose own Personal
+// Hotspot this computer is on, as on macOS.
+func (m *muxState) hotspotOnly() bool { return m.macOS || (runtime.GOOS == "darwin" && !m.anyOS) }
+
+// stopLocked ends the search; the phones it found leave the list. The
+// caller holds m.mu.
+func (m *muxState) stopLocked() {
+	if m.stop != nil {
+		m.stop()
+		m.stop = nil
+	}
+	m.hotspot, m.away = nil, time.Time{}
 }
 
 // pairDir is where the system's usbmuxd keeps pair records.
@@ -86,19 +128,22 @@ func (m *muxState) pairDir() string {
 }
 
 // wifiMux starts the usbmuxd of its own and the search when Pinky uses
-// phones over Wi-Fi, and stops the search when it no longer does.
+// phones over Wi-Fi, and stops the search when it no longer does. On macOS
+// turning it on starts nothing: the search there is for phones on their
+// own Personal Hotspot, once lostPhones finds one (hotspotMux).
 func (p *Provider) wifiMux(on bool) {
-	if !p.WiFiMux || (!ownMuxOS() && !p.nmux.anyOS) {
+	if !p.WiFiMux {
 		return
 	}
 	m := &p.nmux
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.on = on
 	if !on {
-		if m.stop != nil {
-			m.stop()
-			m.stop = nil
-		}
+		m.stopLocked()
+		return
+	}
+	if !m.everywhere() {
 		return
 	}
 	if m.mux == nil && !m.skipped {
@@ -107,16 +152,133 @@ func (p *Provider) wifiMux(on bool) {
 	if m.mux == nil || m.stop != nil {
 		return
 	}
+	p.findLocked(p.pairedUDIDs, nil)
+}
+
+// findLocked starts the search for the phones udids returns, at the
+// addresses accept takes (any when nil). It looks once the last search
+// has ended, whose end lists no phones: so that a search stopped a moment
+// ago does not drop the phones this one found. The caller holds p.nmux.mu.
+func (p *Provider) findLocked(udids func() []string, accept func(netip.Addr) bool) {
+	m := &p.nmux
 	ctx, cancel := context.WithCancel(context.Background())
 	m.stop = cancel
-	f := &netmux.Finder{Mux: m.mux, UDIDs: p.pairedUDIDs, Log: p.logger(), BrowseFn: m.browseFn}
+	f := &netmux.Finder{Mux: m.mux, UDIDs: udids, Accept: accept, Log: p.logger(), BrowseFn: m.browseFn, LocalFn: m.localFn}
 	if m.probeFn != nil {
 		f.ProbeFn = m.probeFn
 	}
 	if m.pairFn != nil {
 		f.PairFn = m.pairFn
 	}
-	go f.Run(ctx)
+	last, done := m.done, make(chan struct{})
+	m.done = done
+	go func() {
+		defer close(done)
+		if last != nil {
+			<-last // canceled already (stopLocked)
+		}
+		f.Run(ctx)
+	}()
+}
+
+// hotspotLeave is how long this Mac must have had no address on a phone's
+// Personal Hotspot before the search there stops: as long as the Finder
+// keeps a listed phone that does not answer (netmux's dropAfter), so that
+// the Mac's Wi-Fi dropping for a moment, as when it renews its address,
+// does not end Pinky's session on the phone.
+const hotspotLeave = 45 * time.Second
+
+// hotspotMux looks for phones on their own Personal Hotspot with the
+// usbmuxd of its own, on macOS: lostPhones gives it the phones usbmuxd
+// does not list whose records name hotspotPhone while this Mac has an
+// address on that network (local). It starts the usbmuxd the first time,
+// adds the phones to those the search looks for, and starts the search, at
+// hotspotPhone only, when it does not run. Without a usbmuxd of its own
+// (USBMUXD_SOCKET_ADDRESS set, or no socket) lostPhones says after its wait
+// that the phone is out of reach.
+func (p *Provider) hotspotMux(ids []string, local netip.Addr) {
+	if len(ids) == 0 || !p.WiFiMux {
+		return
+	}
+	m := &p.nmux
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.on || !m.hotspotOnly() {
+		return
+	}
+	if m.mux == nil && !m.skipped {
+		p.startMuxLocked()
+	}
+	if m.mux == nil {
+		return
+	}
+	var added []string
+	for _, id := range ids {
+		if !m.hotspot[id] {
+			if m.hotspot == nil {
+				m.hotspot = map[string]bool{}
+			}
+			m.hotspot[id] = true
+			added = append(added, id)
+		}
+	}
+	if len(added) > 0 {
+		p.logger().Info("iphone: this Mac is on the phone's Personal Hotspot, where usbmuxd does not reach it; looking for it there with Pinky's own usbmuxd",
+			"devices", added, "addr", hotspotPhone, "local", local)
+	}
+	if m.stop == nil {
+		m.away = time.Time{}
+		p.findLocked(p.hotspotUDIDs, func(a netip.Addr) bool { return a == hotspotPhone })
+	}
+}
+
+// hotspotUDIDs returns the phones the search looks for on their own
+// Personal Hotspot, but not those the person removed since; under Only,
+// only those phones.
+func (p *Provider) hotspotUDIDs() []string {
+	m := &p.nmux
+	m.mu.Lock()
+	ids := make([]string, 0, len(m.hotspot))
+	for id := range m.hotspot {
+		ids = append(ids, id)
+	}
+	m.mu.Unlock()
+	p.mu.Lock()
+	out := ids[:0]
+	for _, id := range ids {
+		if !p.wifi.forgot[id] && (p.Only == nil || p.Only[id]) {
+			out = append(out, id)
+		}
+	}
+	p.mu.Unlock()
+	sort.Strings(out)
+	return out
+}
+
+// leaveHotspot stops the search for phones on their own Personal Hotspot
+// once this Mac has had no address on that network for hotspotLeave. List
+// calls it each time.
+func (p *Provider) leaveHotspot() {
+	m := &p.nmux
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.stop == nil || len(m.hotspot) == 0 {
+		return
+	}
+	local := m.localFn
+	if local == nil {
+		local = localAddrs
+	}
+	now := p.clock()
+	switch {
+	case slices.ContainsFunc(local(), hotspotNet.Contains):
+		m.away = time.Time{}
+	case m.away.IsZero():
+		m.away = now
+	case now.Sub(m.away) >= hotspotLeave:
+		m.stopLocked()
+		p.logger().Info("iphone: this Mac left the phone's Personal Hotspot; no longer looking for phones there")
+	}
 }
 
 // startMuxLocked starts the usbmuxd of its own and points go-ios at it.
@@ -129,6 +291,9 @@ func (p *Provider) startMuxLocked() {
 		return
 	}
 	upstream := goios.GetUsbmuxdSocket()
+	if m.upstream != "" {
+		upstream = m.upstream
+	}
 	if runtime.GOOS == "windows" && m.dir == "" {
 		// Apple's usbmuxd listens on a TCP port on Windows, and go-ios
 		// dials one as well; a unix socket's file there can outlive a
@@ -144,10 +309,7 @@ func (p *Provider) startMuxLocked() {
 	}
 	dir := m.dir
 	if dir == "" {
-		base := os.Getenv("XDG_RUNTIME_DIR")
-		if base == "" {
-			base = os.TempDir()
-		}
+		base := muxBase(runtime.GOOS, os.Getenv("XDG_RUNTIME_DIR"), os.TempDir())
 		removeOldMuxDirs(base)
 		d, err := os.MkdirTemp(base, "pinky-usbmuxd-") // 0700: this user's only
 		if err != nil {
@@ -165,6 +327,27 @@ func (p *Provider) startMuxLocked() {
 		return
 	}
 	p.serveMuxLocked(upstream, l, "unix://"+path)
+}
+
+// muxBase is the folder the usbmuxd's own folder goes in: TMPDIR on macOS
+// (tempDir, this user's own; XDG_RUNTIME_DIR, which a shell may set there,
+// is not macOS's), XDG_RUNTIME_DIR elsewhere when set, else tempDir; /tmp
+// when the socket's path there could be too long for the system's limit
+// (sun_path: 104 bytes on macOS, 108 on Linux, the last a NUL).
+func muxBase(goos, runtimeDir, tempDir string) string {
+	base := tempDir
+	if goos != "darwin" && runtimeDir != "" {
+		base = runtimeDir
+	}
+	limit := 107
+	if goos == "darwin" {
+		limit = 103
+	}
+	// os.MkdirTemp's random part has 10 digits at most.
+	if len(filepath.Join(base, "pinky-usbmuxd-4294967295", "usbmuxd")) > limit {
+		return "/tmp"
+	}
+	return base
 }
 
 // removeOldMuxDirs removes the folders that earlier Pinkys left in base.
@@ -203,6 +386,10 @@ func (p *Provider) serveMuxLocked(upstream string, l net.Listener, addr string) 
 	// Phones on the network close developer services without it
 	// (netmux/heartbeat.go). Not in tests, which list made-up phones.
 	m.mux.Heartbeat = m.dir == ""
+	if m.hotspotOnly() {
+		p.logger().Info("iphone: running a usbmuxd of its own for phones whose Personal Hotspot this Mac is on; it hands everything else to the system's usbmuxd", "usbmuxd", upstream, "socket", addr)
+		return
+	}
 	p.logger().Info("iphone: looking for iPhones and iPads on Wi-Fi itself; this computer's usbmuxd does not list them there by itself", "usbmuxd", upstream)
 }
 

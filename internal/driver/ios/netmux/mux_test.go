@@ -263,6 +263,7 @@ func TestMuxWithoutUpstream(t *testing.T) {
 	dir := shortDir(t)
 	up := startUpstream(t, dir)
 	m := startMux(t, dir, up)
+	m.ServePairDir = true // as on Linux
 	m.PairDir = filepath.Join(dir, "lockdown")
 	if err := os.Mkdir(m.PairDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -294,14 +295,60 @@ func TestMuxWithoutUpstream(t *testing.T) {
 	if info, err := m.readPair("NET-PHONE"); err != nil || info.HostID != "HOST-2" {
 		t.Errorf("readPair = %+v, %v", info, err)
 	}
-	// Where the Mux does not hand pair records out (Windows), its clients
-	// get none from PairDir; the Finder still reads them for itself.
+	// Where the Mux does not hand pair records out (Windows, macOS), its
+	// clients get none from PairDir; the Finder still reads them for itself.
 	m.ServePairDir = false
 	if _, err := goios.ReadPairRecord("NET-PHONE"); err == nil {
 		t.Error("handed out a pair record with ServePairDir off")
 	}
 	if info, err := m.readPair("NET-PHONE"); err != nil || info.HostID != "HOST-2" {
 		t.Errorf("readPair with ServePairDir off = %+v, %v", info, err)
+	}
+}
+
+// TestMuxAfterUpstreamRestart: on macOS the Mux reads pair records through
+// Apple's usbmuxd only (no PairDir), and Restart device service quits that
+// usbmuxd, which launchd starts again at the same socket. While it is gone
+// the phones on the network stay listed and usable, and no pair record is
+// handed out; once it is back, the Mux goes on through it.
+func TestMuxAfterUpstreamRestart(t *testing.T) {
+	dir := shortDir(t)
+	up := startUpstream(t, dir)
+	m := startMux(t, dir, up)
+	m.PairDir, m.ServePairDir = "", false // as on macOS
+	port := startPhone(t)
+	m.SetPhones([]Phone{{UDID: "NET-PHONE", Addr: netip.MustParseAddr("127.0.0.1")}})
+
+	up.l.Close() // usbmuxd quit
+	list, err := goios.ListDevices()
+	if err != nil || len(list.DeviceList) != 1 || list.DeviceList[0].Properties.SerialNumber != "NET-PHONE" {
+		t.Fatalf("devices while usbmuxd is gone = %+v, %v", list.DeviceList, err)
+	}
+	if answer, err := talk(t, list.DeviceList[0].DeviceID, port); err != nil || answer != "wifi:hi" {
+		t.Errorf("over Wi-Fi while usbmuxd is gone: %q, %v", answer, err)
+	}
+	for _, id := range []string{"PAIRED", "NET-PHONE"} {
+		if _, err := goios.ReadPairRecord(id); err == nil {
+			t.Errorf("handed out a pair record for %s while usbmuxd is gone", id)
+		}
+	}
+	if _, err := m.readPair("PAIRED"); err == nil {
+		t.Error("readPair read a pair record while usbmuxd is gone")
+	}
+
+	startUpstream(t, dir) // launchd starts it again
+	list, err = goios.ListDevices()
+	if err != nil || len(list.DeviceList) != 2 {
+		t.Fatalf("devices once usbmuxd is back = %+v, %v", list.DeviceList, err)
+	}
+	if r, err := goios.ReadPairRecord("PAIRED"); err != nil || r.HostID != "HOST-1" {
+		t.Errorf("pair record once usbmuxd is back = %+v, %v", r, err)
+	}
+	if info, err := m.readPair("PAIRED"); err != nil || info.HostID != "HOST-1" {
+		t.Errorf("readPair once usbmuxd is back = %+v, %v", info, err)
+	}
+	if answer, err := talk(t, 5, 62078); err != nil || answer != "usb:hi" {
+		t.Errorf("on the cable once usbmuxd is back: %q, %v", answer, err)
 	}
 }
 

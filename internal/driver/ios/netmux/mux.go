@@ -2,7 +2,8 @@
 // Wi-Fi, for systems whose usbmuxd does not list them there by itself:
 // Linux, where libimobiledevice's usbmuxd has no network support, and
 // Windows, where Apple's lists a phone on Wi-Fi only while it is on a
-// cable too.
+// cable too. On macOS it is only for a phone whose own Personal Hotspot
+// the Mac is on, where Apple's usbmuxd does not reach the phone.
 //
 // A Mux serves the usbmuxd protocol on a socket of its own. It hands
 // everything about phones on a cable to the system's usbmuxd (the
@@ -67,13 +68,16 @@ type Mux struct {
 	// (LockdownDir). The Finder reads them there while that usbmuxd is not
 	// running: libimobiledevice's exits once no phone is on a cable
 	// (usbmuxd --systemd), and udev starts it again when one is plugged in.
+	// "" for none, as on macOS: the records are read through the system's
+	// usbmuxd only.
 	PairDir string
 	// ServePairDir answers clients' ReadPairRecord from PairDir too while
 	// the system's usbmuxd is not running. Not on Windows (New), where the
 	// Mux listens on a loopback port any local user can reach and the pair
 	// records, the computer's private key among them, are readable by
 	// administrators only: a Pinky run as one would hand them out. Apple's
-	// usbmuxd keeps running there anyway.
+	// usbmuxd keeps running there anyway, as launchd keeps it on macOS,
+	// which has no PairDir either.
 	ServePairDir bool
 }
 
@@ -98,7 +102,7 @@ func New(upstream string, log *slog.Logger) *Mux {
 		log = slog.New(slog.DiscardHandler)
 	}
 	return &Mux{upstream: upstream, log: log, phones: map[string]netPhone{}, nextID: firstNetworkID, DialTimeout: 5 * time.Second,
-		PairDir: LockdownDir, ServePairDir: runtime.GOOS != "windows"}
+		PairDir: LockdownDir, ServePairDir: runtime.GOOS != "windows" && runtime.GOOS != "darwin"}
 }
 
 // SetPhones sets the phones on the network. A phone keeps its DeviceID
@@ -434,8 +438,12 @@ func (m *Mux) answerFromPairDir(c net.Conn, tag uint32, req request) error {
 	return writePlist(c, tag, map[string]any{"PairRecordData": data})
 }
 
-// pairFile reads a phone's pair record, by UDID, from PairDir.
+// pairFile reads a phone's pair record, by UDID, from PairDir. Without
+// one it reads nothing, not the current folder.
 func (m *Mux) pairFile(name string) ([]byte, error) {
+	if m.PairDir == "" {
+		return nil, errors.New("netmux: no folder of pair records")
+	}
 	if name == "" || strings.ContainsAny(name, `/\`) || strings.HasPrefix(name, ".") {
 		return nil, fmt.Errorf("netmux: bad pair record name %q", name)
 	}

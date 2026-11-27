@@ -127,7 +127,7 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		}
 		if d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupOwnHotspot {
 			// The computer is on the phone's own Personal Hotspot, where
-			// its device service does not reach the phone
+			// neither its device service nor Pinky reaches the phone
 			// (internal/driver/ios/lost.go).
 			return DeviceNeedsSetup, "Lost on its hotspot"
 		}

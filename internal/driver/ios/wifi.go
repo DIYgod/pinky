@@ -77,7 +77,8 @@ const lockdownTimeout = 8 * time.Second
 
 // SetWiFi implements driver.WiFiFinder. A phone that was open over Wi-Fi is
 // no longer listed once it is off, so the gateway closes it. On Linux and
-// Windows it also starts or stops the search for phones on Wi-Fi
+// Windows it also starts or stops the search for phones on Wi-Fi; on macOS
+// turning it off stops the one for phones on their own Personal Hotspot
 // (netmux.go).
 func (p *Provider) SetWiFi(on bool) {
 	p.mu.Lock()

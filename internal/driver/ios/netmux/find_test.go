@@ -555,4 +555,25 @@ func TestPairedUDIDs(t *testing.T) {
 	if got := PairedUDIDs(filepath.Join(dir, "missing")); got != nil {
 		t.Errorf("UDIDs of a missing folder = %q", got)
 	}
+	if got := PairedUDIDs(""); got != nil {
+		t.Errorf("UDIDs without a folder (macOS) = %q", got)
+	}
+}
+
+// TestFinderAccept: with Accept, a phone is listed only at the addresses
+// it takes among those its records name, and lockdown is not asked at the
+// others: on macOS, its address on its own Personal Hotspot.
+func TestFinderAccept(t *testing.T) {
+	const lan, hotspot = "192.168.89.20", "172.20.10.1"
+	a := newAddrTest(t, nil, iphoneService(lan))
+	a.s.f.Accept = func(addr netip.Addr) bool { return addr == netip.MustParseAddr(hotspot) }
+	a.answer(lan, hotspot)
+	a.look(10*time.Second, "")
+	both := iphoneService(lan)
+	both.Addrs = append(both.Addrs, netip.MustParseAddr(hotspot))
+	a.records(both)
+	a.look(time.Minute, hotspot)
+	if n := a.asked[lan]; n != 0 {
+		t.Errorf("lockdown asked %d times at %s", n, lan)
+	}
 }

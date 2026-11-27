@@ -53,11 +53,14 @@ import (
 // 2026-11-26): there usbmuxd matched the phone's record but connected only
 // to its IPv6 link-local address, gave up after 75 s and ignored the phone,
 // while lockdown answered at the phone's address on the hotspot,
-// 172.20.10.1, and restarting usbmuxd did not help. So a missing phone whose
-// records name hotspotPhone while this Mac has an address in hotspotNet is
-// listed with driver.SetupOwnHotspot instead, after the same wait, which
-// the gateway never restarts the service for: a cable brings it back, or
-// the Mac and the phone on the same other Wi-Fi network.
+// 172.20.10.1, and restarting usbmuxd did not help. So for a missing phone
+// whose records name hotspotPhone while this Mac has an address in
+// hotspotNet, Pinky reaches the phone there with a usbmuxd of its own,
+// started at once (hotspotMux, netmux.go). Only when that has not reached
+// the phone either, the same wait later, counted from then, is the phone
+// listed with driver.SetupOwnHotspot, which the gateway never restarts the
+// service for: a cable brings it back, or the Mac and the phone on the same
+// other Wi-Fi network.
 
 const (
 	// lostAfter is how long a missing phone must show up on the network
@@ -120,6 +123,7 @@ type lostState struct {
 	cabled  map[string]time.Time // by UDID: when usbmuxd last listed it on a cable
 	netted  map[string]time.Time // by UDID: when usbmuxd last listed it over the network
 	notSeen map[string]bool      // logged as not seen on Wi-Fi
+	hotspot map[string]time.Time // by UDID: on its own Personal Hotspot since, while missing (hotspotMux looks for it there)
 
 	// For tests.
 	browseFn func() (bonjourSource, error)
@@ -161,13 +165,16 @@ func (p *Provider) remember(infos []driver.Info) {
 
 // lostPhones returns the phones the person uses that usbmuxd does not list
 // though they have shown up on the network for lostAfter (unplugGrace after
-// a pull), with driver.SetupOwnHotspot when this Mac is on the phone's own
-// Personal Hotspot (ownHotspot), and those not seen on Wi-Fi at all a
-// moment after a pull: listed
+// a pull), and those not seen on Wi-Fi at all a moment after a pull: listed
 // are the UDIDs usbmuxd lists now, cabled those it lists on a cable, netted
 // those it lists over the network. A phone usbmuxd listed over the network
 // after its pull came through it, and may be asleep now: the slow rule. It
 // starts and stops the search as needed.
+//
+// A phone whose own Personal Hotspot this Mac is on (ownHotspot) goes to
+// Pinky's own usbmuxd at once (hotspotMux), and is listed with
+// driver.SetupOwnHotspot only once that has not reached it for the same
+// wait, counted from when it was first seen there.
 func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.Info {
 	w := &p.lost
 	if runtime.GOOS != "darwin" && !w.anyOS {
@@ -217,6 +224,9 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 	if w.notSeen == nil {
 		w.notSeen = map[string]bool{}
 	}
+	if w.hotspot == nil {
+		w.hotspot = map[string]time.Time{}
+	}
 	var toRead []string
 	for _, id := range missing {
 		m, ok := w.pairs[id]
@@ -241,6 +251,11 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 		w.mu.Unlock()
 	}
 
+	// The phones on their own Personal Hotspot go to Pinky's own usbmuxd
+	// once w.mu is released.
+	var onHotspot []string
+	var hotspotAt netip.Addr
+	defer func() { p.hotspotMux(onHotspot, hotspotAt) }()
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	var wanted []string
@@ -296,6 +311,7 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 		if !paired || len(found[id]) == 0 {
 			delete(w.seen, id)
 			delete(w.reports, id)
+			delete(w.hotspot, id)
 			if paired && recent && now.Sub(pulled) >= notSeenAfter && now.Sub(w.started) >= notSeenSearch {
 				if !w.notSeen[id] {
 					w.notSeen[id] = true
@@ -314,6 +330,21 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 		if !ok {
 			w.seen[id], since = now, now
 		}
+		// On its own Personal Hotspot: Pinky's own usbmuxd looks for it
+		// there from now on, and it is out of reach only once that has not
+		// reached it either.
+		local, hotspot := w.ownHotspot(found[id])
+		at := since
+		if hotspot {
+			onHotspot, hotspotAt = append(onHotspot, id), local
+			if t, had := w.hotspot[id]; had && !t.Before(since) {
+				at = t
+			} else {
+				w.hotspot[id], at = now, now
+			}
+		} else {
+			delete(w.hotspot, id)
+		}
 		wait := lostAfter
 		if recent {
 			// Just unplugged: usbmuxd lists a phone over Wi-Fi within
@@ -323,11 +354,16 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 			}
 			wait = 0
 		}
-		if now.Sub(since) < wait || (!recent && !ok) {
+		switch {
+		case hotspot:
+			// Pinky's own usbmuxd gets a moment, also right after a pull.
+			if now.Sub(at) < max(wait, unplugGrace) {
+				continue
+			}
+		case now.Sub(since) < wait || (!recent && !ok):
 			continue
 		}
 		setup, detail := driver.SetupDeviceService, lostDetail
-		local, hotspot := w.ownHotspot(found[id])
 		if hotspot {
 			setup, detail = driver.SetupOwnHotspot, ownHotspotDetail
 		}
@@ -354,6 +390,11 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 	for id := range w.notSeen {
 		if listed[id] {
 			delete(w.notSeen, id)
+		}
+	}
+	for id := range w.hotspot {
+		if listed[id] {
+			delete(w.hotspot, id)
 		}
 	}
 	return out
@@ -413,8 +454,10 @@ const notSeenDetail = "Not seen on Wi-Fi"
 const lostDetail = "This Mac's device service (usbmuxd) lost the iPhone on Wi-Fi: the iPhone is on the network, but the service no longer lists it, and may not for up to an hour. Restarting the service brings it back."
 
 // ownHotspotDetail says what is wrong with a phone usbmuxd does not list
-// while this Mac is on the phone's own Personal Hotspot.
-const ownHotspotDetail = "This Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) does not reach the iPhone over the network. " +
+// while this Mac is on the phone's own Personal Hotspot, and that Pinky's
+// own usbmuxd did not reach there either.
+const ownHotspotDetail = "This Mac is on the iPhone's own Personal Hotspot, where macOS's device service (usbmuxd) does not reach the iPhone over the network, " +
+	"and the iPhone does not answer Pinky over the hotspot either. " +
 	"A cable brings it back, or the Mac and the iPhone on the same other Wi-Fi network. Restarting the service does not help."
 
 // readPairInfo reads what matches the phone on the network from this

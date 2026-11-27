@@ -15684,8 +15684,9 @@ func (msgs Messages) GwStatusScreenOff() string {
 //
 // A phone's status line: this Mac is on the iPhone's own Personal Hotspot,
 // where macOS's device service (usbmuxd) doesn't reach the iPhone over the
-// network; a cable or another Wi-Fi network brings it back. Shown only in
-// other languages; in English the gateway's own words show.
+// network, and the iPhone doesn't answer Pinky there either; a cable or
+// another Wi-Fi network brings it back. Shown only in other languages; in
+// English the gateway's own words show.
 func GwStatusLostOnHotspot() string { return In(i18n.Locale()).GwStatusLostOnHotspot() }
 
 // GwStatusLostOnHotspot says "Lost on its hotspot"
@@ -15693,8 +15694,9 @@ func GwStatusLostOnHotspot() string { return In(i18n.Locale()).GwStatusLostOnHot
 //
 // A phone's status line: this Mac is on the iPhone's own Personal Hotspot,
 // where macOS's device service (usbmuxd) doesn't reach the iPhone over the
-// network; a cable or another Wi-Fi network brings it back. Shown only in
-// other languages; in English the gateway's own words show.
+// network, and the iPhone doesn't answer Pinky there either; a cable or
+// another Wi-Fi network brings it back. Shown only in other languages; in
+// English the gateway's own words show.
 func (msgs Messages) GwStatusLostOnHotspot() string {
 	return Catalog.Format(msgs.locale, "gwStatusLostOnHotspot", nil)
 }
@@ -17922,7 +17924,8 @@ func (msgs Messages) LostDetail(phone string) string {
 //
 // Under lostHotspotTitle, and in Add phone and the checkup. Personal
 // Hotspot is Apple's name for the iPhone's feature that shares its internet
-// connection (Settings › Personal Hotspot). phone is its name.
+// connection (Settings › Personal Hotspot). Shown only when Pinky can't
+// reach the iPhone over the hotspot by itself either. phone is its name.
 func LostHotspotDetail(phone string) string { return In(i18n.Locale()).LostHotspotDetail(phone) }
 
 // LostHotspotDetail says "This Mac is connected to {phone}'s own Personal Hotspot, where macOS's device service (usbmuxd) doesn't reach it over…"
@@ -17930,7 +17933,8 @@ func LostHotspotDetail(phone string) string { return In(i18n.Locale()).LostHotsp
 //
 // Under lostHotspotTitle, and in Add phone and the checkup. Personal
 // Hotspot is Apple's name for the iPhone's feature that shares its internet
-// connection (Settings › Personal Hotspot). phone is its name.
+// connection (Settings › Personal Hotspot). Shown only when Pinky can't
+// reach the iPhone over the hotspot by itself either. phone is its name.
 func (msgs Messages) LostHotspotDetail(phone string) string {
 	return Catalog.Format(msgs.locale, "lostHotspotDetail", map[string]any{"phone": phone})
 }
@@ -17940,7 +17944,8 @@ func (msgs Messages) LostHotspotDetail(phone string) string {
 //
 // The page of an iPhone that macOS's device service doesn't reach because
 // this Mac is connected to that iPhone's own Personal Hotspot (Apple's name
-// for the feature). phone is its name.
+// for the feature), and that doesn't answer Pinky over the hotspot either.
+// phone is its name.
 func LostHotspotTitle(phone string) string { return In(i18n.Locale()).LostHotspotTitle(phone) }
 
 // LostHotspotTitle says "This Mac can't reach {phone} on its Personal Hotspot"
@@ -17948,7 +17953,8 @@ func LostHotspotTitle(phone string) string { return In(i18n.Locale()).LostHotspo
 //
 // The page of an iPhone that macOS's device service doesn't reach because
 // this Mac is connected to that iPhone's own Personal Hotspot (Apple's name
-// for the feature). phone is its name.
+// for the feature), and that doesn't answer Pinky over the hotspot either.
+// phone is its name.
 func (msgs Messages) LostHotspotTitle(phone string) string {
 	return Catalog.Format(msgs.locale, "lostHotspotTitle", map[string]any{"phone": phone})
 }

@@ -140,7 +140,9 @@ func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 	p.Only = onlyDevices()
 	// On Linux and Windows, Pinky finds iPhones on Wi-Fi itself: the
 	// system's usbmuxd lists them there not at all, or only while they are
-	// on a cable too.
+	// on a cable too. On macOS it does so only for an iPhone whose own
+	// Personal Hotspot the Mac is on, where Apple's usbmuxd does not reach
+	// it.
 	p.WiFiMux = true
 	if dirs, err := api.DefaultDirs(); err == nil {
 		// Where Pinky looks for Apple's developer disk image before Xcode's.

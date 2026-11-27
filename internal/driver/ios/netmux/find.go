@@ -85,6 +85,11 @@ type Finder struct {
 	UDIDs func() []string // the phones this computer paired with
 	Log   *slog.Logger
 
+	// Accept, when set, is the only addresses a phone is listed at, of
+	// those its records name: on macOS a phone's address on its own
+	// Personal Hotspot, where Apple's usbmuxd does not reach it.
+	Accept func(netip.Addr) bool
+
 	// Interval is how often the Finder looks; 3 s when zero.
 	Interval time.Duration
 
@@ -269,6 +274,9 @@ func (s *findState) tick(ctx context.Context) {
 		list, refused := usableAddrs(svc, own)
 		if len(refused) > 0 {
 			s.log.Debug("netmux: a record names addresses no phone can have; skipped", "device", id, "addrs", refused)
+		}
+		if s.f.Accept != nil {
+			list = slices.DeleteFunc(list, func(a netip.Addr) bool { return !s.f.Accept(a) })
 		}
 		addrs[id] = append(addrs[id], list...)
 	}
@@ -584,7 +592,7 @@ func probeLockdown(ctx context.Context, addr netip.Addr) bool {
 
 // readPair reads a phone's pair record from the upstream usbmuxd, which
 // keeps them also for phones that are not attached, or from PairDir while
-// it is not running.
+// it is not running (none on macOS).
 func (m *Mux) readPair(udid string) (PairInfo, error) {
 	r, err := m.upstreamPair(udid)
 	if err != nil {
@@ -608,8 +616,11 @@ func (m *Mux) upstreamPair(udid string) (goios.PairRecord, error) {
 
 // PairedUDIDs returns the UDIDs of the pair records in dir, where
 // libimobiledevice's usbmuxd keeps them (/var/lib/lockdown), or none when
-// dir cannot be read.
+// dir is "" or cannot be read.
 func PairedUDIDs(dir string) []string {
+	if dir == "" {
+		return nil
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil
@@ -628,15 +639,21 @@ func PairedUDIDs(dir string) []string {
 
 // LockdownDir is where the system's usbmuxd keeps pair records:
 // libimobiledevice's on Linux, Apple's (Apple Devices, iTunes) on Windows.
+// "" on macOS: Apple's usbmuxd keeps them in /var/db/lockdown, which only
+// its own account can read, and Pinky reads them through it alone
+// (ReadPairRecord).
 var LockdownDir = lockdownDir()
 
 func lockdownDir() string {
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		base := os.Getenv("ProgramData")
 		if base == "" {
 			base = `C:\ProgramData`
 		}
 		return filepath.Join(base, "Apple", "Lockdown")
+	case "darwin":
+		return ""
 	}
 	return filepath.FromSlash("/var/lib/lockdown")
 }

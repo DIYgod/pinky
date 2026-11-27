@@ -33,11 +33,13 @@ type Provider struct {
 	// (an iOS_DDI folder in it), looked in before Xcode's; "" for none.
 	DiskImageDir string
 
-	// WiFiMux lets the provider run a usbmuxd of its own on Linux and
-	// Windows, whose usbmuxd lists phones on Wi-Fi not at all or only while
-	// they are on a cable too, to find phones on Wi-Fi (netmux.go). Only the
-	// app's provider sets it: it points go-ios, for the whole process, at
-	// that usbmuxd, which then carries every connection to an iPhone.
+	// WiFiMux lets the provider run a usbmuxd of its own to find phones on
+	// Wi-Fi (netmux.go): on Linux and Windows, whose usbmuxd lists them there
+	// not at all or only while they are on a cable too, and on macOS for a
+	// phone whose own Personal Hotspot the Mac is on, where Apple's does not
+	// reach it. Only the app's provider sets it: it points go-ios, for the
+	// whole process, at that usbmuxd, which then carries every connection to
+	// an iPhone.
 	WiFiMux bool
 
 	// RunDir is where Pinky remembers the helper runners it started (see
@@ -79,7 +81,7 @@ type Provider struct {
 
 	wifi       wifiState                                               // phones over Wi-Fi (wifi.go)
 	lost       lostState                                               // phones usbmuxd lost on Wi-Fi (lost.go)
-	nmux       muxState                                                // a usbmuxd of its own on Linux (netmux.go)
+	nmux       muxState                                                // a usbmuxd of its own (netmux.go)
 	restartFn  func(ctx context.Context, command, reason string) error // for tests: runAsAdmin
 	quiet      quietRestart                                            // restarting usbmuxd without a password (quietrestart.go)
 	prep       preparer                                                // Developer Mode and the developer disk image (prepare.go)
@@ -160,6 +162,9 @@ func (p *Provider) Platform() driver.Platform { return driver.IOS }
 // Detail how to fix what is missing. A gateway calls it every few seconds,
 // so it asks each phone again only when needed (see recheckOffline).
 func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
+	// The search for phones on their own Personal Hotspot ends once this
+	// Mac has left it (netmux.go).
+	p.leaveHotspot()
 	list, ok, err := p.listUsbmuxd()
 	if !ok {
 		return nil, err // nil without usbmuxd: CheckHost says what to install

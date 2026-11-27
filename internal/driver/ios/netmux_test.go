@@ -1,7 +1,8 @@
 //go:build !windows
 
-// Pinky runs its own usbmuxd on Linux and Windows (netmux.go); these
-// tests serve it on a Unix socket in /tmp, which Windows does not have.
+// Pinky runs its own usbmuxd on Linux and Windows, and on macOS for a
+// phone on its own Personal Hotspot (netmux.go); these tests serve it on a
+// Unix socket in /tmp, which Windows does not have.
 
 package ios
 
@@ -40,6 +41,7 @@ func muxTestProvider(t *testing.T) *Provider {
 	p.nmux.pairs = t.TempDir()
 	p.nmux.anyOS = true
 	p.nmux.dir = dir
+	p.nmux.upstream = "unix://" + dir + "/none" // not this computer's usbmuxd
 	p.nmux.browseFn = func() (netmux.Source, error) {
 		return staticSource{{Instance: "08:87:c7:2a:8a:db@fe80::1-supportsRP-24", Type: netmux.ServiceType, Addrs: []netip.Addr{netip.MustParseAddr("192.168.1.20")}}}, nil
 	}
