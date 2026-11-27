@@ -111,10 +111,12 @@ type media struct {
 
 	// For probes (media_probe.go). lastFrame is when the last frame came,
 	// atFrame what had come by then; srSent is the packet count of the
-	// phone's last sender report and srCount the reports (both under mu).
+	// phone's last sender report, srCame the RTP packets that had come when
+	// it did, and srCount the reports (all under mu).
 	lastFrame atomic.Int64 // unix nanos
 	atFrame   frameCounts
 	srSent    uint32
+	srCame    int
 	srCount   int
 	lastPT    atomic.Uint32 // payload type of the last RTP packet
 	lastSSRC  atomic.Uint32 // its SSRC
@@ -128,9 +130,8 @@ type media struct {
 
 // frameCounts are what had come when the last frame came out.
 type frameCounts struct {
-	packets int    // RTP packets
-	units   int    // access units
-	srSent  uint32 // packets the phone's last sender report counted
+	packets int // RTP packets
+	units   int // access units
 }
 
 type frameMark struct {
@@ -352,6 +353,7 @@ func (m *media) onRTCP(b []byte) {
 			m.srTS = binary.BigEndian.Uint32(b[16:20])
 			m.mu.Lock()
 			m.srSent = binary.BigEndian.Uint32(b[20:24]) // the sender's packet count
+			m.srCame = m.stats.Packets
 			m.srCount++
 			m.mu.Unlock()
 		}
@@ -554,7 +556,7 @@ func (m *media) finishAU() {
 	}
 	now := time.Now()
 	m.lastFrame.Store(now.UnixNano())
-	m.atFrame = frameCounts{packets: m.stats.Packets, units: m.wire.Units, srSent: m.srSent}
+	m.atFrame = frameCounts{packets: m.stats.Packets, units: m.wire.Units}
 	m.frameLog = append(m.frameLog, frameMark{at: now, size: len(data), key: key})
 	if len(m.frameLog) > 600 {
 		m.frameLog = append(m.frameLog[:0], m.frameLog[len(m.frameLog)-300:]...)
@@ -735,8 +737,8 @@ func (m *media) feedback() {
 			lastRR = time.Now()
 			m.udp.WriteTo(m.receiverReport(), m.dst)
 		}
-		// A stream that gives no frame even when asked broke without a
-		// sign (media_probe.go).
+		// A stream that gives no frame after input, even when asked, broke
+		// without a sign (media_probe.go).
 		if err := m.probeTick(time.Now()); err != nil {
 			m.fail(err)
 			return

@@ -42,6 +42,22 @@ func (f *fakeStream) keyFrame() {
 	f.rtp(100, true, f.ts, hevcNAL(19, 0xAA))
 }
 
+// fragments is a frame that is no key frame: one slice in n RTP payloads.
+func fragments(n int) [][]byte {
+	out := make([][]byte, n)
+	for i := range out {
+		h := byte(1) // TRAIL_R
+		if i == 0 {
+			h |= 0x80
+		}
+		if i == n-1 {
+			h |= 0x40
+		}
+		out[i] = []byte{hevcFU << 1, 1, h, byte(i)}
+	}
+	return out
+}
+
 // srCount feeds a sender report that says the phone sent n packets.
 func (f *fakeStream) srCount(n uint32) {
 	b := make([]byte, 28)
@@ -65,121 +81,110 @@ func ticks(m *media, from, to time.Time) (asks int, err error) {
 	return asks, nil
 }
 
-// A still screen that answers each probe with a key frame is left alone,
-// and is asked less and less often: at most one key frame per probeIdle.
-func TestProbeStillScreenAnswers(t *testing.T) {
-	f, buf := probeStream(t, true)
-	m, t0 := f.m, time.Now()
-	if asks, err := ticks(m, t0, t0.Add(probeIdle-300*time.Millisecond)); asks != 0 || err != nil {
-		t.Fatalf("before probeIdle: %d requests, %v", asks, err)
-	}
-	if asks, _ := ticks(m, t0.Add(probeIdle), t0.Add(probeIdle)); asks != 1 || m.probe.why != "idle" {
-		t.Fatalf("at probeIdle: %d requests (%q); want one idle probe", asks, m.probe.why)
-	}
-	f.keyFrame() // the phone answers
-	now := t0.Add(probeIdle + 200*time.Millisecond)
-	if err := m.probeTick(now); err != nil || !m.probe.at.IsZero() || m.probe.answered != 1 {
-		t.Fatalf("after the answer: %v, probe %+v", err, m.probe)
-	}
-	// The next probe waits twice as long; answered, the one after that
-	// longer again, up to probeIdleMax.
-	for i, wait := range []time.Duration{2 * probeIdle, 4 * probeIdle, probeIdleMax, probeIdleMax} {
-		if asks, _ := ticks(m, now.Add(200*time.Millisecond), now.Add(wait-200*time.Millisecond)); asks != 0 {
-			t.Fatalf("probe %d came before %v", i+2, wait)
-		}
-		now = now.Add(wait)
-		if asks, _ := ticks(m, now, now); asks != 1 {
-			t.Fatalf("probe %d did not come after %v", i+2, wait)
-		}
-		f.keyFrame()
-		now = now.Add(200 * time.Millisecond)
-		if err := m.probeTick(now); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if m.Err() != nil || m.stopped.Load() || strings.Contains(buf.String(), "level=WARN") {
-		t.Fatalf("a still screen was failed: %v\n%s", m.Err(), buf)
-	}
-	// The screen changes: the next probe is probeIdle after its last frame.
-	f.rtp(100, true, f.ts+400, hevcNAL(1, 0xBB))
-	f.ts += 400
-	changed := now.Add(time.Second)
-	m.lastFrame.Store(changed.UnixNano()) // as if it came then
-	if asks, _ := ticks(m, changed, changed.Add(probeIdle-200*time.Millisecond)); asks != 0 {
-		t.Fatalf("a probe within %v of the screen changing", probeIdle)
-	}
-	if asks, _ := ticks(m, changed.Add(probeIdle), changed.Add(probeIdle)); asks != 1 {
-		t.Fatalf("no probe %v after the screen changed", probeIdle)
-	}
-}
-
-// A phone that stops sending video while its sender reports go on (the
-// alert of #204) gets no frame even when asked: the stream fails, and the
-// log says no RTP came while the phone counted packets it sent.
-func TestProbeNoRTPFails(t *testing.T) {
-	f, buf := probeStream(t, true)
-	m, t0 := f.m, time.Now()
-	f.srCount(40)
-	f.srCount(90) // sent, never came
-	asks, err := ticks(m, t0, t0.Add(probeIdle+probeWait))
+// failAfterInput gives the stream input that no frame follows and runs its
+// probe, which must find the stream broken after probeAsks requests.
+func failAfterInput(t *testing.T, m *media) *probeError {
+	t.Helper()
+	var in atomic.Int64
+	m.setProbe(&in, 0, nil)
+	at := time.Now().Add(time.Millisecond)
+	in.Store(at.UnixNano())
+	asks, err := ticks(m, at, at.Add(probeInput+probeWait+time.Second))
 	var pe *probeError
 	if !errors.As(err, &pe) || asks != probeAsks {
 		t.Fatalf("after %d requests: %v; want the stream broken after %d", asks, err, probeAsks)
 	}
-	m.fail(err)
+	return pe
+}
+
+// A still screen a mirror watches is never failed, nor asked for key
+// frames, however long it stays still, also after input it answered: the
+// phone may ignore key frame requests then, and probes of still screens
+// restarted working streams of the owner's iPhone 13 mini and iPad and of
+// #235's iPhone 17 (docs/notes/ios.md, "Probes").
+func TestProbeStillScreenNotFailed(t *testing.T) {
+	f, buf := probeStream(t, true)
+	m, t0 := f.m, time.Now()
+	var in atomic.Int64
+	m.setProbe(&in, 0, func() bool { return false })
+	if asks, err := ticks(m, t0, t0.Add(10*time.Minute)); asks != 0 || err != nil {
+		t.Fatalf("a still screen: %d requests, %v", asks, err)
+	}
+	// Input the screen answers, then a still screen again.
+	in.Store(time.Now().UnixNano())
+	f.ts += 400
+	f.rtp(100, true, f.ts, hevcNAL(1, 0xBB))
+	now := time.Now()
+	if asks, err := ticks(m, now, now.Add(10*time.Minute)); asks != 0 || err != nil {
+		t.Fatalf("a still screen after input it answered: %d requests, %v", asks, err)
+	}
+	if m.Err() != nil || m.stopped.Load() || strings.Contains(buf.String(), "level=WARN") {
+		t.Fatalf("a still screen was failed: %v\n%s", m.Err(), buf)
+	}
+}
+
+// A phone that stops sending video while its sender reports go on (the
+// alert of #204) gives no frame after input, even when asked: the stream
+// fails, and the log says no RTP came while the phone counted packets it
+// sent.
+func TestProbeNoRTPFails(t *testing.T) {
+	f, buf := probeStream(t, true)
+	m := f.m
+	f.srCount(40)
+	f.srCount(90) // 88 sent that never came
+	pe := failAfterInput(t, m)
+	m.fail(pe)
 	if !m.stopped.Load() || !errors.As(m.Err(), &pe) {
 		t.Fatalf("the stream did not fail: %v", m.Err())
 	}
 	got := buf.String()
 	t.Logf("the log:\n%s", got)
 	for _, want := range []string{
-		"level=WARN", "the video stream stopped showing pictures", "why=idle", "requests=3", "rtp_since_frame=0",
-		"sender_reports=2", "sr_packets=90", "sr_sent_since_frame=90", "frames=1", "payload_types=100×2", "codec=hevc",
+		"level=WARN", "the video stream stopped showing pictures", " since_input=", " requests=3 ", " rtp_since_frame=0 ",
+		" sender_reports=2 ", " sr_packets=90 ", " sr_missing=88 ", " frames=1 ", " payload_types=100×2 ", " codec=hevc ",
 	} {
 		if !strings.Contains(got, want) {
-			t.Errorf("the log lacks %s", want)
+			t.Errorf("the log lacks %q", want)
 		}
+	}
+	if strings.Contains(got, " why=") {
+		t.Error("the log names why the probe ran; only input starts one")
 	}
 }
 
 // RTP that gives no frame (another payload type, fragments without their
-// start) counts as no picture: the probe fails the stream, and the log
-// says packets came.
+// start) counts as no picture: the probe after input fails the stream, and
+// the log says packets came.
 func TestProbeUnreadableRTPFails(t *testing.T) {
 	f, buf := probeStream(t, true)
-	m, t0 := f.m, time.Now()
 	fu := []byte{hevcFU << 1, 1, 0x01, 0xEE} // a middle fragment
 	for i := range 30 {
 		f.rtp(127, i%3 == 2, f.ts+uint32(400*(i/3+1)), fu)
 	}
-	_, err := ticks(m, t0, t0.Add(probeIdle+probeWait))
-	var pe *probeError
-	if !errors.As(err, &pe) {
-		t.Fatalf("the stream was not found broken: %v", err)
-	}
+	failAfterInput(t, f.m)
 	got := buf.String()
-	for _, want := range []string{"rtp_since_frame=30", "payload_types=\"100×2 127×30\"", "last_pt=127", "frames=1"} {
+	for _, want := range []string{" rtp_since_frame=30 ", " payload_types=\"100×2 127×30\" ", " last_pt=127 ", " frames=1 "} {
 		if !strings.Contains(got, want) {
-			t.Errorf("the log lacks %s:\n%s", want, got)
+			t.Errorf("the log lacks %q:\n%s", want, got)
 		}
 	}
 }
 
-// Input that no frame follows is probed probeInput later, watched or not;
-// a frame after the input, or no input, starts no probe on a stream
-// nobody watches.
+// Input that no frame follows is probed probeInput later, watched or not,
+// and once: a frame answers the probe, and the same input starts no other.
+// Input a frame follows, or no input, starts none.
 func TestProbeAfterInput(t *testing.T) {
 	f, _ := probeStream(t, false)
 	m, t0 := f.m, time.Now()
 	var in atomic.Int64
 	m.setProbe(&in, 0, nil)
 	if asks, _ := ticks(m, t0, t0.Add(time.Minute)); asks != 0 {
-		t.Fatalf("%d requests on an unwatched stream without input", asks)
+		t.Fatalf("%d requests without input", asks)
 	}
 	// Input the screen answers: no probe.
 	in.Store(time.Now().Add(-time.Millisecond).UnixNano())
-	f.rtp(100, true, f.ts+400, hevcNAL(1, 0xBB))
 	f.ts += 400
+	f.rtp(100, true, f.ts, hevcNAL(1, 0xBB))
 	now := time.Now()
 	if asks, _ := ticks(m, now, now.Add(5*time.Second)); asks != 0 {
 		t.Fatalf("%d requests after input the screen answered", asks)
@@ -190,14 +195,96 @@ func TestProbeAfterInput(t *testing.T) {
 	if asks, _ := ticks(m, at, at.Add(probeInput-200*time.Millisecond)); asks != 0 {
 		t.Fatal("a probe before probeInput")
 	}
-	if asks, _ := ticks(m, at.Add(probeInput), at.Add(probeInput)); asks != 1 || m.probe.why != "input" {
-		t.Fatalf("%d requests (%q) probeInput after input; want an input probe", asks, m.probe.why)
+	if asks, _ := ticks(m, at.Add(probeInput), at.Add(probeInput)); asks != 1 || m.probe.at.IsZero() {
+		t.Fatalf("%d requests probeInput after input; want a probe", asks)
 	}
-	// Unanswered, the stream is broken.
-	_, err := ticks(m, at.Add(probeInput+200*time.Millisecond), at.Add(probeInput+probeWait))
+	f.keyFrame() // the phone answers
+	if asks, err := ticks(m, at.Add(probeInput+200*time.Millisecond), at.Add(time.Minute)); asks != 0 || err != nil || m.probe.answered != 1 {
+		t.Fatalf("after the answer: %d requests, %v, %d probes answered", asks, err, m.probe.answered)
+	}
+	// Input again, and no answer: the stream is broken.
+	at = at.Add(time.Minute)
+	in.Store(at.UnixNano())
+	_, err := ticks(m, at, at.Add(probeInput+probeWait+time.Second))
 	var pe *probeError
-	if !errors.As(err, &pe) || pe.why != "input" {
-		t.Fatalf("an unanswered input probe: %v", err)
+	if !errors.As(err, &pe) || m.probe.sent != 2 {
+		t.Fatalf("an unanswered probe after input: %v, after %d probes", err, m.probe.sent)
+	}
+}
+
+// A frame that comes while the probe decides answers it. Before it fails a
+// stream the probe asks the phone whether its screen is off, which takes a
+// while; a frame that came meanwhile once failed a stream that worked
+// (since_frame=-100ms, twice in the owner's log).
+func TestProbeFrameWhileDeciding(t *testing.T) {
+	f, buf := probeStream(t, true)
+	m := f.m
+	var in atomic.Int64
+	asked := 0
+	m.setProbe(&in, 0, func() bool {
+		asked++
+		f.keyFrame() // comes while the phone is asked
+		return false
+	})
+	at := time.Now().Add(time.Millisecond)
+	in.Store(at.UnixNano())
+	if _, err := ticks(m, at, at.Add(time.Minute)); err != nil || asked != 1 {
+		t.Fatalf("%v, the screen asked about %d times", err, asked)
+	}
+	if m.probe.answered != 1 || m.Err() != nil || strings.Contains(buf.String(), "level=WARN") {
+		t.Fatalf("the frame did not answer the probe: %d answered, %v\n%s", m.probe.answered, m.Err(), buf)
+	}
+}
+
+// sr_missing is the packet count of the phone's last sender report minus
+// the packets that had come when it did. A report sent between the packets
+// of the last frame counts only those before it, so nothing is missing once
+// the rest came, also when a later report counts them all. The field it
+// replaced, sr_sent_since_frame, subtracted the count of the last report
+// before the last frame, which can be a second older than the frame, so it
+// counted packets that came (180 in #235's line, which lost none). Packets
+// the report counts that never came are missing, the last ones too, which
+// leave no gap in the sequence numbers for lost to count.
+func TestProbeSRMissing(t *testing.T) {
+	// lastFrame feeds a frame in four packets with a sender report before
+	// the third, which counts the four packets that had come by then.
+	lastFrame := func(f *fakeStream) {
+		f.ts += 400
+		for i, p := range fragments(4) {
+			if i == 2 {
+				f.srCount(4)
+			}
+			f.rtp(100, i == 3, f.ts, p)
+		}
+	}
+	for _, c := range []struct {
+		name string
+		feed func(*fakeStream)
+		want []string
+	}{
+		{"a report within the last frame", lastFrame,
+			[]string{" sr_packets=4 ", " sr_missing=0 ", " packets=6 "}},
+		{"and one after it", func(f *fakeStream) {
+			lastFrame(f)
+			f.srCount(6)
+		}, []string{" sender_reports=2 ", " sr_packets=6 ", " sr_missing=0 ", " packets=6 "}},
+		{"packets that never came", func(f *fakeStream) {
+			f.ts += 400
+			f.rtp(100, true, f.ts, hevcNAL(1, 0xBB))
+			f.srCount(10) // 7 more than came
+		}, []string{" sr_packets=10 ", " sr_missing=7 ", " packets=3 "}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			f, buf := probeStream(t, true)
+			c.feed(f)
+			failAfterInput(t, f.m)
+			got := buf.String()
+			for _, want := range append(c.want, " rtp_since_frame=0 ", " lost=0 ") {
+				if !strings.Contains(got, want) {
+					t.Errorf("the log lacks %q:\n%s", want, got)
+				}
+			}
+		})
 	}
 }
 
@@ -205,21 +292,26 @@ func TestProbeAfterInput(t *testing.T) {
 // its screen is off.
 func TestProbeHoldAndDarkScreen(t *testing.T) {
 	f, buf := probeStream(t, true)
-	m, t0 := f.m, time.Now()
+	m := f.m
 	dark := true
-	m.setProbe(new(atomic.Int64), 20*time.Second, func() bool { return dark })
-	if _, err := ticks(m, t0, t0.Add(19*time.Second)); err != nil {
-		t.Fatalf("failed within its hold: %v", err)
+	var in atomic.Int64
+	m.setProbe(&in, 20*time.Second, func() bool { return dark })
+	hold := m.started.Add(20 * time.Second)
+	at := time.Now().Add(time.Millisecond)
+	in.Store(at.UnixNano())
+	if _, err := ticks(m, at, hold.Add(-time.Millisecond)); err != nil || m.probe.dark != 0 {
+		t.Fatalf("within its hold: %v, %d dark", err, m.probe.dark)
 	}
-	if _, err := ticks(m, t0.Add(19200*time.Millisecond), t0.Add(2*time.Minute)); err != nil {
+	if _, err := ticks(m, hold, hold.Add(time.Minute)); err != nil {
 		t.Fatalf("failed while the screen is off: %v", err)
 	}
-	if m.probe.dark == 0 || !strings.Contains(buf.String(), "while its screen is off") {
+	if m.probe.dark != 1 || !strings.Contains(buf.String(), "while its screen is off") {
 		t.Fatalf("dark probes %d, log:\n%s", m.probe.dark, buf)
 	}
 	dark = false
-	now := t0.Add(2 * time.Minute)
-	if _, err := ticks(m, now, now.Add(probeIdleMax+probeWait+time.Second)); err == nil {
+	at = hold.Add(time.Minute)
+	in.Store(at.UnixNano())
+	if _, err := ticks(m, at, at.Add(probeInput+probeWait+time.Second)); err == nil {
 		t.Fatal("not failed once the screen is on")
 	}
 }
@@ -250,8 +342,10 @@ func TestProbeFailureRestarts(t *testing.T) {
 	if h := holdOf(first); h != probeHoldBase {
 		t.Fatalf("the first stream's hold %v; want %v", h, probeHoldBase)
 	}
+	// Input that the phone shows nothing for.
 	now := first.started.Add(probeHoldBase)
-	_, perr := ticks(first, now, now.Add(probeIdle+probeWait))
+	d.lastInput.Store(now.UnixNano())
+	_, perr := ticks(first, now, now.Add(probeInput+probeWait+time.Second))
 	if perr == nil {
 		t.Fatal("the probe did not find the stream broken")
 	}
