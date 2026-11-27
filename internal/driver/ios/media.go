@@ -940,7 +940,7 @@ func (st *mediaStream) Close() error {
 	return nil
 }
 
-// RequestKeyFrame asks the phone for a key frame now (an RTCP FIR, at most
+// RequestKeyFrame asks the phone for a key frame now (an RTCP PLI, at most
 // one every 500 ms). The gateway shares one stream among the mirror and
 // the recorder, so a member that needs a key frame (a viewer that fell
 // behind, a recording after a pause) asks through it: the stream itself
