@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 通过 USB 数据线连接的 iOS 16 到 17.3 的 iPhone 现在也能用 Pinky 了。iOS 16 上，在装有 Xcode 的 Mac 上打开「添加手机 › iPhone」，点击「安装 iPhone 上的 Pinky」；Mac 上没有这台手机需要的开发者磁盘映像时，在同一页点击「下载」即可从第三方镜像获取。iOS 17.0 到 17.3 还没在真机上试过，需要你按 README 的说明自己在 Xcode 中启动 WebDriverAgent。感谢 @jiangdada6。
+
 ## 2026.1127.2 (2026-11-27)
 
 - Mac 连着 iPhone 自己的「个人热点」、设备服务连不上这台 iPhone 时，Pinky 现在会自己通过热点连上它；只有 iPhone 在热点上也没有应答，才会显示为「个人热点上找不到」。感谢 @SamuelZ12 反馈。
