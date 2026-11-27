@@ -2431,6 +2431,24 @@ func (msgs Messages) AddPhoneIPhoneNoImageMac() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageMac", nil)
 }
 
+// AddPhoneIPhoneNoImageLegacy says "Current Xcode does not include an iOS 16 developer disk image. In Add phone › iPhone, choose Download to get a matc…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's page when an iOS 16 phone needs a
+// developer disk image. The download offer follows on the Add phone page;
+// current Xcode has no iOS 16 DeviceSupport image.
+func AddPhoneIPhoneNoImageLegacy() string { return In(i18n.Locale()).AddPhoneIPhoneNoImageLegacy() }
+
+// AddPhoneIPhoneNoImageLegacy says "Current Xcode does not include an iOS 16 developer disk image. In Add phone › iPhone, choose Download to get a matc…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's page when an iOS 16 phone needs a
+// developer disk image. The download offer follows on the Add phone page;
+// current Xcode has no iOS 16 DeviceSupport image.
+func (msgs Messages) AddPhoneIPhoneNoImageLegacy() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageLegacy", nil)
+}
+
 // AddPhoneIPhoneNoImageTitle says "This computer has no developer disk image yet"
 // in the language the app shows.
 //
@@ -11251,14 +11269,14 @@ func (msgs Messages) ConnectionWDA() string {
 	return Catalog.Format(msgs.locale, "connectionWDA", nil)
 }
 
-// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16 to 17.3, WebDriverAgent needs USB and…"
+// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16, use Install Pinky on the iPhone and …"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
 // iPhone gives and costs.
 func ConnectionWDADesc() string { return In(i18n.Locale()).ConnectionWDADesc() }
 
-// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16 to 17.3, WebDriverAgent needs USB and…"
+// ConnectionWDADesc says "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16, use Install Pinky on the iPhone and …"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: what Pinky on the
@@ -11283,13 +11301,13 @@ func (msgs Messages) LegacyWDAExternal() string {
 	return Catalog.Format(msgs.locale, "legacyWDAExternal", nil)
 }
 
-// LegacyWDALockdown says "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked durin…"
+// LegacyWDALockdown says "Install Pinky on the iPhone from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation."
 // in the language the app shows.
 //
 // Setup for an iPhone on iOS 16.
 func LegacyWDALockdown() string { return In(i18n.Locale()).LegacyWDALockdown() }
 
-// LegacyWDALockdown says "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked durin…"
+// LegacyWDALockdown says "Install Pinky on the iPhone from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation."
 // in the language of msgs.
 //
 // Setup for an iPhone on iOS 16.

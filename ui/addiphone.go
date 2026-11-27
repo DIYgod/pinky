@@ -298,6 +298,11 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 					})
 				}
 			case driver.SetupNoDiskImage:
+				if ios16(d.Info.OSVersion) {
+					guideProblem(c, locales.AddPhoneIPhoneNoImageTitle(), locales.AddPhoneIPhoneNoImageLegacy())
+					a.mirrorOffer(c, d.Info.OSVersion)
+					break
+				}
 				// Apple's image comes with Xcode; Pinky does not ship it.
 				if guideOS == "darwin" {
 					guideProblem(c, locales.AddPhoneIPhoneNoImageTitle(), locales.AddPhoneIPhoneNoImageMac())

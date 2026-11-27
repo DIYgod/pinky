@@ -180,18 +180,7 @@ func prepareLegacyImage(ctx context.Context, e goios.DeviceEntry, version, ownDi
 	if img == "" {
 		return fmt.Errorf("no compatible developer disk image for iOS %s: %w", version, errNoDiskImage)
 	}
-	_, err := bounded(ctx, helperStartTimeout, func() (bool, error) {
-		m, err := imagemounter.NewImageMounter(e)
-		if err != nil {
-			return false, err
-		}
-		defer m.Close()
-		list, err := m.ListImages()
-		if err != nil || len(list) > 0 {
-			return false, err
-		}
-		return true, m.MountImage(img)
-	})
+	_, err := bounded(ctx, helperStartTimeout, func() (bool, error) { return true, mountLegacyImage(e, img) })
 	if err != nil {
 		return fmt.Errorf("mounting the iOS 16 developer disk image: %w", err)
 	}
@@ -199,6 +188,22 @@ func prepareLegacyImage(ctx context.Context, e goios.DeviceEntry, version, ownDi
 		return fmt.Errorf("the iOS 16 developer disk image did not make XCTest available: %w", err)
 	}
 	return nil
+}
+
+// mountLegacyImage is synchronous. A background preparation job must wait
+// for the underlying mount to finish before allowing another attempt: the
+// image mounter has no context and bounded would leave it running.
+func mountLegacyImage(e goios.DeviceEntry, img string) error {
+	m, err := imagemounter.NewImageMounter(e)
+	if err != nil {
+		return err
+	}
+	defer m.Close()
+	list, err := m.ListImages()
+	if err != nil || len(list) > 0 {
+		return err
+	}
+	return m.MountImage(img)
 }
 
 func legacyImagePath(ownDir string, version osVersion) string {

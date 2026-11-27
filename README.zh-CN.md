@@ -151,7 +151,7 @@ iOS 17.4 到 26 的 iPhone 通过手机上一个运行 WebDriverAgent 的应用�
 
 #### iOS 16 到 17.3 的 iPhone
 
-用 USB 连接 iPhone。iOS 16 上，在装有 Xcode 的 Mac 上打开「添加手机 › iPhone」，点击「安装 iPhone 上的 Pinky」。Pinky 会用你的 Apple 开发团队构建、签名并安装 iOS 16 助手。iOS 17.0 到 17.3 上，先在 Xcode 的测试方案中设置 `USE_IP=127.0.0.1`，再启动已签名的 WebDriverAgentRunner 测试；否则，同一 Wi-Fi 上的其他人可能连接 WebDriverAgent 的控制和屏幕端口。使用 Pinky 时保持测试运行，用完后在 Xcode 中停止测试。iOS 17.0 到 17.3 尚未在真机上验证。[设置与验证方法](docs/notes/ios.md#iphones-on-ios-16-to-173)。
+用 USB 连接 iPhone。iOS 16 上，在装有 Xcode 的 Mac 上打开「添加手机 › iPhone」，点击「安装 iPhone 上的 Pinky」。Pinky 会用你的 Apple 开发团队构建、签名并安装 Pinky 助手。iOS 17.0 到 17.3 上，先在 Xcode 的测试方案中设置 `USE_IP=127.0.0.1`，再启动已签名的 WebDriverAgentRunner 测试；否则，同一 Wi-Fi 上的其他人可能连接 WebDriverAgent 的控制和屏幕端口。使用 Pinky 时保持测试运行，用完后在 Xcode 中停止测试。iOS 17.0 到 17.3 尚未在真机上验证。[设置与验证方法](docs/notes/ios.md#iphones-on-ios-16-to-173)。
 
 ### 3. 把 Pinky 接入你的 Agent
 

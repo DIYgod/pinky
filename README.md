@@ -151,7 +151,7 @@ On iOS 17.4 to 26, an iPhone takes taps and typing from a computer through an ap
 
 #### iPhones on iOS 16 to 17.3
 
-Connect over USB. On iOS 16, open **Add phone › iPhone** on a Mac with Xcode and click **Install Pinky on the iPhone**. Pinky builds, signs and installs the iOS 16 helper with your Apple development team. On iOS 17.0 to 17.3, set `USE_IP=127.0.0.1` in the Xcode test scheme before starting the signed WebDriverAgentRunner test. Without this setting, WebDriverAgent can expose control and screen ports to others on the same Wi-Fi. Keep the test running while using Pinky, then stop it in Xcode. This iOS 17.0 to 17.3 path has not yet been tried on a phone. [Setup and how to verify it](docs/notes/ios.md#iphones-on-ios-16-to-173).
+Connect over USB. On iOS 16, open **Add phone › iPhone** on a Mac with Xcode and click **Install Pinky on the iPhone**. Pinky builds, signs and installs Pinky Helper with your Apple development team. On iOS 17.0 to 17.3, set `USE_IP=127.0.0.1` in the Xcode test scheme before starting the signed WebDriverAgentRunner test. Without this setting, WebDriverAgent can expose control and screen ports to others on the same Wi-Fi. Keep the test running while using Pinky, then stop it in Xcode. This iOS 17.0 to 17.3 path has not yet been tried on a phone. [Setup and how to verify it](docs/notes/ios.md#iphones-on-ios-16-to-173).
 
 ### 3. Add Pinky to your agent
 

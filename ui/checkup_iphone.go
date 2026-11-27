@@ -208,6 +208,9 @@ func setupWords(d gateway.DeviceView, step string, here bool) (title, text, note
 	case driver.SetupPreparing:
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStepPreparing(), ""
 	case driver.SetupNoDiskImage:
+		if ios16(d.Info.OSVersion) {
+			return locales.AddPhoneIPhoneNoImageTitle(), locales.AddPhoneIPhoneNoImageLegacy(), ""
+		}
 		text := locales.AddPhoneIPhoneNoImageMac()
 		if guideOS != "darwin" {
 			text = locales.AddPhoneIPhoneNoImageCopy()

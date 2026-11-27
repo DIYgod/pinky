@@ -226,4 +226,16 @@ func TestBrandRunnerDevice(t *testing.T) {
 			t.Error(err)
 		}
 	}
+	info, _, err := readInfo(app)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !branded(info) || info["CFBundleDisplayName"] != "Pinky Helper" {
+		t.Errorf("iOS 16 runner was not branded: %v", info)
+	}
+	icons, _ := info["CFBundleIcons"].(map[string]any)
+	primary, _ := icons["CFBundlePrimaryIcon"].(map[string]any)
+	if primary["CFBundleIconName"] != "AppIcon" {
+		t.Errorf("iOS 16 runner icon = %v", info["CFBundleIcons"])
+	}
 }

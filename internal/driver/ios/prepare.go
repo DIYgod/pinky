@@ -82,10 +82,11 @@ func recheckFor(info driver.Info) time.Duration {
 
 // preparer holds the provider's preparation jobs. Its zero value is ready.
 type preparer struct {
-	mu       sync.Mutex
-	jobs     map[string]*mountJob // by UDID
-	revealed map[string]entryKey  // the attach the Developer Mode switch was shown for
-	asked    map[string]time.Time // the last pairing request (Windows), by UDID
+	mu         sync.Mutex
+	jobs       map[string]*mountJob // by UDID
+	legacyJobs map[string]*mountJob // iOS 16 mounts, by UDID
+	revealed   map[string]entryKey  // the attach the Developer Mode switch was shown for
+	asked      map[string]time.Time // the last pairing request (Windows), by UDID
 	// A phone whose accepted pairing did not reach the record here: the host
 	// id it was stuck with, and the attach it was seen through. Pairing again
 	// would only make the phone ask to be trusted while that record stays. It
@@ -428,6 +429,7 @@ func readRefusals(ownDir string) map[string]time.Time {
 func (pr *preparer) forget(id string) {
 	pr.mu.Lock()
 	delete(pr.jobs, id)
+	delete(pr.legacyJobs, id)
 	pr.mu.Unlock()
 }
 

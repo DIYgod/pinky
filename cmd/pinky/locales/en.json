@@ -836,6 +836,10 @@
   "@addPhoneIPhoneNoImageMac": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the text on a Mac."
   },
+  "addPhoneIPhoneNoImageLegacy": "Current Xcode does not include an iOS 16 developer disk image. In Add phone › iPhone, choose Download to get a matching image and signature from the third-party mirror; Pinky checks both files before using them.",
+  "@addPhoneIPhoneNoImageLegacy": {
+    "description": "Add phone › iPhone and the phone's page when an iOS 16 phone needs a developer disk image. The download offer follows on the Add phone page; current Xcode has no iOS 16 DeviceSupport image."
+  },
   "addPhoneIPhoneNoImageTitle": "This computer has no developer disk image yet",
   "@addPhoneIPhoneNoImageTitle": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the title of the box."
@@ -3900,7 +3904,7 @@
   "@connectionWDA": {
     "description": "Settings › Phones, an iPhone's connection choice: the way through Pinky on the iPhone. WebDriverAgent is a name. Pinky on the iPhone is what the computer calls Pinky's iPhone app, named just Pinky on the iPhone itself (Pinky on the phone names the Android app the same way), which hosts WebDriverAgent; older installs are the app Pinky Helper, which works the same."
   },
-  "connectionWDADesc": "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16 to 17.3, WebDriverAgent needs USB and separate Xcode setup. It does not share the screen, so banking apps that refuse screen sharing keep working. Now and then iOS asks for its passcode on the iPhone before it starts. The live picture and reading the screen are slower.",
+  "connectionWDADesc": "Pinky on the iPhone needs to be installed once from a Mac with Xcode. On iOS 16, use Install Pinky on the iPhone and keep USB connected. On iOS 17.0 to 17.3, WebDriverAgent needs USB and separate Xcode setup. It does not share the screen, so banking apps that refuse screen sharing keep working. Now and then iOS asks for its passcode on the iPhone before it starts. The live picture and reading the screen are slower.",
   "@connectionWDADesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what Pinky on the iPhone gives and costs."
   },
@@ -3908,7 +3912,7 @@
   "@legacyWDAExternal": {
     "description": "Setup for an iPhone on iOS 17.0 to 17.3. WebDriverAgentRunner is the name of an Xcode test target."
   },
-  "legacyWDALockdown": "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation.",
+  "legacyWDALockdown": "Install Pinky on the iPhone from a Mac with Xcode. Keep the iPhone connected over USB and unlocked during installation.",
   "@legacyWDALockdown": {
     "description": "Setup for an iPhone on iOS 16."
   },

@@ -60,8 +60,8 @@ func TestDeviceUSBWDA(t *testing.T) {
 	}
 	defer dev.Close()
 	wda, ok := dev.(*WDADevice)
-	if !ok || wda.l != nil || (wda.run != nil) != (kind == pathLockdownWDA) {
-		t.Fatalf("expected %v WebDriverAgent over USB", kind)
+	if !ok || wda.l != nil || (kind != pathLockdownWDA && wda.run != nil) {
+		t.Fatalf("expected %v WebDriverAgent over USB (runner started here: %t)", kind, ok && wda.run != nil)
 	}
 	t.Logf("opened iOS %s through WebDriverAgent over USB (started runner: %t)", wda.info.OSVersion, wda.run != nil)
 	app, err := wda.c.activeApp(ctx)

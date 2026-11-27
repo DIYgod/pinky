@@ -42,3 +42,20 @@ func TestLegacyImagePicksNewestCompatibleVersion(t *testing.T) {
 		t.Errorf("selected %q", got)
 	}
 }
+
+// Run with PINKY_TEST_MIRROR=1 to verify the pinned third-party files are
+// still available and pass the checksum checks before testing on a phone.
+func TestLegacyMirrorDownload(t *testing.T) {
+	if os.Getenv("PINKY_TEST_MIRROR") != "1" {
+		t.Skip("requires an explicit network test")
+	}
+	p := NewProvider()
+	p.DiskImageDir = t.TempDir()
+	if err := p.DownloadLegacyDiskImage(t.Context(), "16.5.1", nil); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(p.DiskImageDir, "LegacyDiskImages")
+	if got := legacyImageIn(dir, parseVersion("16.5.1")); got != filepath.Join(dir, "16.5", "DeveloperDiskImage.dmg") {
+		t.Fatalf("downloaded image = %q", got)
+	}
+}

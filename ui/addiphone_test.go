@@ -408,6 +408,29 @@ func TestAddIPhoneDownload(t *testing.T) {
 	}
 }
 
+func TestAddIPhoneLegacyImageDownload(t *testing.T) {
+	ta, tt := addIPhoneApp(t)
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the phone", func() bool { tt.Frame(); return ta.add.iphone(ta.app) != nil })
+	id := ta.add.iphone(ta.app).Info.ID
+	ta.api.SetIPhone(id, driver.Info{OSVersion: "16.5.1", State: driver.StateNeedsSetup,
+		Setup: driver.SetupNoDiskImage, Detail: "No compatible iOS 16 developer disk image."})
+	ta.waitFor(t, "the iOS 16 image offer", func() bool {
+		tt.Frame()
+		return hasText(tt, "iOS 16 developer disk image")
+	})
+	if hasText(tt, "Xcode 27.0 beta 4") {
+		t.Fatalf("offered the newer personalized image for iOS 16: %q", tt.Texts())
+	}
+	if !hasText(tt, "Current Xcode does not include an iOS 16 developer disk image") || hasText(tt, locales.AddPhoneIPhoneGetXcode()) {
+		t.Fatalf("iOS 16 image guidance points to the wrong source: %q", tt.Texts())
+	}
+	if err := clickInView(tt, "Download (8 MB)"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "downloaded image", func() bool { tt.Frame(); return hasText(tt, "Preparing the iPhone…") })
+}
+
 func testAddIPhoneDownload(t *testing.T, height int) {
 	ta, _ := addIPhoneApp(t)
 	tt := mg.NewTester(ta.view, 1280, height)

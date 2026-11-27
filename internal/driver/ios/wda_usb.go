@@ -14,8 +14,8 @@ import (
 
 const (
 	wdaUSBDetail      = "Connect this iPhone to the computer with a USB cable to use WebDriverAgent."
-	wdaExternalDetail = "Start the signed WebDriverAgentRunner test from Xcode and keep it running while Pinky is connected."
-	wdaLockdownDetail = "Install the iOS 16 WebDriverAgent helper from a Mac with Xcode and keep the iPhone connected over USB."
+	wdaExternalDetail = "Set USE_IP=127.0.0.1 in Xcode's test scheme, then start the signed WebDriverAgentRunner test. Without it, others on the same Wi-Fi could control and watch this iPhone. Keep the test running while Pinky is connected and stop it in Xcode afterward."
+	wdaLockdownDetail = "Install Pinky on the iPhone from a Mac with Xcode and keep the iPhone connected over USB."
 	lockdownXCTest    = "com.apple.testmanagerd.lockdown.secure"
 )
 
@@ -36,22 +36,24 @@ func (p *Provider) inspectUSBWDA(ctx context.Context, e goios.DeviceEntry, info 
 	runner, ready := p.usbWDAAvailable(ctx, e, kind)
 	info.Backend = backendWDA
 	if !ready && kind == pathLockdownWDA {
+		if runner.BundleID != "" {
+			return p.legacyImageMissing(e, info)
+		}
+		// A phone with the image already mounted needs only the runner.
+		// Check XCTest before asking for an image this Mac may not have.
+		check := p.lockdownXCTestReady
+		if check == nil {
+			check = probeLockdownXCTest
+		}
+		if check(ctx, e) == nil {
+			return wdaExternalSetup(info, kind)
+		}
 		find := p.legacyImageFind
 		if find == nil {
 			find = func(version string) string { return legacyImagePath(p.DiskImageDir, parseVersion(version)) }
 		}
 		if find(info.OSVersion) == "" {
 			return wdaImageSetup(info, fmt.Errorf("no compatible developer disk image for iOS %s: %w", info.OSVersion, errNoDiskImage))
-		}
-		if runner.BundleID != "" {
-			prepare := p.legacyImagePrepare
-			if prepare == nil {
-				prepare = prepareLegacyImage
-			}
-			if err := prepare(ctx, e, info.OSVersion, p.DiskImageDir); err != nil {
-				return wdaImageSetup(info, err)
-			}
-			return p.withHelper(ctx, e, info, runner)
 		}
 	}
 	switch {

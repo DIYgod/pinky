@@ -137,6 +137,9 @@ func TestIPhoneSetupWords(t *testing.T) {
 	if title, _, _ := setupWords(d, "something new", false); title != "" {
 		t.Error("an unknown step should fall back to the driver's words")
 	}
+	if _, text, _ := setupWords(d, driver.SetupNoDiskImage, true); text != locales.AddPhoneIPhoneNoImageLegacy() {
+		t.Errorf("iOS 16 image guidance = %q", text)
+	}
 }
 
 // TestCheckupIPhoneScreenshots draws an iPhone's checkup, online with an
