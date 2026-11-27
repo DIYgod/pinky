@@ -482,6 +482,7 @@ func (p *SimProvider) startBuildLocked(x xcode) {
 	b := &p.build
 	b.running, b.err = true, nil
 	key := b.key
+	log := p.logger()
 	build := p.buildFn
 	if build == nil {
 		dir := p.Dir
@@ -489,10 +490,9 @@ func (p *SimProvider) startBuildLocked(x xcode) {
 			if dir == "" {
 				return "", errors.New("Pinky has no folder to build WebDriverAgent in")
 			}
-			return buildWDA(ctx, dir, x, simArch(), &http.Client{Timeout: 2 * time.Minute})
+			return buildWDA(ctx, dir, x, simArch(), &http.Client{Timeout: 2 * time.Minute}, log)
 		}
 	}
-	log := p.logger()
 	log.Info("ios simulator: building WebDriverAgent", "xcode", x.Version, "build", x.Build, "wda", wdaVersion)
 	go func() {
 		start := time.Now()

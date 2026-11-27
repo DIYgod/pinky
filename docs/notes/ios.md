@@ -856,7 +856,19 @@ Pinky ships no WebDriverAgent and downloads no binary. The first time a Simulato
 
 Why this source: Appium's WDA is what Pinky's iPhone helper already is (`pinkyctl helper install` builds the same release for a phone), it is open source under a permissive license, and building it from a pinned, hashed source means nothing Pinky did not check runs on the Mac. A Simulator needs no signing (`CODE_SIGNING_ALLOWED=NO`), so the build needs no Apple ID or team.
 
-`xcodebuild build-for-testing -scheme WebDriverAgentRunner -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ARCHS=<the Mac's>`, in a folder of its own, builds it; the Products folder moves to `<data>/WebDriverAgent/builds/<version>-xcode<build>-<arch>` (`16.15.3-xcode27B52-arm64`), and builds for other keys are removed. A new Xcode build, a new WDA release or another CPU builds again. On this Mac (M-series, Xcode 27.2, 27B52) the build took 20 s; the first build after an Xcode update, when Xcode compiles its Simulator modules too, can take minutes, so the build may run 15. The archive (0.6 MB), the build (25 MB) and the last build's log (3.4 MB) are about 30 MB together. Before a build's first run Pinky gives it the helper's name and icon (`brandBuild`, "The helper's name and icon"), in about half a second.
+`xcodebuild build-for-testing -scheme WebDriverAgentRunner -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ARCHS=<the Mac's>`, in a folder of its own, builds it, leaving out the files of the Simulator platform that the runner embeds and the Xcode lacks ("Files the Xcode lacks" below); the Products folder moves to `<data>/WebDriverAgent/builds/<version>-xcode<build>-<arch>` (`16.15.3-xcode27B52-arm64`), and builds for other keys are removed. A new Xcode build, a new WDA release or another CPU builds again. On this Mac (M-series, Xcode 27.2, 27B52) the build took 20 s; the first build after an Xcode update, when Xcode compiles its Simulator modules too, can take minutes, so the build may run 15. The archive (0.6 MB), the build (25 MB) and the last build's log (3.4 MB) are about 30 MB together. Before a build's first run Pinky gives it the helper's name and icon (`brandBuild`, "The helper's name and icon"), in about half a second.
+
+### Files the Xcode lacks (GitHub issue #245, 2026-11-27)
+
+WDA's runner embeds files of the Simulator platform in Simulator builds: its "Embed XCTest dependencies" copy phase ([appium/WebDriverAgent#1271](https://github.com/appium/WebDriverAgent/pull/1271), "embed simulator XCTest dependencies with native copy phase") holds the project's ten references with `sourceTree = PLATFORM_DIR`, the XCTest, XCUIAutomation and Swift Testing frameworks and libraries under `iPhoneSimulator.platform/Developer` (`Library/Frameworks`, `Library/PrivateFrameworks`, `usr/lib`). Which of them the runner leaves out goes by Xcode's major version, `EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*] = "$(inherited) $(WDA_XCTEST_EXCLUDED_$(XCODE_VERSION_MAJOR))"`. `WDA_XCTEST_EXCLUDED_2600` lists eight, so with any Xcode 26 it embeds `lib_TestingInterop.dylib` and `_Testing_Foundation.framework`; `_1600`, which device builds always use, lists all ten, so the iPhone helper embeds none; there is no `_2700`, so with Xcode 27 it embeds all ten.
+
+Xcode 26.2 (17C52) has no `lib_TestingInterop.dylib`, so the build failed with `lstat(/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/lib_TestingInterop.dylib): No such file or directory (2) (in target 'WebDriverAgentRunner' …)`, which Pinky showed as the reason the Simulator needed setup (macOS 26.6 arm64, Pinky 2026.1127.3). The reporter found that 26.2's Testing, `_Testing_Foundation` and XCTest frameworks do not link it, and that a runner built with the file added to `WDA_XCTEST_EXCLUDED_2600` started and connected (`test-without-building`). Xcode 26.3 lacked it too ("WebDriverAgent builds with custom Xcode locations" below); 27.2 has it. On 2026-11-27, 16.15.3 was still WDA's latest release, and upstream had no fix.
+
+Before it builds, Pinky reads the project's references to the platform's files (`platformRef`: file references on one line, as Xcode writes them) and lstats each in the Xcode it builds with, as the copy does (`missingPlatformFiles`). The names of those the Xcode lacks go on xcodebuild's command line, `EXCLUDED_SOURCE_FILE_NAMES=$(inherited) lib_TestingInterop.dylib` (`wdaBuildArgs`), and pinky.log says `WebDriverAgent embeds files this Xcode lacks: leaving them out`. A setting on the command line wins over the target's, and its `$(inherited)` is the target's own value for the SDK, so the runner leaves out what WDA leaves out and the missing files, and the checked source stays as it is. It goes by the files, not by WDA's variable names or the Xcode's version, so whatever Xcode 26.0 or 26.1, or a later Xcode, lacks is left out the same way (not checked on those). With an Xcode that has all ten, the arguments are the same as before. A failed build is not kept, so the first try after updating Pinky builds again.
+
+Checked on this Mac (Xcode 27.2, 27B52, Apple silicon, which has all ten), with the pinned source: `-showBuildSettings` for the runner with `XCODE_VERSION_MAJOR=2600` and the override lists WDA's eight and `lib_TestingInterop.dylib`. A full `build-for-testing` with the override succeeded: its copy phase left `lib_TestingInterop.dylib` out (the runner's Frameworks folder had the other nine), and the `.xctestrun` was written. `missingPlatformFiles` finds the ten references in the project, none missing in 27.2, and only `lib_TestingInterop.dylib` in a platform folder without it. `TestMissingPlatformFiles` and `TestWDABuildArgs` (`sim_test.go`) cover the references (a quoted path, a file referenced twice, references that are not the platform's or not files, no platform, no project) and the arguments.
+
+**Not tried:** a build on Xcode 26.2 or 26.3 itself, which this Mac does not have. The reporter's runner, built on 26.2 with the same file left out in the project, ran.
 
 ### iOS 27 Simulators: nothing better than WDA
 
@@ -879,7 +891,8 @@ On this Mac the iOS 27.0 runtime (24A434) is listed by `simctl list runtimes`, b
 | The WDA path itself (`TestWDASim`, "What ran where" above) | iOS 18.5 and 26.5 Simulators | Pass |
 | The app: Add phone › Virtual phone, Start, the phone online, the mirror, an agent's task through MCP, Shut down, Start from the phone's page | iPhone 17e Simulator, iOS 26.5, Xcode 27.2 (27B52), Apple silicon; see "Virtual phones end to end" below | Pass |
 | The app with an Android emulator: the same steps | AVD with Android 16 (API 36 `google_apis`, arm64-v8a), emulator 37.2.13, Apple silicon; see "Virtual phones end to end" below | Pass |
-| Listing, the stamp, Xcode lookup, the archive and tree checks, build keys and retries, starting and stopping, unavailable runtimes | Unit tests (`sim_test.go`) | Pass |
+| A full build with `lib_TestingInterop.dylib` left out on the command line ("Files the Xcode lacks") | Xcode 27.2 (27B52), Apple silicon | Pass: the runner without the file, the `.xctestrun` written. Not run on Xcode 26.2 or 26.3 |
+| Listing, the stamp, Xcode lookup, the archive and tree checks, build keys and retries, the files the Xcode lacks and the build's arguments, starting and stopping, unavailable runtimes | Unit tests (`sim_test.go`) | Pass |
 
 ### Virtual phones end to end
 
@@ -1232,6 +1245,9 @@ requested temporary directories. An unsigned `generic/platform=iOS`
 `build-for-testing` also produced both the runner app and `.xctestrun` there.
 The full Simulator build was attempted but stopped because this Xcode
 installation lacks `iPhoneSimulator.platform/Developer/usr/lib/lib_TestingInterop.dylib`.
+Since 2026-11-27 Pinky leaves such files out (issue
+[#245](https://github.com/DIYgod/pinky/issues/245), "Files the Xcode lacks" under
+"iOS Simulators").
 
 ## Resting an idle phone (GitHub issue #96, 2026-11-12)
 

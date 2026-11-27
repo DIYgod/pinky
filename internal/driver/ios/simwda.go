@@ -10,12 +10,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -102,7 +106,7 @@ func xctestrun(products string) string {
 // buildWDA downloads the source when Dir has none that checks out, builds
 // it for the Simulator, and moves the build to Dir/builds/<key>, removing
 // builds for other keys. It returns the Products folder.
-func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *http.Client) (string, error) {
+func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *http.Client, log *slog.Logger) (string, error) {
 	key := buildKey(x, arch)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
@@ -133,20 +137,18 @@ func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *htt
 		}
 	}
 	dd := filepath.Join(tmp, "dd")
+	lacking := missingPlatformFiles(filepath.Join(src, "WebDriverAgent.xcodeproj"), x)
+	if len(lacking) > 0 {
+		log.Info("ios simulator: WebDriverAgent embeds files this Xcode lacks: leaving them out",
+			"xcode", x.Version, "files", strings.Join(lacking, " "))
+	}
 	logPath := filepath.Join(dir, "build.log")
 	out, err := os.Create(logPath)
 	if err != nil {
 		return "", err
 	}
 	tail := &lastLines{max: 64 << 10}
-	cmd := exec.CommandContext(ctx, x.tool("xcodebuild"), "build-for-testing",
-		"-project", filepath.Join(src, "WebDriverAgent.xcodeproj"),
-		"-scheme", "WebDriverAgentRunner",
-		"-destination", "generic/platform=iOS Simulator",
-		"-derivedDataPath", dd,
-		"SYMROOT="+filepath.Join(dd, "Build", "Products"),
-		"OBJROOT="+filepath.Join(dd, "Build", "Intermediates.noindex"),
-		"CODE_SIGNING_ALLOWED=NO", "ARCHS="+arch)
+	cmd := exec.CommandContext(ctx, x.tool("xcodebuild"), wdaBuildArgs(src, dd, arch, lacking)...)
 	cmd.Env = x.env()
 	cmd.Stdout = io.MultiWriter(out, tail)
 	cmd.Stderr = cmd.Stdout
@@ -185,6 +187,62 @@ func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *htt
 		}
 	}
 	return final, nil
+}
+
+// wdaBuildArgs are xcodebuild's arguments to build WDA's runner for
+// Simulators from the source in src, with dd as its derived data, for the
+// CPU arch. The files in lacking (missingPlatformFiles) are left out on top
+// of those the project leaves out itself: $(inherited) on the command line
+// stands for each target's own list.
+func wdaBuildArgs(src, dd, arch string, lacking []string) []string {
+	args := []string{"build-for-testing",
+		"-project", filepath.Join(src, "WebDriverAgent.xcodeproj"),
+		"-scheme", "WebDriverAgentRunner",
+		"-destination", "generic/platform=iOS Simulator",
+		"-derivedDataPath", dd,
+		"SYMROOT=" + filepath.Join(dd, "Build", "Products"),
+		"OBJROOT=" + filepath.Join(dd, "Build", "Intermediates.noindex"),
+		"CODE_SIGNING_ALLOWED=NO", "ARCHS=" + arch}
+	if len(lacking) > 0 {
+		args = append(args, "EXCLUDED_SOURCE_FILE_NAMES=$(inherited) "+strings.Join(lacking, " "))
+	}
+	return args
+}
+
+// platformRef matches a file reference of an Xcode project to a file of the
+// platform (sourceTree PLATFORM_DIR), on one line as Xcode writes it, and
+// captures its path.
+var platformRef = regexp.MustCompile(`isa = PBXFileReference;[^\n]*?\bpath = ("[^"\n]*"|[^;\s]+);[^\n]*?\bsourceTree = PLATFORM_DIR;`)
+
+// missingPlatformFiles returns the names of the Simulator platform's files
+// that the Xcode project proj refers to and x lacks, in the project's order.
+//
+// WDA's runner embeds the platform's XCTest and Swift Testing frameworks and
+// libraries in Simulator builds, and leaves some of them out by Xcode's
+// major version (WDA_XCTEST_EXCLUDED_2600, _1600 in its project). That is
+// not enough: WDA 16.15.3 embeds lib_TestingInterop.dylib for every Xcode
+// 26, Xcode 26.2 has none, and the build failed copying it (#245); Xcode
+// stops at a file it cannot lstat. The reporter's runner built without it
+// ran on 26.2. None when the platform or the project cannot be read:
+// xcodebuild then says what is wrong.
+func missingPlatformFiles(proj string, x xcode) []string {
+	platform := filepath.Join(x.Developer, "Platforms", "iPhoneSimulator.platform")
+	if _, err := os.Stat(platform); err != nil {
+		return nil
+	}
+	b, err := os.ReadFile(filepath.Join(proj, "project.pbxproj"))
+	if err != nil {
+		return nil
+	}
+	var missing []string
+	for _, m := range platformRef.FindAllSubmatch(b, -1) {
+		p := strings.Trim(string(m[1]), `"`)
+		_, err := os.Lstat(filepath.Join(platform, filepath.FromSlash(p)))
+		if name := path.Base(p); errors.Is(err, fs.ErrNotExist) && !slices.Contains(missing, name) {
+			missing = append(missing, name)
+		}
+	}
+	return missing
 }
 
 // xcodeErrors picks what Xcode said went wrong from its output: the lines

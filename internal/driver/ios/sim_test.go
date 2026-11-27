@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -270,6 +271,96 @@ func TestUntar(t *testing.T) {
 func sha256Hex(s string) string {
 	h := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(h[:])
+}
+
+// platformProject is a project file with references as Xcode writes them:
+// to files of the platform (PLATFORM_DIR), one with its path quoted and one
+// twice, and others that are not the platform's or not files.
+const platformProject = `// !$*UTF8*$!
+{
+	objects = {
+
+/* Begin PBXFileReference section */
+		0A0000000000000000000001 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Developer/Library/Frameworks/XCTest.framework; sourceTree = PLATFORM_DIR; };
+		0A0000000000000000000002 /* lib_TestingInterop.dylib */ = {isa = PBXFileReference; lastKnownFileType = compiled.mach-o.dylib; name = lib_TestingInterop.dylib; path = Developer/usr/lib/lib_TestingInterop.dylib; sourceTree = PLATFORM_DIR; };
+		0A0000000000000000000003 /* libXCTestSwiftSupport.dylib */ = {isa = PBXFileReference; lastKnownFileType = compiled.mach-o.dylib; name = libXCTestSwiftSupport.dylib; path = Developer/usr/lib/libXCTestSwiftSupport.dylib; sourceTree = PLATFORM_DIR; };
+		0A0000000000000000000004 /* _Testing_Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = _Testing_Foundation.framework; path = "Developer/Library/Frameworks/_Testing_Foundation.framework"; sourceTree = PLATFORM_DIR; };
+		0A0000000000000000000005 /* lib_TestingInterop.dylib */ = {isa = PBXFileReference; lastKnownFileType = compiled.mach-o.dylib; name = lib_TestingInterop.dylib; path = Developer/usr/lib/lib_TestingInterop.dylib; sourceTree = PLATFORM_DIR; };
+		0A0000000000000000000006 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		0A0000000000000000000007 /* WebDriverAgentLib.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = WebDriverAgentLib.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0A0000000000000000000008 /* PrivateFrameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Developer/Library/PrivateFrameworks;
+			sourceTree = PLATFORM_DIR;
+		};
+/* End PBXGroup section */
+	};
+}
+`
+
+func TestMissingPlatformFiles(t *testing.T) {
+	proj := filepath.Join(t.TempDir(), "WebDriverAgent.xcodeproj")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(proj, "project.pbxproj"), []byte(platformProject), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dev := t.TempDir()
+	have := func(p string) {
+		t.Helper()
+		p = filepath.Join(dev, "Platforms", "iPhoneSimulator.platform", filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	have("Developer/Library/Frameworks/XCTest.framework")
+	have("Developer/usr/lib/libXCTestSwiftSupport.dylib")
+	x := xcode{Developer: dev, Version: "26.2", Build: "17C52"}
+
+	want := []string{"lib_TestingInterop.dylib", "_Testing_Foundation.framework"}
+	if got := missingPlatformFiles(proj, x); !slices.Equal(got, want) {
+		t.Errorf("missing = %q, want %q", got, want)
+	}
+	// Nothing to go by: xcodebuild says what is wrong.
+	if got := missingPlatformFiles(proj, xcode{Developer: t.TempDir()}); got != nil {
+		t.Errorf("without the platform: %q, want none", got)
+	}
+	if got := missingPlatformFiles(filepath.Join(dev, "None.xcodeproj"), x); got != nil {
+		t.Errorf("without the project: %q, want none", got)
+	}
+	have("Developer/usr/lib/lib_TestingInterop.dylib")
+	have("Developer/Library/Frameworks/_Testing_Foundation.framework")
+	if got := missingPlatformFiles(proj, x); got != nil {
+		t.Errorf("with all of them: %q, want none", got)
+	}
+}
+
+func TestWDABuildArgs(t *testing.T) {
+	want := []string{"build-for-testing",
+		"-project", filepath.Join("src", "WebDriverAgent.xcodeproj"),
+		"-scheme", "WebDriverAgentRunner",
+		"-destination", "generic/platform=iOS Simulator",
+		"-derivedDataPath", "dd",
+		"SYMROOT=" + filepath.Join("dd", "Build", "Products"),
+		"OBJROOT=" + filepath.Join("dd", "Build", "Intermediates.noindex"),
+		"CODE_SIGNING_ALLOWED=NO", "ARCHS=arm64"}
+	if got := wdaBuildArgs("src", "dd", "arm64", nil); !slices.Equal(got, want) {
+		t.Errorf("args = %q,\nwant %q", got, want)
+	}
+	// Left out on top of the project's own list for this Xcode.
+	want = append(want, "EXCLUDED_SOURCE_FILE_NAMES=$(inherited) lib_TestingInterop.dylib _Testing_Foundation.framework")
+	if got := wdaBuildArgs("src", "dd", "arm64", []string{"lib_TestingInterop.dylib", "_Testing_Foundation.framework"}); !slices.Equal(got, want) {
+		t.Errorf("args = %q,\nwant %q", got, want)
+	}
 }
 
 func TestXcodeErrors(t *testing.T) {
