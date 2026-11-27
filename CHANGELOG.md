@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- `pinky token -h`, `pinky quit -h` and `pinky companion -h` now say what the command does and exit with status 0 (`pinky companion -h` used to fail). A word or flag these commands don't take, or `pinky companion` without `install`, now gets the reason and exit status 2, as in `pinky devices`; `pinky token` and `pinky quit` used to ignore extra words. Thanks @6moran.
+
 ## 2026.1126.8 (2026-11-26)
 
 - You can now let Pinky unlock a phone for agents' tasks without asking each time, for 1, 4 or 8 hours: turn on Unlock without asking for the phone in Settings › Phones or in the ⋯ menu under its picture, and confirm once. It needs the phone's PIN saved and Unlock from this computer on in Settings › Safety. Thanks @ayu2210 for the idea.
