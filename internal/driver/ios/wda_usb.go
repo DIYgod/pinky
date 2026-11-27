@@ -73,10 +73,18 @@ func wdaImageSetup(info driver.Info, err error) driver.Info {
 		info.Setup, info.Detail = driver.SetupUnlock, unlockDetail
 		return info
 	case errors.Is(err, errNoDiskImage):
-		info.Setup = driver.SetupNoDiskImage
+		info.Setup, info.Detail = driver.SetupNoDiskImage, legacyNoImageDetail(info.OSVersion)
+		return info
 	}
 	info.Detail = err.Error()
 	return info
+}
+
+// legacyNoImageDetail is what pinky devices and agents read when an iOS 16
+// phone needs a developer disk image this computer lacks. Xcode no longer
+// brings one, so it points to the download in Add phone, as the app does.
+func legacyNoImageDetail(version string) string {
+	return "This computer has no developer disk image for iOS " + version + ", and current Xcode does not include iOS 16 images. In Add phone › iPhone, choose Download to get the image and its signature from a third-party mirror, " + mirrorName + "; Pinky checks both files before using them."
 }
 
 // usbWDAAvailable checks an already-running server first. On iOS 16 only,

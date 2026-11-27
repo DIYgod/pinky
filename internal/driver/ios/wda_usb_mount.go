@@ -2,7 +2,10 @@ package ios
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	goios "github.com/danielpaulus/go-ios/ios"
@@ -21,7 +24,7 @@ func (p *Provider) legacyImageMissing(e goios.DeviceEntry, info driver.Info) dri
 	if prepare == nil {
 		prepare = prepareLegacyImageBackground
 	}
-	j := p.prep.legacyMountState(e, info.OSVersion, p.DiskImageDir, find, prepare, func() { p.forgetPhone(id) })
+	j := p.prep.legacyMountState(e, info.OSVersion, p.DiskImageDir, find, prepare, func() { p.forgetPhone(id) }, p.logger())
 	info.State = driver.StateNeedsSetup
 	switch {
 	case j.running, j.err == nil:
@@ -36,7 +39,7 @@ func (p *Provider) legacyImageMissing(e goios.DeviceEntry, info driver.Info) dri
 
 func (pr *preparer) legacyMountState(e goios.DeviceEntry, version, ownDir string,
 	find func(string) string, prepare func(context.Context, goios.DeviceEntry, string, string) error,
-	done func()) mountJob {
+	done func(), log *slog.Logger) mountJob {
 	id, key := e.Properties.SerialNumber, keyOf(e)
 	pr.mu.Lock()
 	defer pr.mu.Unlock()
@@ -49,14 +52,28 @@ func (pr *preparer) legacyMountState(e goios.DeviceEntry, version, ownDir string
 	}
 	j = &mountJob{key: key, running: true}
 	pr.legacyJobs[id] = j
+	log = logTo(log)
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), helperStartTimeout)
 		defer cancel()
+		start := time.Now()
 		var err error
-		if find(version) == "" {
+		if img := find(version); img == "" {
 			err = fmt.Errorf("no compatible developer disk image for iOS %s: %w", version, errNoDiskImage)
 		} else {
+			log.Info("iphone: mounting the iOS 16 developer disk image", "device", id, "version", version, "image", img)
 			err = prepare(ctx, e, version, ownDir)
+		}
+		// Logged before the job ends, as preparer.run does, so that whoever
+		// sees the job ended finds its lines written.
+		took := time.Since(start).Round(time.Millisecond)
+		switch {
+		case err == nil:
+			log.Info("iphone: iOS 16 developer disk image ready", "device", id, "took", took)
+		case errors.Is(err, errNoDiskImage):
+			log.Warn("iphone: no iOS 16 developer disk image to mount", "device", id, "version", version, "retry_in", retryAfter(err))
+		default:
+			log.Warn("iphone: could not mount the iOS 16 developer disk image", "device", id, "version", version, "took", took, "err", err, "retry_in", retryAfter(err))
 		}
 		pr.mu.Lock()
 		j.running, j.ended, j.err = false, pr.clock(), err

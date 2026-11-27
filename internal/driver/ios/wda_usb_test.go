@@ -3,6 +3,9 @@ package ios
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -128,6 +131,8 @@ func TestInspectUSBWDAMountedWithoutRunner(t *testing.T) {
 
 func TestInspectUSBWDABackgroundMountDoesNotOverlap(t *testing.T) {
 	p := NewProvider()
+	var logs syncBuffer
+	p.Log = slog.New(slog.NewTextHandler(&logs, nil))
 	p.usbWDAStatus = func(context.Context, goios.DeviceEntry) bool { return false }
 	p.findRunner = func(goios.DeviceEntry) (string, error) { return "com.example.WebDriverAgentRunner.xctrunner", nil }
 	p.lockdownXCTestReady = func(context.Context, goios.DeviceEntry) error { return errors.New("image unmounted") }
@@ -170,6 +175,10 @@ func TestInspectUSBWDABackgroundMountDoesNotOverlap(t *testing.T) {
 			if calls.Load() != 1 {
 				t.Fatalf("mount calls = %d", calls.Load())
 			}
+			if s := logs.String(); !strings.Contains(s, "mounting the iOS 16 developer disk image") ||
+				!strings.Contains(s, "could not mount the iOS 16 developer disk image") || !strings.Contains(s, "retry_in=3s") {
+				t.Fatalf("log = %q", s)
+			}
 			return
 		}
 		time.Sleep(time.Millisecond)
@@ -181,6 +190,14 @@ func TestWDAImageSetupLocked(t *testing.T) {
 	info := wdaImageSetup(driver.Info{}, errors.New("ReceiveBytes: device responded with error: DeviceLocked"))
 	if info.Setup != driver.SetupUnlock || info.Detail != unlockDetail {
 		t.Fatalf("locked iPhone = %+v", info)
+	}
+}
+
+func TestWDAImageSetupNoImage(t *testing.T) {
+	info := wdaImageSetup(driver.Info{OSVersion: "16.5.1"}, fmt.Errorf("no compatible developer disk image for iOS 16.5.1: %w", errNoDiskImage))
+	if info.Setup != driver.SetupNoDiskImage || !strings.Contains(info.Detail, "iOS 16.5.1") ||
+		!strings.Contains(info.Detail, "Add phone › iPhone") || !strings.Contains(info.Detail, mirrorName) {
+		t.Fatalf("missing iOS 16 image = %+v", info)
 	}
 }
 
