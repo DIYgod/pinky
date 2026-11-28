@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1128.2 (2026-11-28)
 
 - On an iPhone, a password shown in plain text, such as after you tap "Show" on a web page, now stays masked in Activity, approvals, history and pictures, and Pinky asks before an agent types into that field as it does for any password field. Thanks @pseudoyu.
 - When Pinky on your phone starts a task right after another, the task screen no longer shows the earlier task's steps, and a task that couldn't start no longer shows the one before it as "Couldn't start" in Activity. Thanks @pseudoyu.
