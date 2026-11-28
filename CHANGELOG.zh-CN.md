@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1128.3 (2026-11-28)
 
 - iOS 27 的 iPhone 辅助功能服务卡住时，以及 iOS 17.4 到 26 的 iPhone 没装 iPhone 上的 Pinky 时，Pinky 不再把盖在 App 上的面容 ID 提示、弹窗或通知当成主屏幕，也就不会再给下面被屏蔽的 App 截图、识别文字或录屏。
 
