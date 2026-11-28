@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On an iPhone on iOS 27 whose accessibility service is stuck, and on one on iOS 17.4 to 26 without Pinky on the iPhone, Pinky no longer takes Face ID's prompt, an alert or a notification over an app for the home screen, so it no longer takes screenshots of, reads or records an app you blocked beneath them.
+
 ## 2026.1128.2 (2026-11-28)
 
 - On an iPhone, a password shown in plain text, such as after you tap "Show" on a web page, now stays masked in Activity, approvals, history and pictures, and Pinky asks before an agent types into that field as it does for any password field. Thanks @pseudoyu.
