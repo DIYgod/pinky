@@ -260,6 +260,11 @@ func (a *app) activity(now time.Time) update.Activity {
 		if d.Status == gateway.DeviceInControl {
 			act.Busy = append(act.Busy, locales.UpdateBusyControl(d.Info.Name))
 		}
+		// Unlock without asking ends when Pinky quits: the person chose
+		// how long it lasts, so an automatic update waits for its end.
+		if d.UnlockUntil.After(now) {
+			act.Busy = append(act.Busy, locales.UpdateBusyUnlockWindow(d.Info.Name))
+		}
 	}
 	if a.add.pair.cancel != nil {
 		act.Busy = append(act.Busy, locales.UpdateBusyPairing())

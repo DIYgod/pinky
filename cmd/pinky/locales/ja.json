@@ -1966,6 +1966,7 @@
   "updateBusyInstalling": "{phone} への Pinky のインストール",
   "updateBusyPairing": "スマホのペアリング",
   "updateBusyRecording": "録画の再生",
+  "updateBusyUnlockWindow": "{phone} の確認なしでのロック解除",
   "updateBusyUnlocking": "{phone} のロック解除",
   "updateBusyUpdating": "{phone} の Pinky の更新",
   "updateCancel": "キャンセル",

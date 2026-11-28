@@ -25,8 +25,8 @@ import (
 // it runs out; when the person ends it (EndUnlockWindow); when they turn
 // Settings › Unlock from this computer off (EndUnlockWindows) or change or
 // delete the phone's PIN (the client ends the window then); when the phone
-// is removed; when Pinky stops (Close); and when the phone does not accept
-// the PIN.
+// is removed; when Pinky stops (Close; an automatic update waits for the
+// window to end, ui/update.go); and when the phone does not accept the PIN.
 //
 // It is used in one case only: an agent's step needs the phone's own
 // screen and finds it locked, where the agent got device_locked before.

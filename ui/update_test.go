@@ -268,6 +268,47 @@ func TestAutomaticUpdateWaitsUntilIdle(t *testing.T) {
 	}
 }
 
+// TestAutomaticUpdateWaitsForUnlockWindow: a restart ends unlock without
+// asking, which the person turned on for as long as they chose, so an
+// automatic update waits while a phone has it on, and Update now asks
+// first and says it stops. Once it ends, the update installs by itself
+// (DIYgod/pinky#251).
+func TestAutomaticUpdateWaitsForUnlockWindow(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	ut.check(t)
+	ut.openWindowNow(t, time.Hour)
+	ut.windowSettled(t, "the open window", true)
+	ut.updateTick(time.Now())
+	if ut.upd.phase != updIdle || ut.quits != 0 {
+		t.Fatalf("installed while unlock without asking was on (phase %v, quits %d)", ut.upd.phase, ut.quits)
+	}
+
+	tt := mg.NewTester(ut.view, 1280, 820)
+	if err := tt.Click("Update now Pinky 2026.1107.2"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	want := locales.SentencePair(locales.UpdateConfirmMessage(), locales.UpdateConfirmBusy(locales.UpdateBusyUnlockWindow(uwName)))
+	if !hasText(tt, "Update Pinky now?") || !hasText(tt, want) {
+		t.Fatalf("no confirmation that says %q: %q", want, tt.Texts())
+	}
+	if err := tt.Click("Cancel"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if ut.upd.phase != updIdle || ut.quits != 0 {
+		t.Fatalf("Cancel went on: phase %v, quits %d", ut.upd.phase, ut.quits)
+	}
+
+	if err := ut.api.EndUnlockWindow(uwPhone); err != nil {
+		t.Fatal(err)
+	}
+	ut.windowSettled(t, "the ended window", false)
+	ut.upd.lastInput = time.Time{} // the clicks above were the test's, not the person's
+	ut.updateTick(time.Now())
+	ut.waitFor(t, "the automatic update", func() bool { return ut.quits > 0 })
+}
+
 // TestUpdateOnWindows: a Pinky that its installer installed on Windows
 // updates itself with the release's installer, which runs quietly: the card
 // offers Update now, and Pinky installs it by itself while idle.

@@ -11902,6 +11902,16 @@
   "@updateBusyRecording": {
     "description": "What a restart for an update would stop: a recording playing in Activity."
   },
+  "updateBusyUnlockWindow": "unlock without asking for {phone}",
+  "@updateBusyUnlockWindow": {
+    "description": "What a restart for an update would stop, in the list of updateConfirmBusy: unlock without asking (unlockWindowTitle), on for the phone, which ends when Pinky quits. An automatic update waits until it ends.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
   "updateBusyUnlocking": "unlocking {phone}",
   "@updateBusyUnlocking": {
     "description": "What a restart for an update would stop, in the list of updateConfirmBusy: unlocking a phone.",

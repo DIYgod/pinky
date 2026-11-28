@@ -1966,6 +1966,7 @@
   "updateBusyInstalling": "在 {phone} 上安装 Pinky",
   "updateBusyPairing": "手机配对",
   "updateBusyRecording": "录屏播放",
+  "updateBusyUnlockWindow": "为 {phone} 开着的免确认解锁",
   "updateBusyUnlocking": "解锁 {phone}",
   "updateBusyUpdating": "在 {phone} 上更新 Pinky",
   "updateCancel": "取消",

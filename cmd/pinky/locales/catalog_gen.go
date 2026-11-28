@@ -32387,6 +32387,28 @@ func (msgs Messages) UpdateBusyRecording() string {
 	return Catalog.Format(msgs.locale, "updateBusyRecording", nil)
 }
 
+// UpdateBusyUnlockWindow says "unlock without asking for {phone}"
+// in the language the app shows.
+//
+// What a restart for an update would stop, in the list of
+// updateConfirmBusy: unlock without asking (unlockWindowTitle), on for the
+// phone, which ends when Pinky quits. An automatic update waits until it
+// ends.
+func UpdateBusyUnlockWindow(phone string) string {
+	return In(i18n.Locale()).UpdateBusyUnlockWindow(phone)
+}
+
+// UpdateBusyUnlockWindow says "unlock without asking for {phone}"
+// in the language of msgs.
+//
+// What a restart for an update would stop, in the list of
+// updateConfirmBusy: unlock without asking (unlockWindowTitle), on for the
+// phone, which ends when Pinky quits. An automatic update waits until it
+// ends.
+func (msgs Messages) UpdateBusyUnlockWindow(phone string) string {
+	return Catalog.Format(msgs.locale, "updateBusyUnlockWindow", map[string]any{"phone": phone})
+}
+
 // UpdateBusyUnlocking says "unlocking {phone}"
 // in the language the app shows.
 //
