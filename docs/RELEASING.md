@@ -174,7 +174,7 @@ To build a tag on GitHub and publish nothing, to check the workflow say, run it 
 
 ## When something fails
 
-- **The release workflow failed:** open the run in [Actions](https://github.com/DIYgod/pinky/actions/workflows/release.yml) and choose "Re-run failed jobs". Running it again for the same tag is safe: a draft release gets its files replaced, a published one keeps its files.
+- **The release workflow failed:** open the run in [Actions](https://github.com/DIYgod/pinky/actions/workflows/release.yml) and choose "Re-run failed jobs". Running it again for the same tag is safe: a draft release gets its files replaced, a published one keeps its files. A re-run uses the workflow as it was at the tag, so when the fix is in the workflow itself, push it to main and run `scripts/release.sh trigger <tag>`, which runs main's workflow on the tag's code (as for v2026.1128.4, whose Windows job looked for an FFmpeg archive that FFmpeg-Builds had renamed).
 - **The tag was pushed but no release came:** the run says why (often a missing or expired secret). Fix it and re-run, or `scripts/release.sh trigger <tag>`, or `scripts/release.sh publish <tag>` from the Mac.
 - **The cask is behind:** the tap's [workflow](https://github.com/DIYgod/homebrew-tap/actions) runs every 15 minutes; "Run workflow" runs it now. GitHub turns its schedule off after 60 days without a commit to the tap, and "Run workflow" turns it on again.
 - **A release is broken:** release a fix. Do not delete or move a published tag; installed apps and the cask follow the newest version.

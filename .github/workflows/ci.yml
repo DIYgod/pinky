@@ -29,7 +29,10 @@ env:
   # LGPL build (make ffmpeg). The archive is kept in the Actions cache and
   # fetched only when the cache has none, through GitHub's API (gh), since
   # the releases' download links have answered 504 for hours at a time.
-  # Change the cache key to take a newer build.
+  # The archives are named after FFmpeg 9's newest release, which changes
+  # (n9.0 became n9.1 on 28 November 2026, and the old names were gone), so
+  # the matrix names them by pattern, which is also the cache key. Change
+  # the cache key to take a newer build.
   FFMPEG_REPO: FFmpeg-Builds/FFmpeg-Builds
 
 jobs:
@@ -41,8 +44,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: Linux, os: ubuntu-latest, test: true, ffmpeg: ffmpeg-n9.0-latest-linux64-gpl-shared-9.0.tar.xz }
-          - { name: Windows, os: windows-latest, test: true, ffmpeg: ffmpeg-n9.0-latest-win64-gpl-shared-9.0.zip }
+          - { name: Linux, os: ubuntu-latest, test: true, ffmpeg: "ffmpeg-n9.*-latest-linux64-gpl-shared-9.*.tar.xz" }
+          - { name: Windows, os: windows-latest, test: true, ffmpeg: "ffmpeg-n9.*-latest-win64-gpl-shared-9.*.zip" }
           - { name: macOS, os: macos-latest, test: false }
     env:
       FFMPEG: ${{ matrix.ffmpeg }}
@@ -98,7 +101,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p "$RUNNER_TEMP/ffmpeg"
-          tar -xJf "$RUNNER_TEMP/ffmpeg-archive/$FFMPEG" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+          archive=$(ls "$RUNNER_TEMP"/ffmpeg-archive/*.tar.xz | tail -n 1)
+          tar -xJf "$archive" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
           echo "PINKY_FFMPEG_DIR=$RUNNER_TEMP/ffmpeg/lib" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/ffmpeg/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/ffmpeg/bin/ffmpeg" -hide_banner -version | head -1
@@ -108,7 +112,8 @@ jobs:
         shell: pwsh
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          Expand-Archive "$env:RUNNER_TEMP\ffmpeg-archive\$env:FFMPEG" -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
+          $archive = Get-ChildItem "$env:RUNNER_TEMP\ffmpeg-archive\*.zip" | Sort-Object Name | Select-Object -Last 1
+          Expand-Archive $archive.FullName -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
           $bin = (Get-ChildItem "$env:RUNNER_TEMP\ffmpeg" -Directory | Select-Object -First 1).FullName + "\bin"
           "PINKY_FFMPEG_DIR=$bin" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           $bin | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
