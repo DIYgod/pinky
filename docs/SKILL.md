@@ -85,7 +85,7 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - `phone_files { action: "push", intent: "Put the edited photo where Gallery can open it" }` copies new and changed files to the phone. The person approves it first, like a Pay tap (`approval_pending`, then repeat with `approval_id`). Read-only agents may only list and pull.
 - Pictures pushed to the phone show in its gallery and photo pickers, so you can attach them in an app.
 - Not on that computer (connected over HTTP from another machine)? Hand Pinky the file first: `phone_files { action: "upload", paths: ["photo.jpg"] }` returns a one-time link; send the file to it from your own shell, `curl --upload-file photo.jpg '<link>'` (up to 200 MB, within 10 minutes), then push it. Small files (up to 10 MB) can go in the call instead, base64-encoded: `content: "<base64>"`, which works over stdio too. A different file of the same name is replaced only with `replace: true`.
-- iPhones have no Pinky folder: `list` and `upload` work on the computer's folder (to install apps from), and `pull` and `push` return `unsupported`.
+- iPhones have no Pinky folder: `list` and `upload` work on the computer's folder, `push` saves uploaded images (JPEG, PNG, GIF, WebP, BMP or HEIC) into Photos Recents, `clipboard` copies one image directly onto the iPhone's clipboard for pasting in chats/editors without switching apps (both ask the person first), and `pull` returns `unsupported`.
 
 ## Installing your app
 
