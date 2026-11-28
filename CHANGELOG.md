@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1128.4 (2026-11-28)
 
 - With Update automatically on, Pinky no longer restarts for an update while a phone has Unlock without asking on, which ended it before the time you picked. It updates once the time is up or you click End. Thanks @Sunday2014 for reporting it.
 
