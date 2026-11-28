@@ -21,8 +21,9 @@ type Platform string
 
 // Platforms.
 const (
-	Android Platform = "android"
-	IOS     Platform = "ios"
+	Android   Platform = "android"
+	IOS       Platform = "ios"
+	HarmonyOS Platform = "harmonyos"
 )
 
 // State is a device's connection state.
@@ -52,6 +53,11 @@ type Info struct {
 	// its own words; "" when the driver does not say. Detail says the same
 	// in a sentence.
 	Setup string
+	// SetupCheck is the checkup item a setup step affects. Empty means
+	// authorization, for existing drivers. A missing host tool can name
+	// CheckHost; an unavailable control backend can name its own item,
+	// without falsely reporting that an authorized phone rejected trust.
+	SetupCheck string `json:",omitempty"`
 	// HelperExpires is when the app the phone is driven through stops
 	// starting because the provisioning profile it was signed with runs
 	// out: iPhones driven through the WebDriverAgent helper, whose profile
@@ -344,8 +350,9 @@ type TapOptions struct {
 
 // TypeOptions tune Type.
 type TypeOptions struct {
-	Append bool // keep the field's current text
-	Submit bool // press Enter afterwards
+	ForegroundID string // app the gateway checked before typing, when available
+	Append       bool   // keep the field's current text
+	Submit       bool   // press Enter afterwards
 }
 
 // App is an installed app.

@@ -17,16 +17,17 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
+	"github.com/DIYgod/pinky/internal/driver/harmony"
 	"github.com/DIYgod/pinky/internal/driver/ios"
 )
 
 // providerFactories builds the real device providers. The gateway itself
 // never branches on the platform.
-var providerFactories = platformFactories(true, true)
+var providerFactories = platformFactories(true, true, true)
 
-// platformFactories returns the providers for Android and for iOS, which
+// platformFactories returns the providers for HarmonyOS, Android and iOS, which
 // on a Mac has its Simulators too.
-func platformFactories(android, iOS bool) []func(log *slog.Logger) (driver.Provider, error) {
+func platformFactories(android, iOS, nativeHarmony bool) []func(log *slog.Logger) (driver.Provider, error) {
 	var f []func(log *slog.Logger) (driver.Provider, error)
 	if android {
 		f = append(f, newAndroidProvider)
@@ -37,7 +38,14 @@ func platformFactories(android, iOS bool) []func(log *slog.Logger) (driver.Provi
 			f = append(f, newSimProvider)
 		}
 	}
+	if nativeHarmony {
+		f = append(f, newHarmonyProvider)
+	}
 	return f
+}
+
+func newHarmonyProvider(*slog.Logger) (driver.Provider, error) {
+	return harmony.NewProvider(), nil
 }
 
 // newSimProvider lists the iOS Simulators booted on this Mac as iPhones

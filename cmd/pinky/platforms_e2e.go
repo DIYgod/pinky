@@ -9,7 +9,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 )
 
-// In the e2e build, PINKY_PLATFORMS ("android", "ios", or both, separated
+// In the e2e build, PINKY_PLATFORMS ("android", "ios", "harmonyos", separated
 // by commas) limits the platforms Pinky looks for phones on, so a check of
 // the app with an Android emulator leaves an iPhone that is plugged in
 // alone: the iOS provider would ask it about itself even with PINKY_DEVICES
@@ -20,14 +20,16 @@ func init() {
 	if v == "" {
 		return
 	}
-	var android, iOS bool
+	var android, iOS, nativeHarmony bool
 	for _, p := range strings.Split(v, ",") {
 		switch strings.TrimSpace(p) {
 		case string(driver.Android):
 			android = true
 		case string(driver.IOS):
 			iOS = true
+		case string(driver.HarmonyOS):
+			nativeHarmony = true
 		}
 	}
-	providerFactories = platformFactories(android, iOS)
+	providerFactories = platformFactories(android, iOS, nativeHarmony)
 }
