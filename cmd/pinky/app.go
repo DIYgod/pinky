@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -84,7 +85,7 @@ func runApp(args []string) error {
 	appStarted(dirs, *background, c.Fake, c.Log)
 
 	settingsPath := filepath.Join(dirs.Config, "settings.json")
-	settings := loadSettings(settingsPath, c.Log)
+	settings := firstService(loadSettings(settingsPath, c.Log), settingsPath, secret.System())
 	var unlock pinSource
 	unlock.on.Store(settings.UnlockFromComputer)
 	c.PIN, c.UnlockWindowPIN = unlock.pin, unlock.windowPIN
@@ -324,6 +325,26 @@ func loadSettings(path string, log *slog.Logger) ui.Settings {
 			s = ui.DefaultSettings()
 		}
 	}
+	return s
+}
+
+// firstService starts Ask Pinky on pilot.FirstService on a computer where
+// it was never set up: no settings file yet, and no key saved for
+// Anthropic, the service that settings without one fall back to. A
+// settings file, even one of before there were services, or that key
+// keeps everything as it was. Nothing is saved until the person changes
+// a setting.
+func firstService(s ui.Settings, path string, store secret.Store) ui.Settings {
+	if s.PilotService != "" {
+		return s
+	}
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+		return s
+	}
+	if store != nil && store.Has(secret.ModelKeyAccount(pilot.KeyName(pilot.Anthropic, pilot.Anthropic))) {
+		return s
+	}
+	s.PilotService = pilot.FirstService
 	return s
 }
 
