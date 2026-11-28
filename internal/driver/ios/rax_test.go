@@ -1,10 +1,12 @@
 package ios
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
 	"howett.net/plist"
 )
@@ -364,6 +366,61 @@ func TestRAXContent(t *testing.T) {
 		if got := raxContent(c.e, c.role); got != c.want {
 			t.Errorf("raxContent(%+v) = %q, want %q", c.e, got, c.want)
 		}
+	}
+}
+
+// TestRAXHint: a web page's password field with no label but its
+// placeholder is named by what is typed into it once it shows its text
+// (a "Show" switch makes it an ordinary field). The placeholder still names
+// it to the credentials rule, as the hint does on Android, on both ways of
+// reading the screen.
+func TestRAXHint(t *testing.T) {
+	cases := []struct {
+		label, value, placeholder string
+		want                      bool
+	}{
+		{"", "Zq7-patch-pw", "Password", true},
+		{"", "482913", "Verification code", true},
+		{"", "alice", "User name", false},
+		// A field with a label keeps being named by it.
+		{"Search", "password manager", "Password", false},
+		// An empty field shows its placeholder as its label already.
+		{"", "Password", "Password", true},
+	}
+	check := func(path string, els []screen.Element, value string, want bool) {
+		t.Helper()
+		for _, e := range els {
+			if e.Role == screen.RoleInput {
+				if got := policy.IsCredentialField(&e); got != want {
+					t.Errorf("%s, %q: credential field %v, want %v (%+v)", path, value, got, want, e)
+				}
+				return
+			}
+		}
+		t.Errorf("%s, %q: no field in %+v", path, value, els)
+	}
+	for _, c := range cases {
+		els := []raxElement{
+			{Object: &axpObject{PID: 5, ID: 100, IsApp: true}, Parent: -1, Label: "Safari", Frame: axpRect{0, 0, 375, 812}, HasFrame: true, Type: 1},
+			{Object: &axpObject{PID: 5, ID: 1}, Type: xcTextField, AXRole: axpRoleTextField, Label: c.label, Value: c.value, ValueText: c.value, Placeholder: c.placeholder,
+				Frame: axpRect{20, 200, 335, 44}, HasFrame: true, IsElement: true, Enabled: true, Visible: true},
+		}
+		got, _, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.mobilesafari")
+		check("remoteAX", got, c.value, c.want)
+
+		field := map[string]any{"type": "TextField", "value": c.value, "placeholderValue": c.placeholder,
+			"isEnabled": "1", "isVisible": "1", "isAccessible": "1", "rect": map[string]any{"x": 20, "y": 200, "width": 335, "height": 44}}
+		if c.label != "" {
+			field["label"] = c.label
+		}
+		b, _ := json.Marshal(map[string]any{"type": "Application", "label": "Safari", "isEnabled": "1", "isVisible": "1",
+			"rect": map[string]any{"x": 0, "y": 0, "width": 375, "height": 812}, "children": []any{field}})
+		var root wdaNode
+		if err := json.Unmarshal(b, &root); err != nil {
+			t.Fatal(err)
+		}
+		got, _, _ = wdaScreenElements(&root, 3, 1125, 2436, "com.apple.mobilesafari")
+		check("WDA", got, c.value, c.want)
 	}
 }
 
