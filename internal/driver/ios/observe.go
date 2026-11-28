@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -592,22 +593,28 @@ func (d *Device) walkApp(ctx context.Context, nodes []axNode, locked bool) (app 
 // TestPlaceByOCRPartOfLabel). An icon's caption starts with the name under
 // the icon, which the app catalog has from SpringBoard's icon layout in the
 // phone's language, so a test by those names does not depend on the
-// language. But a banner's caption starts with its app's name too (as
-// postingApp reads it), and an alert's button may be named like an app
-// ("Settings"). So the walk shows the home screen only when SpringBoard's
-// elements name homeIconsMin different apps so: more than Face ID's
-// prompt, an alert and a banner over an app name together, fewer than the
-// Dock holds. A home screen the rule misses is named as a read that names
-// no app (knownfront.go), never pictured as the home screen on a guess.
+// language. What follows the name is the language's too: ", " in English,
+// "，" in Chinese, and in Japanese, which no phone has shown, likely "、".
+// So a caption names an app when it begins with one of the app's names
+// followed by its end or any punctuation mark, the longest such name when
+// several are ("Mail-Box, 1 new item" names Mail-Box, not Mail), which
+// also lets a name hold a punctuation mark ("Yahoo!") (captionApp). But a
+// banner's caption starts with its app's name too (as postingApp reads
+// it), and an alert's button may be named like an app ("Settings"). So the
+// walk shows the home screen only when SpringBoard's elements name
+// homeIconsMin different apps so: more than Face ID's prompt, an alert and
+// a banner over an app name together, fewer than the Dock holds. A home
+// screen the rule misses is named as a read that names no app
+// (knownfront.go), never pictured as the home screen on a guess.
 
 // homeIconsMin is how many different apps SpringBoard's elements in a walk
 // must name for the walk to show the home screen.
 const homeIconsMin = 3
 
 // walkShowsHome reports whether the elements of SpringBoard's process pid
-// in a walk show the home screen: their captions begin with the names of
-// at least homeIconsMin different listed apps, as the home screen names
-// them (or by another of their names).
+// in a walk show the home screen: their captions name at least
+// homeIconsMin different listed apps (captionApp), by the names the home
+// screen gives them or by their other names.
 func (d *Device) walkShowsHome(ctx context.Context, nodes []axNode, pid uint64) bool {
 	c, err := d.catalog(ctx)
 	if err != nil {
@@ -631,11 +638,32 @@ func (d *Device) walkShowsHome(ctx context.Context, nodes []axNode, pid uint64) 
 		if handlePID(n.handle) != pid {
 			continue
 		}
-		if id := ids[strings.TrimSpace(parseCaption(n.caption).first)]; id != "" {
+		if id := captionApp(n.caption, ids); id != "" {
 			named[id] = true
 		}
 	}
 	return len(named) >= homeIconsMin
+}
+
+// captionApp returns the bundle id of the app a caption names, by ids (an
+// app's name -> its bundle id): the app of the longest name that the
+// caption, trimmed, begins with, followed by its end or a punctuation mark
+// (unicode.IsPunct), or "" when it names none. Of two names a caption
+// begins with, one begins the other, so the longest is a single name in
+// whatever order the map gives them.
+func captionApp(caption string, ids map[string]string) string {
+	caption = strings.TrimSpace(caption)
+	best := ""
+	for name := range ids {
+		rest, ok := strings.CutPrefix(caption, name)
+		if !ok || len(name) <= len(best) {
+			continue
+		}
+		if r, _ := utf8.DecodeRuneInString(rest); rest == "" || unicode.IsPunct(r) {
+			best = name
+		}
+	}
+	return ids[best]
 }
 
 // ownerPIDs lists the processes that own walked elements, the one that

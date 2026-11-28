@@ -616,16 +616,29 @@ func TestFallbackReadOfALockedPhone(t *testing.T) {
 }
 
 // TestWalkShowsHome: SpringBoard's elements show the home screen when
-// their captions begin with the names of homeIconsMin different apps on
-// it, as the home screen names them in the phone's language or by their
-// bundles' own names; what SpringBoard draws over an app names fewer.
+// their captions name homeIconsMin different apps on it, as the home
+// screen names them in the phone's language or by their bundles' own
+// names: a caption names the app of the longest name it begins with,
+// followed by its end or a punctuation mark. What SpringBoard draws over
+// an app names fewer.
 func TestWalkShowsHome(t *testing.T) {
-	d := &Device{apps: &appCatalog{at: time.Now(), apps: []driver.App{
-		{ID: "com.apple.Preferences", Name: "设置", Aliases: []string{"Settings"}, System: true},
-		{ID: notesApp.ID, Name: "备忘录", Aliases: []string{"Notes"}, System: true},
-		{ID: "com.tencent.xin", Name: "微信", Aliases: []string{"WeChat"}},
+	phone := func(apps ...driver.App) *Device {
+		return &Device{apps: &appCatalog{at: time.Now(), apps: apps}}
+	}
+	zh := phone(
+		driver.App{ID: "com.apple.Preferences", Name: "设置", Aliases: []string{"Settings"}, System: true},
+		driver.App{ID: notesApp.ID, Name: "备忘录", Aliases: []string{"Notes"}, System: true},
+		driver.App{ID: "com.tencent.xin", Name: "微信", Aliases: []string{"WeChat"}},
 		bankApp,
-	}}}
+		driver.App{ID: "com.example.mail", Name: "Mail"},
+		driver.App{ID: "com.example.mailbox", Name: "Mail-Box"},
+	)
+	ja := phone(
+		driver.App{ID: "com.apple.Preferences", Name: "設定", Aliases: []string{"Settings"}, System: true},
+		driver.App{ID: notesApp.ID, Name: "メモ", Aliases: []string{"Notes"}, System: true},
+		driver.App{ID: "com.apple.mobileslideshow", Name: "写真", Aliases: []string{"Photos"}, System: true},
+		driver.App{ID: "com.example.yahoo", Name: "Yahoo!"},
+	)
 	sb := func(captions ...string) []axNode {
 		var nodes []axNode
 		for _, c := range captions {
@@ -635,17 +648,24 @@ func TestWalkShowsHome(t *testing.T) {
 	}
 	for _, c := range []struct {
 		name  string
+		d     *Device
 		nodes []axNode
 		want  bool
 	}{
-		{"the home screen", sb("设置，1 个新项目", "备忘录", "微信，3 条未读消息", "Bank"), true},
-		{"by the bundles' own names", sb("Settings, 1 new item, Updates Frequently", "Notes", "WeChat"), true},
-		{"an app twice", sb("备忘录", "备忘录，购物清单", "设置"), false},
-		{"Face ID's prompt", sb("面容 ID"), false},
-		{"an alert and a banner", sb("微信，张三：明天见", "无法连接", "取消，按钮", "设置，按钮"), false},
-		{"another process's", append(sb("设置"), owned(951, "备忘录"), owned(951, "微信"), owned(951, "Bank")), false},
+		{"the home screen", zh, sb("设置，1 个新项目", "备忘录", "微信，3 条未读消息", "Bank"), true},
+		{"by the bundles' own names", zh, sb("Settings, 1 new item, Updates Frequently", "Notes", "WeChat"), true},
+		// No Japanese phone has shown what follows an icon's name: likely "、".
+		{"in Japanese", ja, sb("設定、1件の新規項目、頻繁に更新", "メモ、2件の新規項目", "写真、頻繁に更新", "検索、ページ1/2"), true},
+		{"a name that begins a longer word", zh, sb("Notesheet，1 个新项目", "设置", "微信"), false},
+		{"a name with a punctuation mark", ja, sb("Yahoo!、3件の新規項目", "設定", "メモ"), true},
+		{"the longest name", zh, sb("Mail-Box，1 个新项目", "Mail", "Bank"), true},
+		{"only the longest name", zh, sb("Mail-Box，1 个新项目", "Mail-Box", "Bank"), false},
+		{"an app twice", zh, sb("备忘录", "备忘录，购物清单", "设置"), false},
+		{"Face ID's prompt", zh, sb("面容 ID"), false},
+		{"an alert and a banner", zh, sb("微信，张三：明天见", "无法连接", "取消，按钮", "设置，按钮"), false},
+		{"another process's", zh, append(sb("设置"), owned(951, "备忘录"), owned(951, "微信"), owned(951, "Bank")), false},
 	} {
-		if got := d.walkShowsHome(t.Context(), c.nodes, 954); got != c.want {
+		if got := c.d.walkShowsHome(t.Context(), c.nodes, 954); got != c.want {
 			t.Errorf("%s: walkShowsHome = %v, want %v", c.name, got, c.want)
 		}
 	}
