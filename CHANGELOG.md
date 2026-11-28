@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On an iPhone, a password shown in plain text, such as after you tap "Show" on a web page, now stays masked in Activity, approvals, history and pictures, and Pinky asks before an agent types into that field as it does for any password field. Thanks @pseudoyu.
+- When Pinky on your phone starts a task right after another, the task screen no longer shows the earlier task's steps, and a task that couldn't start no longer shows the one before it as "Couldn't start" in Activity. Thanks @pseudoyu.
+
 ## 2026.1128.1 (2026-11-28)
 
 - When the accessibility service of an iPhone on iOS 27 gets stuck and Pinky can no longer read its screen, Pinky now says so: agents are told to ask you to restart the iPhone, the only known fix (restarting Pinky or reconnecting the iPhone doesn't help), and the iPhone's Checkup has a new "Reading the screen" item. Thanks @checkmatee1 for reporting it.
