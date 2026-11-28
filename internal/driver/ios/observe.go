@@ -270,10 +270,12 @@ var errEmptyRead = errors.New("the iPhone answered with an empty screen")
 var errAppUnknown = errors.New("cannot tell which app is on screen")
 
 // observeInspector is Observe through the inspector walk and OCR. The
-// screen's app is the one whose process owns the walk's elements (walkApp);
-// when Pinky cannot name that process, or there are no elements, it is
-// what knownFront names, and the screen is partial; when neither names
-// one, the read fails (knownfront.go).
+// screen's app is the one whose process owns the walk's elements (walkApp),
+// SpringBoard only with the home screen's icons or on a locked phone; when
+// the walk names none (Pinky cannot name that process, SpringBoard draws
+// over an app, or there are no elements), it is what knownFront names, and
+// the screen is partial; when neither names one, the read fails
+// (knownfront.go).
 //
 // With walk false the walk is left out (see "The inspector walk and web
 // pages" above): the inspector is only pinged, and the screen is the
@@ -348,7 +350,7 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	// no handle, or to the ping.
 	st.heard = walkErr == nil || len(nodes) > 0 || errors.Is(walkErr, errAXNoHandle)
 	si := d.screen()
-	app, fromWalk := d.walkApp(ctx, nodes)
+	app, fromWalk := d.walkApp(ctx, nodes, locked)
 	switch {
 	case locked:
 		d.forgetFront(start)
@@ -356,7 +358,8 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 			app = screen.App{Name: "Home Screen", ID: springBoard} // the lock screen is SpringBoard's
 		}
 	case fromWalk:
-		if app.ID != springBoard && d.homeScreenApp(ctx, app.ID) {
+		// A home screen app, or the home screen itself.
+		if app.ID == springBoard || d.homeScreenApp(ctx, app.ID) {
 			d.knewFront(app, start)
 		}
 	case st.heard:
@@ -545,16 +548,24 @@ func unnamedError(st ObserveStats, inspector error) error {
 }
 
 // walkApp names the app of a walk's elements: the app of the process that
-// owns most of them. When that is a web view's content process, which is
-// no app, it is the home screen app among the other owners: the page's
-// host, whose bars and buttons are its own (the process list tells web
-// content apart, as markWebContent does). ok is false when it names none.
-func (d *Device) walkApp(ctx context.Context, nodes []axNode) (app screen.App, ok bool) {
+// owns most of them. SpringBoard is the home screen only on a locked phone
+// (its lock screen) or when its elements show the home screen's icons
+// (walkShowsHome); otherwise it draws over an app (Face ID's prompt or its
+// fade-out, an alert, a banner), which the walk does not name, as
+// screenApp finds on the remoteAXService path. When the owner is a web
+// view's content process, which is no app, it is the home screen app
+// among the other owners: the page's host, whose bars and buttons are its
+// own (the process list tells web content apart, as markWebContent does).
+// ok is false when it names none.
+func (d *Device) walkApp(ctx context.Context, nodes []axNode, locked bool) (app screen.App, ok bool) {
 	owners := ownerPIDs(nodes)
 	if len(owners) == 0 {
 		return screen.App{}, false
 	}
 	if a, ok := d.appForPID(ctx, owners[0]); ok {
+		if a.ID == springBoard && !locked && !d.walkShowsHome(ctx, nodes, owners[0]) {
+			return screen.App{}, false
+		}
 		return screen.App{Name: a.Name, ID: a.ID}, true
 	}
 	if !d.webProcess(ctx, owners[0]) {
@@ -566,6 +577,65 @@ func (d *Device) walkApp(ctx context.Context, nodes []axNode) (app screen.App, o
 		}
 	}
 	return screen.App{}, false
+}
+
+// The home screen in the inspector's walk. remoteAXService gives each
+// element its type, and screenApp takes SpringBoard for the home screen
+// when one of its elements is a visible icon (homeIcons). The walk gives
+// only captions, identifiers and handles (no traits: readAttributes is not
+// called), and nothing recorded tells an icon from SpringBoard's other
+// elements by them: SpringBoard's identifiers were never looked at on this
+// path, and captions are in the phone's language. On iOS 27.0.1 in English
+// an icon read "Settings, 1 new item, Updates Frequently", a folder "💸
+// Wallets folder, 20 apps" and the page dots "Search, Page 1 of 2,
+// Adjustable, Activate to open Spotlight." (TestParseCaption,
+// TestPlaceByOCRPartOfLabel). An icon's caption starts with the name under
+// the icon, which the app catalog has from SpringBoard's icon layout in the
+// phone's language, so a test by those names does not depend on the
+// language. But a banner's caption starts with its app's name too (as
+// postingApp reads it), and an alert's button may be named like an app
+// ("Settings"). So the walk shows the home screen only when SpringBoard's
+// elements name homeIconsMin different apps so: more than Face ID's
+// prompt, an alert and a banner over an app name together, fewer than the
+// Dock holds. A home screen the rule misses is named as a read that names
+// no app (knownfront.go), never pictured as the home screen on a guess.
+
+// homeIconsMin is how many different apps SpringBoard's elements in a walk
+// must name for the walk to show the home screen.
+const homeIconsMin = 3
+
+// walkShowsHome reports whether the elements of SpringBoard's process pid
+// in a walk show the home screen: their captions begin with the names of
+// at least homeIconsMin different listed apps, as the home screen names
+// them (or by another of their names).
+func (d *Device) walkShowsHome(ctx context.Context, nodes []axNode, pid uint64) bool {
+	c, err := d.catalog(ctx)
+	if err != nil {
+		return false
+	}
+	ids := map[string]string{} // an app's name -> its bundle id
+	c.mu.Lock()
+	for _, a := range c.apps {
+		if a.ID == springBoard {
+			continue
+		}
+		for _, name := range append([]string{a.Name}, a.Aliases...) {
+			if name = strings.TrimSpace(name); name != "" && ids[name] == "" {
+				ids[name] = a.ID
+			}
+		}
+	}
+	c.mu.Unlock()
+	named := map[string]bool{}
+	for _, n := range nodes {
+		if handlePID(n.handle) != pid {
+			continue
+		}
+		if id := ids[strings.TrimSpace(parseCaption(n.caption).first)]; id != "" {
+			named[id] = true
+		}
+	}
+	return len(named) >= homeIconsMin
 }
 
 // ownerPIDs lists the processes that own walked elements, the one that

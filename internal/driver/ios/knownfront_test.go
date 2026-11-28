@@ -89,6 +89,7 @@ var (
 	notesApp   = driver.App{ID: "com.apple.mobilenotes", Name: "Notes"}
 	bankFront  = screen.App{ID: bankApp.ID, Name: bankApp.Name}
 	notesFront = screen.App{ID: notesApp.ID, Name: notesApp.Name}
+	homeFront  = screen.App{ID: springBoard, Name: "Home Screen"}
 )
 
 // errSilentWalk is the inspector walk of a daemon that does not answer:
@@ -97,11 +98,11 @@ var errSilentWalk = fmt.Errorf("%w: focus: %v", errAXWalk, context.DeadlineExcee
 
 // fallbackPhone is an iOS 27 iPhone whose remoteAXService just did not
 // answer, so that its reads fall back to the inspector session insp. Its
-// home screen lists Bank (process 950) and Notes (951); processes 952
-// (WebKit's web content) and 953 (a system service) are no app. It is
-// unlocked; shots counts its screenshots, ocrs the pictures OCR read, and
-// asked holds the apps of the screens the gateway's MayCapture was asked
-// about.
+// home screen lists Bank (process 950), Notes (951) and Settings; processes
+// 952 (WebKit's web content) and 953 (a system service) are no app, and 954
+// is SpringBoard. It is unlocked; shots counts its screenshots, ocrs the
+// pictures OCR read, and asked holds the apps of the screens the gateway's
+// MayCapture was asked about.
 type fallbackPhone struct {
 	d     *Device
 	insp  *fakeInspector
@@ -121,7 +122,8 @@ func newFallbackPhone() *fallbackPhone {
 		raxFailedAt: now,
 		apps: &appCatalog{apps: []driver.App{bankApp, notesApp,
 			{ID: "com.apple.Preferences", Name: "Settings", System: true}}, at: now},
-		pidApps:  map[uint64]driver.App{950: bankApp, 951: notesApp},
+		pidApps: map[uint64]driver.App{950: bankApp, 951: notesApp,
+			954: {ID: springBoard, Name: "Home Screen", System: true}},
 		pidMiss:  map[uint64]time.Time{952: now, 953: now},
 		web:      webCache{m: map[int]webEntry{952: {web: true, at: now}, 953: {at: now}}},
 		scr:      screenInfo{Width: 375, Height: 812, Scale: 1},
@@ -396,6 +398,256 @@ func TestAXDeviceNamesTheSameWay(t *testing.T) {
 	p.insp.nodes = []axNode{owned(953, "Allow, Button")}
 	if s, err := a.Observe(t.Context(), p.opt()); err != nil || s.App != notesFront || !s.Partial {
 		t.Fatalf("read = %+v, %v; want Notes', partial", s, err)
+	}
+}
+
+// fallbackReads are the reads that fall back to the inspector's walk: an
+// iOS 27 iPhone's when remoteAXService does not answer (rax), and every
+// read below iOS 27 (AXDevice).
+var fallbackReads = []struct {
+	name string
+	rax  bool
+	read func(*testing.T, *fallbackPhone) (*screen.Screen, error)
+}{
+	{"iOS 27", true, func(t *testing.T, p *fallbackPhone) (*screen.Screen, error) {
+		s, _, err := p.read(t)
+		return s, err
+	}},
+	{"below iOS 27", false, func(t *testing.T, p *fallbackPhone) (*screen.Screen, error) {
+		return (&AXDevice{d: p.d}).Observe(t.Context(), p.opt())
+	}},
+}
+
+// homeWalk is a walk of the home screen: SpringBoard's icons, a folder and
+// the page dots, captioned as on iOS 27.0.1 in English.
+var homeWalk = []axNode{
+	owned(954, "Bank"),
+	owned(954, "Notes"),
+	owned(954, "Settings, 1 new item, Updates Frequently"),
+	owned(954, "💸 Wallets folder, 20 apps"),
+	owned(954, "Search, Page 1 of 2, Adjustable, Activate to open Spotlight."),
+}
+
+// overlayWalks are walks of what SpringBoard draws over an app. Captions
+// may begin with an app's name there too (a banner's, an alert's Settings
+// button), but not with homeIconsMin different ones.
+var overlayWalks = []struct {
+	name  string
+	nodes []axNode
+	label string // one of their labels
+}{
+	{"Face ID's prompt", []axNode{owned(954, "Face ID")}, "Face ID"},
+	{"an alert", []axNode{
+		owned(954, "Low Battery, Heading"), owned(954, "10% battery remaining"),
+		owned(954, "Close, Button"), owned(954, "Low Power Mode, Button"),
+	}, "Low Power Mode"},
+	{"an alert and a banner that name apps", []axNode{
+		owned(954, "Notes, Shopping list, Milk and eggs"),
+		owned(954, "Turn on Notifications in Settings, Heading"),
+		owned(954, "Cancel, Button"), owned(954, "Settings, Button"),
+	}, "Cancel"},
+}
+
+// TestFallbackReadOfTheHomeScreen: a walk of SpringBoard's elements whose
+// captions name the home screen's apps is the home screen, whole, which
+// the gateway lets be pictured. It is recorded, so that what SpringBoard
+// draws over the home screen next (an alert) is the home screen too,
+// partial.
+func TestFallbackReadOfTheHomeScreen(t *testing.T) {
+	for _, r := range fallbackReads {
+		t.Run(r.name, func(t *testing.T) {
+			p := newFallbackPhone()
+			p.insp.nodes = homeWalk
+			start := time.Now()
+			s, err := r.read(t, p)
+			if err != nil || s.App != homeFront || s.Partial || s.Locked {
+				t.Fatalf("read = %+v, %v; want the home screen, whole", s, err)
+			}
+			if !slices.Contains(screenLabels(s), "Bank") {
+				t.Errorf("the screen lacks Bank's icon: %q", screenLabels(s))
+			}
+			if p.shots.Load() != 1 || p.ocrs.Load() != 1 {
+				t.Errorf("%d screenshots, %d read; want one each", p.shots.Load(), p.ocrs.Load())
+			}
+			if len(p.asked) != 1 || p.asked[0] != homeFront {
+				t.Errorf("MayCapture was asked about %v, want the home screen", p.asked)
+			}
+			if app, at := p.known(); app != homeFront || at.Before(start) {
+				t.Errorf("the record is %+v at %v, want the home screen from this read", app, at)
+			}
+			p.insp.nodes = overlayWalks[1].nodes
+			s, err = r.read(t, p)
+			if err != nil || s.App != homeFront || !s.Partial {
+				t.Fatalf("read = %+v, %v; want the home screen, partial", s, err)
+			}
+			if p.shots.Load() != 2 {
+				t.Errorf("%d screenshots, want one of each read", p.shots.Load())
+			}
+		})
+	}
+}
+
+// TestSpringBoardOverAnApp: a walk of SpringBoard's elements that do not
+// show the home screen is of something it draws over an app (Face ID's
+// prompt or its fade-out, an alert, a banner), with the app beneath still
+// on screen. It used to be named the home screen, which the gateway lets
+// be pictured. It now names no app: the read is the app a read named less
+// than lastFrontKeep before, partial, with SpringBoard's elements, and over
+// Bank, which the gateway blocks, it takes no picture.
+func TestSpringBoardOverAnApp(t *testing.T) {
+	for _, r := range fallbackReads {
+		for _, o := range overlayWalks {
+			for _, c := range []struct {
+				front screen.App
+				shots int32
+			}{{bankFront, 0}, {notesFront, 1}} {
+				t.Run(r.name+"/"+o.name+"/"+c.front.Name, func(t *testing.T) {
+					p := newFallbackPhone()
+					at := time.Now().Add(-5 * time.Second)
+					p.d.knewFront(c.front, at)
+					p.insp.nodes = o.nodes
+					s, err := r.read(t, p)
+					if err != nil || s.App != c.front || !s.Partial || s.Locked {
+						t.Fatalf("read = %+v, %v; want %s's, partial", s, err, c.front.Name)
+					}
+					if !slices.Contains(screenLabels(s), o.label) {
+						t.Errorf("the screen lacks %q: %q", o.label, screenLabels(s))
+					}
+					if p.shots.Load() != c.shots || p.ocrs.Load() != c.shots {
+						t.Errorf("%d screenshots, %d read; want %d each", p.shots.Load(), p.ocrs.Load(), c.shots)
+					}
+					if len(p.asked) != 1 || p.asked[0] != c.front {
+						t.Errorf("MayCapture was asked about %v, want %s", p.asked, c.front.Name)
+					}
+					if app, known := p.known(); app != c.front || !known.Equal(at) {
+						t.Errorf("the record is %+v at %v, want %s at %v", app, known, c.front.Name, at)
+					}
+				})
+			}
+		}
+	}
+}
+
+// TestSpringBoardOverAnUnknownApp: when no read named the app less than
+// lastFrontKeep before, or the session was told of another app coming
+// since (Bank, opened from the home screen, asking for Face ID), what
+// SpringBoard draws over an app names none: the read takes no picture and
+// fails, as one of a system service's alert does.
+func TestSpringBoardOverAnUnknownApp(t *testing.T) {
+	ago := func(d time.Duration) time.Time { return time.Now().Add(-d) }
+	for _, r := range fallbackReads {
+		for _, c := range []struct {
+			name string
+			set  func(*fallbackPhone)
+		}{
+			{"none named", func(*fallbackPhone) {}},
+			{"Notes named too long ago", func(p *fallbackPhone) {
+				p.d.knewFront(notesFront, ago(lastFrontKeep+time.Second))
+			}},
+			{"Bank came after the home screen", func(p *fallbackPhone) {
+				p.d.knewFront(homeFront, ago(5*time.Second))
+				p.insp.apps = []axApp{{id: bankApp.ID, pid: 950, state: appForeground, at: ago(time.Second)}}
+			}},
+		} {
+			t.Run(r.name+"/"+c.name, func(t *testing.T) {
+				p := newFallbackPhone()
+				c.set(p)
+				p.insp.nodes = overlayWalks[0].nodes
+				s, err := r.read(t, p)
+				if s != nil || !errors.Is(err, errAppUnknown) {
+					t.Fatalf("read = %+v, %v; want no screen and errAppUnknown", s, err)
+				}
+				if r.rax && !errors.Is(err, errRAXTimeout) {
+					t.Errorf("the error does not say why remoteAXService was not used: %v", err)
+				}
+				if n := p.shots.Load() + p.ocrs.Load(); n != 0 {
+					t.Errorf("the read took or read %d pictures", n)
+				}
+				if len(p.asked) != 1 || p.asked[0] != (screen.App{}) {
+					t.Errorf("MayCapture was asked about %v, want one screen with no app", p.asked)
+				}
+			})
+		}
+	}
+}
+
+// TestFallbackReadOfALockedPhone: a walk of SpringBoard's elements on a
+// locked phone is its lock screen, whatever they name, whole, as before:
+// locked, so the gateway lets it take no picture, and the app recorded
+// before is forgotten. An iOS 27 iPhone found locked before the walk reads
+// as locked without one.
+func TestFallbackReadOfALockedPhone(t *testing.T) {
+	lockWalk := []axNode{
+		owned(954, "Saturday, November 28"), owned(954, "10:41"),
+		owned(954, "Bank, Payment received, 2m ago"),
+		owned(954, "Flashlight, Button"), owned(954, "Camera, Button"),
+	}
+	for _, c := range []struct {
+		name   string
+		read   func(*testing.T, *fallbackPhone) (*screen.Screen, error)
+		lockAt int32 // the call to Locked from which on the phone is locked
+		walks  int
+	}{
+		{"iOS 27, locked before the read", fallbackReads[0].read, 1, 0},
+		{"iOS 27, locked during the walk", fallbackReads[0].read, 2, 1},
+		{"below iOS 27", fallbackReads[1].read, 1, 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			p := newFallbackPhone()
+			p.d.knewFront(notesFront, time.Now().Add(-5*time.Second))
+			var calls atomic.Int32
+			p.d.lockedFn = func(context.Context) (bool, error) { return calls.Add(1) >= c.lockAt, nil }
+			p.insp.nodes = lockWalk
+			s, err := c.read(t, p)
+			if err != nil || !s.Locked || s.App != homeFront || s.Partial {
+				t.Fatalf("read = %+v, %v; want the lock screen, whole", s, err)
+			}
+			if n := p.shots.Load() + p.ocrs.Load(); n != 0 {
+				t.Errorf("the read took or read %d pictures", n)
+			}
+			if walks, _ := p.insp.counts(); walks != c.walks {
+				t.Errorf("%d walks, want %d", walks, c.walks)
+			}
+			if app, _ := p.known(); app != (screen.App{}) {
+				t.Errorf("the record is %+v after a locked read, want none", app)
+			}
+		})
+	}
+}
+
+// TestWalkShowsHome: SpringBoard's elements show the home screen when
+// their captions begin with the names of homeIconsMin different apps on
+// it, as the home screen names them in the phone's language or by their
+// bundles' own names; what SpringBoard draws over an app names fewer.
+func TestWalkShowsHome(t *testing.T) {
+	d := &Device{apps: &appCatalog{at: time.Now(), apps: []driver.App{
+		{ID: "com.apple.Preferences", Name: "设置", Aliases: []string{"Settings"}, System: true},
+		{ID: notesApp.ID, Name: "备忘录", Aliases: []string{"Notes"}, System: true},
+		{ID: "com.tencent.xin", Name: "微信", Aliases: []string{"WeChat"}},
+		bankApp,
+	}}}
+	sb := func(captions ...string) []axNode {
+		var nodes []axNode
+		for _, c := range captions {
+			nodes = append(nodes, owned(954, c))
+		}
+		return nodes
+	}
+	for _, c := range []struct {
+		name  string
+		nodes []axNode
+		want  bool
+	}{
+		{"the home screen", sb("设置，1 个新项目", "备忘录", "微信，3 条未读消息", "Bank"), true},
+		{"by the bundles' own names", sb("Settings, 1 new item, Updates Frequently", "Notes", "WeChat"), true},
+		{"an app twice", sb("备忘录", "备忘录，购物清单", "设置"), false},
+		{"Face ID's prompt", sb("面容 ID"), false},
+		{"an alert and a banner", sb("微信，张三：明天见", "无法连接", "取消，按钮", "设置，按钮"), false},
+		{"another process's", append(sb("设置"), owned(951, "备忘录"), owned(951, "微信"), owned(951, "Bank")), false},
+	} {
+		if got := d.walkShowsHome(t.Context(), c.nodes, 954); got != c.want {
+			t.Errorf("%s: walkShowsHome = %v, want %v", c.name, got, c.want)
+		}
 	}
 }
 

@@ -22,10 +22,16 @@ import (
 // app on screen anyway: iOS reports the apps it wakes in the background in
 // the foreground too.
 //
+// A walk of SpringBoard's elements is the same kind of read unless they
+// show the home screen or the phone is locked (walkApp): SpringBoard then
+// draws over an app (Face ID's prompt or its fade-out, an alert, a
+// banner), and naming it the home screen would let the picture take in the
+// app beneath, a blocked one included.
+//
 // So such a read names only the app that the last read able to tell named
 // (knewFront): remoteAXService's frontmost app, where screenApp settles it,
-// or the home screen app that owns a walk's elements (walkApp). And only
-// while
+// or the home screen app that owns a walk's elements, or the home screen
+// when SpringBoard's elements show it (walkApp). And only while
 //
 //   - that read began less than lastFrontKeep ago;
 //   - the inspector session has listened since before it, and answered
