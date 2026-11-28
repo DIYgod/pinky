@@ -245,3 +245,90 @@ func TestKeepRuns(t *testing.T) {
 		t.Fatalf("after the cutoff: %+v", runs)
 	}
 }
+
+func TestTaskOfIgnoresEarlierTask(t *testing.T) {
+	h := newHarness(t, func(o *Options) { o.DataDir = t.TempDir() })
+	ctl, sub := h.dial(t), h.dial(t)
+	sub.send(map[string]any{"cmd": "subscribe"})
+	sub.read()
+	h.api.mu.Lock()
+	h.api.n, h.api.turns = 0, []func(string, *http.Request) map[string]any{
+		func(string, *http.Request) map[string]any { return call("t1", "phone_observe", nil) },
+		func(string, *http.Request) map[string]any {
+			return call("t2", "finish", map[string]any{"outcome": "done", "summary": "Looked."})
+		},
+	}
+	h.api.mu.Unlock()
+	if r := ctl.do(map[string]any{"cmd": "start", "task": "Look around", "key": "sk-test",
+		"base_url": h.url, "model": "fake"}); !r.OK {
+		t.Fatalf("start: %+v", r)
+	}
+	st := sub.until("the first task's end", func(s State) bool { return s.Agent != nil && !s.Agent.Running })
+	if st.Task == nil || st.Task.Title != "Look around" {
+		t.Fatalf("first task: %+v", st.Task)
+	}
+	firstID := st.Task.ID
+	eventually(t, "the first task is recorded", func() bool {
+		list, _, err := h.core.History(context.Background(), time.Time{}, 0)
+		return err == nil && len(list) == 1 && list[0].Agent != nil
+	})
+	eventually(t, "the key is gone", func() bool { return h.key() == "" })
+
+	dev, ok := h.core.device()
+	if !ok {
+		t.Fatal("no device")
+	}
+	var first gateway.TaskView
+	for _, tk := range h.core.G.Tasks() {
+		if tk.ID == firstID {
+			first = tk
+			break
+		}
+	}
+	if first.ID == "" {
+		t.Fatal("first task not in gateway")
+	}
+
+	// Before phone_connect sets TaskID, a task that started with or before the
+	// gateway task still matches it.
+	if got := h.core.taskOf(dev.Info.ID, pilot.Status{Started: first.Started, Task: "Look around"}); got == nil || got.ID != firstID {
+		t.Fatalf("same task before TaskID: %+v", got)
+	}
+
+	// A second run started right after the first that never reaches
+	// phone_connect (no key) must neither claim the first task in State nor
+	// overwrite the first task's record in History. Like Core.start, forget
+	// the task State showed last.
+	h.core.mu.Lock()
+	h.core.last = nil
+	h.core.mu.Unlock()
+	if err := h.core.pilot.StartWith(pilot.Config{Model: "fake"}, dev.Info.ID, "Never connected", pilot.Extra{}); err != nil {
+		t.Fatalf("second start: %v", err)
+	}
+	var second pilot.Status
+	eventually(t, "the second run ends", func() bool {
+		s, has := h.core.pilot.Status(dev.Info.ID)
+		if has && s.Task == "Never connected" && !s.Running() {
+			second = s
+			return true
+		}
+		return false
+	})
+	if second.TaskID != "" {
+		t.Fatalf("second run unexpectedly connected: %+v", second)
+	}
+	if got := h.core.taskOf(dev.Info.ID, second); got != nil {
+		t.Fatalf("taskOf matched an earlier task: %+v", got)
+	}
+	if got := h.core.State(); got.Agent == nil || got.Agent.Task != "Never connected" || got.Task != nil {
+		t.Fatalf("State showed an earlier task: agent=%+v task=%+v", got.Agent, got.Task)
+	}
+	h.core.record(dev.Info.ID, second)
+	list, _, err := h.core.History(context.Background(), time.Time{}, 0)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("history: %v %+v", err, list)
+	}
+	if list[0].ID != firstID || list[0].Outcome != OutcomeDone || list[0].Agent == nil || list[0].Agent.Task != "Look around" {
+		t.Fatalf("first task's history record was overwritten: %+v %+v", list[0], list[0].Agent)
+	}
+}

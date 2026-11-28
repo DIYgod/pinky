@@ -171,7 +171,8 @@ func stepsOf(t gateway.TaskView) []Step {
 
 // taskOf is the gateway task of the agent's task s on device: the one it
 // connected to (s.TaskID, which a continued task keeps), or before that the
-// newest one of the phone that started with it, never an earlier one. Only
+// newest one of the phone that started after it, never an earlier one: the
+// gateway starts the task when the agent connects, after s started. Only
 // the agent starts tasks on the phone.
 func (c *Core) taskOf(device string, s pilot.Status) *gateway.TaskView {
 	if s.TaskID != "" {
@@ -182,9 +183,8 @@ func (c *Core) taskOf(device string, s pilot.Status) *gateway.TaskView {
 		}
 		return nil
 	}
-	since := s.Started.Add(-time.Second)
 	for _, t := range c.G.Tasks() {
-		if t.DeviceID == device && !t.Started.Before(since) {
+		if t.DeviceID == device && !t.Started.Before(s.Started) {
 			return &t
 		}
 	}
